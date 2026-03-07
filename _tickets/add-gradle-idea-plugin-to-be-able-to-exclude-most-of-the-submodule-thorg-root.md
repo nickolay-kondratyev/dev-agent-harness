@@ -1,11 +1,11 @@
 ---
 id: nid_wgr6tfn0labkt9py8h24ikzwq_E
 title: "Add gradle idea plugin to be able to exclude most of the submodule thorg root"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T22:10:23Z
-status_updated_iso: 2026-03-07T22:10:23Z
+status_updated_iso: 2026-03-07T22:56:47Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
