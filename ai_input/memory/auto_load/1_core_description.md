@@ -1,0 +1,1 @@
+This application will be CLI Kotlin driven Agent harness that will be used to call out to other agents to coordinate the work.

@@ -1,0 +1,1 @@
+Keep claude.md and related documentation up to date.
