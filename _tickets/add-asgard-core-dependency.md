@@ -1,11 +1,11 @@
 ---
 id: nid_rjzn42oj3tzbz69wjgu9364cx_E
 title: "Add asgard core dependency"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T14:10:51Z
-status_updated_iso: 2026-03-07T14:16:14Z
+status_updated_iso: 2026-03-07T14:31:56Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
