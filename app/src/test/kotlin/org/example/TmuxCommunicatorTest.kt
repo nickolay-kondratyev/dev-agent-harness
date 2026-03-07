@@ -16,8 +16,9 @@ import kotlin.test.assertEquals
 class TmuxCommunicatorTest {
 
     private val outFactory = NoOpOutFactory.INSTANCE
-    private val sessionManager = TmuxSessionManager(outFactory)
-    private val communicator = TmuxCommunicator(outFactory)
+    private val commandRunner = TmuxCommandRunner()
+    private val sessionManager = TmuxSessionManager(outFactory, commandRunner)
+    private val communicator = TmuxCommunicator(outFactory, commandRunner)
     private val createdSessions = mutableListOf<TmuxSession>()
     private val createdFiles = mutableListOf<File>()
 

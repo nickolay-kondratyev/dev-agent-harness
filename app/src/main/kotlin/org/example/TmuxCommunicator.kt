@@ -3,16 +3,16 @@ package org.example
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Sends keystrokes and text to an existing tmux session.
  *
- * Uses [ProcessBuilder] to invoke `tmux send-keys`. All operations are suspend functions
- * that run on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
+ * Delegates tmux command execution to [TmuxCommandRunner].
  */
-class TmuxCommunicator(outFactory: OutFactory) {
+class TmuxCommunicator(
+    outFactory: OutFactory,
+    private val commandRunner: TmuxCommandRunner,
+) {
     private val out = outFactory.getOutForClass(TmuxCommunicator::class)
 
     /**
@@ -31,7 +31,7 @@ class TmuxCommunicator(outFactory: OutFactory) {
 
         // [-l]: send text literally so words like "Space", "Enter", "Escape" are NOT
         // interpreted as tmux key names.
-        val literalExitCode = runTmuxCommand("send-keys", "-t", session.sessionName, "-l", text)
+        val literalExitCode = commandRunner.run("send-keys", "-t", session.sessionName, "-l", text)
         if (literalExitCode != 0) {
             throw IllegalStateException(
                 "Failed to send literal keys to tmux session [${session.sessionName}]. Exit code: [${literalExitCode}]"
@@ -39,7 +39,7 @@ class TmuxCommunicator(outFactory: OutFactory) {
         }
 
         // Send Enter as a separate command (NOT literal — we want the actual key press).
-        val enterExitCode = runTmuxCommand("send-keys", "-t", session.sessionName, "Enter")
+        val enterExitCode = commandRunner.run("send-keys", "-t", session.sessionName, "Enter")
         if (enterExitCode != 0) {
             throw IllegalStateException(
                 "Failed to send Enter to tmux session [${session.sessionName}]. Exit code: [${enterExitCode}]"
@@ -63,27 +63,11 @@ class TmuxCommunicator(outFactory: OutFactory) {
             Val(keys, ValType.SHELL_COMMAND),
         )
 
-        val exitCode = runTmuxCommand("send-keys", "-t", session.sessionName, keys)
+        val exitCode = commandRunner.run("send-keys", "-t", session.sessionName, keys)
         if (exitCode != 0) {
             throw IllegalStateException(
                 "Failed to send raw keys to tmux session [${session.sessionName}]. Exit code: [${exitCode}]"
             )
-        }
-    }
-
-    /**
-     * Executes a tmux command and returns its exit code.
-     *
-     * Runs on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
-     */
-    private suspend fun runTmuxCommand(vararg args: String): Int {
-        return withContext(Dispatchers.IO) {
-            val process = ProcessBuilder("tmux", *args)
-                .redirectErrorStream(true)
-                .start()
-            // Drain stdout to prevent process from blocking on full buffer.
-            process.inputStream.readBytes()
-            process.waitFor()
         }
     }
 }

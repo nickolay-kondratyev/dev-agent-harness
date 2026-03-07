@@ -3,8 +3,6 @@ package org.example
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 
 /**
  * Represents a tmux session that has been created.
@@ -16,10 +14,12 @@ data class TmuxSession(val sessionName: String)
 /**
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.
  *
- * Uses [ProcessBuilder] to invoke tmux CLI commands. All operations are suspend functions
- * that run on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
+ * Delegates tmux command execution to [TmuxCommandRunner].
  */
-class TmuxSessionManager(outFactory: OutFactory) {
+class TmuxSessionManager(
+    outFactory: OutFactory,
+    private val commandRunner: TmuxCommandRunner,
+) {
     private val out = outFactory.getOutForClass(TmuxSessionManager::class)
 
     /**
@@ -37,7 +37,7 @@ class TmuxSessionManager(outFactory: OutFactory) {
             Val(command, ValType.SHELL_COMMAND),
         )
 
-        val exitCode = runTmuxCommand("new-session", "-d", "-s", sessionName, command)
+        val exitCode = commandRunner.run("new-session", "-d", "-s", sessionName, command)
         if (exitCode != 0) {
             throw IllegalStateException(
                 "Failed to create tmux session [${sessionName}] with command [${command}]. Exit code: [${exitCode}]"
@@ -63,7 +63,7 @@ class TmuxSessionManager(outFactory: OutFactory) {
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
         )
 
-        val exitCode = runTmuxCommand("kill-session", "-t", session.sessionName)
+        val exitCode = commandRunner.run("kill-session", "-t", session.sessionName)
         if (exitCode != 0) {
             throw IllegalStateException(
                 "Failed to kill tmux session [${session.sessionName}]. Exit code: [${exitCode}]"
@@ -87,23 +87,7 @@ class TmuxSessionManager(outFactory: OutFactory) {
             listOf(Val(sessionName, ValType.STRING_USER_AGNOSTIC))
         }
 
-        val exitCode = runTmuxCommand("has-session", "-t", sessionName)
+        val exitCode = commandRunner.run("has-session", "-t", sessionName)
         return exitCode == 0
-    }
-
-    /**
-     * Executes a tmux command and returns its exit code.
-     *
-     * Runs on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
-     */
-    private suspend fun runTmuxCommand(vararg args: String): Int {
-        return withContext(Dispatchers.IO) {
-            val process = ProcessBuilder("tmux", *args)
-                .redirectErrorStream(true)
-                .start()
-            // Drain stdout to prevent process from blocking on full buffer.
-            process.inputStream.readBytes()
-            process.waitFor()
-        }
     }
 }

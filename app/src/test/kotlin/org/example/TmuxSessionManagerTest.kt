@@ -16,7 +16,8 @@ import kotlin.test.assertTrue
 class TmuxSessionManagerTest {
 
     private val outFactory = NoOpOutFactory.INSTANCE
-    private val sessionManager = TmuxSessionManager(outFactory)
+    private val commandRunner = TmuxCommandRunner()
+    private val sessionManager = TmuxSessionManager(outFactory, commandRunner)
     private val createdSessions = mutableListOf<TmuxSession>()
 
     @AfterEach
