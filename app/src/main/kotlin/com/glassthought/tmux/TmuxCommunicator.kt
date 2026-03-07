@@ -1,5 +1,6 @@
 package com.glassthought.tmux
 
+import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
@@ -11,6 +12,7 @@ import com.glassthought.tmux.util.TmuxCommandRunner
  *
  * Delegates tmux command execution to [com.glassthought.tmux.util.TmuxCommandRunner].
  */
+@AnchorPoint("ap.3BCYPiR792a2B8I9ZONDwmvN.E")
 class TmuxCommunicator(
     outFactory: OutFactory,
     private val commandRunner: TmuxCommandRunner,
