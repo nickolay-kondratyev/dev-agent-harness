@@ -1,7 +1,7 @@
 {
     "specClassName": "org.example.AppTest",
-    "timestamp": "2026-03-07T22:31:04.946690721Z",
-    "totalDurationMs": 10,
+    "timestamp": "2026-03-07T23:06:19.600054496Z",
+    "totalDurationMs": 17,
     "overallStatus": "PASSED",
     "passed": 1,
     "failed": 0,
@@ -14,7 +14,7 @@
                 "THEN can be instantiated without error"
             ],
             "status": "PASSED",
-            "durationMs": 10
+            "durationMs": 17
         }
     ]
 }

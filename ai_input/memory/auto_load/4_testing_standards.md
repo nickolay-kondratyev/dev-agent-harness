@@ -18,6 +18,9 @@
 - Gate entire `describe` blocks with `.config(isIntegTestEnabled())` for tests requiring external resources (e.g., tmux, network).
 - Annotate the class with `@OptIn(ExperimentalKotest::class)`.
 - Only entire test classes (or top-level describe blocks) may be enabled/disabled — NOT individual `it` blocks.
+- `isIntegTestEnabled()` is defined in `app/src/test/kotlin/org/example/integTestSupport.kt` and reads the
+  `runIntegTests` system property injected by Gradle. Enable via: `./gradlew :app:test -PrunIntegTests=true`.
+  This is tracked as a Gradle task input so the cache invalidates automatically (unlike env vars).
 
 ### Suspend Context
 - `describe` block bodies are **NOT** suspend contexts.

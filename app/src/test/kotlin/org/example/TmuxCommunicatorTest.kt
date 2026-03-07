@@ -2,7 +2,6 @@ package org.example
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.asgard.testTools.isIntegTestEnabled
 import com.glassthought.tmux.TmuxCommunicator
 import com.glassthought.tmux.TmuxSessionManager
 import com.glassthought.tmux.data.TmuxSessionName

@@ -1,21 +1,10 @@
 {
     "specClassName": "org.example.TmuxCommunicatorTest",
-    "timestamp": "2026-03-07T22:31:06.145966714Z",
-    "totalDurationMs": 1133,
+    "timestamp": "2026-03-07T23:06:19.691783250Z",
+    "totalDurationMs": 0,
     "overallStatus": "PASSED",
-    "passed": 1,
+    "passed": 0,
     "failed": 0,
     "skipped": 0,
-    "tests": [
-        {
-            "testName": "THEN file is created with expected content",
-            "fullPath": [
-                "GIVEN a tmux session running bash",
-                "WHEN sendKeys with echo command",
-                "THEN file is created with expected content"
-            ],
-            "status": "PASSED",
-            "durationMs": 1133
-        }
-    ]
+    "tests": []
 }

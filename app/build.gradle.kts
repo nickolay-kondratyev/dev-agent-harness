@@ -53,4 +53,11 @@ application {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+
+    // Gradle property -PrunIntegTests=true enables integration tests.
+    // Registered as a task input so Gradle cache is invalidated when it changes
+    // (unlike env vars, which Gradle does not track).
+    val runIntegTests = project.findProperty("runIntegTests")?.toString() == "true"
+    inputs.property("runIntegTests", runIntegTests)
+    systemProperty("runIntegTests", runIntegTests)
 }
