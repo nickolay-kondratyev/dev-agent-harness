@@ -6,6 +6,7 @@
 
 ### Logging
 - Use `Out` / `OutFactory` for all logging (never `println`).
+  - println is allowed to be used for user communication NOT logging.
 - Structured values via `Val(value, ValType.SPECIFIC_TYPE)` — never embed values in message strings.
 - Use **lazy lambda** form for DEBUG/TRACE to avoid serialization overhead.
 - Use **snake_case** for log message strings.
