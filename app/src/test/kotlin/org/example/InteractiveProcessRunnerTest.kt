@@ -1,13 +1,9 @@
 package org.example
 
-import com.asgard.core.out.impl.NoOpOutFactory
+import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.processRunner.InteractiveProcessResult
 import com.glassthought.processRunner.InteractiveProcessRunner
-import kotlinx.coroutines.runBlocking
-import kotlin.test.Test
-import kotlin.test.assertEquals
-import kotlin.test.assertFalse
-import kotlin.test.assertTrue
+import io.kotest.matchers.shouldBe
 
 /**
  * Tests for [com.glassthought.processRunner.InteractiveProcessRunner].
@@ -16,61 +12,53 @@ import kotlin.test.assertTrue
  * These tests cover construction and non-interactive commands, which work
  * fine with inheritIO even when stdin is not a terminal.
  */
-class InteractiveProcessRunnerTest {
+class InteractiveProcessRunnerTest : AsgardDescribeSpec({
 
-    private val outFactory = NoOpOutFactory.INSTANCE
-
-    @Test
-    fun `GIVEN InteractiveProcessRunner WHEN constructed THEN it is created without error`() {
-        // Verifies the class can be instantiated — compile-time and construction sanity check.
-      InteractiveProcessRunner(outFactory)
-    }
-
-    @Test
-    fun `GIVEN a non-interactive command WHEN runInteractive is called THEN exit code is 0`() {
-        val runner = InteractiveProcessRunner(outFactory)
-
-        val result = runBlocking {
-            runner.runInteractive("echo", "hello")
+    describe("GIVEN InteractiveProcessRunner") {
+        it("WHEN constructed THEN no error") {
+            InteractiveProcessRunner(outFactory)
         }
 
-        assertEquals(0, result.exitCode)
+        describe("AND a runner instance") {
+            val runner = InteractiveProcessRunner(outFactory)
+
+            describe("WHEN runInteractive is called with non-interactive echo") {
+                it("THEN exit code is 0") {
+                    val result = runner.runInteractive("echo", "hello")
+                    result.exitCode shouldBe 0
+                }
+
+                it("THEN interrupted is false") {
+                    val result = runner.runInteractive("echo", "hello")
+                    result.interrupted shouldBe false
+                }
+            }
+
+            describe("WHEN runInteractive is called with a command that exits non-zero") {
+                // `false` is a Unix command that always exits with code 1.
+                it("THEN exit code is 1") {
+                    val result = runner.runInteractive("false")
+                    result.exitCode shouldBe 1
+                }
+            }
+        }
     }
 
-    @Test
-    fun `GIVEN a non-interactive command WHEN runInteractive succeeds THEN interrupted is false`() {
-        val runner = InteractiveProcessRunner(outFactory)
+    describe("GIVEN InteractiveProcessResult") {
+        describe("WHEN constructed with exitCode 42") {
+            val result = InteractiveProcessResult(exitCode = 42, interrupted = false)
 
-        val result = runBlocking {
-            runner.runInteractive("echo", "hello")
+            it("THEN exitCode is 42") {
+                result.exitCode shouldBe 42
+            }
         }
 
-        assertFalse(result.interrupted)
-    }
+        describe("WHEN constructed with interrupted=true") {
+            val result = InteractiveProcessResult(exitCode = -1, interrupted = true)
 
-    @Test
-    fun `GIVEN a command that exits with non-zero code WHEN runInteractive is called THEN exit code is captured`() {
-        val runner = InteractiveProcessRunner(outFactory)
-
-        // `false` is a Unix command that always exits with code 1.
-        val result = runBlocking {
-            runner.runInteractive("false")
+            it("THEN interrupted is true") {
+                result.interrupted shouldBe true
+            }
         }
-
-        assertEquals(1, result.exitCode)
     }
-
-    @Test
-    fun `GIVEN InteractiveProcessResult WHEN constructed with given exit code THEN exitCode field holds that value`() {
-        val result = InteractiveProcessResult(exitCode = 42, interrupted = false)
-
-        assertEquals(42, result.exitCode)
-    }
-
-    @Test
-    fun `GIVEN InteractiveProcessResult WHEN constructed with interrupted=true THEN interrupted field is true`() {
-        val result = InteractiveProcessResult(exitCode = -1, interrupted = true)
-
-        assertTrue(result.interrupted)
-    }
-}
+})

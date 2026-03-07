@@ -1,0 +1,51 @@
+{
+    "specClassName": "org.example.TmuxSessionManagerTest",
+    "timestamp": "2026-03-07T22:31:06.204016408Z",
+    "totalDurationMs": 42,
+    "overallStatus": "PASSED",
+    "passed": 4,
+    "failed": 0,
+    "skipped": 0,
+    "tests": [
+        {
+            "testName": "THEN session exists",
+            "fullPath": [
+                "GIVEN TmuxSessionManager",
+                "WHEN createSession with bash",
+                "THEN session exists"
+            ],
+            "status": "PASSED",
+            "durationMs": 12
+        },
+        {
+            "testName": "THEN returns true",
+            "fullPath": [
+                "GIVEN TmuxSessionManager",
+                "WHEN sessionExists with existing session",
+                "THEN returns true"
+            ],
+            "status": "PASSED",
+            "durationMs": 11
+        },
+        {
+            "testName": "THEN returns false",
+            "fullPath": [
+                "GIVEN TmuxSessionManager",
+                "WHEN sessionExists with non-existent name",
+                "THEN returns false"
+            ],
+            "status": "PASSED",
+            "durationMs": 4
+        },
+        {
+            "testName": "THEN session no longer exists",
+            "fullPath": [
+                "GIVEN TmuxSessionManager",
+                "WHEN killSession is called on existing session",
+                "THEN session no longer exists"
+            ],
+            "status": "PASSED",
+            "durationMs": 15
+        }
+    ]
+}

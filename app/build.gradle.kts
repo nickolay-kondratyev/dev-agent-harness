@@ -19,11 +19,12 @@ repositories {
 }
 
 dependencies {
-    // Use the Kotlin Test integration.
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-
-    // Use the JUnit 5 integration.
-    testImplementation(libs.junit.jupiter.engine)
+    // asgardTestTools provides AsgardDescribeSpec (Kotest DescribeSpec extension).
+    // Kotest deps (assertions, runner) are 'implementation' in asgardTestTools (not api),
+    // so we declare them directly here for compilation visibility.
+    testImplementation("com.asgard:asgardTestTools:1.0.0")
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.runner.junit5)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 

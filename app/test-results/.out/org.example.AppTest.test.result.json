@@ -1,0 +1,20 @@
+{
+    "specClassName": "org.example.AppTest",
+    "timestamp": "2026-03-07T22:31:04.946690721Z",
+    "totalDurationMs": 10,
+    "overallStatus": "PASSED",
+    "passed": 1,
+    "failed": 0,
+    "skipped": 0,
+    "tests": [
+        {
+            "testName": "THEN can be instantiated without error",
+            "fullPath": [
+                "GIVEN TmuxCommandRunner",
+                "THEN can be instantiated without error"
+            ],
+            "status": "PASSED",
+            "durationMs": 10
+        }
+    ]
+}
