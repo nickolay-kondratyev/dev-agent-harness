@@ -11,7 +11,9 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
+TASK: DECOUPLE from THORG_ROOT environment variable and instead use relative paths.
 
+--------------------------------------------------------------------------------
 This is a Kotlin CLI application that demonstrates integration with AsgardCore via composite Gradle build.
 
 ## Environment Prerequisites
