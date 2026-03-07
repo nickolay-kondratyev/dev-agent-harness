@@ -1,0 +1,3 @@
+[submodule "submodules/thorg-root"]
+	path = submodules/thorg-root
+	url = git@gitlab.com:thorg/thorg-root.git
