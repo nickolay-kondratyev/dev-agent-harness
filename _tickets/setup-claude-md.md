@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-07T16:31:38Z
 id: nid_xbgo7223zqolvxp9lgql6wdsc_E
 title: "setup claude md"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-07T14:15:05Z
-status_updated_iso: 2026-03-07T16:17:12Z
+status_updated_iso: 2026-03-07T16:31:38Z
 type: task
 priority: 1 
 assignee: nickolaykondratyev
@@ -843,3 +844,27 @@ See comments in `gradle/libs.versions.toml` for details.
   </file name="6_version_management.md">
 
 </file path="${THORG_KOTLIN_MP_ROOT}/CLAUDE.md">
+**2026-03-07T16:31:50Z**
+
+## Resolution
+
+Set up ai_input folder with best practices from thorg, adapted for this non-thorg-specific Kotlin CLI project.
+
+### auto_load files created/updated:
+- `1_core_description.md` — Updated with agent harness context
+- `2_claude_editing.md` — Kept as-is
+- `3_kotlin_standards.md` — NEW: Kotlin standards (DI, logging, exceptions, coroutines, code style)
+- `4_testing_standards.md` — NEW: Testing conventions (BDD, one assert per test, fail hard)
+- `5_ticket_and_change_log_usage.md` — NEW: Ticket/changelog tooling with project-specific tags
+- `z_deep_memory_pointers.md` — Updated with 5 real deep memory references
+
+### Deep memories created:
+- `out_logging_patterns.md` — Out/OutFactory usage patterns
+- `dont_log_and_throw.md` — Anti-pattern guidance
+- `favor_functional_style.md` — Functional over imperative style
+- `in_tests__one_assert_per_test.md` — Testing pattern
+- `in_tests__fail_hard_never_mask.md` — Testing anti-pattern
+
+### Review iteration:
+- Removed DRY violation between 1_core_description.md and 3_kotlin_standards.md
+- Updated deep memory examples from JUnit to Kotest style
