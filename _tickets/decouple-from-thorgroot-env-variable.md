@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-07T22:59:51Z
 id: nid_zdmfnpevga8p1im90xmk2g9bm_E
 title: "Decouple from THORG_ROOT env variable"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-07T15:43:13Z
-status_updated_iso: 2026-03-07T15:43:13Z
+status_updated_iso: 2026-03-07T22:59:51Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
