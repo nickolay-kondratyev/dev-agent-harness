@@ -3,6 +3,11 @@
  */
 package org.example
 
+import com.asgard.core.lifecycle.use
+import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
+import com.asgard.core.processRunner.ProcessRunner
+import kotlinx.coroutines.runBlocking
+
 class App {
     val greeting: String
         get() {
@@ -12,4 +17,13 @@ class App {
 
 fun main() {
     println(App().greeting)
+
+    // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
+    runBlocking {
+        SimpleConsoleOutFactory.standard().use { outFactory ->
+            val runner = ProcessRunner.standard(outFactory)
+            val result = runner.runProcess("echo", "Hello from AsgardCore ProcessRunner This is coming from ECHO!")
+            println(result.trim())
+        }
+    }
 }
