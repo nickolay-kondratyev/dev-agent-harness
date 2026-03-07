@@ -5,7 +5,7 @@ package org.example
 
 import com.asgard.core.lifecycle.use
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.glassthought.tmux.TmuxCommandRunner
+import com.glassthought.tmux.util.TmuxCommandRunner
 import com.glassthought.tmux.TmuxCommunicator
 import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking

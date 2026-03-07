@@ -1,4 +1,4 @@
-package com.glassthought.tmux
+package com.glassthought.tmux.util
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -6,8 +6,8 @@ import kotlinx.coroutines.withContext
 /**
  * Executes tmux CLI commands and returns the exit code.
  *
- * Shared infrastructure for [TmuxSessionManager] and [TmuxCommunicator].
- * Runs commands on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
+ * Shared infrastructure for [com.glassthought.tmux.TmuxSessionManager] and [com.glassthought.tmux.TmuxCommunicator].
+ * Runs commands on [kotlinx.coroutines.Dispatchers.IO] to avoid blocking the coroutine dispatcher.
  */
 class TmuxCommandRunner {
 
@@ -19,12 +19,12 @@ class TmuxCommandRunner {
      */
     suspend fun run(vararg args: String): Int {
         return withContext(Dispatchers.IO) {
-            val process = ProcessBuilder("tmux", *args)
-                .redirectErrorStream(true)
-                .start()
-            // Drain stdout/stderr to prevent process from blocking on full buffer.
-            process.inputStream.readBytes()
-            process.waitFor()
+          val process = ProcessBuilder("tmux", *args)
+            .redirectErrorStream(true)
+            .start()
+          // Drain stdout/stderr to prevent process from blocking on full buffer.
+          process.inputStream.readBytes()
+          process.waitFor()
         }
     }
 }
