@@ -3,7 +3,7 @@ package org.example
 import com.asgard.core.out.impl.NoOpOutFactory
 import com.glassthought.tmux.TmuxCommandRunner
 import com.glassthought.tmux.TmuxCommunicator
-import com.glassthought.tmux.TmuxSessionName
+import com.glassthought.tmux.data.TmuxSessionName
 import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach

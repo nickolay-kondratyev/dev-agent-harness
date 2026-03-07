@@ -3,6 +3,7 @@ package com.glassthought.tmux
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.tmux.data.TmuxSessionName
 
 /**
  * Sends keystrokes and text to an existing tmux session.

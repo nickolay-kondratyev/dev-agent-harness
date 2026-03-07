@@ -3,13 +3,7 @@ package com.glassthought.tmux
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-
-/**
- * Represents a tmux session that has been created.
- *
- * @param sessionName The name used to identify the session in tmux.
- */
-data class TmuxSessionName(val sessionName: String)
+import com.glassthought.tmux.data.TmuxSessionName
 
 /**
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.
@@ -27,7 +21,7 @@ class TmuxSessionManager(
      *
      * @param sessionName Unique name for the tmux session.
      * @param command The command to run inside the tmux session.
-     * @return A [TmuxSessionName] representing the created session.
+     * @return A [com.glassthought.tmux.data.TmuxSessionName] representing the created session.
      * @throws IllegalStateException if tmux fails to create the session.
      */
     suspend fun createSession(sessionName: String, command: String): TmuxSessionName {
