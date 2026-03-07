@@ -27,9 +27,21 @@ fun main() {
     // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
     runBlocking {
         SimpleConsoleOutFactory.standard().use { outFactory ->
-            val interactiveRunner = InteractiveProcessRunner(outFactory)
-            val result = interactiveRunner.runInteractive("claude")
-            println("Interactive session ended. Exit code: ${result.exitCode}")
+            val commandRunner = TmuxCommandRunner()
+            val sessionManager = TmuxSessionManager(outFactory, commandRunner)
+            val communicator = TmuxCommunicator(outFactory, commandRunner)
+
+            val sessionName = "agent-harness__${System.currentTimeMillis()}"
+            println("Tmux session name: $sessionName")
+
+            val session = sessionManager.createSession(sessionName, "claude")
+
+            // tmux buffers keystrokes, so we can send immediately.
+            communicator.sendKeys(session, "Write 'hello world from tmux' to /tmp/out")
+
+            // The tmux session is intentionally left alive after main() exits.
+            // Claude needs time to process the prompt. The user can attach to the session
+            // via `tmux attach -t <sessionName>` to observe progress, or kill it manually.
         }
     }
 }
