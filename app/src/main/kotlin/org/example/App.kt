@@ -3,6 +3,7 @@
  */
 package org.example
 
+import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.use
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
 import com.glassthought.tmux.util.TmuxCommandRunner
@@ -10,12 +11,6 @@ import com.glassthought.tmux.TmuxCommunicator
 import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking
 
-class App {
-    val greeting: String
-        get() {
-            return "Hello World!"
-        }
-}
 
 // NOTE: Run via the installed distribution for interactive mode to work.
 // `./gradlew :app:run` does NOT work — Gradle wraps the JVM without a real controlling
@@ -24,27 +19,27 @@ class App {
 // To run:
 //   ./gradlew :app:installDist
 //   ./app/build/install/app/bin/app
+@AnchorPoint("ap.4JVSSyLwZXop6hWiJNYevFQX.E")
 fun main() {
-    println(App().greeting)
 
-    // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
-    runBlocking {
-        SimpleConsoleOutFactory.standard().use { outFactory ->
-            val commandRunner = TmuxCommandRunner()
-            val sessionManager = TmuxSessionManager(outFactory, commandRunner)
-            val communicator = TmuxCommunicator(outFactory, commandRunner)
+  // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
+  runBlocking {
+    SimpleConsoleOutFactory.standard().use { outFactory ->
+      val commandRunner = TmuxCommandRunner()
+      val sessionManager = TmuxSessionManager(outFactory, commandRunner)
+      val communicator = TmuxCommunicator(outFactory, commandRunner)
 
-            val sessionName = "agent-harness__${System.currentTimeMillis()}"
-            println("Tmux session name: $sessionName")
+      val sessionName = "agent-harness__${System.currentTimeMillis()}"
+      println("Tmux session name: $sessionName")
 
-            val session = sessionManager.createSession(sessionName, "claude")
+      val session = sessionManager.createSession(sessionName, "claude")
 
-            // tmux buffers keystrokes, so we can send immediately.
-            communicator.sendKeys(session, "Write 'hello world from tmux' to /tmp/out")
+      // tmux buffers keystrokes, so we can send immediately.
+      communicator.sendKeys(session, "Write 'hello world from tmux' to /tmp/out")
 
-            // The tmux session is intentionally left alive after main() exits.
-            // Claude needs time to process the prompt. The user can attach to the session
-            // via `tmux attach -t <sessionName>` to observe progress, or kill it manually.
-        }
+      // The tmux session is intentionally left alive after main() exits.
+      // Claude needs time to process the prompt. The user can attach to the session
+      // via `tmux attach -t <sessionName>` to observe progress, or kill it manually.
     }
+  }
 }

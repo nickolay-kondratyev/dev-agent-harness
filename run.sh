@@ -3,6 +3,7 @@
 
 main() {
   ./gradlew :app:installDist
+  # Runs the main function at ref.ap.4JVSSyLwZXop6hWiJNYevFQX.E
   ./app/build/install/app/bin/app
 }
 
