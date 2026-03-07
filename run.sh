@@ -2,7 +2,8 @@
 # __enable_bash_strict_mode__
 
 main() {
-  ./gradlew :app:run
+  ./gradlew :app:installDist
+  ./app/build/install/app/bin/app
 }
 
 main "${@}"
