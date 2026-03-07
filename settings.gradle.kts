@@ -19,6 +19,8 @@ include("app")
 includeBuild("submodules/thorg-root/source/libraries/kotlin-mp") {
     dependencySubstitution {
         substitute(module("com.asgard:asgardCore")).using(project(":asgardCore"))
+        // asgardCoreShared and asgardCoreNodeJS are transitive deps of asgardCore (not direct deps of this project).
+        // They must be substituted here so the composite build can resolve them from source as well.
         substitute(module("com.asgard:asgardCoreShared")).using(project(":asgardCoreShared"))
         substitute(module("com.asgard:asgardCoreNodeJS")).using(project(":asgardCoreNodeJS"))
     }
