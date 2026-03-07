@@ -1,0 +1,10 @@
+{
+    "specClassName": "org.example.TmuxCommunicatorTest",
+    "timestamp": "2026-03-07T23:06:19.691783250Z",
+    "totalDurationMs": 0,
+    "overallStatus": "PASSED",
+    "passed": 0,
+    "failed": 0,
+    "skipped": 0,
+    "tests": []
+}

@@ -19,11 +19,12 @@ repositories {
 }
 
 dependencies {
-    // Use the Kotlin Test integration.
-    testImplementation("org.jetbrains.kotlin:kotlin-test")
-
-    // Use the JUnit 5 integration.
-    testImplementation(libs.junit.jupiter.engine)
+    // asgardTestTools provides AsgardDescribeSpec (Kotest DescribeSpec extension).
+    // Kotest deps (assertions, runner) are 'implementation' in asgardTestTools (not api),
+    // so we declare them directly here for compilation visibility.
+    testImplementation("com.asgard:asgardTestTools:1.0.0")
+    testImplementation(libs.kotest.assertions.core)
+    testImplementation(libs.kotest.runner.junit5)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
@@ -52,4 +53,11 @@ application {
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+
+    // Gradle property -PrunIntegTests=true enables integration tests.
+    // Registered as a task input so Gradle cache is invalidated when it changes
+    // (unlike env vars, which Gradle does not track).
+    val runIntegTests = project.findProperty("runIntegTests")?.toString() == "true"
+    inputs.property("runIntegTests", runIntegTests)
+    systemProperty("runIntegTests", runIntegTests)
 }

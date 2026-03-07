@@ -3,11 +3,12 @@
 
 [versions]
 guava = "33.4.6-jre"
-junit-jupiter-engine = "5.12.1"
+kotest = "5.9.1"
 
 [libraries]
 guava = { module = "com.google.guava:guava", version.ref = "guava" }
-junit-jupiter-engine = { module = "org.junit.jupiter:junit-jupiter-engine", version.ref = "junit-jupiter-engine" }
+kotest-assertions-core = { module = "io.kotest:kotest-assertions-core", version.ref = "kotest" }
+kotest-runner-junit5 = { module = "io.kotest:kotest-runner-junit5", version.ref = "kotest" }
 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.20" }

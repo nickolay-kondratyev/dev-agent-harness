@@ -23,5 +23,6 @@ includeBuild("submodules/thorg-root/source/libraries/kotlin-mp") {
         // They must be substituted here so the composite build can resolve them from source as well.
         substitute(module("com.asgard:asgardCoreShared")).using(project(":asgardCoreShared"))
         substitute(module("com.asgard:asgardCoreNodeJS")).using(project(":asgardCoreNodeJS"))
+        substitute(module("com.asgard:asgardTestTools")).using(project(":asgardTestTools"))
     }
 }
