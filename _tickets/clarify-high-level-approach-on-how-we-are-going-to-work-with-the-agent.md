@@ -1,7 +1,7 @@
 ---
 id: nid_j54dq6ra33hix1e8aavanb8bz_E
-title: "clarify high level approach on how we are going to work with the agent"
-status: done
+title: "High level approach on how we are going to work with the agent"
+status: open
 deps: []
 links: []
 created_iso: 2026-03-07T14:51:08Z
