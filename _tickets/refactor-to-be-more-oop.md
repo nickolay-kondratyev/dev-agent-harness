@@ -1,11 +1,11 @@
 ---
 id: nid_lfazm1rs99uoj2td5iwljvc7k_E
 title: "refactor to be more OOP"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T23:16:54Z
-status_updated_iso: 2026-03-07T23:16:54Z
+status_updated_iso: 2026-03-07T23:27:35Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
