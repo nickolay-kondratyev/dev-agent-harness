@@ -58,11 +58,23 @@ enum ModelTier { QuickCheap, Medium }
 - Each `ModelTier` maps to a separate API provider (e.g., GLM for quick, GPT for medium)
 - Provider is configurable per tier
 
-## User Interaction
+## User Interaction — REVISED (V1 simplification)
 
-- **Sentinel pattern**: agent writes `#QUESTION_FOR_HUMAN: ...` in PUBLIC.md
-- Harness scans for sentinel, presents questions to user via CLI
-- Answers are recorded in `SHARED_CONTEXT.md` (passed to all subsequent agents)
+**Prototyped and confirmed:** Kotlin can spawn `claude` (and other CLI agents) in fully
+interactive mode via `InteractiveProcessRunner` (`ProcessBuilder` + `/dev/tty` redirect).
+The user sees a live `claude` session in their terminal; Kotlin resumes after exit.
+
+**This eliminates the sentinel pattern for V1.** Instead of agents writing
+`#QUESTION_FOR_HUMAN:` markers and the harness scanning for them, we simply run agents
+interactively — they ask the human directly, the human responds, the agent continues.
+
+- **All agent invocations are interactive** (not just CLARIFICATION)
+- Human questions are handled natively by the agent's own UX
+- No sentinel scanning, no `SHARED_CONTEXT.md` Q&A loop needed in V1
+- `SHARED_CONTEXT.md` is still useful for cross-agent context, but not for Q&A routing
+
+**Caveat:** Must run via `./run.sh` (or `./app/build/install/app/bin/app` directly) —
+Gradle's `:app:run` task breaks TTY detection. `run.sh` handles `installDist` + bin invocation.
 
 ## File Structure
 
@@ -110,20 +122,19 @@ Core engine in Kotlin; workflow phases defined in XML:
 
 ## Clarification Phase
 
-- Spawn `claude` (or other agent) in **interactive mode** via shell
-- User interacts directly with the agent for clarification
-- On CTRL+C, agent exits but Kotlin harness continues
-- **TODO: Prototype** — verify that CTRL+C interrupts child process without killing Kotlin JVM
-  - May need custom signal handling (catch SIGINT, only forward to child)
+- Spawn `claude` (or other agent) in **interactive mode** via `InteractiveProcessRunner`
+- User interacts directly with the agent; Kotlin resumes after exit
+- **PROTOTYPED AND WORKING** — see `InteractiveProcessRunner.kt`
+- On CTRL+C: agent exits (exit code -1 / interrupted=true); Kotlin harness continues
+  - No custom signal handling needed — `process.waitFor()` unblocks on child exit
 
 ## V1 Scope
 
 1. Single straightforward flow: IMPLEMENTATION_WITH_SELF_PLAN → REVIEW → ITERATION
-2. File-based communication with sentinel question detection
+2. File-based communication (PUBLIC.md / PRIVATE.md) between agents
 3. Git commits between phases
 4. Convergence check (max iterations)
-5. User Q&A presentation via CLI
-6. `CodeAgent` abstraction (ClaudeCode impl)
+5. **Interactive agent invocation** — human questions handled by agent directly (no sentinel)
+6. `CodeAgent` abstraction (ClaudeCode impl) backed by `InteractiveProcessRunner`
 7. `DirectLLMApi` for harness decisions
 8. XML workflow definition
-9. CTRL+C clarification prototype

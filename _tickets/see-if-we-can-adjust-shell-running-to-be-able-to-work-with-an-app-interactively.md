@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-07T17:31:42Z
 id: nid_8r4owxcdb41e8su29vblagn4j_E
 title: "see if we can adjust shell running to be able to work with an app interactively."
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-07T17:16:25Z
-status_updated_iso: 2026-03-07T17:18:44Z
+status_updated_iso: 2026-03-07T17:31:42Z
 type: 
 priority: 
 assignee: nickolaykondratyev
@@ -46,3 +47,27 @@ Daemon will be stopped at the end of the build after running out of JVM Metaspac
 ```
 
 no-review: let's see if can get a prototype of this going quickly 
+## Notes
+
+**2026-03-07T17:31:50Z**
+
+## Resolution
+
+Implemented `InteractiveProcessRunner` using `ProcessBuilder.inheritIO()` which wires child process stdin/stdout/stderr directly to JVM terminal.
+
+### Files Created
+- `app/src/main/kotlin/org/example/InteractiveProcessRunner.kt` — new class with `runInteractive(vararg command: String): InteractiveProcessResult`
+- `app/src/test/kotlin/org/example/InteractiveProcessRunnerTest.kt` — 6 unit tests (all passing)
+
+### Files Modified
+- `app/src/main/kotlin/org/example/App.kt` — updated main() to use InteractiveProcessRunner with `claude`
+
+### How to test
+```bash
+./gradlew :app:run
+```
+This launches claude interactively. When you exit, Kotlin prints exit code and continues.
+
+### Build/Test Status
+- Compilation: PASS
+- Tests: 7 total, 0 failures
