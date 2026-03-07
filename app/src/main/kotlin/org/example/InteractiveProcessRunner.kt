@@ -24,10 +24,10 @@ data class InteractiveProcessResult(
  * enabling fully interactive sessions (e.g. `claude` CLI, `vim`, `bash`).
  *
  * ## How it works
- * stdout/stderr are inherited from the JVM (INHERIT redirect).
- * stdin is connected to `/dev/tty` directly on Unix — bypassing whatever the JVM launcher
- * (e.g. Gradle) has done with the JVM's own stdin, which may be a pipe rather than a real TTY.
- * Programs like `claude` check `isatty(stdin)` and require a real TTY to enter interactive mode.
+ * All three I/O streams are connected to `/dev/tty` (the real terminal device) on Unix.
+ * This bypasses whatever the JVM launcher (e.g. Gradle) has done with the JVM's own
+ * stdin/stdout/stderr, which are often pipes. Programs like `claude` check `isatty()` on
+ * all three and require real TTYs to enter interactive mode.
  *
  * ## Limitations
  * - `/dev/tty` approach is Unix-only; falls back to INHERIT on other platforms.
@@ -39,8 +39,9 @@ class InteractiveProcessRunner(outFactory: OutFactory) {
     /**
      * Spawns the given command interactively, blocking until the user exits.
      *
-     * stdin is connected to the real terminal device (`/dev/tty` on Unix) so that
-     * interactive programs receive a proper TTY even when the JVM's own stdin is piped.
+     * All I/O is connected to the real terminal device (`/dev/tty` on Unix) so that
+     * interactive programs see proper TTYs for stdin, stdout, and stderr — even when
+     * the JVM's own streams are piped (e.g. under Gradle's `:app:run` task).
      *
      * @param command The command and its arguments (e.g. `"claude"` or `"bash", "-c", "ls"`).
      * @return [InteractiveProcessResult] with the exit code and whether the process was interrupted.
@@ -52,14 +53,13 @@ class InteractiveProcessRunner(outFactory: OutFactory) {
         )
 
         val processBuilder = ProcessBuilder(*command)
-        processBuilder.redirectOutput(ProcessBuilder.Redirect.INHERIT)
-        processBuilder.redirectError(ProcessBuilder.Redirect.INHERIT)
 
-        // [/dev/tty]: connect child stdin directly to the terminal device rather than inheriting
-        // the JVM's stdin. Gradle's :app:run task pipes the JVM's stdin (not a real TTY), so
-        // `inheritIO()` alone would cause `isatty(stdin)` to return false in the child process,
-        // breaking interactive programs like `claude` that require a TTY.
-        // Probe first: /dev/tty exists on Unix but may not be openable when there is no
+        // [/dev/tty]: wire ALL three streams to the real terminal device.
+        // Gradle's :app:run pipes the JVM's stdin/stdout/stderr — so `inheritIO()` alone
+        // passes pipes to the child, causing `isatty()` to return false for all three.
+        // Programs like `claude` check isatty() on stdout (not just stdin) to decide
+        // whether to enter interactive mode.
+        // Probe first: /dev/tty exists on Unix but isn't openable when there's no
         // controlling terminal (e.g. in test runners). Fall back to INHERIT in that case.
         val devTty = java.io.File("/dev/tty")
         val devTtyUsable = devTty.exists() && try {
@@ -70,8 +70,10 @@ class InteractiveProcessRunner(outFactory: OutFactory) {
         }
         if (devTtyUsable) {
             processBuilder.redirectInput(devTty)
+            processBuilder.redirectOutput(devTty)
+            processBuilder.redirectError(devTty)
         } else {
-            processBuilder.redirectInput(ProcessBuilder.Redirect.INHERIT)
+            processBuilder.inheritIO()
         }
 
         return withContext(Dispatchers.IO) {
