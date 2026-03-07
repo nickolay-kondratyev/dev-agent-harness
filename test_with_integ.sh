@@ -4,4 +4,4 @@ set -euo pipefail
 export THORG_ROOT=$PWD/submodules/thorg-root
 
 mkdir -p .tmp/
-./gradlew :app:test -PrunIntegTests=true > .tmp/test_with_integ.txt 2>&1
+./gradlew :app:test -PrunIntegTests=true 2>&1 | tee .tmp/test_with_integ.txt
