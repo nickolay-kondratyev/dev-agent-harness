@@ -1,10 +1,11 @@
-package org.example
+package com.glassthought.processRunner
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import java.io.File
 import java.io.FileInputStream
 import java.io.IOException
 
@@ -65,7 +66,7 @@ class InteractiveProcessRunner(outFactory: OutFactory) {
         // whether to enter interactive mode.
         // Probe first: /dev/tty exists on Unix but isn't openable when there's no
         // controlling terminal (e.g. in test runners). Fall back to INHERIT in that case.
-        val devTty = java.io.File("/dev/tty")
+        val devTty = File("/dev/tty")
         val devTtyUsable = devTty.exists() && try {
             FileInputStream(devTty).close()
             true

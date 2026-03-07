@@ -1,4 +1,4 @@
-package org.example
+package com.glassthought.tmux
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

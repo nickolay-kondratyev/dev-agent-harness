@@ -1,6 +1,8 @@
 package org.example
 
 import com.asgard.core.out.impl.NoOpOutFactory
+import com.glassthought.processRunner.InteractiveProcessResult
+import com.glassthought.processRunner.InteractiveProcessRunner
 import kotlinx.coroutines.runBlocking
 import kotlin.test.Test
 import kotlin.test.assertEquals
@@ -8,7 +10,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Tests for [InteractiveProcessRunner].
+ * Tests for [com.glassthought.processRunner.InteractiveProcessRunner].
  *
  * NOTE: True interactive tests (requiring a TTY) cannot run in CI.
  * These tests cover construction and non-interactive commands, which work
@@ -21,7 +23,7 @@ class InteractiveProcessRunnerTest {
     @Test
     fun `GIVEN InteractiveProcessRunner WHEN constructed THEN it is created without error`() {
         // Verifies the class can be instantiated — compile-time and construction sanity check.
-        InteractiveProcessRunner(outFactory)
+      InteractiveProcessRunner(outFactory)
     }
 
     @Test

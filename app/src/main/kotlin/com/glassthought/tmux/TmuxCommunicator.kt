@@ -1,4 +1,4 @@
-package org.example
+package com.glassthought.tmux
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType

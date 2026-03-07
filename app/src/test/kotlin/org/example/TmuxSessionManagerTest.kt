@@ -1,6 +1,9 @@
 package org.example
 
 import com.asgard.core.out.impl.NoOpOutFactory
+import com.glassthought.tmux.TmuxCommandRunner
+import com.glassthought.tmux.TmuxSession
+import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import kotlin.test.Test
@@ -8,7 +11,7 @@ import kotlin.test.assertFalse
 import kotlin.test.assertTrue
 
 /**
- * Tests for [TmuxSessionManager].
+ * Tests for [com.glassthought.tmux.TmuxSessionManager].
  *
  * Requires tmux to be installed on the system. Tests use bash sessions (not claude)
  * so they can run in CI environments.

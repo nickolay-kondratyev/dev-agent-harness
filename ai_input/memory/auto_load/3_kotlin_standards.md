@@ -26,6 +26,9 @@
 
 ### Code Style
 - **Composition over inheritance** — always.
+- Be classy and use interfaces.
+  - Put interfaces as the same place as the default implementation.
+  - Use naming that aligns with implementation or `Impl` as fallback naming (Doer/DoerImpl).
 - **Favor immutability** — immutable data structures by default, pass values as parameters, return new values.
 - **Be explicit** — no magic numbers, no `Pair`/`Triple`. Use descriptive `data class` instead.
 - **No `@Deprecated`** — refactor directly, make clean breaks.

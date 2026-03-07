@@ -1,6 +1,10 @@
 package org.example
 
 import com.asgard.core.out.impl.NoOpOutFactory
+import com.glassthought.tmux.TmuxCommandRunner
+import com.glassthought.tmux.TmuxCommunicator
+import com.glassthought.tmux.TmuxSession
+import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
 import java.io.File
@@ -8,7 +12,7 @@ import kotlin.test.Test
 import kotlin.test.assertEquals
 
 /**
- * Tests for [TmuxCommunicator].
+ * Tests for [com.glassthought.tmux.TmuxCommunicator].
  *
  * Requires tmux to be installed on the system. Uses bash sessions to verify
  * that keystrokes are delivered correctly.
