@@ -12,7 +12,7 @@ assignee: nickolaykondratyev
 ---
 
 
-WHEN i tried to run 
+WHEN I tried to run 
 ```
             val result = runner.runProcess("claude", "Say hello")
 
@@ -44,3 +44,5 @@ Daemon will be stopped at the end of the build after running out of JVM Metaspac
 > :app:run
 
 ```
+
+no-review: let's see if can get a prototype of this going quickly 
