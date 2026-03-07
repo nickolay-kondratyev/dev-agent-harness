@@ -1,11 +1,11 @@
 ---
 id: nid_xbgo7223zqolvxp9lgql6wdsc_E
 title: "setup claude md"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T14:15:05Z
-status_updated_iso: 2026-03-07T14:15:05Z
+status_updated_iso: 2026-03-07T16:17:12Z
 type: task
 priority: 1 
 assignee: nickolaykondratyev
