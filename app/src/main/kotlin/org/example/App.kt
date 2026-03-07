@@ -5,7 +5,6 @@ package org.example
 
 import com.asgard.core.lifecycle.use
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.asgard.core.processRunner.ProcessRunner
 import kotlinx.coroutines.runBlocking
 
 class App {
@@ -21,14 +20,9 @@ fun main() {
     // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
     runBlocking {
         SimpleConsoleOutFactory.standard().use { outFactory ->
-            val runner = ProcessRunner.standard(outFactory)
-
-            val result = runner.runProcess("claude", "Say hello")
-
-            println(result.trim())
-
-            println("AFTER CLAUDE CALL BACK TO KOTLIN")
-
+            val interactiveRunner = InteractiveProcessRunner(outFactory)
+            val result = interactiveRunner.runInteractive("claude")
+            println("Interactive session ended. Exit code: ${result.exitCode}")
         }
     }
 }
