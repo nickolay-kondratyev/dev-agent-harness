@@ -29,6 +29,12 @@ dependencies {
 
     // This dependency is used by the application.
     implementation(libs.guava)
+
+    // AsgardCore: general-purpose foundation library (ProcessRunner, Out logging, etc.)
+    implementation("com.asgard:asgardCore:1.0.0")
+
+    // Coroutines: required for runBlocking in main() and suspend ProcessRunner calls
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

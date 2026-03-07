@@ -12,3 +12,14 @@ plugins {
 
 rootProject.name = "nickolay-kondratyev_dev-agent-harness"
 include("app")
+
+// Include the full kotlin-mp build from the submodule as a composite build.
+// This makes com.asgard:asgardCore (and all other com.asgard/com.thorg artifacts)
+// resolvable directly from source without publishing to Maven.
+includeBuild("submodules/thorg-root/source/libraries/kotlin-mp") {
+    dependencySubstitution {
+        substitute(module("com.asgard:asgardCore")).using(project(":asgardCore"))
+        substitute(module("com.asgard:asgardCoreShared")).using(project(":asgardCoreShared"))
+        substitute(module("com.asgard:asgardCoreNodeJS")).using(project(":asgardCoreNodeJS"))
+    }
+}
