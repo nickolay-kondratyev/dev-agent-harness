@@ -1,5 +1,5 @@
 ---
-spec: "org.example.TmuxSessionManagerTest"
+spec: "org.example.TmuxSessionManagerIntegTest"
 status: PASSED
 failed: 0
 skipped: 0

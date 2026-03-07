@@ -14,7 +14,7 @@ import io.kotest.matchers.shouldBe
  * so they can run in CI environments.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxSessionManagerTest : AsgardDescribeSpec({
+class TmuxSessionManagerIntegTest : AsgardDescribeSpec({
 
     describe("GIVEN TmuxSessionManager").config(isIntegTestEnabled()) {
         val commandRunner = TmuxCommandRunner()
