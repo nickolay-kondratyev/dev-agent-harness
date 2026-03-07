@@ -123,6 +123,7 @@ This project uses a CLI ticket system=[tk] for task management.
 - USE `tk` to create new ticket for follow-up items.
   - Including any found pre-existing test failures.
 - USE `tk` to close tickets for completed tasks.
+
 <tk help>
 ticket - minimal ticket system with dependency tracking
 
@@ -167,17 +168,6 @@ Searches parent directories for _tickets/, stopping at .git boundary (override w
 Tickets stored as markdown files in _tickets/ (filenames derived from title)
 IDs are stored in frontmatter at 'id' field;
 </tk help>
-
-### Tags for change_log and tk
-<tags to use for change_log and tk>
-harness           # agent harness core orchestration
-harness.workflow  # workflow phases and coordination
-harness.cli       # CLI interface and argument parsing
-asgardCore        # asgard core foundation library integration
-agents            # agent management and communication
-file-io           # file-based communication between agents
-docs              # documentation and CLAUDE.md updates
-</tags to use for change_log and tk>
 
 ### WHEN Closing ticket THEN compress change log
 When you close the ticket see which change_log files have been created on your branch and compress them into one coherent change log.
