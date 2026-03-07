@@ -9,7 +9,7 @@ import com.asgard.core.out.OutFactory
  *
  * @param sessionName The name used to identify the session in tmux.
  */
-data class TmuxSession(val sessionName: String)
+data class TmuxSessionName(val sessionName: String)
 
 /**
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.
@@ -27,10 +27,10 @@ class TmuxSessionManager(
      *
      * @param sessionName Unique name for the tmux session.
      * @param command The command to run inside the tmux session.
-     * @return A [TmuxSession] representing the created session.
+     * @return A [TmuxSessionName] representing the created session.
      * @throws IllegalStateException if tmux fails to create the session.
      */
-    suspend fun createSession(sessionName: String, command: String): TmuxSession {
+    suspend fun createSession(sessionName: String, command: String): TmuxSessionName {
         out.info(
             "creating_tmux_session",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
@@ -48,7 +48,7 @@ class TmuxSessionManager(
             "tmux_session_created",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
         )
-        return TmuxSession(sessionName)
+        return TmuxSessionName(sessionName)
     }
 
     /**
@@ -57,7 +57,7 @@ class TmuxSessionManager(
      * @param session The session to kill.
      * @throws IllegalStateException if tmux fails to kill the session.
      */
-    suspend fun killSession(session: TmuxSession) {
+    suspend fun killSession(session: TmuxSessionName) {
         out.info(
             "killing_tmux_session",
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),

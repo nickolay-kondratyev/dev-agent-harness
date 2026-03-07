@@ -3,7 +3,7 @@ package org.example
 import com.asgard.core.out.impl.NoOpOutFactory
 import com.glassthought.tmux.TmuxCommandRunner
 import com.glassthought.tmux.TmuxCommunicator
-import com.glassthought.tmux.TmuxSession
+import com.glassthought.tmux.TmuxSessionName
 import com.glassthought.tmux.TmuxSessionManager
 import kotlinx.coroutines.runBlocking
 import org.junit.jupiter.api.AfterEach
@@ -23,7 +23,7 @@ class TmuxCommunicatorTest {
     private val commandRunner = TmuxCommandRunner()
     private val sessionManager = TmuxSessionManager(outFactory, commandRunner)
     private val communicator = TmuxCommunicator(outFactory, commandRunner)
-    private val createdSessions = mutableListOf<TmuxSession>()
+    private val createdSessions = mutableListOf<TmuxSessionName>()
     private val createdFiles = mutableListOf<File>()
 
     @AfterEach

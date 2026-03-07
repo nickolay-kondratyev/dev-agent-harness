@@ -22,7 +22,7 @@ class TmuxCommunicator(
      * @param text The text to type, followed by Enter.
      * @throws IllegalStateException if the send-keys command fails.
      */
-    suspend fun sendKeys(session: TmuxSession, text: String) {
+    suspend fun sendKeys(session: TmuxSessionName, text: String) {
         out.info(
             "sending_keys_to_tmux_session",
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
@@ -56,7 +56,7 @@ class TmuxCommunicator(
      * @param keys The raw keys to send.
      * @throws IllegalStateException if the send-keys command fails.
      */
-    suspend fun sendRawKeys(session: TmuxSession, keys: String) {
+    suspend fun sendRawKeys(session: TmuxSessionName, keys: String) {
         out.info(
             "sending_raw_keys_to_tmux_session",
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
