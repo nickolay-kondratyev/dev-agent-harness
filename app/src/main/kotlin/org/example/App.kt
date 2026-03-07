@@ -22,8 +22,13 @@ fun main() {
     runBlocking {
         SimpleConsoleOutFactory.standard().use { outFactory ->
             val runner = ProcessRunner.standard(outFactory)
-            val result = runner.runProcess("echo", "Hello from AsgardCore ProcessRunner This is coming from ECHO!")
+
+            val result = runner.runProcess("claude", "Say hello")
+
             println(result.trim())
+
+            println("AFTER CLAUDE CALL BACK TO KOTLIN")
+
         }
     }
 }
