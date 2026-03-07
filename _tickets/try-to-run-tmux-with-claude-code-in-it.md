@@ -1,11 +1,11 @@
 ---
 id: nid_zj8rww86omnzhz23lzk8znyf0_E
 title: "Try to run tmux with claude code in it"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T19:10:48Z
-status_updated_iso: 2026-03-07T19:10:48Z
+status_updated_iso: 2026-03-07T19:18:18Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
