@@ -32,6 +32,10 @@ data class InteractiveProcessResult(
  * ## Limitations
  * - `/dev/tty` approach is Unix-only; falls back to INHERIT on other platforms.
  * - Output cannot be captured — it flows directly to the terminal.
+ * - **Gradle's `:app:run` task does not work** — Gradle wraps the JVM in its own process group
+ *   without a real controlling terminal, so even `/dev/tty` redirection is insufficient.
+ *   Run via the installed distribution instead: `./gradlew :app:installDist` then
+ *   `./app/build/install/app/bin/app`.
  */
 class InteractiveProcessRunner(outFactory: OutFactory) {
     private val out = outFactory.getOutForClass(InteractiveProcessRunner::class)

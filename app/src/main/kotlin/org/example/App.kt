@@ -14,6 +14,13 @@ class App {
         }
 }
 
+// NOTE: Run via the installed distribution for interactive mode to work.
+// `./gradlew :app:run` does NOT work — Gradle wraps the JVM without a real controlling
+// terminal, breaking isatty() checks in interactive programs like `claude`.
+//
+// To run:
+//   ./gradlew :app:installDist
+//   ./app/build/install/app/bin/app
 fun main() {
     println(App().greeting)
 
