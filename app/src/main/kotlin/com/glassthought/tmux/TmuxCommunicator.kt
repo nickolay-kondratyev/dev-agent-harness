@@ -9,16 +9,8 @@ import com.glassthought.tmux.util.TmuxCommandRunner
 
 /**
  * Sends keystrokes and text to an existing tmux session.
- *
- * Delegates tmux command execution to [com.glassthought.tmux.util.TmuxCommandRunner].
  */
-@AnchorPoint("ap.3BCYPiR792a2B8I9ZONDwmvN.E")
-class TmuxCommunicator(
-    outFactory: OutFactory,
-    private val commandRunner: TmuxCommandRunner,
-) {
-    private val out = outFactory.getOutForClass(TmuxCommunicator::class)
-
+interface TmuxCommunicator {
     /**
      * Sends text followed by the Enter key to the given tmux session.
      *
@@ -26,7 +18,33 @@ class TmuxCommunicator(
      * @param text The text to type, followed by Enter.
      * @throws IllegalStateException if the send-keys command fails.
      */
-    suspend fun sendKeys(session: TmuxSessionName, text: String) {
+    suspend fun sendKeys(session: TmuxSessionName, text: String)
+
+    /**
+     * Sends raw keys to the given tmux session without appending Enter.
+     *
+     * Useful for sending special keys (e.g., "C-c", "Escape") or partial text.
+     *
+     * @param session The target tmux session.
+     * @param keys The raw keys to send.
+     * @throws IllegalStateException if the send-keys command fails.
+     */
+    suspend fun sendRawKeys(session: TmuxSessionName, keys: String)
+}
+
+/**
+ * Sends keystrokes and text to an existing tmux session.
+ *
+ * Delegates tmux command execution to [com.glassthought.tmux.util.TmuxCommandRunner].
+ */
+@AnchorPoint("ap.3BCYPiR792a2B8I9ZONDwmvN.E")
+class TmuxCommunicatorImpl(
+    outFactory: OutFactory,
+    private val commandRunner: TmuxCommandRunner,
+) : TmuxCommunicator {
+    private val out = outFactory.getOutForClass(TmuxCommunicatorImpl::class)
+
+    override suspend fun sendKeys(session: TmuxSessionName, text: String) {
         out.info(
             "sending_keys_to_tmux_session",
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
@@ -51,16 +69,7 @@ class TmuxCommunicator(
         }
     }
 
-    /**
-     * Sends raw keys to the given tmux session without appending Enter.
-     *
-     * Useful for sending special keys (e.g., "C-c", "Escape") or partial text.
-     *
-     * @param session The target tmux session.
-     * @param keys The raw keys to send.
-     * @throws IllegalStateException if the send-keys command fails.
-     */
-    suspend fun sendRawKeys(session: TmuxSessionName, keys: String) {
+    override suspend fun sendRawKeys(session: TmuxSessionName, keys: String) {
         out.info(
             "sending_raw_keys_to_tmux_session",
             Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),

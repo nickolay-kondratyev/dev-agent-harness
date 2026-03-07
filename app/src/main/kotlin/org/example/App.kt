@@ -6,9 +6,9 @@ package org.example
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.use
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.glassthought.tmux.util.TmuxCommandRunner
-import com.glassthought.tmux.TmuxCommunicator
+import com.glassthought.tmux.TmuxCommunicatorImpl
 import com.glassthought.tmux.TmuxSessionManager
+import com.glassthought.tmux.util.TmuxCommandRunner
 import kotlinx.coroutines.runBlocking
 
 
@@ -26,8 +26,8 @@ fun main() {
   runBlocking {
     SimpleConsoleOutFactory.standard().use { outFactory ->
       val commandRunner = TmuxCommandRunner()
-      val sessionManager = TmuxSessionManager(outFactory, commandRunner)
-      val communicator = TmuxCommunicator(outFactory, commandRunner)
+      val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
+      val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
 
       val sessionName = "agent-harness__${System.currentTimeMillis()}"
       println("Tmux session name: $sessionName")
@@ -35,7 +35,7 @@ fun main() {
       val session = sessionManager.createSession(sessionName, "claude")
 
       // tmux buffers keystrokes, so we can send immediately.
-      communicator.sendKeys(session, "Write 'hello world from tmux' to /tmp/out")
+      session.sendKeys("Write 'hello world from tmux' to /tmp/out")
 
       // The tmux session is intentionally left alive after main() exits.
       // Claude needs time to process the prompt. The user can attach to the session

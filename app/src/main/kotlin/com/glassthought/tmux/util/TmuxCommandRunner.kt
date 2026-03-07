@@ -6,7 +6,7 @@ import kotlinx.coroutines.withContext
 /**
  * Executes tmux CLI commands and returns the exit code.
  *
- * Shared infrastructure for [com.glassthought.tmux.TmuxSessionManager] and [com.glassthought.tmux.TmuxCommunicator].
+ * Shared infrastructure for [com.glassthought.tmux.TmuxSessionManager] and [com.glassthought.tmux.TmuxCommunicatorImpl].
  * Runs commands on [kotlinx.coroutines.Dispatchers.IO] to avoid blocking the coroutine dispatcher.
  */
 class TmuxCommandRunner {

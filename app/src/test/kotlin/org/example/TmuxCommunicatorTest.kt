@@ -2,9 +2,9 @@ package org.example
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.tmux.TmuxCommunicator
+import com.glassthought.tmux.TmuxCommunicatorImpl
+import com.glassthought.tmux.TmuxSession
 import com.glassthought.tmux.TmuxSessionManager
-import com.glassthought.tmux.data.TmuxSessionName
 import com.glassthought.tmux.util.TmuxCommandRunner
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
@@ -13,7 +13,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tests for [com.glassthought.tmux.TmuxCommunicator].
+ * Tests for [com.glassthought.tmux.TmuxCommunicatorImpl].
  *
  * Requires tmux to be installed on the system. Uses bash sessions to verify
  * that keystrokes are delivered correctly.
@@ -23,9 +23,9 @@ class TmuxCommunicatorTest : AsgardDescribeSpec({
 
     describe("GIVEN a tmux session running bash").config(isIntegTestEnabled()) {
         val commandRunner = TmuxCommandRunner()
-        val sessionManager = TmuxSessionManager(outFactory, commandRunner)
-        val communicator = TmuxCommunicator(outFactory, commandRunner)
-        val createdSessions = mutableListOf<TmuxSessionName>()
+        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
+        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+        val createdSessions = mutableListOf<TmuxSession>()
         val createdFiles = mutableListOf<File>()
 
         afterEach {
@@ -51,7 +51,7 @@ class TmuxCommunicatorTest : AsgardDescribeSpec({
                 val session = sessionManager.createSession(sessionName, "bash")
                 createdSessions.add(session)
 
-                communicator.sendKeys(session, "echo hello > ${outputFile.absolutePath}")
+                session.sendKeys("echo hello > ${outputFile.absolutePath}")
 
                 AsgardAwaitility.wait()
                     .pollDelay(100.milliseconds)

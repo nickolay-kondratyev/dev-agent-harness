@@ -1,8 +1,9 @@
 package org.example
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.tmux.TmuxCommunicatorImpl
+import com.glassthought.tmux.TmuxSession
 import com.glassthought.tmux.TmuxSessionManager
-import com.glassthought.tmux.data.TmuxSessionName
 import com.glassthought.tmux.util.TmuxCommandRunner
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
@@ -18,8 +19,9 @@ class TmuxSessionManagerTest : AsgardDescribeSpec({
 
     describe("GIVEN TmuxSessionManager").config(isIntegTestEnabled()) {
         val commandRunner = TmuxCommandRunner()
-        val sessionManager = TmuxSessionManager(outFactory, commandRunner)
-        val createdSessions = mutableListOf<TmuxSessionName>()
+        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
+        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+        val createdSessions = mutableListOf<TmuxSession>()
 
         afterEach {
             // Clean up any sessions created during tests.
@@ -33,41 +35,24 @@ class TmuxSessionManagerTest : AsgardDescribeSpec({
             createdSessions.clear()
         }
 
-        describe("WHEN createSession with bash") {
-            it("THEN session exists") {
-                val sessionName = "test-session-${System.currentTimeMillis()}"
-                val session = sessionManager.createSession(sessionName, "bash")
-                createdSessions.add(session)
-
-                sessionManager.sessionExists(sessionName) shouldBe true
-            }
-        }
-
-        describe("WHEN sessionExists with existing session") {
-            it("THEN returns true") {
+        describe("WHEN session is created") {
+            it("THEN exists() returns true") {
                 val sessionName = "test-exists-${System.currentTimeMillis()}"
                 val session = sessionManager.createSession(sessionName, "bash")
                 createdSessions.add(session)
 
-                sessionManager.sessionExists(sessionName) shouldBe true
-            }
-        }
-
-        describe("WHEN sessionExists with non-existent name") {
-            it("THEN returns false") {
-                val nonExistentName = "non-existent-session-${System.currentTimeMillis()}"
-                sessionManager.sessionExists(nonExistentName) shouldBe false
+                session.exists() shouldBe true
             }
         }
 
         describe("WHEN killSession is called on existing session") {
-            it("THEN session no longer exists") {
+            it("THEN exists() returns false") {
                 val sessionName = "test-kill-${System.currentTimeMillis()}"
                 // Do NOT add to createdSessions since we kill it explicitly.
                 val session = sessionManager.createSession(sessionName, "bash")
                 sessionManager.killSession(session)
 
-                sessionManager.sessionExists(sessionName) shouldBe false
+                session.exists() shouldBe false
             }
         }
     }

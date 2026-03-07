@@ -10,10 +10,12 @@ import com.glassthought.tmux.util.TmuxCommandRunner
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.
  *
  * Delegates tmux command execution to [com.glassthought.tmux.util.TmuxCommandRunner].
+ * Session interaction (sending keys, checking existence) is available via the returned [TmuxSession].
  */
 class TmuxSessionManager(
     outFactory: OutFactory,
     private val commandRunner: TmuxCommandRunner,
+    private val communicator: TmuxCommunicator,
 ) {
     private val out = outFactory.getOutForClass(TmuxSessionManager::class)
 
@@ -22,10 +24,10 @@ class TmuxSessionManager(
      *
      * @param sessionName Unique name for the tmux session.
      * @param command The command to run inside the tmux session.
-     * @return A [com.glassthought.tmux.data.TmuxSessionName] representing the created session.
+     * @return A [TmuxSession] representing the created session.
      * @throws IllegalStateException if tmux fails to create the session.
      */
-    suspend fun createSession(sessionName: String, command: String): TmuxSessionName {
+    suspend fun createSession(sessionName: String, command: String): TmuxSession {
         out.info(
             "creating_tmux_session",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
@@ -43,7 +45,12 @@ class TmuxSessionManager(
             "tmux_session_created",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
         )
-        return TmuxSessionName(sessionName)
+
+        return TmuxSession(
+            name = TmuxSessionName(sessionName),
+            communicator = communicator,
+            existsChecker = { sessionExists(sessionName) },
+        )
     }
 
     /**
@@ -52,32 +59,34 @@ class TmuxSessionManager(
      * @param session The session to kill.
      * @throws IllegalStateException if tmux fails to kill the session.
      */
-    suspend fun killSession(session: TmuxSessionName) {
+    suspend fun killSession(session: TmuxSession) {
         out.info(
             "killing_tmux_session",
-            Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
+            Val(session.name.sessionName, ValType.STRING_USER_AGNOSTIC),
         )
 
-        val exitCode = commandRunner.run("kill-session", "-t", session.sessionName)
+        val exitCode = commandRunner.run("kill-session", "-t", session.name.sessionName)
         if (exitCode != 0) {
             throw IllegalStateException(
-                "Failed to kill tmux session [${session.sessionName}]. Exit code: [${exitCode}]"
+                "Failed to kill tmux session [${session.name.sessionName}]. Exit code: [${exitCode}]"
             )
         }
 
         out.info(
             "tmux_session_killed",
-            Val(session.sessionName, ValType.STRING_USER_AGNOSTIC),
+            Val(session.name.sessionName, ValType.STRING_USER_AGNOSTIC),
         )
     }
 
     /**
      * Checks whether a tmux session with the given name currently exists.
      *
+     * Internal logic — exposed to callers via [TmuxSession.exists].
+     *
      * @param sessionName The session name to check.
      * @return true if the session exists, false otherwise.
      */
-    suspend fun sessionExists(sessionName: String): Boolean {
+    private suspend fun sessionExists(sessionName: String): Boolean {
         out.debug("checking_tmux_session_exists") {
             listOf(Val(sessionName, ValType.STRING_USER_AGNOSTIC))
         }
