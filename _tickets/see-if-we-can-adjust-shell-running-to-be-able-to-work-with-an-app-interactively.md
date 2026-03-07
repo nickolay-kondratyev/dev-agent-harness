@@ -1,11 +1,11 @@
 ---
 id: nid_8r4owxcdb41e8su29vblagn4j_E
 title: "see if we can adjust shell running to be able to work with an app interactively."
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-07T17:16:25Z
-status_updated_iso: 2026-03-07T17:16:25Z
+status_updated_iso: 2026-03-07T17:18:44Z
 type: 
 priority: 
 assignee: nickolaykondratyev
