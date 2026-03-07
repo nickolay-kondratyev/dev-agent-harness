@@ -11,3 +11,7 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
+Look through the :
+
+- ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/submodules/thorg-root/CLAUDE.md
+- ${THORG_KOTLIN_MP_ROOT}/CLAUDE.md
