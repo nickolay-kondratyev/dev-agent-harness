@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-07T23:10:45Z
 id: nid_wgr6tfn0labkt9py8h24ikzwq_E
 title: "Add gradle idea plugin to be able to exclude most of the submodule thorg root"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-07T22:10:23Z
-status_updated_iso: 2026-03-07T22:56:47Z
+status_updated_iso: 2026-03-07T23:10:45Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -31,3 +32,19 @@ includeBuild("submodules/thorg-root/source/libraries/kotlin-mp") {
 ```
 
 But the rest should be auto excluded by intellij to avoid using up indexing when we stand up the project.
+## Notes
+
+**2026-03-07T23:10:45Z**
+
+## Resolution
+
+Created root `build.gradle.kts` applying the Gradle `idea` plugin with `excludeDirs` configuration.
+
+Exclusion logic (three-level drill-down):
+1. Exclude all dirs directly under `thorg-root/` except `source/`
+2. Exclude all dirs under `source/` except `libraries/`
+3. Exclude all dirs under `source/libraries/` except `kotlin-mp/`
+
+This keeps `source/libraries/kotlin-mp` accessible for the composite build while excluding the bulk of the submodule from IntelliJ indexing.
+
+Build verified: `./gradlew tasks` and `./gradlew idea --dry-run` both pass.
