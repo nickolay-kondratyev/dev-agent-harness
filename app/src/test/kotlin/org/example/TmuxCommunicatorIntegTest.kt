@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
  * that keystrokes are delivered correctly.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxCommunicatorTest : AsgardDescribeSpec({
+class TmuxCommunicatorIntegTest : AsgardDescribeSpec({
 
     describe("GIVEN a tmux session running bash").config(isIntegTestEnabled()) {
         val commandRunner = TmuxCommandRunner()
