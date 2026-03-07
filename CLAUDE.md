@@ -1,4 +1,21 @@
 #generated_do_not_edit_directly
+<file name="0_env-requirement.md">
+
+## Environment Prerequisites (ap.MKHNCkA2bpT63NAvjCnvbvsb.E)
+
+### `THORG_ROOT` (required)
+The build depends on `THORG_ROOT` being set in the environment. Without it, `./gradlew :app:build` will fail.
+
+`THORG_ROOT` must point to the root of the `thorg-root` submodule (checked in under `submodules/thorg-root`):
+
+```bash
+export THORG_ROOT=$PWD/submodules/thorg-root
+```
+
+This is needed because the composite build in `settings.gradle.kts` includes
+`submodules/thorg-root/source/libraries/kotlin-mp`, and that build uses `THORG_ROOT` internally
+(e.g., for resolving version catalogs and sub-project paths).
+</file name="0_env-requirement.md">
 <file name="1_core_description.md">
 ## Project Overview
 
@@ -179,11 +196,11 @@ When you close the ticket see which change_log files have been created on your b
 
 | File | Description |
 |------|-------------|
-| ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/ai_input/memory/deep/dont_log_and_throw.md | Do NOT log and throw. Let exceptions bubble up, log at the top-most layer only. |
-| ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/ai_input/memory/deep/favor_functional_style.md | Prefer functional collection operations (map, filter, zip, takeWhile) over manual loops with index tracking. |
-| ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/ai_input/memory/deep/in_tests__fail_hard_never_mask.md | Tests must fail explicitly. No silent fallbacks, no conditional skipping of individual tests. Only entire test classes may be toggled. |
-| ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/ai_input/memory/deep/in_tests__one_assert_per_test.md | Structure tests with separate `it` blocks for each assertion. Use describe to group. Self-documenting. |
-| ${GIT_REPOS}/nickolay-kondratyev_dev-agent-harness/ai_input/memory/deep/out_logging_patterns.md | How to use Out structured logging. Covers Out interface, Val, ValType, and lazy debug patterns. |
+| $(git.repo_root)/ai_input/memory/deep/dont_log_and_throw.md | Do NOT log and throw. Let exceptions bubble up, log at the top-most layer only. |
+| $(git.repo_root)/ai_input/memory/deep/favor_functional_style.md | Prefer functional collection operations (map, filter, zip, takeWhile) over manual loops with index tracking. |
+| $(git.repo_root)/ai_input/memory/deep/in_tests__fail_hard_never_mask.md | Tests must fail explicitly. No silent fallbacks, no conditional skipping of individual tests. Only entire test classes may be toggled. |
+| $(git.repo_root)/ai_input/memory/deep/in_tests__one_assert_per_test.md | Structure tests with separate `it` blocks for each assertion. Use describe to group. Self-documenting. |
+| $(git.repo_root)/ai_input/memory/deep/out_logging_patterns.md | How to use Out structured logging. Covers Out interface, Val, ValType, and lazy debug patterns. |
 
 </deep_memory_pointers>
 </file name="z_deep_memory_pointers.md">
