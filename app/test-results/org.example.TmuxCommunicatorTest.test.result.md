@@ -5,4 +5,6 @@ failed: 0
 skipped: 0
 ---
 
-*No tests were run*
+- GIVEN a tmux session running bash
+  - WHEN sendKeys with echo command
+    - [PASS] THEN file is created with expected content
