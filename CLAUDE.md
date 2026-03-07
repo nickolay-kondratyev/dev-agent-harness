@@ -11,11 +11,7 @@ CLI Kotlin Agent Harness — orchestrates work by calling out to other agents an
 - **NOT thorg-specific** — general-purpose agent harness
 
 ### Architecture Principles
-- Constructor injection (manual DI, no framework, no singletons)
-- Structured logging via Out/OutFactory (never println)
-- Structured exceptions extending AsgardBaseException
-- Composition over inheritance
-- Favor immutability
+See `3_kotlin_standards.md` for full Kotlin development standards.
 </file name="1_core_description.md">
 <file name="2_claude_editing.md">
 Keep claude.md and related documentation up to date.

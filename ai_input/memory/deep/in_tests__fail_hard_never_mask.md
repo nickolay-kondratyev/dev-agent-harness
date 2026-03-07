@@ -21,8 +21,8 @@ try { loadConfig() } catch (e: Exception) { useDefaults() }
 **Conditional test skipping without explicit failure:**
 ```kotlin
 // BAD — test appears to pass when it didn't run
-@Test fun integTest() {
-    if (!hasDependency()) return  // silent skip
+it("THEN should process data") {
+    if (!hasDependency()) return@it  // silent skip
     // ...
 }
 ```
@@ -31,15 +31,17 @@ try { loadConfig() } catch (e: Exception) { useDefaults() }
 
 **Fail immediately with clear error messages:**
 ```kotlin
-// GOOD — fail in test setup, not silently skip
-@BeforeAll fun checkDependencies() {
-    require(isDependencyOnPath()) {
-        "Integration tests require 'dependency' on PATH. Current PATH: ${System.getenv("PATH")}"
+// GOOD — guard entire describe block with enabledIf
+describe("GIVEN integration environment").config(enabledIf = { isIntegTestEnabled() }) {
+    describe("WHEN processing data") {
+        it("THEN should succeed") {
+            // test logic
+        }
     }
 }
 
 // GOOD — explicit assertion for required config
-@Test fun integTest() {
+it("THEN should use config value") {
     val configValue = System.getenv("CONFIG_VAR")
         ?: fail("CONFIG_VAR environment variable must be set for integration tests")
     // ...
