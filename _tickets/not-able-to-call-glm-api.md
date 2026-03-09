@@ -1,11 +1,11 @@
 ---
 id: nid_wnu7f6eeozzarewg3uu1p5w0q_E
 title: "Not able to call GLM api"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-09T18:22:36Z
-status_updated_iso: 2026-03-09T18:22:36Z
+status_updated_iso: 2026-03-09T18:24:01Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
