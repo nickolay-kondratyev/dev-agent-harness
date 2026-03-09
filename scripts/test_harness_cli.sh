@@ -116,6 +116,46 @@ test_port_file_missing() {
   rm -rf "${TEMP_HOME}"
 }
 
+test_port_file_no_trailing_newline() {
+  echo "GIVEN: port file exists but has no trailing newline"
+
+  local ORIGINAL_HOME="${HOME}"
+  TEMP_HOME=$(mktemp -d)
+  export HOME="${TEMP_HOME}"
+  mkdir -p "${TEMP_HOME}/.chainsaw_agent_harness/server"
+  # [printf]: writes port WITHOUT trailing newline (unlike echo)
+  printf "12345" > "${TEMP_HOME}/.chainsaw_agent_harness/server/port.txt"
+  export HARNESS_CLI_DRY_RUN=true
+
+  run_capturing "${HARNESS_CLI}" done
+  echo "  WHEN: 'done' is run with no-newline port file"
+  assert_equals "0" "${CAPTURED_EXIT_CODE}" "THEN: exits 0 (read -r does not cause silent failure)"
+  assert_contains "${CAPTURED_STDOUT}" "URL=http://localhost:12345/agent/done" "THEN: port is correctly read"
+
+  unset HARNESS_CLI_DRY_RUN
+  export HOME="${ORIGINAL_HOME}"
+  rm -rf "${TEMP_HOME}"
+}
+
+test_invalid_port_value() {
+  echo "GIVEN: port file contains a non-numeric value"
+
+  local ORIGINAL_HOME="${HOME}"
+  TEMP_HOME=$(mktemp -d)
+  export HOME="${TEMP_HOME}"
+  mkdir -p "${TEMP_HOME}/.chainsaw_agent_harness/server"
+  echo "abc" > "${TEMP_HOME}/.chainsaw_agent_harness/server/port.txt"
+
+  run_capturing "${HARNESS_CLI}" done
+  echo "  WHEN: 'done' command is run"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "Invalid port value" "THEN: stderr mentions 'Invalid port value'"
+  assert_contains "${CAPTURED_STDERR}" "abc" "THEN: stderr includes the bad value"
+
+  export HOME="${ORIGINAL_HOME}"
+  rm -rf "${TEMP_HOME}"
+}
+
 test_missing_arguments() {
   echo "GIVEN: commands that require arguments"
 
@@ -255,6 +295,10 @@ echo ""
 test_help_output
 echo ""
 test_port_file_missing
+echo ""
+test_port_file_no_trailing_newline
+echo ""
+test_invalid_port_value
 echo ""
 test_missing_arguments
 echo ""

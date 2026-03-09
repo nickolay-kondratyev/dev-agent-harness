@@ -19,8 +19,10 @@ _read_port() {
   fi
 
   local port
-  # [read -r]: naturally strips trailing newline from port file
-  read -r port < "${PORT_FILE}"
+  # [read -r]: naturally strips trailing newline from port file.
+  # [|| true]: read returns 1 at EOF when file lacks a trailing newline;
+  # suppress to let the regex validation below handle empty/invalid values.
+  read -r port < "${PORT_FILE}" || true
 
   if [[ ! "${port}" =~ ^[0-9]+$ ]]; then
     echo "ERROR: Invalid port value [${port}] in [${PORT_FILE}]" >&2
@@ -96,9 +98,10 @@ main() {
   local BRANCH
   BRANCH=$(_get_branch)
 
+  local json_body
+
   case "$1" in
     done)
-      local json_body
       json_body=$(jq -n --arg branch "${BRANCH}" '{branch: $branch}')
       _post "done" "${json_body}"
       ;;
@@ -107,7 +110,6 @@ main() {
         echo "ERROR: question command requires a text argument" >&2
         exit 1
       fi
-      local json_body
       json_body=$(jq -n --arg branch "${BRANCH}" --arg question "$2" \
         '{branch: $branch, question: $question}')
       _post "question" "${json_body}"
@@ -117,13 +119,11 @@ main() {
         echo "ERROR: failed command requires a reason argument" >&2
         exit 1
       fi
-      local json_body
       json_body=$(jq -n --arg branch "${BRANCH}" --arg reason "$2" \
         '{branch: $branch, reason: $reason}')
       _post "failed" "${json_body}"
       ;;
     status)
-      local json_body
       json_body=$(jq -n --arg branch "${BRANCH}" '{branch: $branch}')
       _post "status" "${json_body}"
       ;;

@@ -108,6 +108,7 @@ $HOME/.chainsaw_agent_harness/server/port.txt
 Server starts once at harness startup, stays alive across all phases.
 
 ### Agent CLI Script
+<!-- ref.ap.8PB8nMd93D3jipEWhME5n.E -- implementation in scripts/harness-cli-for-agent.sh -->
 
 **`harness-cli-for-agent.sh`** — bash script wrapping curl calls:
 - Lives on `$PATH` of the started agent
