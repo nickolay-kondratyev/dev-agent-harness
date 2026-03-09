@@ -43,6 +43,9 @@ dependencies {
     // org.json: lightweight JSON construction and parsing for LLM API request/response bodies
     implementation("org.json:json:20240303")
 
+    // snakeyaml: YAML parsing for ticket and role markdown frontmatter
+    implementation("org.yaml:snakeyaml:2.2")
+
     // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

@@ -34,6 +34,8 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 ## CLI Entry Point
 
+ap.mmcagXtg6ulznKYYNKlNP.E
+
 **picocli** for CLI parsing. V1 has a single subcommand:
 
 ```
