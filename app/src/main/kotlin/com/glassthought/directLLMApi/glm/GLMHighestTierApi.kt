@@ -25,7 +25,8 @@ import org.json.JSONObject
  * @param httpClient Shared OkHttp client instance. Callers should reuse the returned
  *   [DirectLLM] instance rather than calling the factory repeatedly, because OkHttp
  *   recommends a single shared client for connection pooling.
- * @param modelName The model identifier to send in the API request (e.g. "claude-3-5-sonnet-20241022").
+ * @param modelName The model identifier to send in the API request (e.g. "glm-5").
+ * @param maxTokens Maximum tokens for the response (required by Anthropic API).
  * @param apiEndpoint The Anthropic-compatible endpoint URL.
  * @param apiToken API key for authentication (sent as x-api-key header).
  */
@@ -33,6 +34,7 @@ class GLMHighestTierApi(
     outFactory: OutFactory,
     private val httpClient: OkHttpClient,
     private val modelName: String,
+    private val maxTokens: Int,
     private val apiEndpoint: String,
     private val apiToken: String,
 ) : DirectLLM {
@@ -99,7 +101,7 @@ class GLMHighestTierApi(
     private fun buildRequestBody(prompt: String): String {
         return JSONObject().apply {
             put("model", modelName)
-            put("max_tokens", MAX_TOKENS)
+            put("max_tokens", maxTokens)
             put(
                 "messages", JSONArray().apply {
                     put(JSONObject().apply {
@@ -149,7 +151,5 @@ class GLMHighestTierApi(
 
     companion object {
         private const val MAX_ERROR_BODY_SNIPPET_LENGTH = 500
-        /** Maximum tokens for the response (Anthropic API requires this parameter). */
-        private const val MAX_TOKENS = 4096
     }
 }

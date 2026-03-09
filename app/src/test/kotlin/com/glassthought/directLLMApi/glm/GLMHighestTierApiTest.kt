@@ -20,7 +20,8 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
     val httpClient = OkHttpClient.Builder()
         .readTimeout(5, TimeUnit.SECONDS)
         .build()
-    val modelName = "claude-3-5-sonnet-20241022"
+    val modelName = "glm-5"
+    val maxTokens = 4096
     val apiToken = "test-token-123"
 
     fun successResponseJson(content: String): String {
@@ -50,6 +51,7 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
             outFactory = outFactory,
             httpClient = httpClient,
             modelName = modelName,
+            maxTokens = maxTokens,
             apiEndpoint = server.url("/chat/completions").toString(),
             apiToken = apiToken,
         )
@@ -124,7 +126,7 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
                     val recorded = fixture.server.takeRequest()
                     val body = JSONObject(recorded.body.readUtf8())
                     body.has("max_tokens") shouldBe true
-                    body.getInt("max_tokens") shouldBe 4096
+                    body.getInt("max_tokens") shouldBe maxTokens
                 }
             }
 

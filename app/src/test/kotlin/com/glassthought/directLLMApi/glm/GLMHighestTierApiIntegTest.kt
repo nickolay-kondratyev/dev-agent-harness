@@ -34,7 +34,8 @@ class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
         val api = GLMHighestTierApi(
             outFactory = outFactory,
             httpClient = httpClient,
-            modelName = config.zAiGlmConfig.highestTier,
+            modelName = config.zAiGlmConfig.modelName,
+            maxTokens = config.zAiGlmConfig.maxTokens,
             apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
             apiToken = apiToken,
         )
