@@ -33,6 +33,10 @@ data class AppDependencies(
  */
 interface Initializer {
     fun initialize(): AppDependencies
+
+    companion object{
+        fun standard(): Initializer = InitializerImpl()
+    }
 }
 
 class InitializerImpl : Initializer {
