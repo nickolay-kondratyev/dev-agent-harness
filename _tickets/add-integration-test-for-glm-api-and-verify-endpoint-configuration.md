@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-09T20:50:16Z
 id: nid_7v3qgmsyt7rzzsrar2w8vll4n_E
 title: "Add integration test for GLM API and verify endpoint configuration"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T20:39:13Z
-status_updated_iso: 2026-03-09T20:47:23Z
+status_updated_iso: 2026-03-09T20:50:16Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -47,3 +48,15 @@ export ANTHROPIC_AUTH_TOKEN="${ZAI_API_KEY}"
 - API call returns successful response with text content
 - Response parsing correctly extracts content from API response
 
+
+## Notes
+
+**2026-03-09T20:50:10Z**
+
+## Resolution
+
+Root cause: `Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT` was set to `https://api.z.ai/api/anthropic` (the base URL), but the Anthropic Messages API requires the full path `/v1/messages` appended.
+
+Fix: Updated endpoint to `https://api.z.ai/api/anthropic/v1/messages`.
+
+Integration test `GLMHighestTierApiIntegTest` already existed and passes with the corrected endpoint when run with `-PrunIntegTests=true` and `Z_AI_GLM_API_TOKEN` set.
