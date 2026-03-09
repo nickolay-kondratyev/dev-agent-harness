@@ -40,8 +40,10 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 chainsaw run --workflow <name> --ticket <path>
 ```
 
+- `--ticket` **(required)**: path to a ticket markdown file. Chainsaw always operates on a ticket.
+  - Ticket is a markdown file with YAML frontmatter containing at minimum an `id` field and `title` field.
+  - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
-- `--ticket`: path to the ticket markdown file
 
 On startup, checks for existing `current_state.json`. If found, offers to resume from last checkpoint or start fresh.
 
@@ -471,11 +473,12 @@ Same pattern: `planning/PLANNER/` and `planning/PLAN_REVIEWER/` directories are 
 
 ## Git Branch / Feature Naming
 
-Branch format: `{TICKET_ID}__{slugified_title}__try-{N}`
+Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
-- `TICKET_ID`: from the ticket being worked
-- `slugified_title`: compressed via `DirectLLMApi(QuickCheap)` if long
-- `try-{N}`: incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
+- `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
+- `slugified_title`: the ticket `title` slugified (lowercase, hyphens); compressed via `DirectLLMApi(QuickCheap)` if too long
+- `try-{N}`: starts at 1, incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
+- Delimiter between components: `__` (double underscore)
 
 ## Harness-Level Resume
 
