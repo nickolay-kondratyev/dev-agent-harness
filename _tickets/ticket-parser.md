@@ -1,11 +1,11 @@
 ---
 id: nid_r9on08uqjmumuc6wi2c53e8p9_E
 title: "Ticket Parser"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-09T23:05:48Z
-status_updated_iso: 2026-03-09T23:05:48Z
+status_updated_iso: 2026-03-09T23:26:29Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
