@@ -1,5 +1,6 @@
 package com.glassthought.initializer
 
+import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
 import com.glassthought.Constants
@@ -14,15 +15,27 @@ import java.util.concurrent.TimeUnit
 
 /**
  * Encapsulates all application-level dependencies created during initialization.
- * The [outFactory] must be closed by the caller via `.use{}`.
+ *
+ * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
+ * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
  */
-data class AppDependencies(
+class AppDependencies(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
     val tmuxCommunicator: TmuxCommunicator,
     val tmuxSessionManager: TmuxSessionManager,
     val glmDirectLLM: DirectLLM,
-)
+    private val httpClient: OkHttpClient,
+) : AsgardCloseable {
+
+    override suspend fun close() {
+        // Shut down OkHttpClient connection and thread pools to prevent resource leaks
+        // in long-running server usage. Order matters: dispatcher first, then connections.
+        httpClient.dispatcher.executorService.shutdown()
+        httpClient.connectionPool.evictAll()
+        outFactory.close()
+    }
+}
 
 /**
  * Root of all dependency wiring.
@@ -48,7 +61,11 @@ class InitializerImpl : Initializer {
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
 
-        val glmDirectLLM = createGLMDirectLLM(outFactory)
+        val httpClient = OkHttpClient.Builder()
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+
+        val glmDirectLLM = createGLMDirectLLM(outFactory, httpClient)
 
         return AppDependencies(
             outFactory = outFactory,
@@ -56,22 +73,17 @@ class InitializerImpl : Initializer {
             tmuxCommunicator = communicator,
             tmuxSessionManager = sessionManager,
             glmDirectLLM = glmDirectLLM,
+            httpClient = httpClient,
         )
     }
 
-    private fun createGLMDirectLLM(outFactory: OutFactory): DirectLLM {
+    private fun createGLMDirectLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectLLM {
         val config = Constants.getConfigurationObject()
 
         val apiToken = System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
             ?: throw IllegalStateException(
                 "Required environment variable [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] is not set"
             )
-
-        // OkHttpClient lifecycle is tied to process lifetime, which is acceptable
-        // for a CLI application. For long-running processes, add proper shutdown.
-        val httpClient = OkHttpClient.Builder()
-            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-            .build()
 
         return GLMHighestTierApi(
             outFactory = outFactory,

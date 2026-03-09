@@ -22,7 +22,7 @@ fun main() {
 
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {
-    deps.outFactory.use { _ ->
+    deps.use { _ ->
       val sessionName = "agent-harness__${System.currentTimeMillis()}"
       println("Tmux session name: $sessionName")
 
