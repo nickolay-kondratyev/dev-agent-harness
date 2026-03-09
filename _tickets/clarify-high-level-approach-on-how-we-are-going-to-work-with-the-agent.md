@@ -13,7 +13,7 @@ assignee: nickolaykondratyev
 
 # Chainsaw — High-Level Design (V1)
 
-Codename: **CHAINSAW**. Will appear in package names (manual rename, not part of this ticket).
+Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
 
 ## Context
 
@@ -24,7 +24,7 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 ## What the Harness Does
 
 - Reads a task/ticket
-- Orchestrates workflow phases (defined in XML)
+- Orchestrates workflow phases (defined in **JSON**)
 - Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
 - Runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for entire harness process
 - Manages file-based context (PUBLIC.md / PRIVATE.md / SHARED_CONTEXT.md)
@@ -34,7 +34,7 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 ## CLI Entry Point
 
-V1 has a single subcommand:
+**picocli** for CLI parsing. V1 has a single subcommand:
 
 ```
 chainsaw run --workflow <name> --ticket <path>
@@ -49,11 +49,11 @@ On startup, checks for existing `current_state.json`. If found, offers to resume
 
 ## Sub-Agent Invocation — TMUX Only
 
-All agents are spawned as **interactive TMUX sessions**. `InteractiveProcessRunner` was a prototype
-stepping stone — V1 uses TMUX exclusively via `TmuxSessionManager` + `TmuxCommunicator`.
+All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
+`InteractiveProcessRunner` was a prototype — **remove it**.
 
-- `CodeAgent` abstraction with `ClaudeCodeAgent` implementation
-- Leverages subscription pricing; abstraction allows swapping agent implementations
+- `CodeAgent` interface with `ClaudeCodeAgent` implementation
+- Leverages subscription pricing; interface allows swapping agent implementations
 - **Strictly serial** execution for V1 (1 harness → 1 TMUX session at a time)
 - **Separate sessions per phase** — each phase spawns a fresh agent. Context carries via files.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
@@ -90,14 +90,26 @@ CodeAgent.run(
 - **Agent → Harness**: HTTP POST via `harness-cli-for-agent.sh` (wraps curl)
 - **Harness → Agent**: TMUX `send-keys` (only way to communicate with running agents)
 
-**Harness** starts Ktor CIO HTTP server on a fixed port.
-- Port set via env var: `CHAINSAW_AGENT_HARNESS__SERVER_PORT`
-- Exported into the TMUX session before agent starts
-- Server starts once at harness startup, stays alive across all phases
+### Server Port — File-Based Discovery
 
-**Agent** communicates back using **bash CLI script**: `harness-cli-for-agent.sh`
+Server binds to **port 0** (OS-assigned). On startup, writes the assigned port to:
+```
+$HOME/.chainsaw_agent_harness/server/port.txt
+```
+
+- `harness-cli-for-agent.sh` reads this file to construct the server URL
+- Single helper method in the CLI encapsulates URL construction
+- On server shutdown, this file is **deleted**
+- CLI errors out if file does not exist (server not running)
+- **No env var needed** — eliminates port collision risk entirely
+
+Server starts once at harness startup, stays alive across all phases.
+
+### Agent CLI Script
+
+**`harness-cli-for-agent.sh`** — bash script wrapping curl calls:
 - Lives on `$PATH` of the started agent
-- Wraps `curl` calls to the harness server
+- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
 - Agent receives `--help` content in its instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
 
@@ -120,12 +132,12 @@ All structured/formatted content sent to agents goes through temp files:
 
 All requests include the **git branch** as identifier (key for future parallelism).
 
-### Q&A Flow
+### Q&A Flow — Attended Only (V1)
 
 1. Agent calls `harness-cli-for-agent.sh question "How should I handle X?"`
 2. CLI POSTs to `/agent/question` with branch + question text
 3. Harness presents question to human (stdout/interactive)
-4. Human answers
+4. Human answers (V1: human must be present; no autonomous fallback)
 5. Harness writes answer to temp file (`$HOME/.chainsaw_agent_harness/tmp/agent_comm/`)
 6. Harness sends file path to agent via TMUX `send-keys`
 7. Harness responds 200 to the blocked curl (unblocking agent CLI script)
@@ -133,7 +145,7 @@ All requests include the **git branch** as identifier (key for future parallelis
 
 ### Agent Lifecycle — New Session
 
-1. Harness creates TMUX session, exports `CHAINSAW_AGENT_HARNESS__SERVER_PORT`
+1. Harness creates TMUX session
 2. Harness starts agent (e.g., `claude`) in the TMUX session
 3. Harness sends Wingman GUID handshake (plain text, directly via send-keys)
 4. Wingman resolves session ID from GUID
@@ -173,7 +185,7 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 |---|---|---|
 | `NoStatusCallbackTimeOutUseCase` | No callback after X min | Ping agent via TMUX send-keys |
 | `NoReplyToPingUseCase` | No `/agent/status` reply after Y min | Mark as CRASHED, kill TMUX, attempt resume |
-| `FailedToExecutePlanUseCase` | Agent calls `/agent/failed` during plan execution | Spin up cleanup agent, summarize failure, reset changes, re-open ticket |
+| `FailedToExecutePlanUseCase` | Agent calls `/agent/failed` during plan execution | Spin up cleanup agent, enrich ticket, reset codebase, re-open ticket |
 
 - **Simple encapsulated objects** — NOT a state machine pattern
 - Live in their own namespace, separate from detailed implementation
@@ -182,10 +194,10 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 ### FailedToExecutePlanUseCase Detail
 
 When plan execution hits blocking issues:
-1. Spin up a **cleanup agent** (read-only on codebase)
-2. Cleanup agent analyzes & summarizes the approach taken and why it failed
-3. Summary written into the ticket
-4. Git changes reset (only summary and failure notes preserved)
+1. Spin up a **cleanup agent** (full write access — needs to run cleanup commands)
+2. Cleanup agent analyzes the approach taken and why it failed
+3. Writes failure summary + learnings into the ticket (so next retry is better informed)
+4. Runs cleanup commands to restore codebase to starting state
 5. Ticket re-opened via `tk reopen <id>`
 
 ---
@@ -194,13 +206,13 @@ When plan execution hits blocking issues:
 
 **Problem:** Claude Code doesn't expose its session ID to the agent itself.
 
-**Solution:** Wingman interface discovers session IDs externally.
+**Solution:** `Wingman` interface + `ClaudeCodeWingman` implementation.
 
 1. Harness generates a GUID for each new session
 2. Harness sends GUID to agent as first message (plain text, directly): `"Here is a GUID: [$GUID]. We will use it to identify this session."`
 3. `ClaudeCodeWingman` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
 4. Matched filename = session ID (e.g., `77d5b7ea-cf04-453b-8867-162404763e18.jsonl`)
-5. Session ID stored in `.ai_out/${feature}/${git_branch}/phases/${part}/${ROLE}/session_ids/${timestamp}.json`
+5. Session ID stored in `.ai_out/${git_branch}/phases/${part}/${ROLE}/session_ids/${timestamp}.json`
 6. Enables session resumption after crashes
 
 **Not used during resume** — session ID already known from prior Wingman resolution.
@@ -223,20 +235,24 @@ enum ModelTier { QuickCheap, Medium }
 
 ---
 
-## Workflow Definition — Hybrid (Kotlin + XML)
+## Workflow Definition — Kotlin + JSON
 
-Core engine in Kotlin; workflow phases defined in XML under `./config/workflows/`.
+Core engine in Kotlin; workflow phases defined in **JSON** under `./config/workflows/`.
+JSON chosen because: 1) easy for LLMs to generate during planning phase, 2) strong tooling support.
+
+**Serialization: Jackson + Kotlin module** throughout (workflow definitions, current_state.json, DirectLLMApi responses).
 
 ### Straightforward Workflow (static phases)
 
-```xml
-<workflow name="straightforward">
-  <phase name="IMPLEMENTATION" role="IMPLEMENTOR_WITH_SELF_PLAN"
-         mode="read-write" />
-  <phase name="REVIEW" role="IMPLEMENTATION_REVIEWER"
-         mode="read-only" depends-on="IMPLEMENTATION" />
-  <iteration over="IMPLEMENTATION,REVIEW" max="4" />
-</workflow>
+```json
+{
+  "name": "straightforward",
+  "phases": [
+    { "name": "IMPLEMENTATION", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "mode": "read-write" },
+    { "name": "REVIEW", "role": "IMPLEMENTATION_REVIEWER", "mode": "read-only", "dependsOn": "IMPLEMENTATION" }
+  ],
+  "iteration": { "over": ["IMPLEMENTATION", "REVIEW"], "max": 4 }
+}
 ```
 
 Single implementation part, single review. No dynamic phase generation.
@@ -278,9 +294,9 @@ A `ContextProvider` interface is responsible for assembling context packages for
 ## File Structure
 
 ```
-.ai_out/${feature}/${git_branch}/
+.ai_out/${git_branch}/
 ├── harness_private/
-│   ├── current_state.json                              # Serialized workflow state; updated as phases progress; enables harness-level resume
+│   ├── current_state.json                              # Serialized workflow state; enables harness-level resume
 │   └── PRIVATE.md                                      # Harness internal context (if needed)
 ├── shared/
 │   ├── SHARED_CONTEXT.md                               # Cross-cutting context for ALL agents (agents can modify)
@@ -302,6 +318,11 @@ A `ContextProvider` interface is responsible for assembling context packages for
 **Temp files for agent communication:**
 ```
 $HOME/.chainsaw_agent_harness/tmp/agent_comm/           # Temp instruction/answer files sent to agents
+```
+
+**Server port file:**
+```
+$HOME/.chainsaw_agent_harness/server/port.txt           # Written on startup, deleted on shutdown
 ```
 
 ### Iteration within a part
@@ -337,22 +358,43 @@ Branch format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
 ---
 
+## Key Technology Decisions
+
+| Decision | Choice | Rationale |
+|---|---|---|
+| Workflow format | **JSON** | Easy for LLMs to generate; strong tooling |
+| JSON library | **Jackson + Kotlin module** | Battle-tested, runtime reflection |
+| CLI parser | **picocli** | Mature, annotation-driven |
+| HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
+| Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
+| Session tracking | **Wingman interface** | `ClaudeCodeWingman` impl; abstracted for future agent types |
+| Package | **com.glassthought.chainsaw** | Chainsaw as sub-package under glassthought |
+| Q&A mode | **Attended only (V1)** | Human must be at terminal |
+| Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
+
+## Cleanup Items
+
+- **Remove `InteractiveProcessRunner`** — prototype, TMUX is the only path
+- **Move classes from `org.example`** to `com.glassthought.chainsaw`
+
+---
+
 ## V1 Scope Summary
 
-1. CLI: `chainsaw run --workflow <name> --ticket <path>`
-2. TMUX-based agent invocation (`CodeAgent` abstraction, `ClaudeCodeAgent` impl)
-3. Ktor CIO HTTP server (starts once, alive for entire harness process) for agent→harness callbacks (done/question/failed/status)
-4. Bash CLI script (`harness-cli-for-agent.sh`) for agents to call back
-5. Wingman for session ID discovery
-6. File-based cross-agent context — phase-oriented directory structure
+1. CLI: `chainsaw run --workflow <name> --ticket <path>` (picocli)
+2. TMUX-based agent invocation (`CodeAgent` interface, `ClaudeCodeAgent` impl)
+3. Ktor CIO HTTP server (port 0, file-based discovery) for agent→harness callbacks (done/question/failed/status)
+4. Bash CLI script (`harness-cli-for-agent.sh`) for agents to call back (reads port from file)
+5. Wingman interface + ClaudeCodeWingman for session ID discovery
+6. File-based cross-agent context — phase-oriented directory structure under `.ai_out/${git_branch}/`
 7. Temp file pattern for all structured content delivery to agents
-8. XML workflow definition (`straightforward` static; `with-planning` dynamic)
+8. JSON workflow definitions (`straightforward` static; `with-planning` dynamic)
 9. ContextProvider interface for assembling context packages
 10. Hybrid phase transitions (automatic + LLM-evaluated via DirectLLMApi returning structured JSON)
 11. Agent health monitoring: timeout → ping → crash detection (UseCase pattern)
-12. FailedToExecutePlanUseCase: cleanup agent → summarize failure → reset → re-open ticket
+12. FailedToExecutePlanUseCase: cleanup agent (write access) → enrich ticket → restore starting state → re-open ticket
 13. DirectLLMApi for harness decisions (GLM QuickCheap tier first)
 14. Git commits between phases; branch naming with try-N for retries
-15. `current_state.json` for harness-level resume
+15. `current_state.json` for harness-level resume (Jackson serialization)
 16. Strictly serial execution (1 harness → 1 agent at a time)
 17. Separate sessions per phase (individual agent resume deferred to V2)
