@@ -242,44 +242,159 @@ JSON chosen because: 1) easy for LLMs to generate during planning phase, 2) stro
 
 **Serialization: Jackson + Kotlin module** throughout (workflow definitions, current_state.json, DirectLLMApi responses).
 
-### Straightforward Workflow (static phases)
+**Workflow resolution**: `--workflow <name>` → loads `./config/workflows/<name>.json`. Fail-fast if not found.
+
+### Shared Schema — Parts
+
+Both static and dynamic workflows use the same **parts** schema. One parser handles all workflows.
+
+A **part** is a sequential unit of work with an ordered list of phases (typically implementor → reviewer) and an iteration config:
 
 ```json
 {
-  "name": "straightforward",
-  "phases": [
-    { "name": "IMPLEMENTATION", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "mode": "read-write" },
-    { "name": "REVIEW", "role": "IMPLEMENTATION_REVIEWER", "mode": "read-only", "dependsOn": "IMPLEMENTATION" }
-  ],
-  "iteration": { "over": ["IMPLEMENTATION", "REVIEW"], "max": 4 }
+  "parts": [
+    {
+      "name": "part_name",
+      "description": "What this part accomplishes",
+      "phases": [
+        { "role": "SOME_IMPLEMENTOR" },
+        { "role": "SOME_REVIEWER" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
 }
 ```
 
-Single implementation part, single review. No dynamic phase generation.
+- Parts execute **sequentially** (part_1 completes before part_2 starts)
+- Within a part, phases execute sequentially (implementor → reviewer)
+- Iteration loops back within the part (implementor ↔ reviewer) up to `max` times
 
-### With-Planning Workflow (dynamic phases)
+### Straightforward Workflow (static parts)
 
-When `--workflow with-planning` is used:
+```json
+// config/workflows/straightforward.json
+{
+  "name": "straightforward",
+  "parts": [
+    {
+      "name": "main",
+      "description": "Implement and review",
+      "phases": [
+        { "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
+        { "role": "IMPLEMENTATION_REVIEWER" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}
+```
 
-1. **Planning phase** runs first: planner agent performs thorough exploration, clarification, then outputs `PLAN.md` with a structured JSON block defining parts and their roles
-2. Harness parses the plan's JSON into a dynamic phase sequence
-3. Phases execute per the plan:
+Single part, single iteration loop. No planning, no dynamic phase generation.
+
+### With-Planning Workflow (planning loop + dynamic execution)
+
+```json
+// config/workflows/with-planning.json
+{
+  "name": "with-planning",
+  "planningPhases": [
+    { "role": "PLANNER" },
+    { "role": "PLAN_REVIEWER" }
+  ],
+  "planningIteration": { "max": 3 },
+  "executionPhasesFrom": "plan.json"
+}
+```
+
+#### Startup Flow — With Planning
 
 ```
-phases/
-├── part_1/
-│   ├── UI_DESIGNER/       # e.g., mockups
-│   └── UI_REVIEWER/
-├── part_2/
-│   ├── STANDARD_IMPLEMENTOR/
-│   └── STANDARD_REVIEWER/
+1. Load with-planning.json
+2. PLANNING LOOP:
+   a. Spawn PLANNER agent (explores codebase, asks questions via Q&A, writes plan)
+      - Planner receives: ticket, role catalog, plan format instructions
+      - Planner outputs: PLAN.md (human-readable) + plan.json (machine-readable)
+   b. Spawn PLAN_REVIEWER agent (reviews the plan)
+   c. LLM evaluates: plan approved? → exit loop / needs revision? → back to (a)
+   d. Max 3 iterations
+3. Harness parses plan.json → resolves into parts (same schema as straightforward)
+4. Resolved parts stored in-memory + persisted in current_state.json (for resume)
+5. EXECUTION: parts execute sequentially, each with its own iteration loop
+6. If major blocking issues during execution → FailedToExecutePlanUseCase
 ```
 
-4. If blocking issues found during plan execution → `FailedToExecutePlanUseCase`
+#### Planner Output — Separate Files
+
+```
+.ai_out/${git_branch}/shared/plan/
+├── PLAN.md        # Human-readable plan (rationale, approach, risks)
+└── plan.json      # Machine-readable (parts schema, parsed by harness)
+```
+
+Example `plan.json`:
+```json
+{
+  "parts": [
+    {
+      "name": "ui_design",
+      "description": "Design the dashboard UI",
+      "phases": [
+        { "role": "UI_DESIGNER" },
+        { "role": "UI_REVIEWER" }
+      ],
+      "iteration": { "max": 3 }
+    },
+    {
+      "name": "backend_impl",
+      "description": "Implement API endpoints",
+      "phases": [
+        { "role": "IMPLEMENTOR" },
+        { "role": "SECURITY_REVIEWER" },
+        { "role": "IMPLEMENTATION_REVIEWER" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}
+```
+
+#### Role Catalog — Auto-Discovered
+
+The planner needs to know what roles are available. The catalog is **auto-discovered** from `${AGENTS_DIR}/`:
+
+- Scan all Markdown files in `${AGENTS_DIR}/`
+- Filter to files with `chainsaw_enabled: true` in YAML frontmatter
+- Extract `description` (required) and `description_long` (optional) from frontmatter
+- Present the catalog to the planner agent in its instructions
+
+Example role file frontmatter:
+```yaml
+---
+chainsaw_enabled: true
+description: "Reviews code for security vulnerabilities and OWASP top 10"
+description_long: "Performs deep security analysis including auth flows, input validation, SQL injection, XSS..."
+---
+```
+
+#### Plan Mutability During Execution
+
+- **Minor adjustments OK**: Implementor can adjust approach within a part and keep going
+- **Major deviations → fail explicitly**: If blocking issues or fundamental approach changes are needed, agent calls `/agent/failed` → `FailedToExecutePlanUseCase` (cleanup, enrich ticket, re-open for retry)
+- Do NOT attempt to patch the plan mid-execution
+
+### Startup Flow — Straightforward (No Planning)
+
+```
+1. Load straightforward.json
+2. Parse parts (static, defined in JSON)
+3. Parts stored in-memory + persisted in current_state.json
+4. EXECUTION: parts execute sequentially, each with its own iteration loop
+```
 
 ### Phase Transitions — Hybrid
 
-- **Automatic** for straightforward transitions (IMPLEMENTATION done → REVIEW starts)
+- **Automatic** for straightforward transitions (implementor done → reviewer starts)
 - **LLM-evaluated** for iteration decisions: DirectLLMApi receives reviewer's PUBLIC.md + reviewed role's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason)
 
 ### Context Assembly — ContextProvider
@@ -287,6 +402,7 @@ phases/
 A `ContextProvider` interface is responsible for assembling context packages for:
 - Iteration decision prompts (what the LLM sees)
 - Agent instruction files (what gets concatenated)
+- Planner instructions (ticket + role catalog + format instructions)
 - Easy to adjust and clear to see what is being shared
 
 ---
@@ -296,13 +412,14 @@ A `ContextProvider` interface is responsible for assembling context packages for
 ```
 .ai_out/${git_branch}/
 ├── harness_private/
-│   ├── current_state.json                              # Serialized workflow state; enables harness-level resume
+│   ├── current_state.json                              # Serialized workflow state (incl. resolved parts); enables resume
 │   └── PRIVATE.md                                      # Harness internal context (if needed)
 ├── shared/
 │   ├── SHARED_CONTEXT.md                               # Cross-cutting context for ALL agents (agents can modify)
 │   ├── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt  # Links to all PUBLIC.md files
 │   └── plan/
-│       └── PLAN.md                                     # High-level plan (with-planning workflow only)
+│       ├── PLAN.md                                     # Human-readable plan (with-planning only)
+│       └── plan.json                                   # Machine-readable plan (with-planning only)
 ├── phases/
 │   ├── part_1/
 │   │   ├── ${ROLE}/
@@ -363,6 +480,7 @@ Branch format: `{TICKET_ID}__{slugified_title}__try-{N}`
 | Decision | Choice | Rationale |
 |---|---|---|
 | Workflow format | **JSON** | Easy for LLMs to generate; strong tooling |
+| Workflow schema | **Shared "parts" structure** | Same schema for static workflows and planner output; one parser |
 | JSON library | **Jackson + Kotlin module** | Battle-tested, runtime reflection |
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
@@ -371,6 +489,10 @@ Branch format: `{TICKET_ID}__{slugified_title}__try-{N}`
 | Package | **com.glassthought.chainsaw** | Chainsaw as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
+| Role catalog | **Auto-discovered from frontmatter** | `chainsaw_enabled: true` in `${AGENTS_DIR}/` files |
+| Plan review | **Agent-based (PLAN_REVIEWER)** | Same iteration pattern as other review phases |
+| Plan output | **Separate files** | PLAN.md (human) + plan.json (machine) in `shared/plan/` |
+| Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
 
 ## Cleanup Items
 
@@ -388,13 +510,15 @@ Branch format: `{TICKET_ID}__{slugified_title}__try-{N}`
 5. Wingman interface + ClaudeCodeWingman for session ID discovery
 6. File-based cross-agent context — phase-oriented directory structure under `.ai_out/${git_branch}/`
 7. Temp file pattern for all structured content delivery to agents
-8. JSON workflow definitions (`straightforward` static; `with-planning` dynamic)
-9. ContextProvider interface for assembling context packages
-10. Hybrid phase transitions (automatic + LLM-evaluated via DirectLLMApi returning structured JSON)
-11. Agent health monitoring: timeout → ping → crash detection (UseCase pattern)
-12. FailedToExecutePlanUseCase: cleanup agent (write access) → enrich ticket → restore starting state → re-open ticket
-13. DirectLLMApi for harness decisions (GLM QuickCheap tier first)
-14. Git commits between phases; branch naming with try-N for retries
-15. `current_state.json` for harness-level resume (Jackson serialization)
-16. Strictly serial execution (1 harness → 1 agent at a time)
-17. Separate sessions per phase (individual agent resume deferred to V2)
+8. JSON workflow definitions with shared "parts" schema (`straightforward` static; `with-planning` dynamic)
+9. With-planning: PLANNER → PLAN_REVIEWER iteration loop → dynamic execution phases from plan.json
+10. Role catalog auto-discovered from `${AGENTS_DIR}/` frontmatter (`chainsaw_enabled: true`)
+11. ContextProvider interface for assembling context packages (incl. planner instructions with role catalog)
+12. Hybrid phase transitions (automatic + LLM-evaluated via DirectLLMApi returning structured JSON)
+13. Agent health monitoring: timeout → ping → crash detection (UseCase pattern)
+14. FailedToExecutePlanUseCase: cleanup agent (write access) → enrich ticket → restore starting state → re-open ticket
+15. DirectLLMApi for harness decisions (GLM QuickCheap tier first)
+16. Git commits between phases; branch naming with try-N for retries
+17. `current_state.json` for harness-level resume (Jackson serialization, incl. resolved parts)
+18. Strictly serial execution (1 harness → 1 agent at a time)
+19. Separate sessions per phase (individual agent resume deferred to V2)
