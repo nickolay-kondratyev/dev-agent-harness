@@ -1,6 +1,102 @@
 package com.glassthought.initializer
 
+import com.asgard.core.lifecycle.AsgardCloseable
+import com.asgard.core.out.OutFactory
+import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
+import com.glassthought.Constants
+import com.glassthought.directLLMApi.DirectLLM
+import com.glassthought.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.tmux.TmuxCommunicator
+import com.glassthought.tmux.TmuxCommunicatorImpl
+import com.glassthought.tmux.TmuxSessionManager
+import com.glassthought.tmux.util.TmuxCommandRunner
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
+
 /**
- * Responsible for initialization of application. To wire up all the dependencies etc. */
-class Initializer {
+ * Encapsulates all application-level dependencies created during initialization.
+ *
+ * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
+ * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
+ */
+class AppDependencies(
+    val outFactory: OutFactory,
+    val tmuxCommandRunner: TmuxCommandRunner,
+    val tmuxCommunicator: TmuxCommunicator,
+    val tmuxSessionManager: TmuxSessionManager,
+    val glmDirectLLM: DirectLLM,
+    private val httpClient: OkHttpClient,
+) : AsgardCloseable {
+
+    override suspend fun close() {
+        // Shut down OkHttpClient connection and thread pools to prevent resource leaks
+        // in long-running server usage. Order matters: dispatcher first, then connections.
+        httpClient.dispatcher.executorService.shutdown()
+        httpClient.connectionPool.evictAll()
+        outFactory.close()
+    }
+}
+
+/**
+ * Root of all dependency wiring.
+ *
+ * Single public method [initialize] creates and connects all application-level
+ * dependencies. App.kt delegates to this interface rather than constructing
+ * dependencies directly.
+ */
+interface Initializer {
+    fun initialize(): AppDependencies
+
+    companion object{
+        fun standard(): Initializer = InitializerImpl()
+    }
+}
+
+class InitializerImpl : Initializer {
+
+    override fun initialize(): AppDependencies {
+        val outFactory = SimpleConsoleOutFactory.standard()
+
+        val commandRunner = TmuxCommandRunner()
+        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
+        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+
+        val httpClient = OkHttpClient.Builder()
+            .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
+            .build()
+
+        val glmDirectLLM = createGLMDirectLLM(outFactory, httpClient)
+
+        return AppDependencies(
+            outFactory = outFactory,
+            tmuxCommandRunner = commandRunner,
+            tmuxCommunicator = communicator,
+            tmuxSessionManager = sessionManager,
+            glmDirectLLM = glmDirectLLM,
+            httpClient = httpClient,
+        )
+    }
+
+    private fun createGLMDirectLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectLLM {
+        val config = Constants.getConfigurationObject()
+
+        val apiToken = System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
+            ?: throw IllegalStateException(
+                "Required environment variable [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] is not set"
+            )
+
+        return GLMHighestTierApi(
+            outFactory = outFactory,
+            httpClient = httpClient,
+            modelName = config.zAiGlmConfig.modelName,
+            maxTokens = config.zAiGlmConfig.maxTokens,
+            apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
+            apiToken = apiToken,
+        )
+    }
+
+    companion object {
+        /** LLM API calls routinely take 10-30 seconds; default OkHttp 10s would cause failures. */
+        private const val READ_TIMEOUT_SECONDS = 60L
+    }
 }

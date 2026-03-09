@@ -5,10 +5,7 @@ package org.example
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.use
-import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.glassthought.tmux.TmuxCommunicatorImpl
-import com.glassthought.tmux.TmuxSessionManager
-import com.glassthought.tmux.util.TmuxCommandRunner
+import com.glassthought.initializer.InitializerImpl
 import kotlinx.coroutines.runBlocking
 
 
@@ -21,18 +18,15 @@ import kotlinx.coroutines.runBlocking
 //   ./app/build/install/app/bin/app
 @AnchorPoint("ap.4JVSSyLwZXop6hWiJNYevFQX.E")
 fun main() {
+  val deps = InitializerImpl().initialize()
 
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {
-    SimpleConsoleOutFactory.standard().use { outFactory ->
-      val commandRunner = TmuxCommandRunner()
-      val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-      val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
-
+    deps.use { _ ->
       val sessionName = "agent-harness__${System.currentTimeMillis()}"
       println("Tmux session name: $sessionName")
 
-      val session = sessionManager.createSession(sessionName, "claude")
+      val session = deps.tmuxSessionManager.createSession(sessionName, "claude")
 
       // tmux buffers keystrokes, so we can send immediately.
       session.sendKeys("Write 'hello world from tmux' to /tmp/out")
