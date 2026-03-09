@@ -420,7 +420,16 @@ A `ContextProvider` interface is responsible for assembling context packages for
 │   └── plan/
 │       ├── PLAN.md                                     # Human-readable plan (with-planning only)
 │       └── plan.json                                   # Machine-readable plan (with-planning only)
-├── phases/
+├── planning/                                           # Plan-making loop (with-planning only)
+│   ├── PLANNER/
+│   │   ├── PUBLIC.md
+│   │   ├── PRIVATE.md
+│   │   └── session_ids/${timestamp}.json
+│   └── PLAN_REVIEWER/
+│       ├── PUBLIC.md
+│       ├── PRIVATE.md
+│       └── session_ids/${timestamp}.json
+├── phases/                                             # Plan execution
 │   ├── part_1/
 │   │   ├── ${ROLE}/
 │   │   │   ├── PUBLIC.md
@@ -445,6 +454,10 @@ $HOME/.chainsaw_agent_harness/server/port.txt           # Written on startup, de
 ### Iteration within a part
 
 When review fails and iteration loops back, the **same** `phases/part_N/{ROLE}/` directory is reused. The agent reads its own prior PUBLIC.md for context on what to fix.
+
+### Iteration within planning
+
+Same pattern: `planning/PLANNER/` and `planning/PLAN_REVIEWER/` directories are reused across planning iterations. Each iteration overwrites PUBLIC.md with updated plan content.
 
 ## Agent Role Definitions
 
