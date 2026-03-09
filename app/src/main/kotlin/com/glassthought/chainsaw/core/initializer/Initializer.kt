@@ -1,15 +1,15 @@
-package com.glassthought.initializer
+package com.glassthought.chainsaw.core.initializer
 
 import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.glassthought.Constants
-import com.glassthought.directLLMApi.DirectLLM
-import com.glassthought.directLLMApi.glm.GLMHighestTierApi
-import com.glassthought.tmux.TmuxCommunicator
-import com.glassthought.tmux.TmuxCommunicatorImpl
-import com.glassthought.tmux.TmuxSessionManager
-import com.glassthought.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.core.Constants
+import com.glassthought.chainsaw.core.directLLMApi.DirectLLM
+import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.chainsaw.core.tmux.TmuxCommunicator
+import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
+import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
+import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -41,7 +41,7 @@ class AppDependencies(
  * Root of all dependency wiring.
  *
  * Single public method [initialize] creates and connects all application-level
- * dependencies. App.kt delegates to this interface rather than constructing
+ * dependencies. AppMain.kt delegates to this interface rather than constructing
  * dependencies directly.
  */
 interface Initializer {

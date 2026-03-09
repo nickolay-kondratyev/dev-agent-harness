@@ -1,12 +1,12 @@
 package org.example
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.processRunner.InteractiveProcessResult
-import com.glassthought.processRunner.InteractiveProcessRunner
+import com.glassthought.chainsaw.core.processRunner.InteractiveProcessResult
+import com.glassthought.chainsaw.core.processRunner.InteractiveProcessRunner
 import io.kotest.matchers.shouldBe
 
 /**
- * Tests for [com.glassthought.processRunner.InteractiveProcessRunner].
+ * Tests for [InteractiveProcessRunner].
  *
  * NOTE: True interactive tests (requiring a TTY) cannot run in CI.
  * These tests cover construction and non-interactive commands, which work

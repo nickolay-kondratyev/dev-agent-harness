@@ -56,7 +56,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "org.example.AppKt"
+    mainClass = "com.glassthought.chainsaw.cli.AppMainKt"
 }
 
 tasks.named<Test>("test") {

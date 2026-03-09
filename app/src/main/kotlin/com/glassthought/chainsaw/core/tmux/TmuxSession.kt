@@ -1,7 +1,7 @@
-package com.glassthought.tmux
+package com.glassthought.chainsaw.core.tmux
 
 import com.asgard.core.annotation.AnchorPoint
-import com.glassthought.tmux.data.TmuxSessionName
+import com.glassthought.chainsaw.core.tmux.data.TmuxSessionName
 
 /**
  * Represents a live tmux session. Acts as the primary handle for interacting with a session.

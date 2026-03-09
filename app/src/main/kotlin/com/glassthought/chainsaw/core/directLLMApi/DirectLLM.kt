@@ -1,4 +1,4 @@
-package com.glassthought.directLLMApi
+package com.glassthought.chainsaw.core.directLLMApi
 
 /**
  * Request to a direct LLM API call.

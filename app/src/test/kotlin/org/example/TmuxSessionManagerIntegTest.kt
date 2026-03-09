@@ -1,15 +1,15 @@
 package org.example
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.tmux.TmuxCommunicatorImpl
-import com.glassthought.tmux.TmuxSession
-import com.glassthought.tmux.TmuxSessionManager
-import com.glassthought.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
+import com.glassthought.chainsaw.core.tmux.TmuxSession
+import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
+import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 
 /**
- * Tests for [com.glassthought.tmux.TmuxSessionManager].
+ * Tests for [TmuxSessionManager].
  *
  * Requires tmux to be installed on the system. Tests use bash sessions (not claude)
  * so they can run in CI environments.

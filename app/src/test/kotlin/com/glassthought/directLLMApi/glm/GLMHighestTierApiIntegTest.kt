@@ -1,8 +1,9 @@
 package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.Constants
-import com.glassthought.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.Constants
+import com.glassthought.chainsaw.core.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.string.shouldNotBeBlank
 import okhttp3.OkHttpClient
@@ -32,12 +33,12 @@ class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
             .build()
 
         val api = GLMHighestTierApi(
-            outFactory = outFactory,
-            httpClient = httpClient,
-            modelName = config.zAiGlmConfig.modelName,
-            maxTokens = config.zAiGlmConfig.maxTokens,
-            apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
-            apiToken = apiToken,
+          outFactory = outFactory,
+          httpClient = httpClient,
+          modelName = config.zAiGlmConfig.modelName,
+          maxTokens = config.zAiGlmConfig.maxTokens,
+          apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
+          apiToken = apiToken,
         )
 
         describe("WHEN calling with a simple math question") {

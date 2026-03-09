@@ -1,4 +1,4 @@
-package com.glassthought
+package com.glassthought.chainsaw.core
 
 object Constants {
   /** Model identifiers as sent to the provider's API (wire format). */

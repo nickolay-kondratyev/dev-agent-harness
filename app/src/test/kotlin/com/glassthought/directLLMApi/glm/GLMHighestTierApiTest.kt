@@ -1,7 +1,8 @@
 package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -40,20 +41,20 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
      * Returns both so the test can enqueue responses and inspect recorded requests.
      */
     data class TestFixture(
-        val server: MockWebServer,
-        val api: GLMHighestTierApi,
+      val server: MockWebServer,
+      val api: GLMHighestTierApi,
     )
 
     fun createFixture(): TestFixture {
         val server = MockWebServer()
         server.start()
         val api = GLMHighestTierApi(
-            outFactory = outFactory,
-            httpClient = httpClient,
-            modelName = modelName,
-            maxTokens = maxTokens,
-            apiEndpoint = server.url("/chat/completions").toString(),
-            apiToken = apiToken,
+          outFactory = outFactory,
+          httpClient = httpClient,
+          modelName = modelName,
+          maxTokens = maxTokens,
+          apiEndpoint = server.url("/chat/completions").toString(),
+          apiToken = apiToken,
         )
         return TestFixture(server, api)
     }
