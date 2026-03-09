@@ -13,6 +13,18 @@ assignee: nickolaykondratyev
 
 # High-Level Design Decisions
 
+## Context:
+We used to run Claude with sub-agent where 'TOP_LEVEL_AGENT' would act as orchestrator.
+
+The problem was that the way Claude sub-agents work is they would still eat up the context of the 
+orchestrator agent. Even though orchestrator was instructed not to pollute its context.
+
+Hence, we are switching in a more hands-on approach of how we are going to run agents. Where 
+the sub-agents will be spawned by our own harness.
+
+We will still want some high level decision making to be LLM provided rather than strictly following 
+config of flow.
+
 ## What is the Harness?
 
 The Kotlin CLI **replaces** the TOP_LEVEL_AGENT Claude session. It:
@@ -26,7 +38,8 @@ The Kotlin CLI **replaces** the TOP_LEVEL_AGENT Claude session. It:
 
 ## Sub-Agent Invocation
 
-- **Shell out** to CLI tools (`claude`, `droid`, etc.) behind a `CodeAgent` abstraction
+- **Shell out** through TMUX to CLI tools (`claude`, `droid`, etc.) behind a `CodeAgent` abstraction spawning **interactive** coding agent session.
+  - Why Through TMUX? TMUX will be used to be able to interact with the agent that has spawned, for example that will allow the agent to stop and ask questions.   
 - Reason: leverages subscription pricing; abstraction allows swapping implementations
 - **Strictly serial** execution for V1 (parallel can be delegated to the agent itself)
 
@@ -87,13 +100,31 @@ Gradle's `:app:run` task breaks TTY detection. `run.sh` handles `installDist` + 
 ├── sub-agent/
 │   ├── shared/
 │   │   ├── SHARED_CONTEXT.md                          # Q&A, cross-cutting context for ALL agents
+                                                       # updated throughout as new findings are discovered
 │   │   └── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt  # links to all PUBLIC.md files
 │   ├── harness/
-│   │   └── PRIVATE.md                                 # harness internal state
+│   │   └── PRIVATE.md                                 # top level harness internal state 
+                                                       # this should NOT be shared with sub-agents 
 │   └── ${ROLE}/
 │       ├── PUBLIC.md
-│       └── PRIVATE.md
+│       ├── PRIVATE.md
+        └/session_ids/${timestamp}.json                 # Will store the latest session id information and which agent was used.
 ```
+
+## session_ids/${timestamp}.json - getting session ID
+PROBLEM: claude-code interactive session does not expose the session ID easily.
+
+And even the agent itself does not have the context. So the way we can approach is it to provide a GUID into the session on startup of brand-new session (when we do not resume).
+
+So the flow would be:
+1. Harness generates a GUID for the brand new session.
+2. Harness starts a new Tmux session with new agent (eg. AgentClaudeCode)
+   3. Instructions are passed in as `Here is a GUID: [$GUID]. We will use it to identify this session. Please wait for further instructions.` This will make the agent write the GUID into its session files.
+3. Harness will search the session files for this guid 
+   4. This will live in `Wingman` interface
+   5. For example ClaudeCodeWingman implementation will search in `$HOME/.claude` to find files like `$HOME/.claude/projects/-home-nickolaykondratyev-git-repos-nickolay-kondratyev-dev-agent-harness-mirror-1/77d5b7ea-cf04-453b-8867-162404763e18.jsonl`, 77d5b7ea-cf04-453b-8867-162404763e18 Will be the session ID this will get stored in .ai_out/${feature}/${git_branch}/$ROLE/session_ids/${timestamp}.json file along with the agent that was used.
+   6. This will allow us to resume the agent, if so desired. 
+
 
 ## Agent Role Definitions
 
