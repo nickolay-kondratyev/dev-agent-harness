@@ -1,18 +1,20 @@
 package com.glassthought.tmux
 
+import com.asgard.core.annotation.AnchorPoint
 import com.glassthought.tmux.data.TmuxSessionName
 
 /**
  * Represents a live tmux session. Acts as the primary handle for interacting with a session.
  *
  * Encapsulates the session name, key-sending capability, and existence checking.
- * The [existsChecker] lambda avoids a circular dependency with [TmuxSessionManager].
  *
  * Instances are created by [TmuxSessionManager.createSession].
  */
+@AnchorPoint("ap.7sZveqPcid5z1ntmLs27UqN6.E")
 class TmuxSession(
     val name: TmuxSessionName,
     private val communicator: TmuxCommunicator,
+    // The [existsChecker] lambda avoids a circular dependency with [TmuxSessionManager].
     private val existsChecker: suspend () -> Boolean,
 ) {
     /**
