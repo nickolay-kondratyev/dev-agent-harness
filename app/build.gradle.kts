@@ -36,6 +36,15 @@ dependencies {
 
     // Coroutines: required for runBlocking in main() and suspend ProcessRunner calls
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+
+    // OkHttp: HTTP client for direct LLM API calls
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // org.json: lightweight JSON construction and parsing for LLM API request/response bodies
+    implementation("org.json:json:20240303")
+
+    // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
+    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
