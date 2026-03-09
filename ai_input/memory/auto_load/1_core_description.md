@@ -37,7 +37,19 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Harness decisions**: `DirectLLMApi` for iteration evaluation, title compression, etc. Structured JSON responses. Tiers: `QuickCheap`, `Medium`.
 
+**Server endpoints (V1)**: `POST /agent/done` (task complete), `/agent/question` (Q&A, curl blocks until human answers), `/agent/failed` (unrecoverable error → `FailedToExecutePlanUseCase`), `/agent/status` (health ping reply). All requests include git branch as identifier.
+
+**CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile, privateOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
+
+**Context assembly**: `ContextProvider` interface assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + harness CLI help), iteration decision prompts, and planner instructions (ticket + role catalog).
+
+**Phase transitions — hybrid**: Automatic for straightforward transitions (implementor → reviewer). LLM-evaluated for iteration decisions: `DirectLLMApi` receives reviewer's PUBLIC.md + reviewed role's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason).
+
+**Agent lifecycle**: TMUX session created → agent started → Wingman GUID handshake → instruction file sent via `send-keys` → agent works (may call Q&A) → agent calls `/agent/done` → harness kills session → next phase.
+
 **Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`).
+
+**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `/agent/failed` → cleanup agent enriches ticket → codebase reset → ticket re-opened.
 
 **Resume**: `current_state.json` tracks workflow progress. On restart, offers to resume from last checkpoint.
 

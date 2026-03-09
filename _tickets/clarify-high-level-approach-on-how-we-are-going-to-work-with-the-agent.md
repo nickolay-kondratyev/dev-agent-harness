@@ -536,3 +536,10 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 17. `current_state.json` for harness-level resume (Jackson serialization, incl. resolved parts)
 18. Strictly serial execution (1 harness → 1 agent at a time)
 19. Separate sessions per phase (individual agent resume deferred to V2)
+
+---
+
+## Linked Documentation
+
+This high-level plan is mirrored in `ai_input/memory/auto_load/1_core_description.md` (auto-loaded into every agent's context).
+**If this plan changes, update that file explicitly to keep sub-agents aligned.**
