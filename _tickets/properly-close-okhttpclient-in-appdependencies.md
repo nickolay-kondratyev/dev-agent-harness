@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-09T21:25:21Z
 id: nid_qedn4pb3eix0prpawphzikvvn_E
 title: "Properly close OkHttpClient in AppDependencies"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T21:12:22Z
-status_updated_iso: 2026-03-09T21:19:29Z
+status_updated_iso: 2026-03-09T21:25:21Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -43,3 +44,15 @@ val httpClient = OkHttpClient.Builder()
 - [ ] OkHttpClient is properly closed when AppDependencies.close() is called
 - [ ] Main server (or entry point) calls AppDependencies.use{} or explicitly closes dependencies on shutdown
 
+
+## Notes
+
+**2026-03-09T21:25:21Z**
+
+Resolution: AppDependencies now implements AsgardCloseable.
+
+- Changed AppDependencies from `data class` to `class` implementing `AsgardCloseable`
+- Added `httpClient: OkHttpClient` as a constructor parameter (created in `initialize()`, passed to both `AppDependencies` and `createGLMDirectLLM()`)
+- `close()` shuts down `httpClient.dispatcher.executorService`, calls `httpClient.connectionPool.evictAll()`, and closes `outFactory`
+- App.kt updated to use `deps.use {}` instead of `deps.outFactory.use {}`
+- Unit test added: `AppDependenciesCloseTest` verifies executor is shut down after `close()`
