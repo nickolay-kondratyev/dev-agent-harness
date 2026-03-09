@@ -1,11 +1,11 @@
 ---
 id: nid_ymtlew0apdjcyaco2qff3vva4_E
 title: "Agent CLI Script (harness-cli-for-agent.sh)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-09T23:06:21Z
-status_updated_iso: 2026-03-09T23:06:21Z
+status_updated_iso: 2026-03-09T23:33:17Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
