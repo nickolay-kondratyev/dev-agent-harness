@@ -18,16 +18,16 @@ import org.json.JSONObject
 /**
  * [DirectLLM] implementation for Z.AI's GLM highest-tier model.
  *
- * Uses the OpenAI-compatible chat completions API format.
+ * Uses the Anthropic-compatible API format (Z.AI provides an Anthropic-compatible endpoint).
  * V1: single user message, no streaming, no retry logic.
  *
  * @param outFactory Logging factory.
  * @param httpClient Shared OkHttp client instance. Callers should reuse the returned
  *   [DirectLLM] instance rather than calling the factory repeatedly, because OkHttp
  *   recommends a single shared client for connection pooling.
- * @param modelName The model identifier to send in the API request (e.g. "glm-5").
- * @param apiEndpoint The chat completions endpoint URL.
- * @param apiToken Bearer token for API authentication.
+ * @param modelName The model identifier to send in the API request (e.g. "claude-3-5-sonnet-20241022").
+ * @param apiEndpoint The Anthropic-compatible endpoint URL.
+ * @param apiToken API key for authentication (sent as x-api-key header).
  */
 class GLMHighestTierApi(
     outFactory: OutFactory,
@@ -54,7 +54,8 @@ class GLMHighestTierApi(
 
         val httpRequest = Request.Builder()
             .url(apiEndpoint)
-            .addHeader("Authorization", "Bearer $apiToken")
+            .addHeader("x-api-key", apiToken)
+            .addHeader("anthropic-version", "2023-06-01")
             .addHeader("Content-Type", "application/json")
             .post(requestBody.toRequestBody("application/json".toMediaType()))
             .build()
@@ -98,6 +99,7 @@ class GLMHighestTierApi(
     private fun buildRequestBody(prompt: String): String {
         return JSONObject().apply {
             put("model", modelName)
+            put("max_tokens", MAX_TOKENS)
             put(
                 "messages", JSONArray().apply {
                     put(JSONObject().apply {
@@ -110,25 +112,31 @@ class GLMHighestTierApi(
     }
 
     /**
-     * Extracts `choices[0].message.content` from the API response JSON.
+     * Extracts `content[0].text` from the Anthropic-compatible API response JSON.
      *
      * @throws IllegalStateException if the response structure is unexpected.
      */
     private fun parseResponseContent(responseBody: String): String {
         try {
             val json = JSONObject(responseBody)
-            val choices = json.getJSONArray("choices")
+            val content = json.getJSONArray("content")
 
-            if (choices.length() == 0) {
+            if (content.length() == 0) {
                 throw IllegalStateException(
-                    "Direct LLM API returned empty choices array. response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"
+                    "Direct LLM API returned empty content array. response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"
                 )
             }
 
-            return choices
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content")
+            val firstBlock = content.getJSONObject(0)
+
+            // Verify it's a text block
+            if (firstBlock.getString("type") != "text") {
+                throw IllegalStateException(
+                    "Direct LLM API returned non-text content block. type=[${firstBlock.getString("type")}], response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"
+                )
+            }
+
+            return firstBlock.getString("text")
         } catch (e: IllegalStateException) {
             throw e
         } catch (e: Exception) {
@@ -141,5 +149,7 @@ class GLMHighestTierApi(
 
     companion object {
         private const val MAX_ERROR_BODY_SNIPPET_LENGTH = 500
+        /** Maximum tokens for the response (Anthropic API requires this parameter). */
+        private const val MAX_TOKENS = 4096
     }
 }

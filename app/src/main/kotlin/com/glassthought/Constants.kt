@@ -3,13 +3,14 @@ package com.glassthought
 object Constants {
   /** Model identifiers as sent to the provider's API (wire format). */
   object DIRECT_LLM_API_MODEL_NAME {
-    /** GLM highest-tier model identifier for the Z.AI chat completions API. */
-    const val GLM_HIGHEST_TIER = "glm-5"
+    /** GLM highest-tier model identifier for the Z.AI Anthropic-compatible API. */
+    const val GLM_HIGHEST_TIER = "claude-3-5-sonnet-20241022"
   }
 
   /** Z.AI API configuration constants. */
   object Z_AI_API {
-    const val CHAT_COMPLETIONS_ENDPOINT = "https://api.z.ai/api/paas/v4/chat/completions"
+    /** Anthropic-compatible endpoint for Z.AI GLM subscription. */
+    const val CHAT_COMPLETIONS_ENDPOINT = "https://api.z.ai/api/anthropic"
     const val API_TOKEN_ENV_VAR = "Z_AI_GLM_API_TOKEN"
   }
 

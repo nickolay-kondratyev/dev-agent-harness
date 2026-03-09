@@ -20,17 +20,15 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
     val httpClient = OkHttpClient.Builder()
         .readTimeout(5, TimeUnit.SECONDS)
         .build()
-    val modelName = "glm-5"
+    val modelName = "claude-3-5-sonnet-20241022"
     val apiToken = "test-token-123"
 
     fun successResponseJson(content: String): String {
         return JSONObject().apply {
-            put("choices", org.json.JSONArray().apply {
+            put("content", org.json.JSONArray().apply {
                 put(JSONObject().apply {
-                    put("message", JSONObject().apply {
-                        put("role", "assistant")
-                        put("content", content)
-                    })
+                    put("type", "text")
+                    put("text", content)
                 })
             })
         }.toString()
@@ -87,13 +85,13 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
                 }
             }
 
-            it("THEN request has correct Authorization header") {
+            it("THEN request has correct x-api-key header") {
                 withFixture { fixture ->
                     fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
                     fixture.api.call(ChatRequest(prompt))
 
                     val recorded = fixture.server.takeRequest()
-                    recorded.getHeader("Authorization") shouldBe "Bearer $apiToken"
+                    recorded.getHeader("x-api-key") shouldBe apiToken
                 }
             }
 
@@ -115,6 +113,18 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
                     val recorded = fixture.server.takeRequest()
                     val body = JSONObject(recorded.body.readUtf8())
                     body.getString("model") shouldBe modelName
+                }
+            }
+
+            it("THEN request body contains max_tokens parameter") {
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
+
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    body.has("max_tokens") shouldBe true
+                    body.getInt("max_tokens") shouldBe 4096
                 }
             }
 
@@ -225,20 +235,20 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
             }
         }
 
-        describe("WHEN API returns empty choices array") {
-            it("THEN throws IllegalStateException mentioning empty choices") {
+        describe("WHEN API returns empty content array") {
+            it("THEN throws IllegalStateException mentioning empty content") {
                 withFixture { fixture ->
                     fixture.server.enqueue(
                         MockResponse()
                             .setResponseCode(200)
                             .setHeader("Content-Type", "application/json")
-                            .setBody("""{"choices": []}""")
+                            .setBody("""{"content": []}""")
                     )
 
                     val exception = shouldThrow<IllegalStateException> {
                         fixture.api.call(ChatRequest("test"))
                     }
-                    exception.message shouldContain "empty choices"
+                    exception.message shouldContain "empty content"
                 }
             }
         }
