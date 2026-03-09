@@ -1,11 +1,11 @@
 ---
 id: nid_yp5og4l5tvdv46rsll5b8l6o3_E
 title: "Wingman Session ID Tracker"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-09T23:06:01Z
-status_updated_iso: 2026-03-09T23:06:01Z
+status_updated_iso: 2026-03-09T23:31:46Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
