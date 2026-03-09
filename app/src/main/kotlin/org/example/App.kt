@@ -5,7 +5,7 @@ package org.example
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.use
-import com.glassthought.initializer.Initializer
+import com.glassthought.initializer.InitializerImpl
 import kotlinx.coroutines.runBlocking
 
 
@@ -18,7 +18,7 @@ import kotlinx.coroutines.runBlocking
 //   ./app/build/install/app/bin/app
 @AnchorPoint("ap.4JVSSyLwZXop6hWiJNYevFQX.E")
 fun main() {
-  val deps = Initializer().initialize()
+  val deps = InitializerImpl().initialize()
 
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {

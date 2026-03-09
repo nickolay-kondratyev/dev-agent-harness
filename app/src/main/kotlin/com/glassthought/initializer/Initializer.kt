@@ -13,54 +13,49 @@ import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
+ * Encapsulates all application-level dependencies created during initialization.
+ * The [outFactory] must be closed by the caller via `.use{}`.
+ */
+data class AppDependencies(
+    val outFactory: OutFactory,
+    val tmuxCommandRunner: TmuxCommandRunner,
+    val tmuxCommunicator: TmuxCommunicator,
+    val tmuxSessionManager: TmuxSessionManager,
+    val glmDirectLLM: DirectLLM,
+)
+
+/**
  * Root of all dependency wiring.
  *
- * Responsible for creating and connecting all application-level dependencies.
- * App.kt delegates to this class rather than constructing dependencies directly.
+ * Single public method [initialize] creates and connects all application-level
+ * dependencies. App.kt delegates to this interface rather than constructing
+ * dependencies directly.
  */
-class Initializer {
+interface Initializer {
+    fun initialize(): AppDependencies
+}
 
-    /**
-     * Encapsulates all application-level dependencies created during initialization.
-     * Created by [Initializer.initialize] and must be used within an [OutFactory.use] block.
-     */
-    data class AppDependencies(
-        val outFactory: OutFactory,
-        val tmuxCommandRunner: TmuxCommandRunner,
-        val tmuxCommunicator: TmuxCommunicator,
-        val tmuxSessionManager: TmuxSessionManager,
-    )
+class InitializerImpl : Initializer {
 
-    /**
-     * Creates all application dependencies.
-     * The returned [AppDependencies.outFactory] must be closed by the caller via `.use{}`.
-     */
-    fun initialize(): AppDependencies {
+    override fun initialize(): AppDependencies {
         val outFactory = SimpleConsoleOutFactory.standard()
 
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
 
+        val glmDirectLLM = createGLMDirectLLM(outFactory)
+
         return AppDependencies(
             outFactory = outFactory,
             tmuxCommandRunner = commandRunner,
             tmuxCommunicator = communicator,
             tmuxSessionManager = sessionManager,
+            glmDirectLLM = glmDirectLLM,
         )
     }
 
-    /**
-     * Creates a [DirectLLM] instance configured for Z.AI GLM highest-tier model.
-     *
-     * Callers should reuse the returned [DirectLLM] instance rather than calling
-     * this method repeatedly -- OkHttp recommends a single shared client for
-     * connection pooling.
-     *
-     * @param outFactory The OutFactory for logging (must come from [AppDependencies]).
-     * @throws IllegalStateException if [Constants.Z_AI_API.API_TOKEN_ENV_VAR] environment variable is not set.
-     */
-    fun createGLMDirectLLM(outFactory: OutFactory): DirectLLM {
+    private fun createGLMDirectLLM(outFactory: OutFactory): DirectLLM {
         val config = Constants.getConfigurationObject()
 
         val apiToken = System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
