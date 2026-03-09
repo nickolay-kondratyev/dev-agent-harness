@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-09T23:51:27Z
 id: nid_yp5og4l5tvdv46rsll5b8l6o3_E
 title: "Wingman Session ID Tracker"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T23:06:01Z
-status_updated_iso: 2026-03-09T23:31:46Z
+status_updated_iso: 2026-03-09T23:51:27Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -47,4 +48,25 @@ As part of closing this ticket:
 1. Run `anchor_point.create` to generate a new AP for this component.
 2. Add `ap.XXX.E` just below the `## Session ID Tracking — Wingman` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` in the KDoc of the `Wingman` interface pointing back to that design ticket section.
+
+## Resolution
+
+**Status: COMPLETED**
+
+### Files Created
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/Wingman.kt` — Interface with `suspend fun resolveSessionId(guid: String): String`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/ClaudeCodeWingman.kt` — Implementation scanning JSONL files for GUID, `@AnchorPoint("ap.gCgRdmWd9eTGXPbHJvyxI.E")`
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/wingman/ClaudeCodeWingmanTest.kt` — 7 BDD unit tests (happy path, no match, ambiguous, nested dirs, non-JSONL filtering)
+
+### Anchor Points
+- `ap.gCgRdmWd9eTGXPbHJvyxI.E` — on `ClaudeCodeWingman` class
+- Cross-referenced below `## Session ID Tracking — Wingman` in design ticket
+- `ref.ap.gCgRdmWd9eTGXPbHJvyxI.E` in `Wingman` KDoc
+
+### Key Implementation Details
+- Constructor injection of `claudeProjectsDir: Path` for testability
+- `Files.walk()` with `.use {}` for proper stream cleanup
+- `withContext(Dispatchers.IO)` for blocking file I/O
+- `IllegalStateException` for error cases (consistent with codebase pattern)
+- Structured logging with `Out`/`Val`/`ValType`
 
