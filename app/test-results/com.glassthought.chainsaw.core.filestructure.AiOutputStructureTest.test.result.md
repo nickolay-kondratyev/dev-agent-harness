@@ -6,6 +6,8 @@ skipped: 0
 ---
 
 - GIVEN AiOutputStructure
+  - WHEN constructed with a file path (not a directory)
+    - [PASS] THEN throws IllegalArgumentException
   - WHEN constructed with non-existent repo root
     - [PASS] THEN throws IllegalArgumentException
   - WHEN constructed with valid repo root
@@ -33,11 +35,21 @@ skipped: 0
     - [PASS] THEN planning/PLANNER/session_ids directory exists
     - [PASS] THEN planning/PLAN_REVIEWER directory exists
     - [PASS] THEN planning/PLAN_REVIEWER/session_ids directory exists
+- GIVEN AiOutputStructure with blank string parameters
+  - WHEN branch is blank
+    - [PASS] THEN harnessPrivateDir throws IllegalArgumentException
+    - [PASS] THEN sharedDir throws IllegalArgumentException
+  - WHEN part is blank
+    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
+  - WHEN role is blank
+    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
+    - [PASS] THEN planningRoleDir throws IllegalArgumentException
 - GIVEN AiOutputStructure with valid repo root
   - AND branch is 'feature__my-task__try-1'
     - AND part is 'part_1' AND role is 'IMPLEMENTOR'
       - WHEN phaseRoleDir is called
         - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR
+        - [PASS] THEN path starts with repo root
       - WHEN privateMd is called
         - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/PRIVATE.md
       - WHEN publicMd is called
@@ -51,6 +63,7 @@ skipped: 0
         - [PASS] THEN path ends with planning/PLANNER/PUBLIC.md
       - WHEN planningRoleDir is called
         - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/planning/PLANNER
+        - [PASS] THEN path starts with repo root
       - WHEN planningSessionIdsDir is called
         - [PASS] THEN path ends with planning/PLANNER/session_ids
     - WHEN harnessPrivateDir is called
@@ -64,3 +77,4 @@ skipped: 0
       - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared/SHARED_CONTEXT.md
     - WHEN sharedDir is called
       - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared
+      - [PASS] THEN path starts with repo root
