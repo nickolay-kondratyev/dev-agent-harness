@@ -1,11 +1,11 @@
 ---
 id: nid_u7l156vka309r8y1rmr7z1pt7_E
 title: "File Structure Manager (AiOutputStructure)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-09T23:06:35Z
-status_updated_iso: 2026-03-09T23:06:35Z
+status_updated_iso: 2026-03-09T23:27:52Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
