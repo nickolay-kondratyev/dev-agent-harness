@@ -8,15 +8,17 @@ import io.kotest.matchers.string.shouldStartWith
 import java.nio.file.Files
 import java.nio.file.Path
 
+private data class TestFixture(val repoRoot: Path, val structure: AiOutputStructure)
+
 class AiOutputStructureTest : AsgardDescribeSpec({
 
     val branch = "feature__my-task__try-1"
     val role = "IMPLEMENTOR"
     val part = "part_1"
 
-    fun createStructureWithTempDir(): Pair<Path, AiOutputStructure> {
+    fun createTestFixture(): TestFixture {
         val repoRoot = Files.createTempDirectory("ai-output-structure-test")
-        return repoRoot to AiOutputStructure(repoRoot)
+        return TestFixture(repoRoot, AiOutputStructure(repoRoot))
     }
 
     describe("GIVEN AiOutputStructure") {
@@ -33,15 +35,65 @@ class AiOutputStructureTest : AsgardDescribeSpec({
 
         describe("WHEN constructed with valid repo root") {
             it("THEN does not throw") {
-                val (_, structure) = createStructureWithTempDir()
+                val fixture = createTestFixture()
 
-                structure shouldBe structure // constructed successfully
+                fixture.structure shouldBe fixture.structure // constructed successfully
+            }
+        }
+
+        describe("WHEN constructed with a file path (not a directory)") {
+            it("THEN throws IllegalArgumentException") {
+                val tempFile = Files.createTempFile("ai-output-not-a-dir", ".txt")
+
+                shouldThrow<IllegalArgumentException> {
+                    AiOutputStructure(tempFile)
+                }
+            }
+        }
+    }
+
+    describe("GIVEN AiOutputStructure with blank string parameters") {
+        val (_, structure) = createTestFixture()
+
+        describe("WHEN branch is blank") {
+            it("THEN harnessPrivateDir throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    structure.harnessPrivateDir("")
+                }
+            }
+
+            it("THEN sharedDir throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    structure.sharedDir("  ")
+                }
+            }
+        }
+
+        describe("WHEN role is blank") {
+            it("THEN planningRoleDir throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    structure.planningRoleDir(branch, "")
+                }
+            }
+
+            it("THEN phaseRoleDir throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    structure.phaseRoleDir(branch, part, "")
+                }
+            }
+        }
+
+        describe("WHEN part is blank") {
+            it("THEN phaseRoleDir throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    structure.phaseRoleDir(branch, "", role)
+                }
             }
         }
     }
 
     describe("GIVEN AiOutputStructure with valid repo root") {
-        val (repoRoot, structure) = createStructureWithTempDir()
+        val (repoRoot, structure) = createTestFixture()
 
         describe("AND branch is '$branch'") {
 
@@ -62,6 +114,10 @@ class AiOutputStructureTest : AsgardDescribeSpec({
 
                 it("THEN path ends with .ai_out/$branch/shared") {
                     result.toString() shouldEndWith ".ai_out/$branch/shared"
+                }
+
+                it("THEN path starts with repo root") {
+                    result.toString() shouldStartWith repoRoot.toString()
                 }
             }
 
@@ -98,6 +154,10 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                     it("THEN path ends with .ai_out/$branch/planning/PLANNER") {
                         result.toString() shouldEndWith ".ai_out/$branch/planning/PLANNER"
                     }
+
+                    it("THEN path starts with repo root") {
+                        result.toString() shouldStartWith repoRoot.toString()
+                    }
                 }
 
                 describe("WHEN planningPublicMd is called") {
@@ -133,6 +193,10 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                     it("THEN path ends with phases/$part/$role") {
                         result.toString() shouldEndWith "phases/$part/$role"
                     }
+
+                    it("THEN path starts with repo root") {
+                        result.toString() shouldStartWith repoRoot.toString()
+                    }
                 }
 
                 describe("WHEN sessionIdsDir is called") {
@@ -165,7 +229,7 @@ class AiOutputStructureTest : AsgardDescribeSpec({
     describe("GIVEN AiOutputStructure for ensureStructure") {
 
         describe("WHEN ensureStructure is called with branch and parts") {
-            val (repoRoot, structure) = createStructureWithTempDir()
+            val (repoRoot, structure) = createTestFixture()
             val parts = listOf(
                 Part("part_1", listOf("IMPLEMENTOR", "REVIEWER")),
                 Part("part_2", listOf("IMPLEMENTOR")),
@@ -210,7 +274,7 @@ class AiOutputStructureTest : AsgardDescribeSpec({
         }
 
         describe("WHEN ensureStructure is called with planningRoles") {
-            val (repoRoot, structure) = createStructureWithTempDir()
+            val (repoRoot, structure) = createTestFixture()
             val planningRoles = listOf("PLANNER", "PLAN_REVIEWER")
             structure.ensureStructure(branch, emptyList(), planningRoles)
 
@@ -233,7 +297,7 @@ class AiOutputStructureTest : AsgardDescribeSpec({
 
         describe("WHEN ensureStructure is called twice") {
             it("THEN does not throw (idempotent)") {
-                val (_, structure) = createStructureWithTempDir()
+                val (_, structure) = createTestFixture()
                 val parts = listOf(Part("part_1", listOf("IMPLEMENTOR")))
                 val planningRoles = listOf("PLANNER")
 
@@ -244,7 +308,7 @@ class AiOutputStructureTest : AsgardDescribeSpec({
         }
 
         describe("WHEN ensureStructure is called with empty parts list") {
-            val (repoRoot, structure) = createStructureWithTempDir()
+            val (repoRoot, structure) = createTestFixture()
             structure.ensureStructure(branch, emptyList())
 
             it("THEN shared directory still exists") {

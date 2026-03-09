@@ -21,14 +21,14 @@ data class Part(val name: String, val roles: List<String>)
  * ref.ap.XBNUQHLjDLpAr8F9IOyXU.E — See "File Structure" section in the design ticket.
  *
  * @param repoRoot the root directory of the git repository.
- * @throws IllegalArgumentException if [repoRoot] does not exist on the filesystem.
+ * @throws IllegalArgumentException if [repoRoot] is not an existing directory on the filesystem.
  */
 class AiOutputStructure(
     private val repoRoot: Path,
 ) {
     init {
-        require(Files.exists(repoRoot)) {
-            "Repository root does not exist: [${repoRoot}]"
+        require(Files.isDirectory(repoRoot)) {
+            "Repository root is not a directory: [${repoRoot}]"
         }
     }
 
@@ -48,8 +48,14 @@ class AiOutputStructure(
 
     // -- Path resolution (pure, no I/O) --
 
-    private fun branchRoot(branch: String): Path =
-        repoRoot.resolve(AI_OUT_DIR).resolve(branch)
+    private fun requireNotBlank(value: String, paramName: String) {
+        require(value.isNotBlank()) { "$paramName must not be blank" }
+    }
+
+    private fun branchRoot(branch: String): Path {
+        requireNotBlank(branch, "branch")
+        return repoRoot.resolve(AI_OUT_DIR).resolve(branch)
+    }
 
     fun harnessPrivateDir(branch: String): Path =
         branchRoot(branch).resolve(HARNESS_PRIVATE_DIR)
@@ -60,8 +66,10 @@ class AiOutputStructure(
     fun planDir(branch: String): Path =
         sharedDir(branch).resolve(PLAN_DIR)
 
-    fun planningRoleDir(branch: String, role: String): Path =
-        branchRoot(branch).resolve(PLANNING_DIR).resolve(role)
+    fun planningRoleDir(branch: String, role: String): Path {
+        requireNotBlank(role, "role")
+        return branchRoot(branch).resolve(PLANNING_DIR).resolve(role)
+    }
 
     fun planningPublicMd(branch: String, role: String): Path =
         planningRoleDir(branch, role).resolve(PUBLIC_MD)
@@ -72,8 +80,11 @@ class AiOutputStructure(
     fun planningSessionIdsDir(branch: String, role: String): Path =
         planningRoleDir(branch, role).resolve(SESSION_IDS_DIR)
 
-    fun phaseRoleDir(branch: String, part: String, role: String): Path =
-        branchRoot(branch).resolve(PHASES_DIR).resolve(part).resolve(role)
+    fun phaseRoleDir(branch: String, part: String, role: String): Path {
+        requireNotBlank(part, "part")
+        requireNotBlank(role, "role")
+        return branchRoot(branch).resolve(PHASES_DIR).resolve(part).resolve(role)
+    }
 
     fun sessionIdsDir(branch: String, part: String, role: String): Path =
         phaseRoleDir(branch, part, role).resolve(SESSION_IDS_DIR)
