@@ -9,8 +9,10 @@ object Constants {
 
   /** Z.AI API configuration constants. */
   object Z_AI_API {
-    /** Anthropic-compatible endpoint for Z.AI GLM subscription. */
-    const val CHAT_COMPLETIONS_ENDPOINT = "https://api.z.ai/api/anthropic"
+    /** Anthropic-compatible messages endpoint for Z.AI GLM subscription.
+     * Base URL is `https://api.z.ai/api/anthropic`; `/v1/messages` is the messages path
+     * required by the Anthropic Messages API spec. */
+    const val CHAT_COMPLETIONS_ENDPOINT = "https://api.z.ai/api/anthropic/v1/messages"
     const val API_TOKEN_ENV_VAR = "Z_AI_GLM_API_TOKEN"
     /** Default max tokens for API responses. Can be overridden via environment variable. */
     const val MAX_TOKENS_ENV_VAR = "Z_AI_GLM_MAX_TOKENS"
