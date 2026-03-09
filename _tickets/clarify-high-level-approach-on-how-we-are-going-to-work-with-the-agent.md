@@ -63,14 +63,18 @@ enum ModelTier { QuickCheap, Medium }
 **Prototyped and confirmed:** Kotlin can spawn `claude` (and other CLI agents) in fully
 interactive mode via `InteractiveProcessRunner` (`ProcessBuilder` + `/dev/tty` redirect).
 The user sees a live `claude` session in their terminal; Kotlin resumes after exit.
+And we will be using `claude` (and other agents) through a TMUX session to be able to
+interact with them.
+
+- Why use TMUX: so that harness can send messages to Agents that we have spawned.
 
 **This eliminates the sentinel pattern for V1.** Instead of agents writing
 `#QUESTION_FOR_HUMAN:` markers and the harness scanning for them, we simply run agents
 interactively — they ask the human directly, the human responds, the agent continues.
 
 - **All agent invocations are interactive** (not just CLARIFICATION)
-- Human questions are handled natively by the agent's own UX
-- No sentinel scanning, no `SHARED_CONTEXT.md` Q&A loop needed in V1
+- Human questions are handled natively by the agent's own UX 
+  - (human will be expected to check on tmux sessions)
 - `SHARED_CONTEXT.md` is still useful for cross-agent context, but not for Q&A routing
 
 **Caveat:** Must run via `./run.sh` (or `./app/build/install/app/bin/app` directly) —
@@ -131,6 +135,8 @@ Core engine in Kotlin; workflow phases defined in XML:
 ## V1 Scope
 
 1. Single straightforward flow: IMPLEMENTATION_WITH_SELF_PLAN → REVIEW → ITERATION
+   2. This flow should be defined in XML let's put these flows under
+      3. ./config/workflows
 2. File-based communication (PUBLIC.md / PRIVATE.md) between agents
 3. Git commits between phases
 4. Convergence check (max iterations)
@@ -138,3 +144,11 @@ Core engine in Kotlin; workflow phases defined in XML:
 6. `CodeAgent` abstraction (ClaudeCode impl) backed by `InteractiveProcessRunner`
 7. `DirectLLMApi` for harness decisions
 8. XML workflow definition
+
+9. During spawn of the agent we should pass the files that the agent should read.
+   10. We should filter the files that actually exist but mention the paths of the files that do not.
+
+--------------------------------------------------------------------------------
+
+Shutdown of sub-agent:
+- Remember the agents are spawned in interactive mode, we are going to wait for them to create a DONE.md marker file under their directory.
