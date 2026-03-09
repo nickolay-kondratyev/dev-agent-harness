@@ -1,0 +1,80 @@
+---
+spec: "com.glassthought.chainsaw.core.filestructure.AiOutputStructureTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN AiOutputStructure
+  - WHEN constructed with a file path (not a directory)
+    - [PASS] THEN throws IllegalArgumentException
+  - WHEN constructed with non-existent repo root
+    - [PASS] THEN throws IllegalArgumentException
+  - WHEN constructed with valid repo root
+    - [PASS] THEN does not throw
+- GIVEN AiOutputStructure for ensureStructure
+  - WHEN ensureStructure is called twice
+    - [PASS] THEN does not throw (idempotent)
+  - WHEN ensureStructure is called with branch and parts
+    - [PASS] THEN harness_private directory exists
+    - [PASS] THEN phase role directory exists for part_1/IMPLEMENTOR
+    - [PASS] THEN phase role directory exists for part_1/REVIEWER
+    - [PASS] THEN phase role directory exists for part_2/IMPLEMENTOR
+    - [PASS] THEN plan directory exists
+    - [PASS] THEN session_ids directory exists for part_1/IMPLEMENTOR
+    - [PASS] THEN session_ids directory exists for part_1/REVIEWER
+    - [PASS] THEN session_ids directory exists for part_2/IMPLEMENTOR
+    - [PASS] THEN shared directory exists
+  - WHEN ensureStructure is called with empty parts list
+    - [PASS] THEN harness_private directory still exists
+    - [PASS] THEN no phases directory is created
+    - [PASS] THEN plan directory still exists
+    - [PASS] THEN shared directory still exists
+  - WHEN ensureStructure is called with planningRoles
+    - [PASS] THEN planning/PLANNER directory exists
+    - [PASS] THEN planning/PLANNER/session_ids directory exists
+    - [PASS] THEN planning/PLAN_REVIEWER directory exists
+    - [PASS] THEN planning/PLAN_REVIEWER/session_ids directory exists
+- GIVEN AiOutputStructure with blank string parameters
+  - WHEN branch is blank
+    - [PASS] THEN harnessPrivateDir throws IllegalArgumentException
+    - [PASS] THEN sharedDir throws IllegalArgumentException
+  - WHEN part is blank
+    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
+  - WHEN role is blank
+    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
+    - [PASS] THEN planningRoleDir throws IllegalArgumentException
+- GIVEN AiOutputStructure with valid repo root
+  - AND branch is 'feature__my-task__try-1'
+    - AND part is 'part_1' AND role is 'IMPLEMENTOR'
+      - WHEN phaseRoleDir is called
+        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR
+        - [PASS] THEN path starts with repo root
+      - WHEN privateMd is called
+        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/PRIVATE.md
+      - WHEN publicMd is called
+        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/PUBLIC.md
+      - WHEN sessionIdsDir is called
+        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/session_ids
+    - AND role is 'PLANNER'
+      - WHEN planningPrivateMd is called
+        - [PASS] THEN path ends with planning/PLANNER/PRIVATE.md
+      - WHEN planningPublicMd is called
+        - [PASS] THEN path ends with planning/PLANNER/PUBLIC.md
+      - WHEN planningRoleDir is called
+        - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/planning/PLANNER
+        - [PASS] THEN path starts with repo root
+      - WHEN planningSessionIdsDir is called
+        - [PASS] THEN path ends with planning/PLANNER/session_ids
+    - WHEN harnessPrivateDir is called
+      - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/harness_private
+      - [PASS] THEN path starts with repo root
+    - WHEN locationsFile is called
+      - [PASS] THEN path ends with shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt
+    - WHEN planDir is called
+      - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared/plan
+    - WHEN sharedContextMd is called
+      - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared/SHARED_CONTEXT.md
+    - WHEN sharedDir is called
+      - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared
+      - [PASS] THEN path starts with repo root
