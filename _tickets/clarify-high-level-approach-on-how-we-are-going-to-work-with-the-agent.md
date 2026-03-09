@@ -408,6 +408,7 @@ A `ContextProvider` interface is responsible for assembling context packages for
 ---
 
 ## File Structure
+<!-- ap.XBNUQHLjDLpAr8F9IOyXU.E — AiOutputStructure class manages path resolution for this tree -->
 
 ```
 .ai_out/${git_branch}/
