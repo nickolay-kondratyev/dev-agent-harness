@@ -11,39 +11,41 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
-# High-Level Design Decisions
+# Chainsaw — High-Level Design (V1)
 
-## Context:
-We used to run Claude with sub-agent where 'TOP_LEVEL_AGENT' would act as orchestrator.
+Codename: **CHAINSAW**. Will appear in package names (manual rename, not part of this ticket).
 
-The problem was that the way Claude sub-agents work is they would still eat up the context of the 
-orchestrator agent. Even though orchestrator was instructed not to pollute its context.
+## Context
 
-Hence, we are switching in a more hands-on approach of how we are going to run agents. Where 
-the sub-agents will be spawned by our own harness.
+Previously, a TOP_LEVEL_AGENT Claude session orchestrated sub-agents. Problem: sub-agent context
+polluted the orchestrator's context window. Solution: a **Kotlin CLI harness** replaces the
+orchestrator. Sub-agents are spawned as independent processes — their context is fully isolated.
 
-We will still want some high level decision making to be LLM provided rather than strictly following 
-config of flow.
+## What the Harness Does
 
-## What is the Harness?
-
-The Kotlin CLI **replaces** the TOP_LEVEL_AGENT Claude session. It:
 - Reads a task/ticket
-- Orchestrates workflow phases (CLARIFICATION → IMPLEMENTATION → REVIEW → ITERATION)
-- Spawns code agents (Claude Code, Droid, etc.) as sub-processes
-- Manages file-based communication (PUBLIC.md / PRIVATE.md / SHARED_CONTEXT.md)
+- Orchestrates workflow phases (defined in XML)
+- Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
+- Runs a **local HTTP server** (Ktor CIO) for agent→harness callbacks
+- Manages file-based context (PUBLIC.md / PRIVATE.md / SHARED_CONTEXT.md)
 - Handles git commits between phases
 - Monitors convergence and stopping conditions
-- Can call `DirectLLMApi` for its own decisions (not everything is hardcoded Kotlin logic)
+- Uses `DirectLLMApi` for its own decisions (not everything is hardcoded Kotlin logic)
 
-## Sub-Agent Invocation
+---
 
-- **Shell out** through TMUX to CLI tools (`claude`, `droid`, etc.) behind a `CodeAgent` abstraction spawning **interactive** coding agent session.
-  - Why Through TMUX? TMUX will be used to be able to interact with the agent that has spawned, for example that will allow the agent to stop and ask questions.   
-- Reason: leverages subscription pricing; abstraction allows swapping implementations
-- **Strictly serial** execution for V1 (parallel can be delegated to the agent itself)
+## Sub-Agent Invocation — TMUX Only
 
-## CodeAgent Abstraction (rough)
+All agents are spawned as **interactive TMUX sessions**. `InteractiveProcessRunner` was a prototype
+stepping stone — V1 uses TMUX exclusively via `TmuxSessionManager` + `TmuxCommunicator`.
+
+- `CodeAgent` abstraction with `ClaudeCodeAgent` implementation
+- Leverages subscription pricing; abstraction allows swapping agent implementations
+- **Strictly serial** execution for V1 (1 harness → 1 TMUX session at a time)
+- **Separate sessions per phase** — each phase spawns a fresh agent. Context carries via files.
+- Future: parallel sessions on separate git worktrees (branch as identifier)
+
+### CodeAgent Abstraction (rough)
 
 ```
 CodeAgent.run(
@@ -54,9 +56,78 @@ CodeAgent.run(
 ) -> AgentResult { exitCode, stdout }
 ```
 
-- Instructions written to **Markdown file** (preserves formatting vs. prompt text)
-- `publicOutputFile` / `privateOutputFile` are explicit — no generic `outputFiles` list
+- Instructions written to Markdown file (preserves formatting vs. prompt text)
 - V1: no tool restrictions (allow everything)
+
+---
+
+## Agent↔Harness Communication — Server + CLI
+
+### Architecture
+
+```
+┌────────────┐    HTTP (curl)     ┌──────────────────┐
+│  Agent      │ ──────────────→  │  Harness Server   │
+│  (in TMUX)  │                   │  (Ktor CIO)       │
+│             │ ←──────────────  │                    │
+│             │   TMUX send-keys  │                    │
+└────────────┘                   └──────────────────┘
+```
+
+**Harness** starts a Ktor CIO HTTP server on a fixed port.
+- Port is set via env var: `CHAINSAW_AGENT_HARNESS__SERVER_PORT`
+- This env var is exported into the TMUX session before agent starts
+
+**Agent** communicates back using a **bash CLI script**: `harness-cli-for-agent.sh`
+- Lives on `$PATH` of the started agent
+- Wraps `curl` calls to the harness server
+- Agent receives `--help` content in its instructions, wrapped in
+  `<critical_to_keep_through_compaction>` tags to survive context compaction
+
+### V1 Server Endpoints
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /agent/done` | Agent completed its task. Harness kills TMUX session, proceeds to next phase. |
+| `POST /agent/question` | Agent has questions for human. Agent blocks. Harness surfaces question to user, gets answer, sends response back via TMUX `send-keys`. |
+| `POST /agent/failed` | Unrecoverable error. Harness handles accordingly. |
+
+All requests include the **git branch** as identifier (key for future parallelism).
+
+### Q&A Flow
+
+1. Agent calls `harness-cli-for-agent.sh question "How should I handle X?"`
+2. CLI POSTs to `/agent/question` with branch + question text
+3. Harness presents question to human (stdout/interactive)
+4. Human answers
+5. Harness sends answer back to agent via TMUX `send-keys`
+6. Agent continues
+
+### Agent Lifecycle
+
+1. Harness creates TMUX session, exports `CHAINSAW_AGENT_HARNESS__SERVER_PORT`
+2. Harness starts agent (e.g., `claude`) in the TMUX session
+3. Agent works, may call CLI for questions
+4. Agent calls `harness-cli-for-agent.sh done` when finished
+5. Harness receives `/agent/done`, kills TMUX session
+6. Harness proceeds to next workflow phase
+
+---
+
+## Session ID Tracking — Wingman
+
+**Problem:** Claude Code doesn't expose its session ID to the agent itself.
+
+**Solution:** Wingman interface discovers session IDs externally.
+
+1. Harness generates a GUID for each new session
+2. Harness sends GUID to agent as first message: `"Here is a GUID: [$GUID]. We will use it to identify this session."`
+3. `ClaudeCodeWingman` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
+4. Matched filename = session ID (e.g., `77d5b7ea-cf04-453b-8867-162404763e18.jsonl`)
+5. Session ID stored in `.ai_out/${feature}/${git_branch}/${ROLE}/session_ids/${timestamp}.json`
+6. Enables future session resumption if desired
+
+---
 
 ## DirectLLMApi
 
@@ -71,73 +142,11 @@ enum ModelTier { QuickCheap, Medium }
 - Each `ModelTier` maps to a separate API provider (e.g., GLM for quick, GPT for medium)
 - Provider is configurable per tier
 
-## User Interaction — REVISED (V1 simplification)
-
-**Prototyped and confirmed:** Kotlin can spawn `claude` (and other CLI agents) in fully
-interactive mode via `InteractiveProcessRunner` (`ProcessBuilder` + `/dev/tty` redirect).
-The user sees a live `claude` session in their terminal; Kotlin resumes after exit.
-And we will be using `claude` (and other agents) through a TMUX session to be able to
-interact with them.
-
-- Why use TMUX: so that harness can send messages to Agents that we have spawned.
-
-**This eliminates the sentinel pattern for V1.** Instead of agents writing
-`#QUESTION_FOR_HUMAN:` markers and the harness scanning for them, we simply run agents
-interactively — they ask the human directly, the human responds, the agent continues.
-
-- **All agent invocations are interactive** (not just CLARIFICATION)
-- Human questions are handled natively by the agent's own UX 
-  - (human will be expected to check on tmux sessions)
-- `SHARED_CONTEXT.md` is still useful for cross-agent context, but not for Q&A routing
-
-**Caveat:** Must run via `./run.sh` (or `./app/build/install/app/bin/app` directly) —
-Gradle's `:app:run` task breaks TTY detection. `run.sh` handles `installDist` + bin invocation.
-
-## File Structure
-
-```
-.ai_out/${feature}/${git_branch}/
-├── sub-agent/
-│   ├── shared/
-│   │   ├── SHARED_CONTEXT.md                          # Q&A, cross-cutting context for ALL agents
-                                                       # updated throughout as new findings are discovered
-│   │   └── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt  # links to all PUBLIC.md files
-│   ├── harness/
-│   │   └── PRIVATE.md                                 # top level harness internal state 
-                                                       # this should NOT be shared with sub-agents 
-│   └── ${ROLE}/
-│       ├── PUBLIC.md
-│       ├── PRIVATE.md
-        └/session_ids/${timestamp}.json                 # Will store the latest session id information and which agent was used.
-```
-
-## session_ids/${timestamp}.json - getting session ID
-PROBLEM: claude-code interactive session does not expose the session ID easily.
-
-And even the agent itself does not have the context. So the way we can approach is it to provide a GUID into the session on startup of brand-new session (when we do not resume).
-
-So the flow would be:
-1. Harness generates a GUID for the brand new session.
-2. Harness starts a new Tmux session with new agent (eg. AgentClaudeCode)
-   3. Instructions are passed in as `Here is a GUID: [$GUID]. We will use it to identify this session. Please wait for further instructions.` This will make the agent write the GUID into its session files.
-3. Harness will search the session files for this guid 
-   4. This will live in `Wingman` interface
-   5. For example ClaudeCodeWingman implementation will search in `$HOME/.claude` to find files like `$HOME/.claude/projects/-home-nickolaykondratyev-git-repos-nickolay-kondratyev-dev-agent-harness-mirror-1/77d5b7ea-cf04-453b-8867-162404763e18.jsonl`, 77d5b7ea-cf04-453b-8867-162404763e18 Will be the session ID this will get stored in .ai_out/${feature}/${git_branch}/$ROLE/session_ids/${timestamp}.json file along with the agent that was used.
-   6. This will allow us to resume the agent, if so desired. 
-
-
-## Agent Role Definitions
-
-- Each ROLE must have a corresponding Markdown file in `${AGENTS_DIR}/`
-- **Fail-fast on startup** if role file is missing (before invoking any models)
-- Role file is passed to the invoked agent alongside:
-  - `SHARED_CONTEXT.md`
-  - `LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt`
-  - Phase-specific artifacts
+---
 
 ## Workflow Definition — Hybrid (Kotlin + XML)
 
-Core engine in Kotlin; workflow phases defined in XML:
+Core engine in Kotlin; workflow phases defined in XML under `./config/workflows/`:
 
 ```xml
 <workflow name="straightforward">
@@ -149,37 +158,58 @@ Core engine in Kotlin; workflow phases defined in XML:
 </workflow>
 ```
 
+### Phase Transitions — Hybrid
+
+- **Automatic** for straightforward transitions (e.g., IMPLEMENTATION done → REVIEW starts)
+- **LLM-evaluated** for iteration decisions (e.g., does the review pass? use DirectLLMApi to decide)
+
+---
+
+## File Structure
+
+```
+.ai_out/${feature}/${git_branch}/
+├── sub-agent/
+│   ├── shared/
+│   │   ├── SHARED_CONTEXT.md                              # cross-cutting context for ALL agents
+│   │   └── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt  # links to all PUBLIC.md files
+│   ├── harness/
+│   │   └── PRIVATE.md                                     # harness internal state (NOT shared with agents)
+│   └── ${ROLE}/
+│       ├── PUBLIC.md
+│       ├── PRIVATE.md
+│       └── session_ids/${timestamp}.json                  # session ID + agent type
+```
+
+## Agent Role Definitions
+
+- Each ROLE has a corresponding Markdown file in `${AGENTS_DIR}/`
+- **Fail-fast on startup** if role file is missing
+- Role file is passed to the agent alongside:
+  - `SHARED_CONTEXT.md`
+  - `LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt`
+  - Phase-specific artifacts
+  - `harness-cli-for-agent.sh --help` content (in `<critical_to_keep_through_compaction>` tags)
+
 ## Git Branch / Feature Naming
 
 - Tied to **note tickets**: branch = `{note_ticket_id}_{compressed_title}`
 - Harness suggests `${feature}` if not provided
 - Uses `DirectLLMApi(QuickCheap)` to compress long titles
 
-## Clarification Phase
+---
 
-- Spawn `claude` (or other agent) in **interactive mode** via `InteractiveProcessRunner`
-- User interacts directly with the agent; Kotlin resumes after exit
-- **PROTOTYPED AND WORKING** — see `InteractiveProcessRunner.kt`
-- On CTRL+C: agent exits (exit code -1 / interrupted=true); Kotlin harness continues
-  - No custom signal handling needed — `process.waitFor()` unblocks on child exit
+## V1 Scope Summary
 
-## V1 Scope
-
-1. Single straightforward flow: IMPLEMENTATION_WITH_SELF_PLAN → REVIEW → ITERATION
-   2. This flow should be defined in XML let's put these flows under
-      3. ./config/workflows
-2. File-based communication (PUBLIC.md / PRIVATE.md) between agents
-3. Git commits between phases
-4. Convergence check (max iterations)
-5. **Interactive agent invocation** — human questions handled by agent directly (no sentinel)
-6. `CodeAgent` abstraction (ClaudeCode impl) backed by `InteractiveProcessRunner`
-7. `DirectLLMApi` for harness decisions
-8. XML workflow definition
-
-9. During spawn of the agent we should pass the files that the agent should read.
-   10. We should filter the files that actually exist but mention the paths of the files that do not.
-
---------------------------------------------------------------------------------
-
-Shutdown of sub-agent:
-- Remember the agents are spawned in interactive mode, we are going to wait for them to create a DONE.md marker file under their directory.
+1. TMUX-based agent invocation (`CodeAgent` abstraction, `ClaudeCodeAgent` impl)
+2. Ktor CIO HTTP server for agent→harness callbacks (done/question/failed)
+3. Bash CLI script (`harness-cli-for-agent.sh`) for agents to call back
+4. Wingman for session ID discovery
+5. File-based cross-agent context (PUBLIC.md / PRIVATE.md / SHARED_CONTEXT.md)
+6. XML workflow definition under `./config/workflows/`
+7. Hybrid phase transitions (automatic + LLM-evaluated for iterations)
+8. DirectLLMApi for harness decisions (GLM QuickCheap tier first)
+9. Git commits between phases
+10. Strictly serial execution (1 harness → 1 agent at a time)
+11. Separate sessions per phase (no session resumption across phases in V1)
+12. Agent instructions include files to read (filter existing, mention missing paths)
