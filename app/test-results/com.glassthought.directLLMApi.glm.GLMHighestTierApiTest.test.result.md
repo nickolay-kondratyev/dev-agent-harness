@@ -14,7 +14,9 @@ skipped: 0
     - [PASS] THEN throws IllegalStateException with status code information
   - WHEN call is made with a simple prompt
     - [PASS] THEN request body contains the model name
-    - [PASS] THEN request body contains the prompt as user message
+    - [PASS] THEN request body has exactly one message
+    - [PASS] THEN request body message content matches prompt
+    - [PASS] THEN request body message role is user
     - [PASS] THEN request has correct Authorization header
     - [PASS] THEN request has correct Content-Type header
     - [PASS] THEN request method is POST

@@ -58,6 +58,19 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
         return TestFixture(server, api)
     }
 
+    /**
+     * Runs a test block with a [TestFixture], ensuring the MockWebServer
+     * is shut down even if assertions fail.
+     */
+    suspend fun withFixture(block: suspend (TestFixture) -> Unit) {
+        val fixture = createFixture()
+        try {
+            block(fixture)
+        } finally {
+            fixture.server.shutdown()
+        }
+    }
+
     describe("GIVEN GLMHighestTierApi with MockWebServer") {
 
         describe("WHEN call is made with a simple prompt") {
@@ -65,69 +78,89 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
             val expectedResponse = "4"
 
             it("THEN request method is POST") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                recorded.method shouldBe "POST"
-                fixture.server.shutdown()
+                    val recorded = fixture.server.takeRequest()
+                    recorded.method shouldBe "POST"
+                }
             }
 
             it("THEN request has correct Authorization header") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                recorded.getHeader("Authorization") shouldBe "Bearer $apiToken"
-                fixture.server.shutdown()
+                    val recorded = fixture.server.takeRequest()
+                    recorded.getHeader("Authorization") shouldBe "Bearer $apiToken"
+                }
             }
 
             it("THEN request has correct Content-Type header") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                recorded.getHeader("Content-Type") shouldBe "application/json; charset=utf-8"
-                fixture.server.shutdown()
+                    val recorded = fixture.server.takeRequest()
+                    recorded.getHeader("Content-Type") shouldBe "application/json; charset=utf-8"
+                }
             }
 
             it("THEN request body contains the model name") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                val body = JSONObject(recorded.body.readUtf8())
-                body.getString("model") shouldBe modelName
-                fixture.server.shutdown()
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    body.getString("model") shouldBe modelName
+                }
             }
 
-            it("THEN request body contains the prompt as user message") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                fixture.api.call(ChatRequest(prompt))
+            it("THEN request body has exactly one message") {
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                val body = JSONObject(recorded.body.readUtf8())
-                val messages = body.getJSONArray("messages")
-                messages.length() shouldBe 1
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    val messages = body.getJSONArray("messages")
+                    messages.length() shouldBe 1
+                }
+            }
 
-                val message = messages.getJSONObject(0)
-                message.getString("role") shouldBe "user"
-                message.getString("content") shouldBe prompt
-                fixture.server.shutdown()
+            it("THEN request body message role is user") {
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
+
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    val message = body.getJSONArray("messages").getJSONObject(0)
+                    message.getString("role") shouldBe "user"
+                }
+            }
+
+            it("THEN request body message content matches prompt") {
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    fixture.api.call(ChatRequest(prompt))
+
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    val message = body.getJSONArray("messages").getJSONObject(0)
+                    message.getString("content") shouldBe prompt
+                }
             }
 
             it("THEN response text matches the mock response content") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
-                val response = fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson(expectedResponse)))
+                    val response = fixture.api.call(ChatRequest(prompt))
 
-                response.text shouldBe expectedResponse
-                fixture.server.shutdown()
+                    response.text shouldBe expectedResponse
+                }
             }
         }
 
@@ -135,78 +168,78 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
             val prompt = "He said \"hello\\nworld\"\nNew line here\tand a tab"
 
             it("THEN request body is valid JSON with correctly escaped content") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson("ok")))
-                fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson("ok")))
+                    fixture.api.call(ChatRequest(prompt))
 
-                val recorded = fixture.server.takeRequest()
-                val body = JSONObject(recorded.body.readUtf8())
-                val content = body.getJSONArray("messages")
-                    .getJSONObject(0)
-                    .getString("content")
-                content shouldBe prompt
-                fixture.server.shutdown()
+                    val recorded = fixture.server.takeRequest()
+                    val body = JSONObject(recorded.body.readUtf8())
+                    val content = body.getJSONArray("messages")
+                        .getJSONObject(0)
+                        .getString("content")
+                    content shouldBe prompt
+                }
             }
 
             it("THEN response is returned successfully") {
-                val fixture = createFixture()
-                fixture.server.enqueue(MockResponse().setBody(successResponseJson("ok")))
-                val response = fixture.api.call(ChatRequest(prompt))
+                withFixture { fixture ->
+                    fixture.server.enqueue(MockResponse().setBody(successResponseJson("ok")))
+                    val response = fixture.api.call(ChatRequest(prompt))
 
-                response.text shouldBe "ok"
-                fixture.server.shutdown()
+                    response.text shouldBe "ok"
+                }
             }
         }
 
         describe("WHEN API returns non-2xx status") {
             it("THEN throws IllegalStateException with status code information") {
-                val fixture = createFixture()
-                fixture.server.enqueue(
-                    MockResponse()
-                        .setResponseCode(500)
-                        .setBody("""{"error": "internal server error"}""")
-                )
+                withFixture { fixture ->
+                    fixture.server.enqueue(
+                        MockResponse()
+                            .setResponseCode(500)
+                            .setBody("""{"error": "internal server error"}""")
+                    )
 
-                val exception = shouldThrow<IllegalStateException> {
-                    fixture.api.call(ChatRequest("test"))
+                    val exception = shouldThrow<IllegalStateException> {
+                        fixture.api.call(ChatRequest("test"))
+                    }
+                    exception.message shouldContain "500"
                 }
-                exception.message shouldContain "500"
-                fixture.server.shutdown()
             }
         }
 
         describe("WHEN API returns malformed JSON") {
             it("THEN throws IllegalStateException indicating parse failure") {
-                val fixture = createFixture()
-                fixture.server.enqueue(
-                    MockResponse()
-                        .setResponseCode(200)
-                        .setBody("this is not json")
-                )
+                withFixture { fixture ->
+                    fixture.server.enqueue(
+                        MockResponse()
+                            .setResponseCode(200)
+                            .setBody("this is not json")
+                    )
 
-                val exception = shouldThrow<IllegalStateException> {
-                    fixture.api.call(ChatRequest("test"))
+                    val exception = shouldThrow<IllegalStateException> {
+                        fixture.api.call(ChatRequest("test"))
+                    }
+                    exception.message shouldContain "Failed to parse"
                 }
-                exception.message shouldContain "Failed to parse"
-                fixture.server.shutdown()
             }
         }
 
         describe("WHEN API returns empty choices array") {
             it("THEN throws IllegalStateException mentioning empty choices") {
-                val fixture = createFixture()
-                fixture.server.enqueue(
-                    MockResponse()
-                        .setResponseCode(200)
-                        .setHeader("Content-Type", "application/json")
-                        .setBody("""{"choices": []}""")
-                )
+                withFixture { fixture ->
+                    fixture.server.enqueue(
+                        MockResponse()
+                            .setResponseCode(200)
+                            .setHeader("Content-Type", "application/json")
+                            .setBody("""{"choices": []}""")
+                    )
 
-                val exception = shouldThrow<IllegalStateException> {
-                    fixture.api.call(ChatRequest("test"))
+                    val exception = shouldThrow<IllegalStateException> {
+                        fixture.api.call(ChatRequest("test"))
+                    }
+                    exception.message shouldContain "empty choices"
                 }
-                exception.message shouldContain "empty choices"
-                fixture.server.shutdown()
             }
         }
     }
