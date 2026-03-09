@@ -1,11 +1,11 @@
 ---
 id: nid_e6xmtbw1d539id72io3voxnxe_E
 title: "Remove duplicate session-exists test in TmuxSessionManagerTest"
-status: in_progress
+status: open
 deps: []
 links: []
 created_iso: 2026-03-07T22:30:54Z
-status_updated_iso: 2026-03-07T23:51:25Z
+status_updated_iso: 2026-03-07T22:30:54Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
