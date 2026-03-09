@@ -4,7 +4,7 @@ import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import java.nio.file.Files
+import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
@@ -17,8 +17,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
         describe("AND a single JSONL file containing the target GUID") {
             describe("WHEN resolveSessionId is called") {
                 it("THEN returns the session ID extracted from the filename") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         val sessionId = "77d5b7ea-cf04-453b-8867-162404763e18"
                         tempDir.resolve("$sessionId.jsonl").writeText(
                             """{"type":"message","content":"$guid"}"""
@@ -32,8 +31,6 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         val result = wingman.resolveSessionId(guid)
 
                         result shouldBe sessionId
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
                     }
                 }
             }
@@ -42,8 +39,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
         describe("AND no JSONL files contain the target GUID") {
             describe("WHEN resolveSessionId is called") {
                 it("THEN throws IllegalStateException") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         tempDir.resolve("some-session.jsonl").writeText(
                             """{"type":"message","content":"different-content"}"""
                         )
@@ -56,14 +52,11 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         shouldThrow<IllegalStateException> {
                             wingman.resolveSessionId(guid)
                         }
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
                     }
                 }
 
                 it("THEN exception message contains the GUID") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         tempDir.resolve("some-session.jsonl").writeText(
                             """{"type":"message","content":"different-content"}"""
                         )
@@ -77,8 +70,6 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             wingman.resolveSessionId(guid)
                         }
                         exception.message shouldContain guid
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
                     }
                 }
             }
@@ -87,8 +78,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
         describe("AND multiple JSONL files contain the target GUID") {
             describe("WHEN resolveSessionId is called") {
                 it("THEN throws IllegalStateException") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         tempDir.resolve("session-a.jsonl").writeText(
                             """{"content":"$guid"}"""
                         )
@@ -104,14 +94,11 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         shouldThrow<IllegalStateException> {
                             wingman.resolveSessionId(guid)
                         }
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
                     }
                 }
 
                 it("THEN exception message mentions ambiguous") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         tempDir.resolve("session-a.jsonl").writeText(
                             """{"content":"$guid"}"""
                         )
@@ -128,8 +115,6 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             wingman.resolveSessionId(guid)
                         }
                         exception.message shouldContain "Ambiguous"
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
                     }
                 }
             }
@@ -138,8 +123,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
         describe("AND JSONL files are in nested subdirectories") {
             describe("WHEN resolveSessionId is called") {
                 it("THEN finds the GUID in nested files and returns session ID") {
-                    val tempDir = createTempDirectory("wingman-test-")
-                    try {
+                    withTempDir { tempDir ->
                         val nestedDir = tempDir.resolve("project-a/sub-dir")
                         nestedDir.createDirectories()
 
@@ -156,11 +140,42 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         val result = wingman.resolveSessionId(guid)
 
                         result shouldBe sessionId
-                    } finally {
-                        tempDir.toFile().deleteRecursively()
+                    }
+                }
+            }
+        }
+
+        describe("AND only non-JSONL files contain the GUID") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN throws IllegalStateException because non-JSONL files are ignored") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("notes.txt").writeText(
+                            """This file contains $guid but is not a JSONL file"""
+                        )
+                        tempDir.resolve("data.log").writeText(
+                            """{"content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                        )
+
+                        shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
                     }
                 }
             }
         }
     }
 })
+
+private suspend fun withTempDir(block: suspend (Path) -> Unit) {
+    val tempDir = createTempDirectory("wingman-test-")
+    try {
+        block(tempDir)
+    } finally {
+        tempDir.toFile().deleteRecursively()
+    }
+}

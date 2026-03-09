@@ -20,3 +20,6 @@ skipped: 0
     - WHEN resolveSessionId is called
       - [PASS] THEN exception message contains the GUID
       - [PASS] THEN throws IllegalStateException
+  - AND only non-JSONL files contain the GUID
+    - WHEN resolveSessionId is called
+      - [PASS] THEN throws IllegalStateException because non-JSONL files are ignored

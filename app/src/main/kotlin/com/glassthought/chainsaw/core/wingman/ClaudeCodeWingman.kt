@@ -1,8 +1,11 @@
 package com.glassthought.chainsaw.core.wingman
 
+import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
 import kotlin.io.path.extension
@@ -20,6 +23,7 @@ import kotlin.streams.toList
  * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
  * @param outFactory Factory for structured logging.
  */
+@AnchorPoint("ap.gCgRdmWd9eTGXPbHJvyxI.E")
 class ClaudeCodeWingman(
     private val claudeProjectsDir: Path,
     outFactory: OutFactory,
@@ -34,14 +38,16 @@ class ClaudeCodeWingman(
             Val(claudeProjectsDir.toString(), ValType.FILE_PATH_STRING),
         )
 
-        val matchingFiles = Files.walk(claudeProjectsDir)
-            .use { stream ->
-                stream
-                    .filter { Files.isRegularFile(it) }
-                    .filter { it.extension == "jsonl" }
-                    .filter { it.readText().contains(guid) }
-                    .toList()
-            }
+        val matchingFiles = withContext(Dispatchers.IO) {
+            Files.walk(claudeProjectsDir)
+                .use { stream ->
+                    stream
+                        .filter { Files.isRegularFile(it) }
+                        .filter { it.extension == "jsonl" }
+                        .filter { it.readText().contains(guid) }
+                        .toList()
+                }
+        }
 
         out.debug("guid_search_completed") {
             listOf(
