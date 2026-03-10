@@ -40,6 +40,7 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
         val server = KtorHarnessServer(
             outFactory = outFactory,
             portPublisher = portFileManager,
+            agentRequestHandler = NoOpAgentRequestHandler(),
         )
         return ServerFixture(server, portFilePath)
     }
@@ -212,6 +213,83 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
                 fixture.server.start()
                 fixture.server.close()
                 shouldNotThrow<Exception> { fixture.server.close() }
+            }
+        }
+    }
+
+    describe("GIVEN a KtorHarnessServer with a recording handler") {
+
+        class RecordingAgentRequestHandler(
+            private val questionAnswer: String = "test-answer",
+        ) : AgentRequestHandler {
+            val doneCalls = mutableListOf<AgentDoneRequest>()
+            val failedCalls = mutableListOf<AgentFailedRequest>()
+            val statusCalls = mutableListOf<AgentStatusRequest>()
+
+            override suspend fun onDone(request: AgentDoneRequest) { doneCalls.add(request) }
+            override suspend fun onQuestion(request: AgentQuestionRequest): String = questionAnswer
+            override suspend fun onFailed(request: AgentFailedRequest) { failedCalls.add(request) }
+            override suspend fun onStatus(request: AgentStatusRequest) { statusCalls.add(request) }
+        }
+
+        data class RecordingFixture(
+            val server: ServerFixture,
+            val handler: RecordingAgentRequestHandler,
+        )
+
+        fun createRecordingFixture(questionAnswer: String = "test-answer"): RecordingFixture {
+            val tempDir = Files.createTempDirectory("harness-server-test")
+            val portFilePath = tempDir.resolve("port.txt")
+            val handler = RecordingAgentRequestHandler(questionAnswer)
+            val server = KtorHarnessServer(
+                outFactory = outFactory,
+                portPublisher = PortFileManager(portFilePath),
+                agentRequestHandler = handler,
+            )
+            return RecordingFixture(ServerFixture(server, portFilePath), handler)
+        }
+
+        suspend fun withRecordingServer(
+            questionAnswer: String = "test-answer",
+            block: suspend (ServerFixture, RecordingAgentRequestHandler) -> Unit,
+        ) {
+            val (fixture, handler) = createRecordingFixture(questionAnswer)
+            fixture.server.start()
+            try {
+                block(fixture, handler)
+            } finally {
+                fixture.server.close()
+            }
+        }
+
+        describe("AND POST /agent/done is called") {
+
+            it("THEN onDone is invoked with the correct branch") {
+                withRecordingServer { fixture, handler ->
+                    postJson(fixture.server.port(), "/agent/done", """{"branch":"my-branch"}""").close()
+                    handler.doneCalls.size shouldBe 1
+                }
+            }
+
+            it("THEN onDone receives the correct branch value") {
+                withRecordingServer { fixture, handler ->
+                    postJson(fixture.server.port(), "/agent/done", """{"branch":"my-branch"}""").close()
+                    handler.doneCalls[0].branch shouldBe "my-branch"
+                }
+            }
+        }
+
+        describe("AND POST /agent/question is called") {
+
+            it("THEN response body contains the handler's answer") {
+                withRecordingServer(questionAnswer = "the answer") { fixture, _ ->
+                    val response = postJson(
+                        fixture.server.port(),
+                        "/agent/question",
+                        """{"branch":"my-branch","question":"What now?"}""",
+                    )
+                    response.use { it.body!!.string() shouldBe """{"answer":"the answer"}""" }
+                }
             }
         }
     }
