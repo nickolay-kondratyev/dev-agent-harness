@@ -7,6 +7,7 @@ import com.asgard.core.out.time
 import com.glassthought.chainsaw.core.Constants
 import com.glassthought.chainsaw.core.directLLMApi.DirectLLM
 import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.chainsaw.core.initializer.data.Environment
 import com.glassthought.chainsaw.core.tmux.TmuxCommunicator
 import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
@@ -46,7 +47,7 @@ class AppDependencies(
  * dependencies directly.
  */
 interface Initializer {
-    suspend fun initialize(): AppDependencies
+    suspend fun initialize(environment: Environment = Environment.production()): AppDependencies
 
     companion object{
         fun standard(): Initializer = InitializerImpl()
@@ -55,14 +56,15 @@ interface Initializer {
 
 class InitializerImpl : Initializer {
 
-    override suspend fun initialize(): AppDependencies {
+    override suspend fun initialize(environment: Environment): AppDependencies {
         val outFactory = SimpleConsoleOutFactory.standard()
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
-        return out.time({initializeImpl(outFactory)}, "initializer.initialize")
+        return out.time({initializeImpl(outFactory, environment)}, "initializer.initialize")
     }
 
-    private fun initializeImpl(outFactory: SimpleConsoleOutFactory): AppDependencies {
+    private fun initializeImpl(outFactory: SimpleConsoleOutFactory, environment: Environment): AppDependencies {
+        // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)

@@ -1,0 +1,13 @@
+---
+spec: "com.glassthought.chainsaw.core.initializer.data.EnvironmentTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN Environment.production()
+  - WHEN isTest is checked
+    - [PASS] THEN isTest is false
+- GIVEN TestEnvironment
+  - WHEN isTest is checked
+    - [PASS] THEN isTest is true
