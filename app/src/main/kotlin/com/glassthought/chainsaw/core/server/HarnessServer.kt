@@ -36,14 +36,19 @@ interface HarnessServer : AsgardCloseable {
  * Ktor CIO implementation of [HarnessServer].
  *
  * Binds to port 0 (OS-assigned), writes the resolved port to the port file via
- * [PortPublisher], and exposes 4 stub POST endpoints under `/agent/`.
+ * [PortPublisher], and exposes 4 POST endpoints under `/agent/`.
+ *
+ * HTTP protocol concerns (parsing, routing, responding) live here. Business logic
+ * is delegated to [agentRequestHandler], which the phase runner wires in.
  *
  * @param outFactory Logging factory for structured logging.
  * @param portPublisher Publishes/removes the port file so agents can discover the server.
+ * @param agentRequestHandler Handles agent requests; use [NoOpAgentRequestHandler] as a placeholder.
  */
 class KtorHarnessServer(
     outFactory: OutFactory,
     private val portPublisher: PortPublisher,
+    private val agentRequestHandler: AgentRequestHandler = NoOpAgentRequestHandler(),
 ) : HarnessServer {
 
     private val out = outFactory.getOutForClass(KtorHarnessServer::class)
@@ -119,23 +124,44 @@ class KtorHarnessServer(
 
         routing {
             route("/agent") {
-                post("/done") { handleAgentRequest<AgentDoneRequest>("/agent/done") }
-                // STUB: V1 returns 200 immediately. Future: must suspend until human answers,
-                // then return the answer in the response body (answer delivered via TMUX send-keys).
-                post("/question") { handleAgentRequest<AgentQuestionRequest>("/agent/question") }
-                post("/failed") { handleAgentRequest<AgentFailedRequest>("/agent/failed") }
-                post("/status") { handleAgentRequest<AgentStatusRequest>("/agent/status") }
+                post("/done") {
+                    handleAgentRequest<AgentDoneRequest>("/agent/done") { req ->
+                        agentRequestHandler.onDone(req)
+                        OK_RESPONSE
+                    }
+                }
+                post("/question") {
+                    handleAgentRequest<AgentQuestionRequest>("/agent/question") { req ->
+                        mapOf("answer" to agentRequestHandler.onQuestion(req))
+                    }
+                }
+                post("/failed") {
+                    handleAgentRequest<AgentFailedRequest>("/agent/failed") { req ->
+                        agentRequestHandler.onFailed(req)
+                        OK_RESPONSE
+                    }
+                }
+                post("/status") {
+                    handleAgentRequest<AgentStatusRequest>("/agent/status") { req ->
+                        agentRequestHandler.onStatus(req)
+                        OK_RESPONSE
+                    }
+                }
             }
         }
     }
 
     /**
-     * Receives an [AgentRequest] of type [T], logs it, and responds with [OK_RESPONSE].
+     * Receives an [AgentRequest] of type [T], logs it, invokes [action], and responds with
+     * the result.
      *
      * Consolidates the common receive-log-respond pattern shared by all agent endpoints.
+     * The caller supplies [action] to produce the response body, keeping HTTP concerns here
+     * while delegating business logic to [AgentRequestHandler].
      */
     private suspend inline fun <reified T : AgentRequest> RoutingContext.handleAgentRequest(
         path: String,
+        action: suspend (T) -> Any,
     ) {
         val request = call.receive<T>()
         out.info(
@@ -143,7 +169,8 @@ class KtorHarnessServer(
             Val(path, ValType.HTTP_REQUEST_PATH),
             Val(request.branch, ValType.GIT_BRANCH_NAME),
         )
-        call.respond(OK_RESPONSE)
+        val response = action(request)
+        call.respond(response)
     }
 
     companion object {

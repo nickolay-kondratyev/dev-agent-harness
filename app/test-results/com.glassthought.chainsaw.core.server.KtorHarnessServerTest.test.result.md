@@ -7,6 +7,12 @@ skipped: 0
 
 - GIVEN a KtorHarnessServer that has not been started
   - [PASS] THEN port() throws IllegalStateException
+- GIVEN a KtorHarnessServer with a recording handler
+  - AND POST /agent/done is called
+    - [PASS] THEN onDone is invoked with the correct branch
+    - [PASS] THEN onDone receives the correct branch value
+  - AND POST /agent/question is called
+    - [PASS] THEN response body contains the handler's answer
 - GIVEN a started KtorHarnessServer
   - AND POST /agent/done is called with malformed JSON
     - [PASS] THEN response status is 400

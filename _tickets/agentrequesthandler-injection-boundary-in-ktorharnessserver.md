@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T20:55:32Z
 id: nid_z3rhdp8coydv3aigd2o01h2t7_E
 title: "AgentRequestHandler injection boundary in KtorHarnessServer"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T16:33:03Z
-status_updated_iso: 2026-03-10T20:33:12Z
+status_updated_iso: 2026-03-10T20:55:32Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -32,3 +33,9 @@ A NoOpAgentRequestHandler should serve as placeholder.
 
 Ref: CONSOLIDATED_REVIEW.md optional #7 in .ai_out/harness-http-server-review/
 
+
+## Notes
+
+**2026-03-10T20:55:38Z**
+
+Completed. Created AgentRequestHandler.kt (interface + NoOpAgentRequestHandler), injected into KtorHarnessServer, /question returns handler answer in {"answer":"..."}. 17 tests pass. Commit: 0990b2f
