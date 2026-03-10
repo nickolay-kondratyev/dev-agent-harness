@@ -241,6 +241,7 @@ enum ModelTier { QuickCheap, Medium }
 ---
 
 ## Workflow Definition — Kotlin + JSON
+<!-- ap.Wya4gZPW6RPpJHdtoJqZO.E -->
 
 Core engine in Kotlin; workflow phases defined in **JSON** under `./config/workflows/`.
 JSON chosen because: 1) easy for LLMs to generate during planning phase, 2) strong tooling support.

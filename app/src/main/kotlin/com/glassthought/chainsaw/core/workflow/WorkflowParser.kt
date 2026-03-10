@@ -16,7 +16,7 @@ import kotlin.io.path.readText
 /**
  * Parses workflow definition JSON files into [WorkflowDefinition].
  *
- * See design doc: ref.ap.mmcagXtg6ulznKYYNKlNP.E
+ * See design doc: ref.ap.Wya4gZPW6RPpJHdtoJqZO.E (Workflow Definition — Kotlin + JSON)
  *
  * ap.U5oDohccLN3tugPzK9TJa.E
  */
