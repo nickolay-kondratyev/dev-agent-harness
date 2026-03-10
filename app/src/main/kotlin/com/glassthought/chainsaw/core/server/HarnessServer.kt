@@ -56,12 +56,16 @@ class KtorHarnessServer(
         }
 
         server.start(wait = false)
+        engine = server  // assign early so close() can stop the server if writePort throws
 
         val resolvedPort = server.engine.resolvedConnectors().first().port
-        portFileManager.writePort(resolvedPort)
-
-        engine = server
-        boundPort = resolvedPort
+        try {
+            portFileManager.writePort(resolvedPort)
+            boundPort = resolvedPort
+        } catch (e: Exception) {
+            close()
+            throw e
+        }
 
         out.info(
             "harness_server_started",
@@ -98,6 +102,8 @@ class KtorHarnessServer(
         routing {
             route("/agent") {
                 post("/done") { handleAgentRequest<AgentDoneRequest>("/agent/done") }
+                // STUB: V1 returns 200 immediately. Future: must suspend until human answers,
+                // then return the answer in the response body (answer delivered via TMUX send-keys).
                 post("/question") { handleAgentRequest<AgentQuestionRequest>("/agent/question") }
                 post("/failed") { handleAgentRequest<AgentFailedRequest>("/agent/failed") }
                 post("/status") { handleAgentRequest<AgentStatusRequest>("/agent/status") }

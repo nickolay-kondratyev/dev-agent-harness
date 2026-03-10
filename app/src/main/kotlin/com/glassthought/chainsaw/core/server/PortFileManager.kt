@@ -31,6 +31,7 @@ class PortFileManager(private val portFilePath: Path) {
     }
 
     companion object {
+        // MUST match PORT_FILE in scripts/harness-cli-for-agent.sh (ref.ap.8PB8nMd93D3jipEWhME5n.E)
         val DEFAULT_PATH: Path = Path.of(
             System.getProperty("user.home"),
             ".chainsaw_agent_harness", "server", "port.txt"

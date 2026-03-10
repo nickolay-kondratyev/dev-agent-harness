@@ -6,8 +6,12 @@ skipped: 0
 ---
 
 - GIVEN a started KtorHarnessServer
+  - AND POST /agent/done is called with malformed JSON
+    - [PASS] THEN response status is 400
   - AND POST /agent/done is called with valid JSON
     - [PASS] THEN response status is 200
+  - AND POST /agent/done response body
+    - [PASS] THEN response body is {"status":"ok"}
   - AND POST /agent/failed is called with valid JSON
     - [PASS] THEN response status is 200
   - AND POST /agent/question is called with valid JSON

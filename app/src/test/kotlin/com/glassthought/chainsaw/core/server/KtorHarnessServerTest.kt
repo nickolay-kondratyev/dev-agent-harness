@@ -140,12 +140,44 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
             }
         }
 
+        describe("AND POST /agent/done is called with malformed JSON") {
+
+            it("THEN response status is 400") {
+                withServer { fixture ->
+                    val response = postJson(
+                        fixture.server.port(),
+                        "/agent/done",
+                        """{"invalid json""",
+                    )
+                    response.use { it.code shouldBe 400 }
+                }
+            }
+        }
+
+        describe("AND POST /agent/done response body") {
+
+            it("THEN response body is {\"status\":\"ok\"}") {
+                withServer { fixture ->
+                    val response = postJson(
+                        fixture.server.port(),
+                        "/agent/done",
+                        """{"branch": "test-branch"}""",
+                    )
+                    response.use { it.body!!.string() shouldBe """{"status":"ok"}""" }
+                }
+            }
+        }
+
         describe("AND the server is closed") {
 
             it("THEN port file is deleted after close") {
                 val fixture = createFixture()
                 fixture.server.start()
-                fixture.server.close()
+                try {
+                    // server is running; close happens in finally to guarantee cleanup
+                } finally {
+                    fixture.server.close()
+                }
                 Files.exists(fixture.portFilePath) shouldBe false
             }
         }
