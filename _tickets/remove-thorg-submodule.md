@@ -1,11 +1,11 @@
 ---
 id: nid_0h5gb1m47hyo0ljxb7v432q2k_E
 title: "Remove thorg-submodule"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T01:07:52Z
-status_updated_iso: 2026-03-10T01:07:52Z
+status_updated_iso: 2026-03-10T16:29:41Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
