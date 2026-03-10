@@ -1,10 +1,14 @@
 # Implementation State
 
-**Status:** COMPLETE — all phases implemented and verified
+**Status:** COMPLETE — all review fixes applied and verified
 
 ## What Was Done
 
+### Iteration 1 (original implementation)
 All 8 files from the plan were successfully modified. See `1_IMPLEMENTATION_FROM_PLAN__PUBLIC.md` for full details.
+
+### Iteration 2 (review fixes — current)
+Fixed all 5 issues raised by IMPLEMENTATION_REVIEWER. See `IMPLEMENTATION_ITERATION__PUBLIC.md` for details.
 
 ## Key Findings
 
@@ -16,6 +20,14 @@ All 8 files from the plan were successfully modified. See `1_IMPLEMENTATION_FROM
 
 4. Both `publishAsgardToMavenLocal` and `checkAsgardInMavenLocal` are marked with `notCompatibleWithConfigurationCache()`.
 
+5. Submodule was committed with: `553eb324f` ("Add maven-publish to buildlogic plugins and publishAsgardLibsToMavenLocal task")
+
+6. Parent repo pointer updated in commit `5f7f28b`.
+
+## Anchor Points Created
+- `ap.MtB03DtelNNjPmY0VjKHs.E` — publishAsgardToMavenLocal task
+- `ap.luMV9nN9bCUVxYfZkAVYR.E` — checkAsgardInMavenLocal task
+
 ## Artifacts Published to ~/.m2
 All asgard libs verified in `/home/node/.m2/repository/com/asgard/`:
 - asgardBuildConfig, asgardBuildConfig-jvm, asgardBuildConfig-js
@@ -25,5 +37,5 @@ All asgard libs verified in `/home/node/.m2/repository/com/asgard/`:
 - asgardCoreShared, asgardCoreShared-jvm, asgardCoreShared-js
 - asgardTestTools, asgardTestTools-jvm
 
-## Next Steps (if resuming)
-Nothing left. All tasks complete, all tests green.
+## Next Steps
+Nothing left. All review issues resolved, all verifications green.
