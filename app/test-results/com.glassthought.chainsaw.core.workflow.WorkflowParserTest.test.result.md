@@ -11,6 +11,10 @@ skipped: 0
 - GIVEN a JSON file that does not exist
   - WHEN parse is called
     - [PASS] THEN throws NoSuchFileException
+- GIVEN a JSON file with an empty parts list
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions empty parts
+    - [PASS] THEN throws IllegalArgumentException
 - GIVEN a JSON file with blank name
   - WHEN parse is called
     - [PASS] THEN exception message mentions blank name
@@ -57,6 +61,10 @@ skipped: 0
 - GIVEN a with-planning JSON missing planningIteration
   - WHEN parse is called
     - [PASS] THEN exception message mentions planningIteration
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a with-planning JSON with a blank executionPhasesFrom
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions executionPhasesFrom
     - [PASS] THEN throws IllegalArgumentException
 - GIVEN a with-planning workflow JSON
   - WHEN parse is called

@@ -88,7 +88,11 @@ class WorkflowParserImpl(outFactory: OutFactory) : WorkflowParser {
         }
 
         if (hasParts) {
-            definition.parts!!.forEachIndexed { index, part ->
+            require(definition.parts!!.isNotEmpty()) {
+                "Workflow 'parts' list must not be empty in: $path"
+            }
+
+            definition.parts.forEachIndexed { index, part ->
                 require(part.phases.isNotEmpty()) {
                     "Part '${part.name}' at index $index has empty phases list in: $path"
                 }
@@ -104,8 +108,8 @@ class WorkflowParserImpl(outFactory: OutFactory) : WorkflowParser {
                 "planningIteration is required when planningPhases is present in: $path"
             }
 
-            require(definition.executionPhasesFrom != null) {
-                "executionPhasesFrom is required when planningPhases is present in: $path"
+            require(definition.executionPhasesFrom?.isNotBlank() == true) {
+                "executionPhasesFrom is required and must not be blank when planningPhases is present in: $path"
             }
         }
     }

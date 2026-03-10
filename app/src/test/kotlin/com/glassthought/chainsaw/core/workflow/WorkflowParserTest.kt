@@ -282,6 +282,44 @@ class WorkflowParserTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a JSON file with an empty parts list") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("empty-parts.json"))
+                }
+            }
+
+            it("THEN exception message mentions empty parts") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("empty-parts.json"))
+                }
+                exception.message shouldContain "parts"
+            }
+        }
+    }
+
+    describe("GIVEN a with-planning JSON with a blank executionPhasesFrom") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-blank-execution-from.json"))
+                }
+            }
+
+            it("THEN exception message mentions executionPhasesFrom") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-blank-execution-from.json"))
+                }
+                exception.message shouldContain "executionPhasesFrom"
+            }
+        }
+    }
+
     describe("GIVEN a JSON file with both parts and planningPhases") {
         val parser = WorkflowParser.standard(outFactory)
 

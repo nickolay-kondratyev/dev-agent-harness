@@ -7,7 +7,7 @@ package com.glassthought.chainsaw.core.workflow
  * (has [planningPhases], [planningIteration], and [executionPhasesFrom]).
  * These two modes are mutually exclusive — exactly one set of fields will be non-null.
  *
- * See design doc: ref.ap.mmcagXtg6ulznKYYNKlNP.E
+ * See design doc: ref.ap.Wya4gZPW6RPpJHdtoJqZO.E (Workflow Definition — Kotlin + JSON)
  *
  * ap.MyWV0mG6ZU8XaQOyo14l4.E
  */
