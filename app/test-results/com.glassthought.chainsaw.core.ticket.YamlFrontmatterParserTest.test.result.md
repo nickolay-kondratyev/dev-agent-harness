@@ -5,6 +5,10 @@ failed: 0
 skipped: 0
 ---
 
+- GIVEN frontmatter with an unquoted ISO datetime value
+  - WHEN parse is called
+    - [PASS] THEN created_iso value equals the ISO string
+    - [PASS] THEN created_iso value is a String (not a java.util.Date)
 - GIVEN markdown content where body has multiple paragraphs
   - WHEN parse is called
     - [PASS] THEN body contains first paragraph

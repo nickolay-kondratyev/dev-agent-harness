@@ -13,6 +13,8 @@ skipped: 0
     - [PASS] THEN throws IllegalArgumentException
 - GIVEN a ticket file with extra frontmatter fields
   - WHEN parse is called
+    - [PASS] THEN additionalFields 'created_iso' value equals the ISO string
+    - [PASS] THEN additionalFields 'created_iso' value is a String (not a java.util.Date)
     - [PASS] THEN additionalFields contains 'assignee'
     - [PASS] THEN additionalFields contains 'priority'
     - [PASS] THEN additionalFields contains 'type'

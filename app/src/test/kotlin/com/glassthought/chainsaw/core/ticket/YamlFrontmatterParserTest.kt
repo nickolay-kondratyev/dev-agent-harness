@@ -132,6 +132,30 @@ class YamlFrontmatterParserTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN frontmatter with an unquoted ISO datetime value") {
+        val content = """
+            ---
+            id: test-iso-date
+            title: "ISO Date Test"
+            created_iso: 2026-03-09T23:05:48Z
+            ---
+
+            Body.
+        """.trimIndent()
+
+        describe("WHEN parse is called") {
+            it("THEN created_iso value is a String (not a java.util.Date)") {
+                val result = YamlFrontmatterParser.parse(content)
+                result.yamlFields["created_iso"]!!::class shouldBe String::class
+            }
+
+            it("THEN created_iso value equals the ISO string") {
+                val result = YamlFrontmatterParser.parse(content)
+                result.yamlFields["created_iso"] shouldBe "2026-03-09T23:05:48Z"
+            }
+        }
+    }
+
     describe("GIVEN markdown content where body itself contains --- lines") {
         val content = """
             ---

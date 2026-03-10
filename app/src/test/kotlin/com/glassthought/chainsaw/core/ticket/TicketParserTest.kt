@@ -106,6 +106,16 @@ class TicketParserTest : AsgardDescribeSpec({
                 val ticket = parser.parse(resourcePath("extra-fields-ticket.md"))
                 ticket.additionalFields shouldNotContainKey "status"
             }
+
+            it("THEN additionalFields 'created_iso' value is a String (not a java.util.Date)") {
+                val ticket = parser.parse(resourcePath("extra-fields-ticket.md"))
+                ticket.additionalFields["created_iso"]!!::class shouldBe String::class
+            }
+
+            it("THEN additionalFields 'created_iso' value equals the ISO string") {
+                val ticket = parser.parse(resourcePath("extra-fields-ticket.md"))
+                ticket.additionalFields["created_iso"] shouldBe "2026-03-09T23:05:48Z"
+            }
         }
     }
 

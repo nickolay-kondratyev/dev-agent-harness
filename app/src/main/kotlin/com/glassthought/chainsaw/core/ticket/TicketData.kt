@@ -15,5 +15,5 @@ data class TicketData(
     val title: String,
     val status: String?,
     val description: String,
-    val additionalFields: Map<String, Any> = emptyMap(),
+    val additionalFields: Map<String, String> = emptyMap(),
 )
