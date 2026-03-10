@@ -79,7 +79,7 @@ CodeAgent.run(
 ---
 
 ## Agent↔Harness Communication — Bidirectional
-<!-- ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
+<!-- ref.ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
 ### Architecture
 
@@ -209,7 +209,7 @@ When plan execution hits blocking issues:
 ---
 
 ## Session ID Tracking — Wingman
-<!-- ap.gCgRdmWd9eTGXPbHJvyxI.E -->
+<!-- ref.ap.gCgRdmWd9eTGXPbHJvyxI.E -->
 
 **Problem:** Claude Code doesn't expose its session ID to the agent itself.
 
@@ -243,7 +243,7 @@ enum ModelTier { QuickCheap, Medium }
 ---
 
 ## Workflow Definition — Kotlin + JSON
-<!-- ap.Wya4gZPW6RPpJHdtoJqZO.E -->
+<!-- ref.ap.Wya4gZPW6RPpJHdtoJqZO.E -->
 
 Core engine in Kotlin; workflow phases defined in **JSON** under `./config/workflows/`.
 JSON chosen because: 1) easy for LLMs to generate during planning phase, 2) strong tooling support.
@@ -368,7 +368,7 @@ Example `plan.json`:
 ```
 
 #### Role Catalog — Auto-Discovered
-<!-- ap.iF4zXT5FUcqOzclp5JVHj.E -->
+<!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
 
 The planner needs to know what roles are available. The catalog is **auto-discovered** from `$CHAINSAW_AGENTS_DIR`:
 
@@ -480,7 +480,7 @@ Same pattern: `planning/PLANNER/` and `planning/PLAN_REVIEWER/` directories are 
   - `harness-cli-for-agent.sh --help` content (in `<critical_to_keep_through_compaction>` tags)
 
 ## Git Branch / Feature Naming
-<!-- ap.THL21SyZzJhzInG2m4zl2.E -->
+<!-- ref.ap.THL21SyZzJhzInG2m4zl2.E -->
 
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
