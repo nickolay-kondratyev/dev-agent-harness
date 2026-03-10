@@ -19,8 +19,9 @@ interface Wingman {
      * Resolves the session ID for the agent session that contains the given GUID.
      *
      * @param guid The unique handshake marker sent to the agent.
-     * @return The session ID string (e.g., a UUID derived from the session artifact filename).
+     * @return A [ResumableAgentSessionId] containing the agent type and session ID
+     *   (e.g., a UUID derived from the session artifact filename).
      * @throws IllegalStateException if no session or multiple sessions match the GUID.
      */
-    suspend fun resolveSessionId(guid: HandshakeGuid): String
+    suspend fun resolveSessionId(guid: HandshakeGuid): ResumableAgentSessionId
 }
