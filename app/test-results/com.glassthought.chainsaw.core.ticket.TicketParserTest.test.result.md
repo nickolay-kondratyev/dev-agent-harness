@@ -11,6 +11,9 @@ skipped: 0
 - GIVEN a ticket file missing the title field
   - WHEN parse is called
     - [PASS] THEN throws IllegalArgumentException
+- GIVEN a ticket file where id is an unquoted ISO date
+  - WHEN parse is called
+    - [PASS] THEN id is preserved as the ISO string (not corrupted by snakeyaml Date resolution)
 - GIVEN a ticket file with extra frontmatter fields
   - WHEN parse is called
     - [PASS] THEN additionalFields 'created_iso' value equals the ISO string
