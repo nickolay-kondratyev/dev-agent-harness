@@ -1,11 +1,11 @@
 ---
 id: nid_mkxn4qa9tqlvvm9zxq4es8cg2_E
 title: "Add class for the guid"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T20:03:24Z
-status_updated_iso: 2026-03-10T20:03:24Z
+status_updated_iso: 2026-03-10T20:31:00Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
