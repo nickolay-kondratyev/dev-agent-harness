@@ -1,0 +1,23 @@
+{
+  "name": "multi-part-workflow",
+  "parts": [
+    {
+      "name": "design",
+      "description": "Design the solution",
+      "phases": [
+        { "role": "DESIGNER" },
+        { "role": "DESIGN_REVIEWER" }
+      ],
+      "iteration": { "max": 3 }
+    },
+    {
+      "name": "implementation",
+      "description": "Implement the solution",
+      "phases": [
+        { "role": "IMPLEMENTOR" },
+        { "role": "IMPLEMENTATION_REVIEWER" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}

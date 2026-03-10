@@ -1,0 +1,14 @@
+{
+  "name": "straightforward",
+  "parts": [
+    {
+      "name": "main",
+      "description": "Implement and review",
+      "phases": [
+        { "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
+        { "role": "IMPLEMENTATION_REVIEWER" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}
