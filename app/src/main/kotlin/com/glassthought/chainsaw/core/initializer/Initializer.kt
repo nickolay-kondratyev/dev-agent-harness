@@ -3,6 +3,7 @@ package com.glassthought.chainsaw.core.initializer
 import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
+import com.asgard.core.out.time
 import com.glassthought.chainsaw.core.Constants
 import com.glassthought.chainsaw.core.directLLMApi.DirectLLM
 import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
@@ -45,7 +46,7 @@ class AppDependencies(
  * dependencies directly.
  */
 interface Initializer {
-    fun initialize(): AppDependencies
+    suspend fun initialize(): AppDependencies
 
     companion object{
         fun standard(): Initializer = InitializerImpl()
@@ -54,9 +55,14 @@ interface Initializer {
 
 class InitializerImpl : Initializer {
 
-    override fun initialize(): AppDependencies {
+    override suspend fun initialize(): AppDependencies {
         val outFactory = SimpleConsoleOutFactory.standard()
+        val out = outFactory.getOutForClass(InitializerImpl::class)
 
+        return out.time({initializeImpl(outFactory)}, "initializer.initialize")
+    }
+
+    private fun initializeImpl(outFactory: SimpleConsoleOutFactory): AppDependencies {
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
