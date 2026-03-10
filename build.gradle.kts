@@ -113,3 +113,70 @@ tasks.register("checkAsgardInMavenLocal") {
         }
     }
 }
+
+/**
+ * Ensures asgard libraries are present in maven local (~/.m2).
+ * Auto-publishes missing libraries without requiring manual THORG_ROOT setup.
+ *
+ * This task is wired as a dependency of :app:compileKotlin, providing self-healing
+ * builds that automatically resolve missing asgard dependencies.
+ *
+ * Fast path: If artifacts already exist, completes in <1s via upToDateWhen check.
+ * Slow path: If missing, auto-publishes using THORG_ROOT=$projectDir/submodules/thorg-root.
+ *
+ * @AnchorPoint("ap.VZk3hR8tJmPcXqYsNvLbW.E")
+ */
+tasks.register("ensureAsgardInMavenLocal") {
+    group = "publishing"
+    description = "Ensures asgard libraries are in maven local, auto-publishing if missing."
+
+    // Not compatible with configuration cache: accesses system properties and spawns subprocess.
+    notCompatibleWithConfigurationCache("Accesses system properties and spawns subprocess at execution time.")
+
+    // Fast path: skip execution if artifacts already exist
+    outputs.upToDateWhen {
+        val m2 = java.io.File(System.getProperty("user.home"), ".m2/repository/com/asgard")
+        val requiredArtifacts = listOf("asgardCore", "asgardTestTools")
+        requiredArtifacts.all { artifact ->
+            m2.resolve("$artifact/1.0.0").exists()
+        }
+    }
+
+    doLast {
+        val m2 = java.io.File(System.getProperty("user.home"), ".m2/repository/com/asgard")
+        val requiredArtifacts = listOf("asgardCore", "asgardTestTools")
+
+        val missing = requiredArtifacts.filter { artifact ->
+            !m2.resolve("$artifact/1.0.0").exists()
+        }
+
+        if (missing.isEmpty()) {
+            println("asgard libraries are present in maven local.")
+            return@doLast
+        }
+
+        // Auto-publish missing libraries
+        println("Missing asgard libraries: $missing. Auto-publishing...")
+
+        // Auto-set THORG_ROOT (no manual env var export needed)
+        val thorgRoot = java.io.File(project.projectDir, "submodules/thorg-root").absolutePath
+        val kotlinMpDir = java.io.File(project.projectDir, "submodules/thorg-root/source/libraries/kotlin-mp")
+
+        if (!kotlinMpDir.exists()) {
+            throw GradleException(
+                "Submodule not initialized. Run: git submodule update --init"
+            )
+        }
+
+        val processBuilder = ProcessBuilder("./gradlew", "publishAsgardLibsToMavenLocal")
+            .directory(kotlinMpDir)
+            .also { it.environment()["THORG_ROOT"] = thorgRoot }
+            .inheritIO()
+        val exitCode = processBuilder.start().waitFor()
+        if (exitCode != 0) {
+            throw GradleException("publishAsgardLibsToMavenLocal failed with exit code $exitCode")
+        }
+
+        println("Successfully published asgard libraries to maven local.")
+    }
+}

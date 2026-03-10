@@ -75,6 +75,13 @@ application {
     mainClass = "com.glassthought.chainsaw.cli.AppMainKt"
 }
 
+// Wire ensureAsgardInMavenLocal as a dependency of compileKotlin.
+// This ensures asgard libs are available before compilation, providing self-healing
+// builds that auto-publish missing dependencies without manual THORG_ROOT setup.
+tasks.named("compileKotlin") {
+    dependsOn(":ensureAsgardInMavenLocal")
+}
+
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
