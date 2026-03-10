@@ -11,5 +11,9 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
-Slim down the tooling that claude code launches with so that 1) uses less context 2) less confusion of which tool to use for things like asking user questions when running under agent.
+Slim down the tooling that clarify code launches with so that
+1) uses less context 
+2) less confusion of which tool to use for things like asking user questions when running under agent.
+
+As part of clarification let's update this to contain a list of Claude Code tools and their short description in a list format.
 
