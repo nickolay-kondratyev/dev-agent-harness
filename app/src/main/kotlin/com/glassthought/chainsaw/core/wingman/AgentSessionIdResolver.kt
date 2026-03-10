@@ -13,7 +13,7 @@ import com.asgard.core.annotation.AnchorPoint
  * See ref.ap.gCgRdmWd9eTGXPbHJvyxI.E for the ClaudeCodeWingman implementation.
  */
 @AnchorPoint("ap.D3ICqiFdFFgbFIPLMTYdoyss.E")
-interface Wingman {
+interface AgentSessionIdResolver {
 
     /**
      * Resolves the session ID for the agent session that contains the given GUID.

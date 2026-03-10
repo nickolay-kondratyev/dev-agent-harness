@@ -26,7 +26,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"type":"message","content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -48,7 +48,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         )
 
                         // Short timeout so the test is fast; real timeout is 45 seconds.
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
@@ -66,7 +66,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"type":"message","content":"different-content"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
@@ -92,7 +92,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -112,7 +112,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -138,7 +138,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -162,7 +162,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeWingman(
+                        val wingman = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
@@ -189,7 +189,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeWingman(
+                    val wingman = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
@@ -206,7 +206,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeWingman(
+                    val wingman = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
@@ -227,7 +227,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeWingman(
+                    val wingman = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
@@ -248,7 +248,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = emptyList(),
                     )
 
-                    val wingman = ClaudeCodeWingman(
+                    val wingman = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         resolveTimeoutMs = 100L,
@@ -266,7 +266,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = emptyList(),
                     )
 
-                    val wingman = ClaudeCodeWingman(
+                    val wingman = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         resolveTimeoutMs = 100L,

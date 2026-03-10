@@ -7,7 +7,7 @@ import com.asgard.core.out.OutFactory
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.wingman.HandshakeGuid
 import com.glassthought.chainsaw.core.wingman.ResumableAgentSessionId
-import com.glassthought.chainsaw.core.wingman.Wingman
+import com.glassthought.chainsaw.core.wingman.AgentSessionIdResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -68,12 +68,12 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
  *
  */
 @AnchorPoint("ap.gCgRdmWd9eTGXPbHJvyxI.E")
-class ClaudeCodeWingman(
+class ClaudeCodeAgentSessionIdResolver(
     claudeProjectsDir: Path,
     outFactory: OutFactory,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
-) : Wingman {
+) : AgentSessionIdResolver {
 
     // Internal constructor allows tests to inject a fake GuidScanner.
     constructor(
@@ -90,7 +90,7 @@ class ClaudeCodeWingman(
         this.guidScanner = guidScanner
     }
 
-    private val out = outFactory.getOutForClass(ClaudeCodeWingman::class)
+    private val out = outFactory.getOutForClass(ClaudeCodeAgentSessionIdResolver::class)
 
     // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
     private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir)
