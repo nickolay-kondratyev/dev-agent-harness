@@ -1,5 +1,7 @@
 package com.glassthought.chainsaw.core.wingman
 
+import com.asgard.core.annotation.AnchorPoint
+
 /**
  * Resolves agent session IDs from a GUID handshake marker.
  *
@@ -10,6 +12,7 @@ package com.glassthought.chainsaw.core.wingman
  * See ref.ap.7sZveqPcid5z1ntmLs27UqN6.E for TmuxSession (the caller context).
  * See ref.ap.gCgRdmWd9eTGXPbHJvyxI.E for the ClaudeCodeWingman implementation.
  */
+@AnchorPoint("ap.D3ICqiFdFFgbFIPLMTYdoyss.E")
 interface Wingman {
 
     /**
