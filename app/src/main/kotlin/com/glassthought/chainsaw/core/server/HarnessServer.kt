@@ -13,6 +13,8 @@ import io.ktor.server.plugins.contentnegotiation.*
 import io.ktor.server.request.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 /**
  * HTTP server for agent-to-harness communication. ap.NAVMACFCbnE7L6Geutwyk.E
@@ -45,32 +47,43 @@ class KtorHarnessServer(
 ) : HarnessServer {
 
     private val out = outFactory.getOutForClass(KtorHarnessServer::class)
+    private val lifecycleMutex = Mutex()
     private var engine: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>? = null
     private var boundPort: Int? = null
 
     override suspend fun start() {
-        check(engine == null) { "Server already started" }
+        lifecycleMutex.withLock {
+            check(engine == null) { "Server already started" }
 
-        val server = embeddedServer(CIO, port = 0) {
-            configureServer()
+            val server = embeddedServer(CIO, port = 0) {
+                configureServer()
+            }
+
+            server.start(wait = false)
+            engine = server  // assign early so close() can stop the server if writePort throws
+
+            val resolvedPort = server.engine.resolvedConnectors().first().port
+            try {
+                portPublisher.writePort(resolvedPort)
+                boundPort = resolvedPort
+            } catch (e: Exception) {
+                // Must stop server outside mutex lock to avoid deadlock if close() is called
+                // from another context. Set engine to null first so close() becomes no-op.
+                val engineToStop = engine
+                engine = null
+                boundPort = null
+                engineToStop?.stop(
+                    gracePeriodMillis = GRACEFUL_SHUTDOWN_PERIOD_MILLIS,
+                    timeoutMillis = SHUTDOWN_TIMEOUT_MILLIS,
+                )
+                throw e
+            }
+
+            out.info(
+                "harness_server_started",
+                Val(resolvedPort, ValType.PORT_AS_INT),
+            )
         }
-
-        server.start(wait = false)
-        engine = server  // assign early so close() can stop the server if writePort throws
-
-        val resolvedPort = server.engine.resolvedConnectors().first().port
-        try {
-            portPublisher.writePort(resolvedPort)
-            boundPort = resolvedPort
-        } catch (e: Exception) {
-            close()
-            throw e
-        }
-
-        out.info(
-            "harness_server_started",
-            Val(resolvedPort, ValType.PORT_AS_INT),
-        )
     }
 
     override fun port(): Int {
@@ -78,16 +91,21 @@ class KtorHarnessServer(
     }
 
     override suspend fun close() {
-        val currentEngine = engine ?: return
+        val currentEngine: EmbeddedServer<CIOApplicationEngine, CIOApplicationEngine.Configuration>?
+        lifecycleMutex.withLock {
+            currentEngine = engine
+            engine = null
+            boundPort = null
+        }
+
+        // Stop server outside mutex to avoid blocking other operations during shutdown
+        currentEngine ?: return
 
         currentEngine.stop(
             gracePeriodMillis = GRACEFUL_SHUTDOWN_PERIOD_MILLIS,
             timeoutMillis = SHUTDOWN_TIMEOUT_MILLIS,
         )
         portPublisher.deletePort()
-
-        engine = null
-        boundPort = null
 
         out.info("harness_server_stopped")
     }

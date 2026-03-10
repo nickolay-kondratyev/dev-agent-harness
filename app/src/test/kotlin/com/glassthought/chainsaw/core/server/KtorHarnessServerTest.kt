@@ -1,6 +1,7 @@
 package com.glassthought.chainsaw.core.server
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import io.kotest.assertions.throwables.shouldNotThrow
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
@@ -204,6 +205,13 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
                     fixture.server.close()
                 }
                 Files.exists(fixture.portFilePath) shouldBe false
+            }
+
+            it("THEN second close() does not throw (idempotent)") {
+                val fixture = createFixture()
+                fixture.server.start()
+                fixture.server.close()
+                shouldNotThrow<Exception> { fixture.server.close() }
             }
         }
     }

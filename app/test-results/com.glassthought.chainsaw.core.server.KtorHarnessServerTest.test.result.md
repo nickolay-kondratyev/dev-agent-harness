@@ -29,3 +29,4 @@ skipped: 0
   - AND the server is closed
     - [PASS] THEN port file is deleted after close
     - [PASS] THEN port() throws IllegalStateException after close
+    - [PASS] THEN second close() does not throw (idempotent)
