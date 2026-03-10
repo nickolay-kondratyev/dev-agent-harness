@@ -54,11 +54,11 @@ class RoleCatalogLoaderImpl(outFactory: OutFactory) : RoleCatalogLoader {
             listOf(Val(dir.toString(), ValType.FILE_PATH_STRING))
         }
 
-        require(Files.exists(dir) && Files.isDirectory(dir)) {
-            "Role catalog directory does not exist or is not a directory: $dir"
-        }
-
         val mdFiles = withContext(Dispatchers.IO) {
+            require(Files.exists(dir) && Files.isDirectory(dir)) {
+                "Role catalog directory does not exist or is not a directory: $dir"
+            }
+
             Files.walk(dir, 1).use { stream ->
                 stream
                     .filter { Files.isRegularFile(it) && it.extension == "md" }
