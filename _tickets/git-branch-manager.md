@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T00:49:09Z
 id: nid_jwu5k36fgwnf4unw4x93sgpy6_E
 title: "Git Branch Manager"
-status: in_progress
+status: closed
 deps: [nid_r9on08uqjmumuc6wi2c53e8p9_E]
 links: []
 created_iso: 2026-03-09T23:06:52Z
-status_updated_iso: 2026-03-10T00:30:17Z
+status_updated_iso: 2026-03-10T00:49:09Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -59,4 +60,18 @@ As part of closing this ticket:
 1. Run `anchor_point.create` to generate a new AP for this component.
 2. Add `ap.XXX.E` just below the `## Git Branch / Feature Naming` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` in the KDoc of the `BranchNameBuilder` class pointing back to that design ticket section.
+
+## Resolution
+**Completed.** All scope items implemented and tested.
+
+### Files Created
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/git/BranchNameBuilder.kt` — Kotlin `object`, pure slugify + build
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/git/GitBranchManager.kt` — interface + `GitBranchManagerImpl` wrapping git CLI via ProcessRunner
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/git/BranchNameBuilderTest.kt` — 17 unit tests
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/git/GitBranchManagerIntegTest.kt` — 4 integration tests
+
+### Anchor Point
+- Created: `ap.THL21SyZzJhzInG2m4zl2.E`
+- Added to design ticket under "Git Branch / Feature Naming"
+- Referenced in `BranchNameBuilder` KDoc
 

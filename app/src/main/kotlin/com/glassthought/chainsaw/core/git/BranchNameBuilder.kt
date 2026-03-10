@@ -9,6 +9,8 @@ import com.glassthought.chainsaw.core.ticket.TicketData
  *
  * The slug portion is capped at [MAX_SLUG_LENGTH] characters. The full branch name
  * may exceed that limit due to the ticket ID and try-N suffix.
+ *
+ * ref.ap.THL21SyZzJhzInG2m4zl2.E — See "Git Branch / Feature Naming" in design ticket.
  */
 object BranchNameBuilder {
 
