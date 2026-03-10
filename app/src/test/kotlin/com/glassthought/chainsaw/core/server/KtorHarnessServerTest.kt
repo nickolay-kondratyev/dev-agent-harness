@@ -1,6 +1,7 @@
 package com.glassthought.chainsaw.core.server
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.ints.shouldBeInRange
 import io.kotest.matchers.shouldBe
 import okhttp3.MediaType.Companion.toMediaType
@@ -37,7 +38,7 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
         val portFileManager = PortFileManager(portFilePath)
         val server = KtorHarnessServer(
             outFactory = outFactory,
-            portFileManager = portFileManager,
+            portPublisher = portFileManager,
         )
         return ServerFixture(server, portFilePath)
     }
@@ -60,7 +61,24 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
         return httpClient.newCall(request).execute()
     }
 
+    describe("GIVEN a KtorHarnessServer that has not been started") {
+
+        it("THEN port() throws IllegalStateException") {
+            val fixture = createFixture()
+            shouldThrow<IllegalStateException> { fixture.server.port() }
+        }
+    }
+
     describe("GIVEN a started KtorHarnessServer") {
+
+        describe("AND start() is called a second time") {
+
+            it("THEN throws IllegalStateException") {
+                withServer { fixture ->
+                    shouldThrow<IllegalStateException> { fixture.server.start() }
+                }
+            }
+        }
 
         describe("AND port file management") {
 
@@ -169,6 +187,13 @@ class KtorHarnessServerTest : AsgardDescribeSpec({
         }
 
         describe("AND the server is closed") {
+
+            it("THEN port() throws IllegalStateException after close") {
+                val fixture = createFixture()
+                fixture.server.start()
+                try { } finally { fixture.server.close() }
+                shouldThrow<IllegalStateException> { fixture.server.port() }
+            }
 
             it("THEN port file is deleted after close") {
                 val fixture = createFixture()

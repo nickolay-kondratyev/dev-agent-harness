@@ -34,14 +34,14 @@ interface HarnessServer : AsgardCloseable {
  * Ktor CIO implementation of [HarnessServer].
  *
  * Binds to port 0 (OS-assigned), writes the resolved port to the port file via
- * [PortFileManager], and exposes 4 stub POST endpoints under `/agent/`.
+ * [PortPublisher], and exposes 4 stub POST endpoints under `/agent/`.
  *
  * @param outFactory Logging factory for structured logging.
- * @param portFileManager Manages writing/deleting the port file.
+ * @param portPublisher Publishes/removes the port file so agents can discover the server.
  */
 class KtorHarnessServer(
     outFactory: OutFactory,
-    private val portFileManager: PortFileManager,
+    private val portPublisher: PortPublisher,
 ) : HarnessServer {
 
     private val out = outFactory.getOutForClass(KtorHarnessServer::class)
@@ -60,7 +60,7 @@ class KtorHarnessServer(
 
         val resolvedPort = server.engine.resolvedConnectors().first().port
         try {
-            portFileManager.writePort(resolvedPort)
+            portPublisher.writePort(resolvedPort)
             boundPort = resolvedPort
         } catch (e: Exception) {
             close()
@@ -84,7 +84,7 @@ class KtorHarnessServer(
             gracePeriodMillis = GRACEFUL_SHUTDOWN_PERIOD_MILLIS,
             timeoutMillis = SHUTDOWN_TIMEOUT_MILLIS,
         )
-        portFileManager.deletePort()
+        portPublisher.deletePort()
 
         engine = null
         boundPort = null
