@@ -54,39 +54,39 @@ class RoleCatalogLoaderImpl(outFactory: OutFactory) : RoleCatalogLoader {
             listOf(Val(dir.toString(), ValType.FILE_PATH_STRING))
         }
 
-        val mdFiles = withContext(Dispatchers.IO) {
+        val roles = withContext(Dispatchers.IO) {
             require(Files.exists(dir) && Files.isDirectory(dir)) {
                 "Role catalog directory does not exist or is not a directory: $dir"
             }
 
-            Files.walk(dir, 1).use { stream ->
+            val mdFiles = Files.walk(dir, 1).use { stream ->
                 stream
                     .filter { Files.isRegularFile(it) && it.extension == "md" }
                     .toList()
             }
-        }
 
-        require(mdFiles.isNotEmpty()) {
-            "No .md files found in role catalog directory: $dir"
-        }
+            require(mdFiles.isNotEmpty()) {
+                "No .md files found in role catalog directory: $dir"
+            }
 
-        val roles = mdFiles.map { file ->
-            val content = withContext(Dispatchers.IO) { file.readText() }
-            val result = YamlFrontmatterParser.parse(content)
+            mdFiles.map { file ->
+                val content = file.readText()
+                val result = YamlFrontmatterParser.parse(content)
 
-            val description = result.yamlFields["description"]
-                ?: throw IllegalArgumentException(
-                    "Role file [${file.fileName}] is missing required frontmatter field: description"
+                val description = result.yamlFields["description"]
+                    ?: throw IllegalArgumentException(
+                        "Role file [${file.fileName}] is missing required frontmatter field: description"
+                    )
+
+                val descriptionLong = result.yamlFields["description_long"]
+
+                RoleDefinition(
+                    name = file.nameWithoutExtension,
+                    description = description,
+                    descriptionLong = descriptionLong,
+                    filePath = file,
                 )
-
-            val descriptionLong = result.yamlFields["description_long"]
-
-            RoleDefinition(
-                name = file.nameWithoutExtension,
-                description = description,
-                descriptionLong = descriptionLong,
-                filePath = file,
-            )
+            }
         }
 
         out.info(
