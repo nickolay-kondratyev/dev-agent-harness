@@ -13,10 +13,12 @@ import java.nio.file.Path
  */
 class PortFileManagerTest : AsgardDescribeSpec({
 
-    fun createTempPortFile(): Pair<Path, PortFileManager> {
+    data class PortFileFixture(val portFilePath: Path, val portFileManager: PortFileManager)
+
+    fun createFixture(): PortFileFixture {
         val tempDir = Files.createTempDirectory("port-file-manager-test")
         val portFilePath = tempDir.resolve("port.txt")
-        return portFilePath to PortFileManager(portFilePath)
+        return PortFileFixture(portFilePath, PortFileManager(portFilePath))
     }
 
     describe("GIVEN PortFileManager with a temp directory") {
@@ -24,34 +26,34 @@ class PortFileManagerTest : AsgardDescribeSpec({
         describe("WHEN writePort is called") {
 
             it("THEN port file exists") {
-                val (portFilePath, manager) = createTempPortFile()
-                manager.writePort(8080)
-                Files.exists(portFilePath) shouldBe true
+                val fixture = createFixture()
+                fixture.portFileManager.writePort(8080)
+                Files.exists(fixture.portFilePath) shouldBe true
             }
 
             it("THEN port file content is the port number as string") {
-                val (portFilePath, manager) = createTempPortFile()
-                manager.writePort(12345)
-                Files.readString(portFilePath) shouldBe "12345"
+                val fixture = createFixture()
+                fixture.portFileManager.writePort(12345)
+                Files.readString(fixture.portFilePath) shouldBe "12345"
             }
         }
 
         describe("WHEN deletePort is called after writePort") {
 
             it("THEN port file does not exist") {
-                val (portFilePath, manager) = createTempPortFile()
-                manager.writePort(8080)
-                manager.deletePort()
-                Files.exists(portFilePath) shouldBe false
+                val fixture = createFixture()
+                fixture.portFileManager.writePort(8080)
+                fixture.portFileManager.deletePort()
+                Files.exists(fixture.portFilePath) shouldBe false
             }
         }
 
         describe("WHEN deletePort is called without prior writePort") {
 
             it("THEN does not throw") {
-                val (_, manager) = createTempPortFile()
+                val fixture = createFixture()
                 shouldNotThrow<Exception> {
-                    manager.deletePort()
+                    fixture.portFileManager.deletePort()
                 }
             }
         }

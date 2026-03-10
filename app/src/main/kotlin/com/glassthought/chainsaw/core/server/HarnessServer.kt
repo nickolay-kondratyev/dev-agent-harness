@@ -95,51 +95,34 @@ class KtorHarnessServer(
 
         routing {
             route("/agent") {
-                post("/done") {
-                    val request = call.receive<AgentDoneRequest>()
-                    out.info(
-                        "agent_request_received",
-                        Val("/agent/done", ValType.HTTP_REQUEST_PATH),
-                        Val(request.branch, ValType.GIT_BRANCH_NAME),
-                    )
-                    call.respond(mapOf("status" to "ok"))
-                }
-
-                post("/question") {
-                    val request = call.receive<AgentQuestionRequest>()
-                    out.info(
-                        "agent_request_received",
-                        Val("/agent/question", ValType.HTTP_REQUEST_PATH),
-                        Val(request.branch, ValType.GIT_BRANCH_NAME),
-                    )
-                    call.respond(mapOf("status" to "ok"))
-                }
-
-                post("/failed") {
-                    val request = call.receive<AgentFailedRequest>()
-                    out.info(
-                        "agent_request_received",
-                        Val("/agent/failed", ValType.HTTP_REQUEST_PATH),
-                        Val(request.branch, ValType.GIT_BRANCH_NAME),
-                    )
-                    call.respond(mapOf("status" to "ok"))
-                }
-
-                post("/status") {
-                    val request = call.receive<AgentStatusRequest>()
-                    out.info(
-                        "agent_request_received",
-                        Val("/agent/status", ValType.HTTP_REQUEST_PATH),
-                        Val(request.branch, ValType.GIT_BRANCH_NAME),
-                    )
-                    call.respond(mapOf("status" to "ok"))
-                }
+                post("/done") { handleAgentRequest<AgentDoneRequest>("/agent/done") }
+                post("/question") { handleAgentRequest<AgentQuestionRequest>("/agent/question") }
+                post("/failed") { handleAgentRequest<AgentFailedRequest>("/agent/failed") }
+                post("/status") { handleAgentRequest<AgentStatusRequest>("/agent/status") }
             }
         }
+    }
+
+    /**
+     * Receives an [AgentRequest] of type [T], logs it, and responds with [OK_RESPONSE].
+     *
+     * Consolidates the common receive-log-respond pattern shared by all agent endpoints.
+     */
+    private suspend inline fun <reified T : AgentRequest> RoutingContext.handleAgentRequest(
+        path: String,
+    ) {
+        val request = call.receive<T>()
+        out.info(
+            "agent_request_received",
+            Val(path, ValType.HTTP_REQUEST_PATH),
+            Val(request.branch, ValType.GIT_BRANCH_NAME),
+        )
+        call.respond(OK_RESPONSE)
     }
 
     companion object {
         private const val GRACEFUL_SHUTDOWN_PERIOD_MILLIS = 1000L
         private const val SHUTDOWN_TIMEOUT_MILLIS = 5000L
+        private val OK_RESPONSE = mapOf("status" to "ok")
     }
 }
