@@ -2,7 +2,7 @@
 closed_iso: 2026-03-10T18:31:17Z
 id: nid_33sk1ml8zcnovfw538t464gfj_E
 title: "Self-healing build: auto-publish asgard libs to maven local if missing"
-status: closed
+status: open
 deps: []
 links: []
 created_iso: 2026-03-10T18:16:16Z
@@ -69,3 +69,8 @@ Added `ensureAsgardInMavenLocal` Gradle task that provides self-healing builds:
 
 - `_change_log/2026-03-10_18-30-44Z.md`
 
+
+--------------------------------------------------------------------------------
+
+## IMPORTANT: SEE THIS
+NOTE: we have added the gradle target (see diff against main). However, it didnt work right due to dependencies needing to be present during configuration. The PROPOSED FIX is to add _prepare_pre_build.sh script which will have _preparate_asgard_dependencies function in it. This script will check if the needed asgard dependencies are missing and if they are missing will call gradle, if they are not missing (are present), we will avoid spinning up gradle call to keep this script fast. Since we will be violating DRY (that ok) we will cross reference the violation with anchor points.
