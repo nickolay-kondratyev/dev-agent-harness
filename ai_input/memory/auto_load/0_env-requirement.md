@@ -7,7 +7,7 @@
 `THORG_ROOT` is only required when explicitly publishing asgard libraries to maven local:
 
 ```bash
-export THORG_ROOT=$PWD/submodules/thorg-root
+export THORG_ROOT=$HOME/thorg-root
 ./gradlew publishAsgardToMavenLocal
 ```
 
@@ -23,6 +23,6 @@ to be present in `~/.m2`. Check status with:
 If missing, publish them:
 
 ```bash
-export THORG_ROOT=$PWD/submodules/thorg-root
+export THORG_ROOT=$HOME/thorg-root
 ./gradlew publishAsgardToMavenLocal
 ```
