@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-09T23:46:03Z
 id: nid_r9on08uqjmumuc6wi2c53e8p9_E
 title: "Ticket Parser"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T23:05:48Z
-status_updated_iso: 2026-03-09T23:26:29Z
+status_updated_iso: 2026-03-09T23:46:03Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -47,4 +48,14 @@ As part of closing this ticket:
 1. Run `anchor_point.create` to generate a new AP for this component.
 2. Add `ap.XXX.E` just below the `## CLI Entry Point` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md` (that section describes the ticket as required input and its format).
 3. Add `ref.ap.XXX.E` in the KDoc of the `TicketParser` interface pointing back to that design ticket section.
+
+## Resolution
+
+Implemented `com.glassthought.chainsaw.core.ticket` package with:
+- `TicketData` data class: `id`, `title`, `status`, `description` (body text), `additionalFields: Map<String, Any>`
+- `YamlFrontmatterParser` object: `parse(content: String): FrontmatterParseResult` — reusable frontmatter splitter with non-string key guard
+- `TicketParser` interface + `TicketParserImpl`: `suspend fun parse(path: Path): TicketData`
+- snakeyaml 2.2 dependency added to `app/build.gradle.kts`
+- Anchor point `ap.mmcagXtg6ulznKYYNKlNP.E` created, added below `## CLI Entry Point` in design ticket, cross-referenced in `TicketParser` KDoc
+- 27 unit tests passing (10 `YamlFrontmatterParserTest` + 14 `TicketParserTest` + 3 from split tests)
 
