@@ -75,12 +75,13 @@ application {
     mainClass = "com.glassthought.chainsaw.cli.AppMainKt"
 }
 
-// Wire ensureAsgardInMavenLocal as a dependency of compileKotlin.
-// This ensures asgard libs are available before compilation, providing self-healing
-// builds that auto-publish missing dependencies without manual THORG_ROOT setup.
-tasks.named("compileKotlin") {
-    dependsOn(":ensureAsgardInMavenLocal")
-}
+// NOTE: ensureAsgardInMavenLocal cannot be wired here via dependsOn.
+// Gradle resolves maven coordinates (com.asgard:*) at CONFIGURATION time — before any
+// task, including ensureAsgardInMavenLocal, gets a chance to run. If asgard libs are
+// absent from ~/.m2, Gradle fails at configuration before self-healing can occur.
+//
+// Self-healing is handled by _prepare_pre_build.sh (ref.ap.gtpABfFlF4RE1SITt7k1P.E),
+// which must be called BEFORE invoking ./gradlew. See test.sh and test_with_integ.sh.
 
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.

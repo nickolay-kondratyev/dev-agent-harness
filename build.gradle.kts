@@ -118,8 +118,13 @@ tasks.register("checkAsgardInMavenLocal") {
  * Ensures asgard libraries are present in maven local (~/.m2).
  * Auto-publishes missing libraries without requiring manual THORG_ROOT setup.
  *
- * This task is wired as a dependency of :app:compileKotlin, providing self-healing
- * builds that automatically resolve missing asgard dependencies.
+ * NOTE: This task cannot be wired as `dependsOn` of compileKotlin. Gradle resolves
+ * maven coordinates at CONFIGURATION time — before any task runs — so if libs are
+ * absent the build fails before this task can execute. Self-healing is handled by
+ * _prepare_pre_build.sh (ref.ap.gtpABfFlF4RE1SITt7k1P.E), which runs before Gradle.
+ *
+ * This task remains useful for manual re-publishing:
+ *   ./gradlew ensureAsgardInMavenLocal
  *
  * Fast path: If artifacts already exist, completes in <1s via upToDateWhen check.
  * Slow path: If missing, auto-publishes using THORG_ROOT=$projectDir/submodules/thorg-root.
