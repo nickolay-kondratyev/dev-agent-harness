@@ -27,7 +27,7 @@ import kotlin.time.Duration.Companion.seconds
  */
 interface GuidScanner {
     /** Returns all JSONL [Path]s whose content contains [guid]. */
-    suspend fun scan(guid: String): List<Path>
+    suspend fun scan(guid: HandshakeGuid): List<Path>
 }
 
 /**
@@ -35,13 +35,13 @@ interface GuidScanner {
  * for `*.jsonl` files and returns those containing the GUID string.
  */
 private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidScanner {
-    override suspend fun scan(guid: String): List<Path> = withContext(Dispatchers.IO) {
+    override suspend fun scan(guid: HandshakeGuid): List<Path> = withContext(Dispatchers.IO) {
         Files.walk(claudeProjectsDir)
             .use { stream ->
                 stream
                     .filter { Files.isRegularFile(it) }
                     .filter { it.extension == "jsonl" }
-                    .filter { it.readText().contains(guid) }
+                    .filter { it.readText().contains(guid.value) }
                     // java.util.stream.Stream.toList() — available since Java 16, no import needed
                     .toList()
             }
@@ -93,10 +93,10 @@ class ClaudeCodeWingman(
     // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
     private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir)
 
-    override suspend fun resolveSessionId(guid: String): String {
+    override suspend fun resolveSessionId(guid: HandshakeGuid): String {
         out.info(
             "resolving_session_id_with_polling",
-            Val(guid, ValType.STRING_USER_AGNOSTIC),
+            Val(guid.value, ValType.STRING_USER_AGNOSTIC),
         )
 
         val matchingFiles: List<Path> = try {
@@ -135,12 +135,12 @@ class ClaudeCodeWingman(
      * Polls [guidScanner] until at least one match is found, then returns the matches.
      * Must be called inside a coroutine scope with a timeout; the timeout cancels the loop.
      */
-    private suspend fun pollUntilFound(guid: String): List<Path> {
+    private suspend fun pollUntilFound(guid: HandshakeGuid): List<Path> {
         while (true) {
             val matches = guidScanner.scan(guid)
             out.debug("guid_poll_attempt") {
                 listOf(
-                    Val(guid, ValType.STRING_USER_AGNOSTIC),
+                    Val(guid.value, ValType.STRING_USER_AGNOSTIC),
                     Val(matches.size.toString(), ValType.STRING_USER_AGNOSTIC),
                 )
             }

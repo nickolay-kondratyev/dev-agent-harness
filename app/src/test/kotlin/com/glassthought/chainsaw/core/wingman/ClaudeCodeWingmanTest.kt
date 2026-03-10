@@ -12,7 +12,7 @@ import kotlin.io.path.writeText
 class ClaudeCodeWingmanTest : AsgardDescribeSpec({
 
     describe("GIVEN a ClaudeCodeWingman with a temp projects directory") {
-        val guid = "test-guid-abc123-unique-marker"
+        val guid = HandshakeGuid("test-guid-abc123-unique-marker")
 
         describe("AND a single JSONL file containing the target GUID") {
             describe("WHEN resolveSessionId is called") {
@@ -20,7 +20,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                     withTempDir { tempDir ->
                         val sessionId = "77d5b7ea-cf04-453b-8867-162404763e18"
                         tempDir.resolve("$sessionId.jsonl").writeText(
-                            """{"type":"message","content":"$guid"}"""
+                            """{"type":"message","content":"${guid.value}"}"""
                         )
 
                         val wingman = ClaudeCodeWingman(
@@ -72,7 +72,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         val exception = shouldThrow<IllegalStateException> {
                             wingman.resolveSessionId(guid)
                         }
-                        exception.message shouldContain guid
+                        exception.message shouldContain guid.value
                     }
                 }
             }
@@ -83,10 +83,10 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                 it("THEN throws IllegalStateException") {
                     withTempDir { tempDir ->
                         tempDir.resolve("session-a.jsonl").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
                         tempDir.resolve("session-b.jsonl").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
 
                         val wingman = ClaudeCodeWingman(
@@ -103,10 +103,10 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                 it("THEN exception message mentions ambiguous") {
                     withTempDir { tempDir ->
                         tempDir.resolve("session-a.jsonl").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
                         tempDir.resolve("session-b.jsonl").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
 
                         val wingman = ClaudeCodeWingman(
@@ -132,7 +132,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
 
                         val sessionId = "nested-session-id-42"
                         nestedDir.resolve("$sessionId.jsonl").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
 
                         val wingman = ClaudeCodeWingman(
@@ -153,10 +153,10 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                 it("THEN throws IllegalStateException because non-JSONL files are ignored") {
                     withTempDir { tempDir ->
                         tempDir.resolve("notes.txt").writeText(
-                            """This file contains $guid but is not a JSONL file"""
+                            """This file contains ${guid.value} but is not a JSONL file"""
                         )
                         tempDir.resolve("data.log").writeText(
-                            """{"content":"$guid"}"""
+                            """{"content":"${guid.value}"}"""
                         )
 
                         val wingman = ClaudeCodeWingman(
@@ -175,7 +175,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a ClaudeCodeWingman with a fake GuidScanner") {
-        val guid = "polling-test-guid"
+        val guid = HandshakeGuid("polling-test-guid")
         val matchPath = Path.of("/fake/sessions/abc-session-id-123.jsonl")
 
         describe("AND the scanner returns empty on first call then a match on the second call") {
@@ -273,7 +273,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                     val exception = shouldThrow<IllegalStateException> {
                         wingman.resolveSessionId(guid)
                     }
-                    exception.message shouldContain guid
+                    exception.message shouldContain guid.value
                 }
             }
         }
@@ -294,7 +294,7 @@ private class CountingFakeGuidScanner(
     var callCount: Int = 0
         private set
 
-    override suspend fun scan(guid: String): List<Path> {
+    override suspend fun scan(guid: HandshakeGuid): List<Path> {
         callCount++
         return if (callCount <= emptyResultCount) emptyList() else matchOnSuccess
     }
