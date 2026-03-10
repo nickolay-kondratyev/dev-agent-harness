@@ -22,7 +22,7 @@ dependencies {
     // asgardTestTools provides AsgardDescribeSpec (Kotest DescribeSpec extension).
     // Kotest deps (assertions, runner) are 'implementation' in asgardTestTools (not api),
     // so we declare them directly here for compilation visibility.
-    testImplementation("com.asgard:asgardTestTools:1.0.0")
+    testImplementation(libs.asgard.test.tools)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.runner.junit5)
 
@@ -32,33 +32,32 @@ dependencies {
     implementation(libs.guava)
 
     // AsgardCore: general-purpose foundation library (ProcessRunner, Out logging, etc.)
-    implementation("com.asgard:asgardCore:1.0.0")
+    implementation(libs.asgard.core)
 
     // Coroutines: required for runBlocking in main() and suspend ProcessRunner calls
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.2")
+    implementation(libs.kotlinx.coroutines.core)
 
     // OkHttp: HTTP client for direct LLM API calls
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation(libs.okhttp)
 
     // org.json: lightweight JSON construction and parsing for LLM API request/response bodies
-    implementation("org.json:json:20240303")
+    implementation(libs.json)
 
     // snakeyaml: YAML parsing for ticket and role markdown frontmatter
-    implementation("org.yaml:snakeyaml:2.2")
+    implementation(libs.snakeyaml)
 
     // Jackson: structured JSON deserialization for workflow definition files
-    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
-    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+    implementation(libs.jackson.databind)
+    implementation(libs.jackson.module.kotlin)
 
     // Ktor: embedded HTTP server for agent-to-harness communication.
-    // Inline version strings, consistent with how other dependencies (OkHttp, Jackson, asgardCore) are declared.
-    implementation("io.ktor:ktor-server-core:3.1.1")
-    implementation("io.ktor:ktor-server-cio:3.1.1")
-    implementation("io.ktor:ktor-server-content-negotiation:3.1.1")
-    implementation("io.ktor:ktor-serialization-jackson:3.1.1")
+    implementation(libs.ktor.server.core)
+    implementation(libs.ktor.server.cio)
+    implementation(libs.ktor.server.content.negotiation)
+    implementation(libs.ktor.serialization.jackson)
 
     // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
-    testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
+    testImplementation(libs.mockwebserver)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.
