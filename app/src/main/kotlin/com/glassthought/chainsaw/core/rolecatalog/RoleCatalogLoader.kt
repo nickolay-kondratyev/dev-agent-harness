@@ -18,6 +18,8 @@ import kotlin.io.path.readText
  * Each markdown file in the directory represents a role. Its YAML frontmatter must contain
  * a required `description` field and an optional `description_long` field.
  *
+ * See design doc: ref.ap.iF4zXT5FUcqOzclp5JVHj.E (Role Catalog -- Auto-Discovered)
+ *
  * @throws IllegalArgumentException if the directory does not exist, contains no `.md` files,
  *   or if any role file is missing the required `description` frontmatter field.
  */
