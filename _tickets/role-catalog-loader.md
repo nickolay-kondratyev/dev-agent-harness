@@ -1,11 +1,11 @@
 ---
 id: nid_pk1sdnmxo777oy9qz4hl7l06g_E
 title: "Role Catalog Loader"
-status: open
+status: in_progress
 deps: [nid_r9on08uqjmumuc6wi2c53e8p9_E]
 links: []
 created_iso: 2026-03-09T23:07:06Z
-status_updated_iso: 2026-03-09T23:07:06Z
+status_updated_iso: 2026-03-10T00:30:49Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
