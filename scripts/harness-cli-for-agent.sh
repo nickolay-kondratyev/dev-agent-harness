@@ -8,6 +8,7 @@
 set -euo pipefail
 
 # --- Constants ---
+# MUST match PortFileManager.DEFAULT_PATH in app/src/main/kotlin/com/glassthought/chainsaw/core/server/PortFileManager.kt
 PORT_FILE="${HOME}/.chainsaw_agent_harness/server/port.txt"
 
 # --- Helper Functions ---

@@ -79,6 +79,7 @@ CodeAgent.run(
 ---
 
 ## Agent↔Harness Communication — Bidirectional
+<!-- ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
 ### Architecture
 
