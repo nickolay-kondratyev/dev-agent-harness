@@ -1,11 +1,11 @@
 ---
 id: nid_z3rhdp8coydv3aigd2o01h2t7_E
 title: "AgentRequestHandler injection boundary in KtorHarnessServer"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T16:33:03Z
-status_updated_iso: 2026-03-10T16:33:03Z
+status_updated_iso: 2026-03-10T20:33:12Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
