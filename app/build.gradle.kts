@@ -14,10 +14,11 @@ plugins {
 }
 
 repositories {
-    // Use Maven Central for resolving dependencies.
-    mavenCentral()
     // asgard libraries are published to maven local via publishAsgardToMavenLocal task.
+    // mavenLocal() first: consistent with buildlogic convention and prevents remote
+    // artifacts from shadowing locally published ones.
     mavenLocal()
+    mavenCentral()
 }
 
 dependencies {

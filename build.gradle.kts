@@ -44,7 +44,7 @@ idea {
  * Delegates to the publishAsgardLibsToMavenLocal task in the kotlin-mp submodule.
  * This task is the one-stop command for setting up the local dev environment.
  *
- * @AnchorPoint("anchor_point.publishAsgardToMavenLocal.E")
+ * @AnchorPoint("ap.MtB03DtelNNjPmY0VjKHs.E")
  */
 tasks.register("publishAsgardToMavenLocal") {
     group = "publishing"
@@ -64,6 +64,12 @@ tasks.register("publishAsgardToMavenLocal") {
         // configuration cache issues with Gradle project object references.
         val kotlinMpDir = java.io.File(project.projectDir, "submodules/thorg-root/source/libraries/kotlin-mp")
 
+        if (!kotlinMpDir.exists()) {
+            throw GradleException(
+                "Submodule not initialized. Run: git submodule update --init"
+            )
+        }
+
         val processBuilder = ProcessBuilder("./gradlew", "publishAsgardLibsToMavenLocal")
             .directory(kotlinMpDir)
             .also { it.environment()["THORG_ROOT"] = thorgRoot }
@@ -76,15 +82,18 @@ tasks.register("publishAsgardToMavenLocal") {
 }
 
 /**
- * Checks whether asgard libraries are present in maven local.
- * Prints clear YES/NO status and guidance if missing.
+ * Checks whether asgard libraries are present in maven local (~/.m2).
+ * Fails with a GradleException if any required artifacts are missing,
+ * consistent with Gradle check task convention (checkstyle, detekt, etc.).
+ *
+ * @AnchorPoint("ap.luMV9nN9bCUVxYfZkAVYR.E")
  */
 tasks.register("checkAsgardInMavenLocal") {
     group = "publishing"
-    description = "Reports whether asgard libraries are present in maven local (~/.m2)."
+    description = "Checks whether asgard libraries are present in maven local (~/.m2). Fails if missing."
 
     // Not compatible with configuration cache: reads user.home system property at execution time.
-    notCompatibleWithConfigurationCache("reads system properties at execution time")
+    notCompatibleWithConfigurationCache("Accesses system properties at execution time.")
 
     doLast {
         val m2 = java.io.File(System.getProperty("user.home"), ".m2/repository/com/asgard")
@@ -97,8 +106,10 @@ tasks.register("checkAsgardInMavenLocal") {
         if (missing.isEmpty()) {
             println("asgard libraries are present in maven local.")
         } else {
-            println("Missing asgard libraries in maven local: $missing")
-            println("Run: export THORG_ROOT=\$PWD/submodules/thorg-root && ./gradlew publishAsgardToMavenLocal")
+            throw GradleException(
+                "Missing asgard libraries in maven local: $missing\n" +
+                "Run: export THORG_ROOT=\$PWD/submodules/thorg-root && ./gradlew publishAsgardToMavenLocal"
+            )
         }
     }
 }
