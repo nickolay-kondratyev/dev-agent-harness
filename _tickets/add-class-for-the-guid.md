@@ -1,27 +1,40 @@
 ---
+closed_iso: 2026-03-10T20:38:16Z
 id: nid_mkxn4qa9tqlvvm9zxq4es8cg2_E
 title: "Add class for the guid"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T20:03:24Z
-status_updated_iso: 2026-03-10T20:31:00Z
+status_updated_iso: 2026-03-10T20:38:16Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
 ---
 
+## Resolution
 
-Refactor this to have a strong type of the GUID instead of string.
+Created `HandshakeGuid` value class for strong typing of the GUID parameter.
 
-```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/Wingman.kt] Lines=[22-23]
-    suspend fun resolveSessionId(guid: String): String
-```
+### Changes Made
 
-We will want to use something like
+1. **New file**: `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/HandshakeGuid.kt`
+   - Created `@JvmInline value class HandshakeGuid(val value: String)` with custom `toString()`
 
-import kotlin.jvm.JvmInline
-@JvmInline
-value class UserId(val id: String)  // Property can have any name
+2. **Updated**: `Wingman.kt`
+   - Changed `resolveSessionId(guid: String)` to `resolveSessionId(guid: HandshakeGuid)`
 
-For the GUID that was sent to have strong typing and 
+3. **Updated**: `ClaudeCodeWingman.kt`
+   - Updated `GuidScanner.scan(guid: String)` to `GuidScanner.scan(guid: HandshakeGuid)`
+   - Updated `FilesystemGuidScanner.scan()` implementation
+   - Updated `resolveSessionId()` implementation
+   - Updated `pollUntilFound()` private method
+
+4. **Updated**: `ClaudeCodeWingmanTest.kt`
+   - All test usages updated to use `HandshakeGuid("...")` instead of plain strings
+   - String interpolations updated to use `guid.value`
+   - `CountingFakeGuidScanner.scan()` updated to use `HandshakeGuid`
+
+### Commit
+
+`6446e95` - "Add HandshakeGuid value class for strong typing of GUID parameter"

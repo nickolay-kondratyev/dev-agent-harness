@@ -19,5 +19,5 @@ interface Wingman {
      * @return The session ID string (e.g., a UUID derived from the session artifact filename).
      * @throws IllegalStateException if no session or multiple sessions match the GUID.
      */
-    suspend fun resolveSessionId(guid: String): String
+    suspend fun resolveSessionId(guid: HandshakeGuid): String
 }
