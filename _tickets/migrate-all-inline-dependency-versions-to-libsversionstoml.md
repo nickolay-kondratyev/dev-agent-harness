@@ -1,11 +1,11 @@
 ---
 id: nid_3vhqc8i3jm64uf3vkf33d9ks1_E
 title: "Migrate all inline dependency versions to libs.versions.toml"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T16:33:14Z
-status_updated_iso: 2026-03-10T16:33:14Z
+status_updated_iso: 2026-03-10T17:37:20Z
 type: chore
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
