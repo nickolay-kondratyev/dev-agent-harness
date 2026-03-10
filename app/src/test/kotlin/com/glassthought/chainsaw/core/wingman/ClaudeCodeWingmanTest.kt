@@ -30,7 +30,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
 
                         val result = wingman.resolveSessionId(guid)
 
-                        result shouldBe sessionId
+                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
                     }
                 }
             }
@@ -142,7 +142,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
 
                         val result = wingman.resolveSessionId(guid)
 
-                        result shouldBe sessionId
+                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
                     }
                 }
             }
@@ -194,7 +194,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
 
                     val result = wingman.resolveSessionId(guid)
 
-                    result shouldBe "abc-session-id-123"
+                    result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, "abc-session-id-123")
                 }
 
                 it("THEN polls more than once before finding the match") {

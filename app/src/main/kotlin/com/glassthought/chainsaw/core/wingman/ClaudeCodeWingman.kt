@@ -92,7 +92,7 @@ class ClaudeCodeWingman(
     // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
     private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir)
 
-    override suspend fun resolveSessionId(guid: HandshakeGuid): String {
+    override suspend fun resolveSessionId(guid: HandshakeGuid): ResumableAgentSessionId {
         out.info(
             "resolving_session_id_with_polling",
             Val(guid.value, ValType.STRING_USER_AGNOSTIC),
@@ -119,7 +119,7 @@ class ClaudeCodeWingman(
                     "session_id_resolved",
                     Val(sessionId, ValType.STRING_USER_AGNOSTIC),
                 )
-                sessionId
+                ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
             }
             else -> {
                 val filenames = matchingFiles.map { it.fileName.toString() }
