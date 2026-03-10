@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T19:28:24Z
 id: nid_wnu7f6eeozzarewg3uu1p5w0q_E
 title: "Not able to call GLM api"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T18:22:36Z
-status_updated_iso: 2026-03-09T19:16:48Z
+status_updated_iso: 2026-03-10T19:28:24Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
