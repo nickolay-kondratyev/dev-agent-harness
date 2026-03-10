@@ -119,6 +119,17 @@ class TicketParserTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a ticket file where id is an unquoted ISO date") {
+        val parser = TicketParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN id is preserved as the ISO string (not corrupted by snakeyaml Date resolution)") {
+                val ticket = parser.parse(resourcePath("non-string-id.md"))
+                ticket.id shouldBe "2026-03-09T23:05:48Z"
+            }
+        }
+    }
+
     describe("GIVEN a ticket file with no body after closing ---") {
         val parser = TicketParser.standard(outFactory)
 
