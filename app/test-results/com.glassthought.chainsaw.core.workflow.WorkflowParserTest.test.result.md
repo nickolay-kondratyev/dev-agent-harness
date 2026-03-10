@@ -41,6 +41,22 @@ skipped: 0
     - [PASS] THEN second part has 2 phases
     - [PASS] THEN second part iteration max is 4
     - [PASS] THEN second part name is 'implementation'
+- GIVEN a part with blank name
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions blank name
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a part with blank phase role
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions blank role
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a part with negative iteration max
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions positive requirement
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a part with zero iteration max
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions positive requirement
+    - [PASS] THEN throws IllegalArgumentException
 - GIVEN a straightforward workflow JSON
   - WHEN parse is called
     - [PASS] THEN executionPhasesFrom is null
@@ -65,6 +81,14 @@ skipped: 0
 - GIVEN a with-planning JSON with a blank executionPhasesFrom
   - WHEN parse is called
     - [PASS] THEN exception message mentions executionPhasesFrom
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a with-planning JSON with blank planning phase role
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions blank role
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a with-planning JSON with zero iteration max
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions positive requirement
     - [PASS] THEN throws IllegalArgumentException
 - GIVEN a with-planning workflow JSON
   - WHEN parse is called
