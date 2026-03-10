@@ -11,6 +11,10 @@ skipped: 0
 - GIVEN a JSON file that does not exist
   - WHEN parse is called
     - [PASS] THEN throws NoSuchFileException
+- GIVEN a JSON file with blank name
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions blank name
+    - [PASS] THEN throws IllegalArgumentException
 - GIVEN a JSON file with both parts and planningPhases
   - WHEN parse is called
     - [PASS] THEN exception message mentions mutual exclusivity
@@ -46,6 +50,14 @@ skipped: 0
     - [PASS] THEN planningIteration is null
     - [PASS] THEN planningPhases is null
     - [PASS] THEN second phase role is 'IMPLEMENTATION_REVIEWER'
+- GIVEN a with-planning JSON missing executionPhasesFrom
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions executionPhasesFrom
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a with-planning JSON missing planningIteration
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions planningIteration
+    - [PASS] THEN throws IllegalArgumentException
 - GIVEN a with-planning workflow JSON
   - WHEN parse is called
     - [PASS] THEN executionPhasesFrom is 'plan.json'

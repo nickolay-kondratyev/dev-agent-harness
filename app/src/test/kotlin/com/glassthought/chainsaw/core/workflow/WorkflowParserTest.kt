@@ -225,6 +225,63 @@ class WorkflowParserTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a JSON file with blank name") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("blank-name.json"))
+                }
+            }
+
+            it("THEN exception message mentions blank name") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("blank-name.json"))
+                }
+                exception.message shouldContain "blank"
+            }
+        }
+    }
+
+    describe("GIVEN a with-planning JSON missing planningIteration") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-missing-iteration.json"))
+                }
+            }
+
+            it("THEN exception message mentions planningIteration") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-missing-iteration.json"))
+                }
+                exception.message shouldContain "planningIteration"
+            }
+        }
+    }
+
+    describe("GIVEN a with-planning JSON missing executionPhasesFrom") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-missing-execution-from.json"))
+                }
+            }
+
+            it("THEN exception message mentions executionPhasesFrom") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-missing-execution-from.json"))
+                }
+                exception.message shouldContain "executionPhasesFrom"
+            }
+        }
+    }
+
     describe("GIVEN a JSON file with both parts and planningPhases") {
         val parser = WorkflowParser.standard(outFactory)
 
