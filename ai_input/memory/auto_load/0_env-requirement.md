@@ -1,15 +1,28 @@
 
 ## Environment Prerequisites (ap.MKHNCkA2bpT63NAvjCnvbvsb.E)
 
-### `THORG_ROOT` (required)
-The build depends on `THORG_ROOT` being set in the environment. Without it, `./gradlew :app:build` will fail.
+### `THORG_ROOT` (only needed for publishing asgard libraries)
+`THORG_ROOT` is NOT required for regular builds. `./gradlew :app:build` works without it.
 
-`THORG_ROOT` must point to the root of the `thorg-root` submodule (checked in under `submodules/thorg-root`):
+`THORG_ROOT` is only required when explicitly publishing asgard libraries to maven local:
 
 ```bash
 export THORG_ROOT=$PWD/submodules/thorg-root
+./gradlew publishAsgardToMavenLocal
 ```
 
-This is needed because the composite build in `settings.gradle.kts` includes
-`submodules/thorg-root/source/libraries/kotlin-mp`, and that build uses `THORG_ROOT` internally
-(e.g., for resolving version catalogs and sub-project paths).
+### Asgard Libraries in Maven Local (required for build)
+
+`./gradlew :app:build` requires `com.asgard:asgardCore:1.0.0` and `com.asgard:asgardTestTools:1.0.0`
+to be present in `~/.m2`. Check status with:
+
+```bash
+./gradlew checkAsgardInMavenLocal
+```
+
+If missing, publish them:
+
+```bash
+export THORG_ROOT=$PWD/submodules/thorg-root
+./gradlew publishAsgardToMavenLocal
+```

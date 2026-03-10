@@ -16,6 +16,8 @@ plugins {
 repositories {
     // Use Maven Central for resolving dependencies.
     mavenCentral()
+    // asgard libraries are published to maven local via publishAsgardToMavenLocal task.
+    mavenLocal()
 }
 
 dependencies {
