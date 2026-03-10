@@ -92,9 +92,23 @@ class WorkflowParserImpl(outFactory: OutFactory) : WorkflowParser {
                 "Workflow 'parts' list must not be empty in: $path"
             }
 
-            definition.parts.forEachIndexed { index, part ->
+            definition.parts.forEachIndexed { partIndex, part ->
+                require(part.name.isNotBlank()) {
+                    "Part at index $partIndex has blank name in: $path"
+                }
+
+                require(part.iteration.max > 0) {
+                    "Part '${part.name}' iteration max must be positive, but was ${part.iteration.max} in: $path"
+                }
+
                 require(part.phases.isNotEmpty()) {
-                    "Part '${part.name}' at index $index has empty phases list in: $path"
+                    "Part '${part.name}' at index $partIndex has empty phases list in: $path"
+                }
+
+                part.phases.forEachIndexed { phaseIndex, phase ->
+                    require(phase.role.isNotBlank()) {
+                        "Phase at index $phaseIndex in part '${part.name}' has blank role in: $path"
+                    }
                 }
             }
         }
@@ -108,8 +122,18 @@ class WorkflowParserImpl(outFactory: OutFactory) : WorkflowParser {
                 "planningIteration is required when planningPhases is present in: $path"
             }
 
+            require(definition.planningIteration!!.max > 0) {
+                "planningIteration max must be positive, but was ${definition.planningIteration!!.max} in: $path"
+            }
+
             require(definition.executionPhasesFrom?.isNotBlank() == true) {
                 "executionPhasesFrom is required and must not be blank when planningPhases is present in: $path"
+            }
+
+            definition.planningPhases.forEachIndexed { phaseIndex, phase ->
+                require(phase.role.isNotBlank()) {
+                    "Planning phase at index $phaseIndex has blank role in: $path"
+                }
             }
         }
     }

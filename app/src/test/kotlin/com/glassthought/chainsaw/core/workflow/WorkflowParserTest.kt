@@ -338,4 +338,118 @@ class WorkflowParserTest : AsgardDescribeSpec({
             }
         }
     }
+
+    describe("GIVEN a part with blank name") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-blank-name.json"))
+                }
+            }
+
+            it("THEN exception message mentions blank name") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-blank-name.json"))
+                }
+                exception.message shouldContain "blank name"
+            }
+        }
+    }
+
+    describe("GIVEN a part with zero iteration max") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-zero-iteration.json"))
+                }
+            }
+
+            it("THEN exception message mentions positive requirement") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-zero-iteration.json"))
+                }
+                exception.message shouldContain "positive"
+            }
+        }
+    }
+
+    describe("GIVEN a part with negative iteration max") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-negative-iteration.json"))
+                }
+            }
+
+            it("THEN exception message mentions positive requirement") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-negative-iteration.json"))
+                }
+                exception.message shouldContain "positive"
+            }
+        }
+    }
+
+    describe("GIVEN a part with blank phase role") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-blank-role.json"))
+                }
+            }
+
+            it("THEN exception message mentions blank role") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("part-blank-role.json"))
+                }
+                exception.message shouldContain "blank role"
+            }
+        }
+    }
+
+    describe("GIVEN a with-planning JSON with zero iteration max") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-zero-iteration.json"))
+                }
+            }
+
+            it("THEN exception message mentions positive requirement") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-zero-iteration.json"))
+                }
+                exception.message shouldContain "positive"
+            }
+        }
+    }
+
+    describe("GIVEN a with-planning JSON with blank planning phase role") {
+        val parser = WorkflowParser.standard(outFactory)
+
+        describe("WHEN parse is called") {
+            it("THEN throws IllegalArgumentException") {
+                shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-blank-role.json"))
+                }
+            }
+
+            it("THEN exception message mentions blank role") {
+                val exception = shouldThrow<IllegalArgumentException> {
+                    parser.parse(resourcePath("planning-blank-role.json"))
+                }
+                exception.message shouldContain "blank role"
+            }
+        }
+    }
 })

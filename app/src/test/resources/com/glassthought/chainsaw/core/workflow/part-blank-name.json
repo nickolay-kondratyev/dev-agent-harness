@@ -1,0 +1,11 @@
+{
+  "name": "part-blank-name",
+  "parts": [
+    {
+      "name": "",
+      "description": "This part has a blank name",
+      "phases": [{ "role": "IMPLEMENTOR" }],
+      "iteration": { "max": 4 }
+    }
+  ]
+}
