@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T00:50:45Z
 id: nid_pk1sdnmxo777oy9qz4hl7l06g_E
 title: "Role Catalog Loader"
-status: in_progress
+status: closed
 deps: [nid_r9on08uqjmumuc6wi2c53e8p9_E]
 links: []
 created_iso: 2026-03-09T23:07:06Z
-status_updated_iso: 2026-03-10T00:30:49Z
+status_updated_iso: 2026-03-10T00:50:45Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -54,3 +55,23 @@ As part of closing this ticket:
 2. Add `ap.XXX.E` just below the `#### Role Catalog — Auto-Discovered` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` in the KDoc of the `RoleCatalogLoader` interface pointing back to that design ticket section.
 
+## Resolution
+
+All requirements implemented and tests passing.
+
+### Files Created
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleDefinition.kt` — data class with `name`, `description`, `descriptionLong?`, `filePath`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleCatalogLoader.kt` — interface + `RoleCatalogLoaderImpl`
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleCatalogLoaderTest.kt` — 14 BDD tests
+- Test resources in `app/src/test/resources/com/glassthought/chainsaw/core/rolecatalog/` (valid-catalog, missing-description, single-role, empty-catalog)
+
+### Anchor Point
+- Created `ap.iF4zXT5FUcqOzclp5JVHj.E` in design doc at "Role Catalog — Auto-Discovered" heading
+- Added `ref.ap.iF4zXT5FUcqOzclp5JVHj.E` in `RoleCatalogLoader` interface KDoc
+
+### Key Design Choices
+- Mirrors `TicketParser` pattern (interface + companion factory + Impl)
+- Reuses `YamlFrontmatterParser` — no YAML parsing duplication
+- Flat directory scan (maxDepth=1) with `Files.walk().use {}`
+- All file I/O wrapped in `withContext(Dispatchers.IO)`
+- No new dependencies added
