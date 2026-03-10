@@ -1,11 +1,11 @@
 ---
 id: nid_61on3cjpjxkn9rltnp0syo6ya_E
 title: "add Environment interface"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T16:47:37Z
-status_updated_iso: 2026-03-10T16:47:37Z
+status_updated_iso: 2026-03-10T16:50:00Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
