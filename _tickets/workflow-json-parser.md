@@ -1,11 +1,11 @@
 ---
 id: nid_w5b16tby0fjiovxfr3ft22ix2_E
 title: "Workflow JSON Parser"
-status: open
+status: in_progress
 deps: [nid_r9on08uqjmumuc6wi2c53e8p9_E]
 links: []
 created_iso: 2026-03-09T23:07:25Z
-status_updated_iso: 2026-03-09T23:07:25Z
+status_updated_iso: 2026-03-10T00:31:41Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
