@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-set -euo pipefail
 
 # Interactive Gradle task runner.
 #
@@ -21,11 +20,7 @@ main() {
       history_add ./gradlew "${chosen_path:?}"
     fi
 
-    if command -v eai2 &>/dev/null; then
-      eai2 ./gradlew "${chosen_path:?}"
-    else
-      ./gradlew "${chosen_path:?}"
-    fi
+    ./gradlew "${chosen_path:?}"
   fi
 }
 
