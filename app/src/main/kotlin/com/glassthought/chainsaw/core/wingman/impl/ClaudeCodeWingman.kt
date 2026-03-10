@@ -1,10 +1,13 @@
-package com.glassthought.chainsaw.core.wingman
+package com.glassthought.chainsaw.core.wingman.impl
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.chainsaw.core.data.AgentType
+import com.glassthought.chainsaw.core.wingman.HandshakeGuid
+import com.glassthought.chainsaw.core.wingman.ResumableAgentSessionId
+import com.glassthought.chainsaw.core.wingman.Wingman
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
@@ -16,7 +19,6 @@ import kotlin.io.path.extension
 import kotlin.io.path.nameWithoutExtension
 import kotlin.io.path.readText
 import kotlin.time.Duration.Companion.milliseconds
-import kotlin.time.Duration.Companion.seconds
 
 /**
  * Scans for JSONL files containing a given GUID string.
@@ -74,7 +76,7 @@ class ClaudeCodeWingman(
 ) : Wingman {
 
     // Internal constructor allows tests to inject a fake GuidScanner.
-    internal constructor(
+    constructor(
         guidScanner: GuidScanner,
         outFactory: OutFactory,
         resolveTimeoutMs: Long = 45_000L,

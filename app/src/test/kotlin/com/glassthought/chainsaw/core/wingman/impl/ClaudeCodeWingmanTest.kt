@@ -1,7 +1,9 @@
-package com.glassthought.chainsaw.core.wingman
+package com.glassthought.chainsaw.core.wingman.impl
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.chainsaw.core.data.AgentType
+import com.glassthought.chainsaw.core.wingman.HandshakeGuid
+import com.glassthought.chainsaw.core.wingman.ResumableAgentSessionId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
