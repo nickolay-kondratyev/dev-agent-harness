@@ -1,6 +1,66 @@
 import org.gradle.api.GradleException
 
 /**
+ * Lists all Gradle tasks from all subprojects as JSON, written to build/tasks-json/tasks.json.
+ *
+ * Gradle's UP-TO-DATE mechanism serves as the cache: when no build file has changed since
+ * the last run, Gradle skips execution and the output file is reused by the caller.
+ * This avoids brittle shell-level memoization that cannot detect when tasks actually change.
+ *
+ * Cache invalidation inputs:
+ *   - All *.gradle.kts build files (root + subprojects)
+ *   - settings.gradle.kts
+ *
+ * Output: build/tasks-json/tasks.json (JSON array, one object per task)
+ *
+ * Used by gradle_tasks_jsonl_cached.sh → gradle_run.sh.
+ */
+tasks.register("tasksJson") {
+    group = "build"
+    description = "Lists all Gradle tasks as JSON. Gradle UP-TO-DATE caching avoids redundant runs."
+
+    val outputFile = layout.buildDirectory.file("tasks-json/tasks.json")
+
+    // Inputs: all build files across all subprojects + settings file.
+    // Gradle re-runs the task only when any of these files change.
+    inputs.files(
+        rootProject.allprojects.mapNotNull { proj ->
+            proj.buildFile.takeIf { it.exists() }
+        }
+    )
+    inputs.file(file("settings.gradle.kts"))
+
+    outputs.file(outputFile)
+
+    // Accesses the live project task graph at execution time — not configuration-cache-safe.
+    notCompatibleWithConfigurationCache("Accesses project task graph at execution time.")
+
+    doLast {
+        val taskList = rootProject.allprojects.flatMap { proj ->
+            proj.tasks.map { task ->
+                mapOf(
+                    "name" to task.name,
+                    "path" to task.path,
+                    "project" to proj.path,
+                    "group" to (task.group ?: "other"),
+                    "description" to (task.description ?: "")
+                )
+            }
+        }
+
+        val json = groovy.json.JsonOutput.prettyPrint(
+            groovy.json.JsonOutput.toJson(taskList)
+        )
+
+        outputFile.get().asFile.also {
+            it.parentFile.mkdirs()
+            it.writeText(json)
+        }
+    }
+}
+
+
+/**
  * Publishes all asgard libraries required by chainsaw to maven local.
  *
  * Requires THORG_ROOT to be set pointing to a standalone thorg-root checkout:

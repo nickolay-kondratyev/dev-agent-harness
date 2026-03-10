@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T20:45:28Z
 id: nid_v1goe46cdkcti7ac1zg6r1jwm_E
 title: "gradle runner"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T18:24:31Z
-status_updated_iso: 2026-03-10T20:35:31Z
+status_updated_iso: 2026-03-10T20:45:28Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -75,3 +76,8 @@ tasks.register("tasksJson") {
 ```
 
 IDEALLY though in our version we will NOT rely on `memoize_by_pwd` shell magic and rather have "tasksJson" perform proper gradle level caching such that if any tasks change it will update the cache and if not it will return the cached version. This way we can avoid having to rely on shell level caching which can be more brittle (does not know when to update).
+## Notes
+
+**2026-03-10T20:45:24Z**
+
+Implemented: (1) tasksJson Gradle task in build.gradle.kts with proper UP-TO-DATE caching (inputs: all build files + settings.gradle.kts, output: build/tasks-json/tasks.json); (2) gradle_tasks_jsonl_cached.sh — runs tasksJson and streams output as JSONL; (3) gradle_run.sh — fzf picker that calls gradle_tasks_jsonl_cached.sh and runs the selected task.
