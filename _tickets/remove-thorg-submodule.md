@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T17:16:36Z
 id: nid_0h5gb1m47hyo0ljxb7v432q2k_E
 title: "Remove thorg-submodule"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T01:07:52Z
-status_updated_iso: 2026-03-10T16:29:41Z
+status_updated_iso: 2026-03-10T17:16:36Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -62,3 +63,17 @@ In our library we will depend on the published versions of the library.
 
 In our chainsaw Gradle builds we will have a target that can trigger the publishing of asgard library, using $THORG_ROOT env variable as reference point to find where asgard libraries are located. ($THORG_ROOT later will not be a submodule but it will point to the same file structure as /home/nickolaykondratyev/git_repos/nickolay-kondratyev_dev-agent-harness-mirror-2/submodules/thorg-root currently does). In chainsaw builds we should have a fast way to check whether we need to trigger this publish to local maven or whether the libraries are already present in local maven cache.
 
+
+## Notes
+
+**2026-03-10T17:16:36Z**
+
+Resolution: switched from Gradle composite build to maven local.
+- Removed includeBuild(submodules/thorg-root) from settings.gradle.kts
+- Added mavenLocal() to app/build.gradle.kts  
+- Added publishAsgardToMavenLocal + checkAsgardInMavenLocal tasks to root build.gradle.kts
+- Added id(maven-publish) to buildlogic convention plugins in submodule
+- Added publishAsgardLibsToMavenLocal aggregate task in thorgKotlinMP.build.gradle.kts
+- Submodule changes committed to thorg-root git history (commit 553eb324f)
+- THORG_ROOT no longer required for ./gradlew :app:build
+- Build and tests verified passing without THORG_ROOT set
