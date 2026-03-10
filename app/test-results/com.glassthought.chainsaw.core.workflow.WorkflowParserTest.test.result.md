@@ -1,0 +1,57 @@
+---
+spec: "com.glassthought.chainsaw.core.workflow.WorkflowParserTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a JSON file missing the name field
+  - WHEN parse is called
+    - [PASS] THEN throws JsonProcessingException
+- GIVEN a JSON file that does not exist
+  - WHEN parse is called
+    - [PASS] THEN throws NoSuchFileException
+- GIVEN a JSON file with both parts and planningPhases
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions mutual exclusivity
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a JSON file with empty phases array in a part
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions the part name
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a JSON file with neither parts nor planningPhases
+  - WHEN parse is called
+    - [PASS] THEN exception message mentions the missing fields
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN a malformed JSON file
+  - WHEN parse is called
+    - [PASS] THEN throws JsonProcessingException
+- GIVEN a multi-part workflow JSON
+  - WHEN parse is called
+    - [PASS] THEN parts list has 2 entries
+    - [PASS] THEN second part first phase role is 'IMPLEMENTOR'
+    - [PASS] THEN second part has 2 phases
+    - [PASS] THEN second part iteration max is 4
+    - [PASS] THEN second part name is 'implementation'
+- GIVEN a straightforward workflow JSON
+  - WHEN parse is called
+    - [PASS] THEN executionPhasesFrom is null
+    - [PASS] THEN first part description is 'Implement and review'
+    - [PASS] THEN first part has 2 phases
+    - [PASS] THEN first part iteration max is 4
+    - [PASS] THEN first part name is 'main'
+    - [PASS] THEN first phase role is 'IMPLEMENTOR_WITH_SELF_PLAN'
+    - [PASS] THEN name is 'straightforward'
+    - [PASS] THEN parts list has 1 entry
+    - [PASS] THEN planningIteration is null
+    - [PASS] THEN planningPhases is null
+    - [PASS] THEN second phase role is 'IMPLEMENTATION_REVIEWER'
+- GIVEN a with-planning workflow JSON
+  - WHEN parse is called
+    - [PASS] THEN executionPhasesFrom is 'plan.json'
+    - [PASS] THEN first planning phase role is 'PLANNER'
+    - [PASS] THEN name is 'with-planning'
+    - [PASS] THEN parts is null
+    - [PASS] THEN planningIteration max is 3
+    - [PASS] THEN planningPhases has 2 entries
+    - [PASS] THEN second planning phase role is 'PLAN_REVIEWER'
