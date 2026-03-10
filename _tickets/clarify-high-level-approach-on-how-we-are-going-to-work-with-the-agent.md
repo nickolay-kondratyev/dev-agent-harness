@@ -207,6 +207,7 @@ When plan execution hits blocking issues:
 ---
 
 ## Session ID Tracking — Wingman
+<!-- ap.gCgRdmWd9eTGXPbHJvyxI.E -->
 
 **Problem:** Claude Code doesn't expose its session ID to the agent itself.
 

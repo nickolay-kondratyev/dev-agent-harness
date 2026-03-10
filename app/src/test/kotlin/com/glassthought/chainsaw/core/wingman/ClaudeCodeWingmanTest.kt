@@ -1,0 +1,310 @@
+package com.glassthought.chainsaw.core.wingman
+
+import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import io.kotest.assertions.throwables.shouldThrow
+import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
+import java.nio.file.Path
+import kotlin.io.path.createDirectories
+import kotlin.io.path.createTempDirectory
+import kotlin.io.path.writeText
+
+class ClaudeCodeWingmanTest : AsgardDescribeSpec({
+
+    describe("GIVEN a ClaudeCodeWingman with a temp projects directory") {
+        val guid = "test-guid-abc123-unique-marker"
+
+        describe("AND a single JSONL file containing the target GUID") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN returns the session ID extracted from the filename") {
+                    withTempDir { tempDir ->
+                        val sessionId = "77d5b7ea-cf04-453b-8867-162404763e18"
+                        tempDir.resolve("$sessionId.jsonl").writeText(
+                            """{"type":"message","content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                        )
+
+                        val result = wingman.resolveSessionId(guid)
+
+                        result shouldBe sessionId
+                    }
+                }
+            }
+        }
+
+        describe("AND no JSONL files contain the target GUID") {
+            describe("WHEN resolveSessionId is called with a short timeout") {
+                it("THEN throws IllegalStateException") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("some-session.jsonl").writeText(
+                            """{"type":"message","content":"different-content"}"""
+                        )
+
+                        // Short timeout so the test is fast; real timeout is 45 seconds.
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                            resolveTimeoutMs = 600L,
+                        )
+
+                        shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
+                    }
+                }
+
+                it("THEN exception message contains the GUID") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("some-session.jsonl").writeText(
+                            """{"type":"message","content":"different-content"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                            resolveTimeoutMs = 600L,
+                        )
+
+                        val exception = shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
+                        exception.message shouldContain guid
+                    }
+                }
+            }
+        }
+
+        describe("AND multiple JSONL files contain the target GUID") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN throws IllegalStateException") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("session-a.jsonl").writeText(
+                            """{"content":"$guid"}"""
+                        )
+                        tempDir.resolve("session-b.jsonl").writeText(
+                            """{"content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                        )
+
+                        shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
+                    }
+                }
+
+                it("THEN exception message mentions ambiguous") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("session-a.jsonl").writeText(
+                            """{"content":"$guid"}"""
+                        )
+                        tempDir.resolve("session-b.jsonl").writeText(
+                            """{"content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                        )
+
+                        val exception = shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
+                        exception.message shouldContain "Ambiguous"
+                    }
+                }
+            }
+        }
+
+        describe("AND JSONL files are in nested subdirectories") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN finds the GUID in nested files and returns session ID") {
+                    withTempDir { tempDir ->
+                        val nestedDir = tempDir.resolve("project-a/sub-dir")
+                        nestedDir.createDirectories()
+
+                        val sessionId = "nested-session-id-42"
+                        nestedDir.resolve("$sessionId.jsonl").writeText(
+                            """{"content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                        )
+
+                        val result = wingman.resolveSessionId(guid)
+
+                        result shouldBe sessionId
+                    }
+                }
+            }
+        }
+
+        describe("AND only non-JSONL files contain the GUID") {
+            describe("WHEN resolveSessionId is called with a short timeout") {
+                it("THEN throws IllegalStateException because non-JSONL files are ignored") {
+                    withTempDir { tempDir ->
+                        tempDir.resolve("notes.txt").writeText(
+                            """This file contains $guid but is not a JSONL file"""
+                        )
+                        tempDir.resolve("data.log").writeText(
+                            """{"content":"$guid"}"""
+                        )
+
+                        val wingman = ClaudeCodeWingman(
+                            claudeProjectsDir = tempDir,
+                            outFactory = outFactory,
+                            resolveTimeoutMs = 600L,
+                        )
+
+                        shouldThrow<IllegalStateException> {
+                            wingman.resolveSessionId(guid)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    describe("GIVEN a ClaudeCodeWingman with a fake GuidScanner") {
+        val guid = "polling-test-guid"
+        val matchPath = Path.of("/fake/sessions/abc-session-id-123.jsonl")
+
+        describe("AND the scanner returns empty on first call then a match on the second call") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN returns the session ID from the matched path") {
+                    val fakeScanner = CountingFakeGuidScanner(
+                        emptyResultCount = 1,
+                        matchOnSuccess = listOf(matchPath),
+                    )
+
+                    val wingman = ClaudeCodeWingman(
+                        guidScanner = fakeScanner,
+                        outFactory = outFactory,
+                        pollIntervalMs = 1L,
+                    )
+
+                    val result = wingman.resolveSessionId(guid)
+
+                    result shouldBe "abc-session-id-123"
+                }
+
+                it("THEN polls more than once before finding the match") {
+                    val fakeScanner = CountingFakeGuidScanner(
+                        emptyResultCount = 1,
+                        matchOnSuccess = listOf(matchPath),
+                    )
+
+                    val wingman = ClaudeCodeWingman(
+                        guidScanner = fakeScanner,
+                        outFactory = outFactory,
+                        pollIntervalMs = 1L,
+                    )
+
+                    wingman.resolveSessionId(guid)
+
+                    fakeScanner.callCount shouldBe 2
+                }
+            }
+        }
+
+        describe("AND the scanner returns empty on the first 3 calls then a match") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN returns the session ID after 4 total poll attempts") {
+                    val fakeScanner = CountingFakeGuidScanner(
+                        emptyResultCount = 3,
+                        matchOnSuccess = listOf(matchPath),
+                    )
+
+                    val wingman = ClaudeCodeWingman(
+                        guidScanner = fakeScanner,
+                        outFactory = outFactory,
+                        pollIntervalMs = 1L,
+                    )
+
+                    wingman.resolveSessionId(guid)
+
+                    fakeScanner.callCount shouldBe 4
+                }
+            }
+        }
+
+        describe("AND the scanner always returns empty and timeout is very short") {
+            describe("WHEN resolveSessionId is called") {
+                it("THEN throws IllegalStateException wrapping the timeout") {
+                    val fakeScanner = CountingFakeGuidScanner(
+                        emptyResultCount = Int.MAX_VALUE,
+                        matchOnSuccess = emptyList(),
+                    )
+
+                    val wingman = ClaudeCodeWingman(
+                        guidScanner = fakeScanner,
+                        outFactory = outFactory,
+                        resolveTimeoutMs = 100L,
+                        pollIntervalMs = 10L,
+                    )
+
+                    shouldThrow<IllegalStateException> {
+                        wingman.resolveSessionId(guid)
+                    }
+                }
+
+                it("THEN exception message contains the GUID") {
+                    val fakeScanner = CountingFakeGuidScanner(
+                        emptyResultCount = Int.MAX_VALUE,
+                        matchOnSuccess = emptyList(),
+                    )
+
+                    val wingman = ClaudeCodeWingman(
+                        guidScanner = fakeScanner,
+                        outFactory = outFactory,
+                        resolveTimeoutMs = 100L,
+                        pollIntervalMs = 10L,
+                    )
+
+                    val exception = shouldThrow<IllegalStateException> {
+                        wingman.resolveSessionId(guid)
+                    }
+                    exception.message shouldContain guid
+                }
+            }
+        }
+    }
+})
+
+/**
+ * Fake [GuidScanner] for testing the polling behavior.
+ *
+ * Returns an empty list for the first [emptyResultCount] calls, then returns [matchOnSuccess].
+ * Tracks [callCount] for assertion.
+ */
+private class CountingFakeGuidScanner(
+    private val emptyResultCount: Int,
+    private val matchOnSuccess: List<Path>,
+) : GuidScanner {
+
+    var callCount: Int = 0
+        private set
+
+    override suspend fun scan(guid: String): List<Path> {
+        callCount++
+        return if (callCount <= emptyResultCount) emptyList() else matchOnSuccess
+    }
+}
+
+private suspend fun withTempDir(block: suspend (Path) -> Unit) {
+    val tempDir = createTempDirectory("wingman-test-")
+    try {
+        block(tempDir)
+    } finally {
+        tempDir.toFile().deleteRecursively()
+    }
+}
