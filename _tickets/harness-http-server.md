@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T15:57:54Z
 id: nid_cxzmudlhewszwlkknedyo0wq2_E
 title: "Harness HTTP Server"
-status: in_progress
+status: closed
 deps: [nid_w5b16tby0fjiovxfr3ft22ix2_E]
 links: []
 created_iso: 2026-03-09T23:07:41Z
-status_updated_iso: 2026-03-10T15:31:52Z
+status_updated_iso: 2026-03-10T15:57:54Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -61,3 +62,23 @@ As part of closing this ticket:
 2. Add `ap.XXX.E` just below the `## Agent↔Harness Communication — Bidirectional` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` in the KDoc of the `HarnessServer` interface pointing back to that design ticket section.
 
+## Resolution
+
+**Completed.** Anchor point: `ap.NAVMACFCbnE7L6Geutwyk.E`
+
+### Files Created
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/HarnessServer.kt` — Interface + KtorHarnessServer
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/AgentRequests.kt` — 4 request data classes with AgentRequest interface
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/PortFileManager.kt` — Port file write/delete
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/server/KtorHarnessServerTest.kt` — 8 BDD tests (lifecycle + endpoints)
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/server/PortFileManagerTest.kt` — 4 BDD tests
+
+### Files Modified
+- `app/build.gradle.kts` — Added Ktor CIO deps (ktor-server-core, ktor-server-cio, ktor-server-content-negotiation, ktor-serialization-jackson) v3.1.1
+- `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md` — Added AP below Agent↔Harness heading
+
+### Key Decisions
+- Ktor 3.1.1 (latest stable compatible with Kotlin 2.2.20)
+- PortFileManager as plain class (not interface) per reviewer simplification
+- Tests use real HTTP (OkHttp client) against real bound port, not Ktor test host
+- Common `AgentRequest` interface + extracted `handleAgentRequest` for DRY endpoints
