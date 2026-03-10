@@ -1,11 +1,11 @@
 ---
 id: nid_69tatkl7ajoqosoz3aal46998_E
 title: "Fully remove thorg-root git submodule"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T17:50:06Z
-status_updated_iso: 2026-03-10T17:50:06Z
+status_updated_iso: 2026-03-10T17:53:47Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
