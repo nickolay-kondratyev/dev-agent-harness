@@ -1,11 +1,11 @@
 ---
 id: nid_33sk1ml8zcnovfw538t464gfj_E
 title: "Self-healing build: auto-publish asgard libs to maven local if missing"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T18:16:16Z
-status_updated_iso: 2026-03-10T18:16:16Z
+status_updated_iso: 2026-03-10T18:19:30Z
 type: task
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
