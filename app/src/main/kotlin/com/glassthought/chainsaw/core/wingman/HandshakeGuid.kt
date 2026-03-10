@@ -5,6 +5,8 @@ package com.glassthought.chainsaw.core.wingman
  *
  * The harness generates a GUID and sends it to the agent as the first TMUX message.
  * This value class provides type safety to distinguish the handshake GUID from other strings.
+ *
+ * This is used by [Wingman]/ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E to resolve the agent session ID from the GUID.
  */
 @JvmInline
 value class HandshakeGuid(val value: String) {
