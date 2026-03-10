@@ -1,11 +1,11 @@
 ---
 id: nid_4ibk65jxp1o84i7dufi3bw2fd_E
 title: "AppMain.kt calls InitializerImpl() directly instead of Initializer.standard()"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T17:01:43Z
-status_updated_iso: 2026-03-10T17:01:43Z
+status_updated_iso: 2026-03-10T17:08:00Z
 type: chore
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
