@@ -1,0 +1,11 @@
+{
+  "name": "zero-iteration",
+  "parts": [
+    {
+      "name": "main",
+      "description": "This part has zero iteration max",
+      "phases": [{ "role": "IMPLEMENTOR" }],
+      "iteration": { "max": 0 }
+    }
+  ]
+}

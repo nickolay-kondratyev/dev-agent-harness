@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T00:53:05Z
 id: nid_w5b16tby0fjiovxfr3ft22ix2_E
 title: "Workflow JSON Parser"
-status: in_progress
+status: closed
 deps: [nid_r9on08uqjmumuc6wi2c53e8p9_E]
 links: []
 created_iso: 2026-03-09T23:07:25Z
-status_updated_iso: 2026-03-10T00:31:41Z
+status_updated_iso: 2026-03-10T00:53:05Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -59,4 +60,19 @@ As part of closing this ticket:
 1. Run `anchor_point.create` to generate a new AP for this component.
 2. Add `ap.XXX.E` just below the `## Workflow Definition — Kotlin + JSON` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` in the KDoc of the `WorkflowParser` interface pointing back to that design ticket section.
+
+## Resolution
+
+Implemented `com.glassthought.chainsaw.core.workflow` package with:
+- `WorkflowDefinition` data class (ap.MyWV0mG6ZU8XaQOyo14l4.E): `name`, `parts?`, `planningPhases?`, `planningIteration?`, `executionPhasesFrom?`
+- `Part` data class: `name`, `description`, `phases: List<Phase>`, `iteration: IterationConfig`
+- `Phase` data class: `role: String`
+- `IterationConfig` data class: `max: Int`
+- `WorkflowParser` interface (ap.U5oDohccLN3tugPzK9TJa.E) + `WorkflowParserImpl`: `suspend fun parse(path: Path): WorkflowDefinition`
+- Jackson + Kotlin module (`jackson-databind:2.17.2`, `jackson-module-kotlin:2.17.2`) added to `app/build.gradle.kts`
+- Production workflow files: `config/workflows/straightforward.json`, `config/workflows/with-planning.json`
+- Anchor point `ap.Wya4gZPW6RPpJHdtoJqZO.E` created, added below `## Workflow Definition — Kotlin + JSON` in design doc
+- `ref.ap.Wya4gZPW6RPpJHdtoJqZO.E` in `WorkflowParser` KDoc pointing to design doc
+- 32 BDD unit tests (11 straightforward + 7 with-planning + 5 multi-part + 9 error paths) all passing
+- Post-deserialization validation: blank name, neither-nor, both, empty phases, incomplete planning config
 

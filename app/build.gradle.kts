@@ -46,6 +46,10 @@ dependencies {
     // snakeyaml: YAML parsing for ticket and role markdown frontmatter
     implementation("org.yaml:snakeyaml:2.2")
 
+    // Jackson: structured JSON deserialization for workflow definition files
+    implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
+    implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
+
     // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }

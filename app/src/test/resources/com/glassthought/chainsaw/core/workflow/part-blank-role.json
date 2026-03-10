@@ -1,0 +1,11 @@
+{
+  "name": "blank-phase-role",
+  "parts": [
+    {
+      "name": "main",
+      "description": "This part has a phase with blank role",
+      "phases": [{ "role": "" }],
+      "iteration": { "max": 4 }
+    }
+  ]
+}

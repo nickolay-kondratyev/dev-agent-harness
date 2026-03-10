@@ -1,0 +1,11 @@
+{
+  "name": "",
+  "parts": [
+    {
+      "name": "main",
+      "description": "test",
+      "phases": [{ "role": "TEST" }],
+      "iteration": { "max": 1 }
+    }
+  ]
+}

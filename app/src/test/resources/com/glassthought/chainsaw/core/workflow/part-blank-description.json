@@ -1,0 +1,13 @@
+{
+  "name": "part-blank-description",
+  "parts": [
+    {
+      "name": "main",
+      "description": "",
+      "phases": [
+        { "role": "IMPLEMENTOR" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}

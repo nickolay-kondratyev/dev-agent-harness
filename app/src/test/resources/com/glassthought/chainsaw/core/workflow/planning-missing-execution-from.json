@@ -1,0 +1,8 @@
+{
+  "name": "broken-planning",
+  "planningPhases": [
+    { "role": "PLANNER" },
+    { "role": "PLAN_REVIEWER" }
+  ],
+  "planningIteration": { "max": 3 }
+}

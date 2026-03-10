@@ -1,0 +1,18 @@
+{
+  "name": "invalid-both",
+  "parts": [
+    {
+      "name": "main",
+      "description": "Implement and review",
+      "phases": [
+        { "role": "IMPLEMENTOR" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ],
+  "planningPhases": [
+    { "role": "PLANNER" }
+  ],
+  "planningIteration": { "max": 3 },
+  "executionPhasesFrom": "plan.json"
+}

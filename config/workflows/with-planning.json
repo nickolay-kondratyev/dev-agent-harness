@@ -1,0 +1,9 @@
+{
+  "name": "with-planning",
+  "planningPhases": [
+    { "role": "PLANNER" },
+    { "role": "PLAN_REVIEWER" }
+  ],
+  "planningIteration": { "max": 3 },
+  "executionPhasesFrom": "plan.json"
+}

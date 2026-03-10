@@ -1,0 +1,12 @@
+{
+  "parts": [
+    {
+      "name": "main",
+      "description": "Implement and review",
+      "phases": [
+        { "role": "IMPLEMENTOR" }
+      ],
+      "iteration": { "max": 4 }
+    }
+  ]
+}
