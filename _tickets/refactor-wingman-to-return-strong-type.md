@@ -1,11 +1,11 @@
 ---
 id: nid_47z6remhu28wwoi4clb1b0pb9_E
 title: "refactor wingman to return strong type"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T23:14:10Z
-status_updated_iso: 2026-03-10T23:14:10Z
+status_updated_iso: 2026-03-10T23:21:49Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
