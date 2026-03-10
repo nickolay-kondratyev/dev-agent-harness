@@ -1,6 +1,7 @@
 package com.glassthought.chainsaw.core.wingman
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.chainsaw.core.data.AgentType
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
