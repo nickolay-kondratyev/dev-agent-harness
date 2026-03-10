@@ -50,6 +50,13 @@ dependencies {
     implementation("com.fasterxml.jackson.core:jackson-databind:2.17.2")
     implementation("com.fasterxml.jackson.module:jackson-module-kotlin:2.17.2")
 
+    // Ktor: embedded HTTP server for agent-to-harness communication.
+    // Inline version strings, consistent with how other dependencies (OkHttp, Jackson, asgardCore) are declared.
+    implementation("io.ktor:ktor-server-core:3.1.1")
+    implementation("io.ktor:ktor-server-cio:3.1.1")
+    implementation("io.ktor:ktor-server-content-negotiation:3.1.1")
+    implementation("io.ktor:ktor-serialization-jackson:3.1.1")
+
     // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
     testImplementation("com.squareup.okhttp3:mockwebserver:4.12.0")
 }
