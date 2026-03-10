@@ -18,10 +18,11 @@ import kotlinx.coroutines.runBlocking
 //   ./app/build/install/app/bin/app
 @AnchorPoint("ap.4JVSSyLwZXop6hWiJNYevFQX.E")
 fun main() {
-  val deps = InitializerImpl().initialize()
-
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {
+    val deps = InitializerImpl().initialize()
+
+
     deps.use { _ ->
       val sessionName = "agent-harness__${System.currentTimeMillis()}"
       println("Tmux session name: $sessionName")
