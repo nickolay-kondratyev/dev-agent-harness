@@ -63,7 +63,6 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
  *
- * ap.gCgRdmWd9eTGXPbHJvyxI.E
  */
 @AnchorPoint("ap.gCgRdmWd9eTGXPbHJvyxI.E")
 class ClaudeCodeWingman(
