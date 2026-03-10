@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T00:00:21Z
 id: nid_ymtlew0apdjcyaco2qff3vva4_E
 title: "Agent CLI Script (harness-cli-for-agent.sh)"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T23:06:21Z
-status_updated_iso: 2026-03-09T23:33:17Z
+status_updated_iso: 2026-03-10T00:00:21Z
 type: feature
 priority: 1
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -48,4 +49,21 @@ As part of closing this ticket:
 1. Run `anchor_point.create` to generate a new AP for this component.
 2. Add `ap.XXX.E` just below the `### Agent CLI Script` heading in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`.
 3. Add `ref.ap.XXX.E` as a comment near the top of `harness-cli-for-agent.sh` pointing back to that design ticket section.
+
+## Resolution
+
+**Status**: COMPLETED
+
+### Deliverables
+- `scripts/harness-cli-for-agent.sh` (ap.8PB8nMd93D3jipEWhME5n.E) — Agent-to-Harness CLI script
+- `scripts/test_harness_cli.sh` — Shell-based test suite (42 tests, all passing)
+
+### Implementation Details
+- **JSON construction**: Uses `jq -n --arg` for safe escaping of all special characters
+- **Port discovery**: Reads from `$HOME/.chainsaw_agent_harness/server/port.txt` via `read -r`
+- **Test seam**: `HARNESS_CLI_DRY_RUN` env var prints URL + JSON body instead of executing curl
+- **Anchor point**: `ap.8PB8nMd93D3jipEWhME5n.E` defined in script, cross-referenced in design ticket
+
+### Bug Found & Fixed During Review
+- `read -r` + `set -e` caused silent exit when port file lacked trailing newline. Fixed with `|| true`.
 
