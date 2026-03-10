@@ -157,10 +157,10 @@ test_invalid_port_value() {
 }
 
 test_missing_arguments() {
-  echo "GIVEN: commands that require arguments"
+  echo "GIVEN: commands that require arguments (no port file needed -- validation is before I/O)"
 
   local ORIGINAL_HOME="${HOME}"
-  setup_temp_home_with_port
+  setup_temp_home
 
   run_capturing "${HARNESS_CLI}" question
   echo "  WHEN: 'question' without text argument"
@@ -177,10 +177,10 @@ test_missing_arguments() {
 }
 
 test_unknown_command() {
-  echo "GIVEN: unknown subcommand"
+  echo "GIVEN: unknown subcommand (no port file needed -- validation is before I/O)"
 
   local ORIGINAL_HOME="${HOME}"
-  setup_temp_home_with_port
+  setup_temp_home
 
   run_capturing "${HARNESS_CLI}" bogus
   echo "  WHEN: 'bogus' command is run"
@@ -196,6 +196,8 @@ test_dry_run_done() {
   echo "GIVEN: DRY_RUN mode with 'done' command"
 
   local ORIGINAL_HOME="${HOME}"
+  local EXPECTED_BRANCH
+  EXPECTED_BRANCH=$(git branch --show-current)
   setup_temp_home_with_port
   export HARNESS_CLI_DRY_RUN=true
 
@@ -204,6 +206,7 @@ test_dry_run_done() {
   assert_equals "0" "${CAPTURED_EXIT_CODE}" "THEN: exits 0"
   assert_contains "${CAPTURED_STDOUT}" "URL=http://localhost:12345/agent/done" "THEN: URL is correct"
   assert_contains "${CAPTURED_STDOUT}" '"branch"' "THEN: JSON body contains branch field"
+  assert_contains "${CAPTURED_STDOUT}" "${EXPECTED_BRANCH}" "THEN: JSON body contains current branch value"
 
   unset HARNESS_CLI_DRY_RUN
   export HOME="${ORIGINAL_HOME}"
@@ -285,6 +288,67 @@ test_dry_run_special_characters() {
   rm -rf "${TEMP_HOME}"
 }
 
+test_port_value_zero() {
+  echo "GIVEN: port file contains value 0"
+
+  local ORIGINAL_HOME="${HOME}"
+  TEMP_HOME=$(mktemp -d)
+  export HOME="${TEMP_HOME}"
+  mkdir -p "${TEMP_HOME}/.chainsaw_agent_harness/server"
+  echo "0" > "${TEMP_HOME}/.chainsaw_agent_harness/server/port.txt"
+
+  run_capturing "${HARNESS_CLI}" done
+  echo "  WHEN: 'done' command is run"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "Invalid port value" "THEN: stderr rejects port 0"
+
+  export HOME="${ORIGINAL_HOME}"
+  rm -rf "${TEMP_HOME}"
+}
+
+test_port_value_above_max() {
+  echo "GIVEN: port file contains value above 65535"
+
+  local ORIGINAL_HOME="${HOME}"
+  TEMP_HOME=$(mktemp -d)
+  export HOME="${TEMP_HOME}"
+  mkdir -p "${TEMP_HOME}/.chainsaw_agent_harness/server"
+  echo "65536" > "${TEMP_HOME}/.chainsaw_agent_harness/server/port.txt"
+
+  run_capturing "${HARNESS_CLI}" done
+  echo "  WHEN: 'done' command is run"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "Invalid port value" "THEN: stderr rejects port above max"
+
+  export HOME="${ORIGINAL_HOME}"
+  rm -rf "${TEMP_HOME}"
+}
+
+test_arity_errors_before_io() {
+  echo "GIVEN: commands requiring arguments, with NO port file present"
+
+  local ORIGINAL_HOME="${HOME}"
+  setup_temp_home
+
+  run_capturing "${HARNESS_CLI}" question
+  echo "  WHEN: 'question' without text argument (port file absent)"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "requires a text argument" "THEN: arity error shown, not port-file error"
+
+  run_capturing "${HARNESS_CLI}" failed
+  echo "  WHEN: 'failed' without reason argument (port file absent)"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "requires a reason argument" "THEN: arity error shown, not port-file error"
+
+  run_capturing "${HARNESS_CLI}" bogus
+  echo "  WHEN: unknown command (port file absent)"
+  assert_equals "1" "${CAPTURED_EXIT_CODE}" "THEN: exits 1"
+  assert_contains "${CAPTURED_STDERR}" "Unknown command" "THEN: command error shown, not port-file error"
+
+  export HOME="${ORIGINAL_HOME}"
+  rm -rf "${TEMP_HOME}"
+}
+
 # --- Run All Tests ---
 
 echo "========================================="
@@ -313,6 +377,12 @@ echo ""
 test_dry_run_status
 echo ""
 test_dry_run_special_characters
+echo ""
+test_port_value_zero
+echo ""
+test_port_value_above_max
+echo ""
+test_arity_errors_before_io
 echo ""
 
 # --- Summary ---

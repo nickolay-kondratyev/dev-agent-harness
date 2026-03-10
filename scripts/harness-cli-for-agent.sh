@@ -24,7 +24,9 @@ _read_port() {
   # suppress to let the regex validation below handle empty/invalid values.
   read -r port < "${PORT_FILE}" || true
 
-  if [[ ! "${port}" =~ ^[0-9]+$ ]]; then
+  # [^[1-9][0-9]*$]: rejects 0, leading zeros, and non-numeric values.
+  # Upper bound check rejects values outside the valid TCP port range.
+  if [[ ! "${port}" =~ ^[1-9][0-9]*$ ]] || [[ "${port}" -gt 65535 ]]; then
     echo "ERROR: Invalid port value [${port}] in [${PORT_FILE}]" >&2
     exit 1
   fi
@@ -50,7 +52,8 @@ _get_branch() {
 _post() {
   local endpoint="$1"
   local json_body="$2"
-  local url="http://localhost:${PORT}/agent/${endpoint}"
+  local port="$3"
+  local url="http://localhost:${port}/agent/${endpoint}"
 
   if [[ "${HARNESS_CLI_DRY_RUN:-}" == "true" ]]; then
     echo "URL=${url}"
@@ -58,7 +61,10 @@ _post() {
     return 0
   fi
 
-  curl --silent --fail --show-error \
+  # [--fail-with-body]: exits non-zero on HTTP >= 400 while still printing the
+  # response body, giving agents diagnostic information on harness-side errors.
+  # Requires curl >= 7.76.0.
+  curl --silent --fail-with-body --show-error \
     -X POST \
     -H "Content-Type: application/json" \
     -d "${json_body}" \
@@ -92,6 +98,26 @@ main() {
     exit 0
   fi
 
+  # Validate command and arity BEFORE any I/O (port file read, git invocation).
+  # This ensures error messages are accurate regardless of environment state.
+  case "$1" in
+    done|status) ;;
+    question)
+      if [[ $# -lt 2 ]]; then
+        echo "ERROR: question command requires a text argument" >&2
+        exit 1
+      fi ;;
+    failed)
+      if [[ $# -lt 2 ]]; then
+        echo "ERROR: failed command requires a reason argument" >&2
+        exit 1
+      fi ;;
+    *)
+      echo "ERROR: Unknown command [$1]" >&2
+      show_help >&2
+      exit 1 ;;
+  esac
+
   local PORT
   PORT=$(_read_port)
 
@@ -103,34 +129,21 @@ main() {
   case "$1" in
     done)
       json_body=$(jq -n --arg branch "${BRANCH}" '{branch: $branch}')
-      _post "done" "${json_body}"
+      _post "done" "${json_body}" "${PORT}"
       ;;
     question)
-      if [[ $# -lt 2 ]]; then
-        echo "ERROR: question command requires a text argument" >&2
-        exit 1
-      fi
       json_body=$(jq -n --arg branch "${BRANCH}" --arg question "$2" \
         '{branch: $branch, question: $question}')
-      _post "question" "${json_body}"
+      _post "question" "${json_body}" "${PORT}"
       ;;
     failed)
-      if [[ $# -lt 2 ]]; then
-        echo "ERROR: failed command requires a reason argument" >&2
-        exit 1
-      fi
       json_body=$(jq -n --arg branch "${BRANCH}" --arg reason "$2" \
         '{branch: $branch, reason: $reason}')
-      _post "failed" "${json_body}"
+      _post "failed" "${json_body}" "${PORT}"
       ;;
     status)
       json_body=$(jq -n --arg branch "${BRANCH}" '{branch: $branch}')
-      _post "status" "${json_body}"
-      ;;
-    *)
-      echo "ERROR: Unknown command [$1]" >&2
-      show_help >&2
-      exit 1
+      _post "status" "${json_body}" "${PORT}"
       ;;
   esac
 }
