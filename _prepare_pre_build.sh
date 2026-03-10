@@ -39,8 +39,7 @@ _prepare_asgard_dependencies() {
   # Subshell: cd + env var scoped to just this publish invocation.
   (
     cd "${_PREPARE_PRE_BUILD_REPO_ROOT}"
-    THORG_ROOT="${HOME}/thorg-root" \
-      ./gradlew publishAsgardToMavenLocal
+    ./gradlew publishAsgardToMavenLocal
   )
 
   echo "asgard_status=[published]"
