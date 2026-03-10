@@ -477,6 +477,7 @@ Same pattern: `planning/PLANNER/` and `planning/PLAN_REVIEWER/` directories are 
   - `harness-cli-for-agent.sh --help` content (in `<critical_to_keep_through_compaction>` tags)
 
 ## Git Branch / Feature Naming
+<!-- ap.THL21SyZzJhzInG2m4zl2.E -->
 
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
