@@ -366,6 +366,7 @@ Example `plan.json`:
 ```
 
 #### Role Catalog — Auto-Discovered
+<!-- ap.iF4zXT5FUcqOzclp5JVHj.E -->
 
 The planner needs to know what roles are available. The catalog is **auto-discovered** from `$CHAINSAW_AGENTS_DIR`:
 
