@@ -1,11 +1,11 @@
 ---
 id: nid_v1goe46cdkcti7ac1zg6r1jwm_E
 title: "gradle runner"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-10T18:24:31Z
-status_updated_iso: 2026-03-10T18:24:31Z
+status_updated_iso: 2026-03-10T20:35:31Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
