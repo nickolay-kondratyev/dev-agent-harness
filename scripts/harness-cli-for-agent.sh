@@ -56,6 +56,7 @@ _post() {
   local url="http://localhost:${port}/agent/${endpoint}"
 
   if [[ "${HARNESS_CLI_DRY_RUN:-}" == "true" ]]; then
+    echo "[DRY_RUN] Skipping real HTTP call." >&2
     echo "URL=${url}"
     echo "BODY=${json_body}"
     return 0
@@ -64,7 +65,10 @@ _post() {
   # [--fail-with-body]: exits non-zero on HTTP >= 400 while still printing the
   # response body, giving agents diagnostic information on harness-side errors.
   # Requires curl >= 7.76.0.
+  # [--max-time 30]: all commands are fire-and-forget; 30s is far more than any
+  # healthy harness needs. Guards against indefinite block if harness is hung.
   curl --silent --fail-with-body --show-error \
+    --max-time 30 \
     -X POST \
     -H "Content-Type: application/json" \
     -d "${json_body}" \
@@ -79,7 +83,8 @@ Usage: harness-cli-for-agent.sh <command> [args]
 
 Commands:
   done                   Signal task completion to the harness.
-  question "<text>"      Ask the harness a question. Blocks until answered.
+  question "<text>"      Submit a question to the harness. This call returns immediately;
+                         the answer will be delivered back to you via TMUX — just wait for it.
   failed "<reason>"      Signal unrecoverable failure to the harness.
   status                 Reply to a health ping from the harness.
 
