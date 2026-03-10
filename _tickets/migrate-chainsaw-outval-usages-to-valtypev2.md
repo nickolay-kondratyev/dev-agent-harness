@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-10T17:45:26Z
 id: nid_ab58clog693kjma16mde2pyrb_E
 title: "Migrate chainsaw Out/Val usages to ValTypeV2"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T17:16:51Z
-status_updated_iso: 2026-03-10T17:16:51Z
+status_updated_iso: 2026-03-10T17:45:25Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
