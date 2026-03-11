@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T15:48:29Z
 id: nid_3ygjxcmvgff95uet7bc8x06zs_E
 title: "refactor chainsaw context and spawn test"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T15:25:40Z
-status_updated_iso: 2026-03-11T15:32:52Z
+status_updated_iso: 2026-03-11T15:48:29Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -73,3 +74,25 @@ class ChainsawContext(
 ```
 
 Then in the test we will be able to just pull from the context instead of spawning individual dependencies and use cases.
+
+## Resolution
+
+### Completed
+
+1. **Created grouping data classes** in `Initializer.kt`:
+   - `TmuxInfra` — groups `commandRunner`, `communicator`, `sessionManager`
+   - `DirectLlmInfra` — groups `glmDirectLLM`, `httpClient`
+   - `Infra` — groups `outFactory`, `tmux: TmuxInfra`, `directLlm: DirectLlmInfra`
+   - `UseCases` — groups `spawnTmuxAgentSession: SpawnTmuxAgentSessionUseCase`
+
+2. **Refactored ChainsawContext** from flat fields to `infra: Infra` + `useCases: UseCases`
+
+3. **Wired SpawnTmuxAgentSessionUseCase into Initializer** — added `systemPromptFilePath` and `claudeProjectsDir` params
+
+4. **Simplified SpawnTmuxAgentSessionUseCaseIntegTest** — now uses `chainsawContext.useCases.spawnTmuxAgentSession` instead of manually constructing all dependencies
+
+5. **Updated all references** across 9 files (tests + production code)
+
+6. **Fixed DRY violation** in `AppDependenciesCloseTest` — added `httpClient` param to `Initializer.initialize()` so the test can inject a custom httpClient without duplicating all wiring
+
+7. **Updated documentation** — `SharedContextDescribeSpec` KDoc, `4_testing_standards.md`, and regenerated `CLAUDE.md`
