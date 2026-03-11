@@ -415,69 +415,18 @@ A `ContextProvider` interface is responsible for assembling context packages for
 ---
 
 ## File Structure
-<!-- ref.ap.XBNUQHLjDLpAr8F9IOyXU.E — AiOutputStructure class manages path resolution for this tree -->
 
-```
-.ai_out/${git_branch}/
-├── harness_private/
-│   ├── current_state.json                              # Serialized workflow state (incl. resolved parts); enables resume
-│   └── PRIVATE.md                                      # Harness internal context (if needed)
-├── shared/
-│   ├── SHARED_CONTEXT.md                               # Cross-cutting context for ALL agents (agents can modify)
-│   ├── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt  # Links to all PUBLIC.md files
-│   └── plan/
-│       ├── PLAN.md                                     # Human-readable plan (with-planning only)
-│       └── plan.json                                   # Machine-readable plan (with-planning only)
-├── planning/                                           # Plan-making loop (with-planning only)
-│   ├── PLANNER/
-│   │   ├── PUBLIC.md
-│   │   ├── PRIVATE.md
-│   │   └── session_ids/${timestamp}.json
-│   └── PLAN_REVIEWER/
-│       ├── PUBLIC.md
-│       ├── PRIVATE.md
-│       └── session_ids/${timestamp}.json
-├── phases/                                             # Plan execution
-│   ├── part_1/
-│   │   ├── ${ROLE}/
-│   │   │   ├── PUBLIC.md
-│   │   │   ├── PRIVATE.md
-│   │   │   └── session_ids/${timestamp}.json           # Session ID + agent type
-│   │   └── ${ROLE_2}/
-│   │       └── ...
-│   └── part_2/
-│       └── ...
-```
+See `doc/ai-out-schema.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for the full directory schema,
+plan.json format, iteration behavior, and cross-agent visibility rules.
 
-**Temp files for agent communication:**
-```
-$HOME/.chainsaw_agent_harness/tmp/agent_comm/           # Temp instruction/answer files sent to agents
-```
-
-**Server port file:**
-```
-$HOME/.chainsaw_agent_harness/server/port.txt           # Written on startup, deleted on shutdown
-```
-
-### Iteration within a part
-
-When review fails and iteration loops back, the **same** `phases/part_N/{ROLE}/` directory is reused. The agent reads its own prior PUBLIC.md for context on what to fix.
-
-### Iteration within planning
-
-Same pattern: `planning/PLANNER/` and `planning/PLAN_REVIEWER/` directories are reused across planning iterations. Each iteration overwrites PUBLIC.md with updated plan content.
+Codified in `AiOutputStructure` class (ref.ap.XBNUQHLjDLpAr8F9IOyXU.E).
 
 ## Agent Role Definitions
 
 - Each ROLE has a corresponding Markdown file in `$CHAINSAW_AGENTS_DIR`
 - **Fail-fast on startup** if role file is missing
-- Instruction file is a **concatenation** of:
-  - Role definition file
-  - Ticket content
-  - `SHARED_CONTEXT.md`
-  - `LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt`
-  - Phase-specific artifacts (e.g., reviewer's PUBLIC.md from prior iteration)
-  - `harness-cli-for-agent.sh --help` content (in `<critical_to_keep_through_compaction>` tags)
+- Instruction file assembled by ContextProvider — concatenation of role definition, ticket,
+  SHARED_CONTEXT.md, relevant PUBLIC.md pointers, and harness CLI help
 
 ## Git Branch / Feature Naming
 <!-- ref.ap.THL21SyZzJhzInG2m4zl2.E -->

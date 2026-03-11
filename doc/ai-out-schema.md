@@ -11,24 +11,21 @@ All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its ow
 ```
 .ai_out/${git_branch}/
 ├── harness_private/
-│   ├── current_state.json              # Serialized workflow state (incl. resolved parts); enables resume
-│   └── PRIVATE.md                      # Harness internal context (if needed)
+│   └── current_state.json              # Serialized workflow state (incl. resolved parts); enables resume
 ├── shared/
 │   ├── SHARED_CONTEXT.md               # Cross-cutting context for ALL agents (agents can modify)
 │   └── plan/
 │       ├── PLAN.md                     # Human-readable plan (with-planning only)
 │       └── plan.json                   # Machine-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
-│   └── ${ROLE}/                        # e.g., PLANNER, PLAN_REVIEWER
+│   └── ${sub_part}/                    # e.g., 1_plan, 2_plan_review (numbered for execution order)
 │       ├── PUBLIC.md
-│       ├── PRIVATE.md
 │       └── session_ids/
 │           └── ${timestamp}.json       # Session ID + agent type
 └── phases/                             # Execution phases
-    └── ${part_name}/                   # e.g., part_1, ui_design, backend_impl
-        └── ${ROLE}/                    # e.g., IMPLEMENTOR, REVIEWER
+    └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
+        └── ${sub_part}/                # Numbered sub-part (e.g., 1_impl, 2_review, 3_security_review)
             ├── PUBLIC.md
-            ├── PRIVATE.md
             └── session_ids/
                 └── ${timestamp}.json   # Session ID + agent type
 ```
@@ -37,19 +34,56 @@ All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its ow
 
 | File | Scope | Purpose |
 |------|-------|---------|
-| `PUBLIC.md` | Per role per part/planning | Agent's public output — visible to other agents and used in iteration evaluation |
-| `PRIVATE.md` | Per role per part/planning | Agent's private notes — not shared with other agents |
+| `PUBLIC.md` | Per sub-part | Agent's output — the sole communication channel between agents |
 | `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write |
-| `current_state.json` | Branch-wide | Workflow progress — which part/phase is current; enables resume |
+| `current_state.json` | Branch-wide | Workflow progress — which part/sub-part is current; enables resume |
 | `PLAN.md` | Branch-wide (shared/plan/) | Human-readable plan (with-planning workflow only) |
 | `plan.json` | Branch-wide (shared/plan/) | Machine-readable plan parsed by harness (with-planning workflow only) |
-| `${timestamp}.json` | Per role session_ids/ | Persisted session ID + agent type for resume capability |
+| `${timestamp}.json` | Per sub-part session_ids/ | Persisted session ID + agent type for resume capability |
+
+## Structure Decisions
+
+### No PRIVATE.md
+
+Agents do not have private output files. An agent's private state lives in its conversation history
+(available via resume). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
+writes is intended to be shared.
+
+### Parts and Sub-Parts
+
+- **Part** = iteration group. Groups sub-parts that may loop (e.g., impl ↔ review).
+- **Sub-part** = one unit of work by one agent. Numbered for execution order within the part.
+- Role and agent type metadata live in `plan.json`, not in directory names.
+
+### plan.json Schema
+
+```json
+{
+  "parts": [
+    {
+      "name": "ui_design",
+      "subParts": [
+        { "name": "1_impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
+        { "name": "2_review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
+          "iteration": { "max": 3, "loopsBackTo": "1_impl" } },
+        { "name": "3_security_review", "role": "SECURITY_REVIEWER", "agentType": "PI",
+          "iteration": { "max": 2, "loopsBackTo": "1_impl" } }
+      ]
+    }
+  ]
+}
+```
+
+- `iteration` on a review sub-part defines the impl ↔ review loop budget.
+- `loopsBackTo` names the sub-part to return to when review fails — typically the implementor.
+- The implementor can fix or push back on feedback; then the reviewer runs again.
+- Sub-parts without `iteration` execute once.
 
 ## Scoping Rules
 
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
-- **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained unit of work.
-- **Role isolation**: Within a part, each role has its own directory for PUBLIC/PRIVATE/session_ids.
+- **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained iteration group.
+- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md and session_ids.
 
 ## Cross-Agent Visibility
 
@@ -60,8 +94,15 @@ what each agent sees.
 
 ## Iteration Behavior
 
-- **Within a part**: When review fails and iteration loops back, the **same** `phases/${part_name}/${ROLE}/` directory is reused. The agent reads its own prior `PUBLIC.md` for context on what to fix.
-- **Within planning**: Same pattern — `planning/PLANNER/` and `planning/PLAN_REVIEWER/` reused across planning iterations. Each iteration overwrites `PUBLIC.md`.
+- **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
+  including relevant context in its output.
+- **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
+  changes is preserved in git — no need for versioned files.
+- **Fresh reviewer**: To use a brand new reviewer (no prior conversation), the harness deletes the
+  reviewer's `PUBLIC.md` and starts a new session (no resume). The fresh reviewer picks up context
+  purely from the implementor's `PUBLIC.md` and other files assembled by ContextProvider.
+- **Resumed reviewer**: To continue with the same reviewer, the harness resumes the session.
+  The reviewer retains its full conversation history.
 
 ## External Paths (outside repo)
 

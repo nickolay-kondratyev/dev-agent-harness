@@ -17,55 +17,51 @@ skipped: 0
     - [PASS] THEN does not throw (idempotent)
   - WHEN ensureStructure is called with branch and parts
     - [PASS] THEN harness_private directory exists
-    - [PASS] THEN phase role directory exists for part_1/IMPLEMENTOR
-    - [PASS] THEN phase role directory exists for part_1/REVIEWER
-    - [PASS] THEN phase role directory exists for part_2/IMPLEMENTOR
     - [PASS] THEN plan directory exists
-    - [PASS] THEN session_ids directory exists for part_1/IMPLEMENTOR
-    - [PASS] THEN session_ids directory exists for part_1/REVIEWER
-    - [PASS] THEN session_ids directory exists for part_2/IMPLEMENTOR
+    - [PASS] THEN session_ids directory exists for backend/1_impl
+    - [PASS] THEN session_ids directory exists for ui_design/1_impl
+    - [PASS] THEN session_ids directory exists for ui_design/2_review
     - [PASS] THEN shared directory exists
+    - [PASS] THEN sub-part directory exists for backend/1_impl
+    - [PASS] THEN sub-part directory exists for ui_design/1_impl
+    - [PASS] THEN sub-part directory exists for ui_design/2_review
   - WHEN ensureStructure is called with empty parts list
     - [PASS] THEN harness_private directory still exists
     - [PASS] THEN no phases directory is created
     - [PASS] THEN plan directory still exists
     - [PASS] THEN shared directory still exists
-  - WHEN ensureStructure is called with planningRoles
-    - [PASS] THEN planning/PLANNER directory exists
-    - [PASS] THEN planning/PLANNER/session_ids directory exists
-    - [PASS] THEN planning/PLAN_REVIEWER directory exists
-    - [PASS] THEN planning/PLAN_REVIEWER/session_ids directory exists
+  - WHEN ensureStructure is called with planningSubParts
+    - [PASS] THEN planning/1_plan directory exists
+    - [PASS] THEN planning/1_plan/session_ids directory exists
+    - [PASS] THEN planning/2_plan_review directory exists
+    - [PASS] THEN planning/2_plan_review/session_ids directory exists
 - GIVEN AiOutputStructure with blank string parameters
   - WHEN branch is blank
     - [PASS] THEN harnessPrivateDir throws IllegalArgumentException
     - [PASS] THEN sharedDir throws IllegalArgumentException
   - WHEN part is blank
-    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
-  - WHEN role is blank
-    - [PASS] THEN phaseRoleDir throws IllegalArgumentException
-    - [PASS] THEN planningRoleDir throws IllegalArgumentException
+    - [PASS] THEN subPartDir throws IllegalArgumentException
+  - WHEN subPart is blank
+    - [PASS] THEN planningSubPartDir throws IllegalArgumentException
+    - [PASS] THEN subPartDir throws IllegalArgumentException
 - GIVEN AiOutputStructure with valid repo root
   - AND branch is 'feature__my-task__try-1'
-    - AND part is 'part_1' AND role is 'IMPLEMENTOR'
-      - WHEN phaseRoleDir is called
-        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR
-        - [PASS] THEN path starts with repo root
-      - WHEN privateMd is called
-        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/PRIVATE.md
+    - AND part is 'ui_design' AND subPart is '1_impl'
       - WHEN publicMd is called
-        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/PUBLIC.md
+        - [PASS] THEN path ends with phases/ui_design/1_impl/PUBLIC.md
       - WHEN sessionIdsDir is called
-        - [PASS] THEN path ends with phases/part_1/IMPLEMENTOR/session_ids
-    - AND role is 'PLANNER'
-      - WHEN planningPrivateMd is called
-        - [PASS] THEN path ends with planning/PLANNER/PRIVATE.md
-      - WHEN planningPublicMd is called
-        - [PASS] THEN path ends with planning/PLANNER/PUBLIC.md
-      - WHEN planningRoleDir is called
-        - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/planning/PLANNER
+        - [PASS] THEN path ends with phases/ui_design/1_impl/session_ids
+      - WHEN subPartDir is called
+        - [PASS] THEN path ends with phases/ui_design/1_impl
         - [PASS] THEN path starts with repo root
+    - AND planning sub-part is '1_plan'
+      - WHEN planningPublicMd is called
+        - [PASS] THEN path ends with planning/1_plan/PUBLIC.md
       - WHEN planningSessionIdsDir is called
-        - [PASS] THEN path ends with planning/PLANNER/session_ids
+        - [PASS] THEN path ends with planning/1_plan/session_ids
+      - WHEN planningSubPartDir is called
+        - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/planning/1_plan
+        - [PASS] THEN path starts with repo root
     - WHEN harnessPrivateDir is called
       - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/harness_private
       - [PASS] THEN path starts with repo root
