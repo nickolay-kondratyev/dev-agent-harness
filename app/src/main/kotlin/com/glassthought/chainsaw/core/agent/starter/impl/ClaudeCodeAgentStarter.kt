@@ -11,7 +11,10 @@ import com.glassthought.chainsaw.core.agent.starter.AgentStarter
  *
  * @param workingDir Directory the agent operates in. Used as `cd` target before launching claude.
  * @param model Claude model alias (e.g., "sonnet", "opus").
- * @param allowedTools Tools the agent is allowed to use (e.g., ["Read", "Write"]).
+ * @param tools Tools available to the agent (e.g., ["Bash", "Read", "Write", "Edit"]).
+ *   Uses `--tools` which **restricts** the available tool set and reduces context window size.
+ *   This is distinct from `--allowedTools` which only pre-approves tools for permissions
+ *   but keeps all tools available (and in the context window).
  * @param systemPromptFilePath Absolute path to the system prompt file, or null to use default.
  * @param appendSystemPrompt When true, uses `--append-system-prompt-file` (preserves built-in prompt).
  *                           When false, uses `--system-prompt-file` (replaces built-in prompt).
@@ -22,7 +25,7 @@ import com.glassthought.chainsaw.core.agent.starter.AgentStarter
 class ClaudeCodeAgentStarter(
     private val workingDir: String,
     private val model: String,
-    private val allowedTools: List<String>,
+    private val tools: List<String>,
     private val systemPromptFilePath: String?,
     private val appendSystemPrompt: Boolean,
     private val dangerouslySkipPermissions: Boolean,
@@ -34,9 +37,12 @@ class ClaudeCodeAgentStarter(
         parts.add("--model")
         parts.add(model)
 
-        if (allowedTools.isNotEmpty()) {
-            parts.add("--allowedTools")
-            parts.add(allowedTools.joinToString(","))
+        if (tools.isNotEmpty()) {
+            // [--tools]: restricts available tool set and reduces context window size.
+            // Distinct from --allowedTools which only pre-approves permissions but keeps
+            // all tools available (and in the context window).
+            parts.add("--tools")
+            parts.add(tools.joinToString(","))
         }
 
         if (systemPromptFilePath != null) {

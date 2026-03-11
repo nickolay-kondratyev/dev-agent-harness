@@ -51,9 +51,9 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
                 command shouldContain "--model sonnet"
             }
 
-            it("THEN start command uses minimal allowed tools") {
+            it("THEN start command uses --tools with test tool set") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldContain "--allowedTools Read,Write"
+                command shouldContain "--tools Bash,Read,Write,Edit"
             }
 
             it("THEN start command includes --dangerously-skip-permissions") {
@@ -84,9 +84,9 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
                 command shouldContain "--append-system-prompt-file"
             }
 
-            it("THEN start command uses full allowed tools set") {
+            it("THEN start command uses --tools with full production tool set") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldContain "--allowedTools Bash,Edit,Read,Write,Glob,Grep"
+                command shouldContain "--tools Bash,Edit,Read,Write,Glob,Grep"
             }
         }
     }

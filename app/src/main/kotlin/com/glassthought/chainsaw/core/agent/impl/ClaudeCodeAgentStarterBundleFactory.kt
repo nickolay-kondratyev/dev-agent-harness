@@ -14,9 +14,9 @@ import java.nio.file.Path
  * Creates [AgentStarterBundle] for [AgentType.CLAUDE_CODE].
  *
  * Uses [Environment.isTest] to determine agent configuration:
- * - **Test mode**: `--model sonnet`, `--allowedTools Read,Write`, `--system-prompt-file`,
- *   `--dangerously-skip-permissions`. Minimal configuration to reduce cost.
- * - **Production mode**: `--model sonnet`, `--allowedTools Bash,Edit,Read,Write,Glob,Grep`,
+ * - **Test mode**: `--model sonnet`, `--tools Bash,Read,Write,Edit`, `--system-prompt-file`,
+ *   `--dangerously-skip-permissions`. Minimal configuration to reduce cost and context window.
+ * - **Production mode**: `--model sonnet`, `--tools Bash,Edit,Read,Write,Glob,Grep`,
  *   `--append-system-prompt-file`, `--dangerously-skip-permissions`.
  *
  * @param environment Runtime environment (test vs production).
@@ -41,7 +41,7 @@ class ClaudeCodeAgentStarterBundleFactory(
             ClaudeCodeAgentStarter(
                 workingDir = request.workingDir,
                 model = TEST_MODEL,
-                allowedTools = TEST_ALLOWED_TOOLS,
+                tools = TEST_TOOLS,
                 systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = false,
                 dangerouslySkipPermissions = true,
@@ -50,7 +50,7 @@ class ClaudeCodeAgentStarterBundleFactory(
             ClaudeCodeAgentStarter(
                 workingDir = request.workingDir,
                 model = PRODUCTION_MODEL,
-                allowedTools = PRODUCTION_ALLOWED_TOOLS,
+                tools = PRODUCTION_TOOLS,
                 systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = true,
                 dangerouslySkipPermissions = true,
@@ -70,9 +70,9 @@ class ClaudeCodeAgentStarterBundleFactory(
 
     companion object {
         private const val TEST_MODEL = "sonnet"
-        private val TEST_ALLOWED_TOOLS = listOf("Read", "Write")
+        private val TEST_TOOLS = listOf("Bash", "Read", "Write", "Edit")
 
         private const val PRODUCTION_MODEL = "sonnet"
-        private val PRODUCTION_ALLOWED_TOOLS = listOf("Bash", "Edit", "Read", "Write", "Glob", "Grep")
+        private val PRODUCTION_TOOLS = listOf("Bash", "Edit", "Read", "Write", "Glob", "Grep")
     }
 }

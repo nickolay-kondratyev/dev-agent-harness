@@ -11,7 +11,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/home/user/project",
             model = "sonnet",
-            allowedTools = listOf("Read", "Write"),
+            tools = listOf("Read", "Write"),
             systemPromptFilePath = "/path/to/prompt.txt",
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
@@ -25,7 +25,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             }
 
             it("THEN command contains --allowedTools Read,Write") {
-                command shouldContain "--allowedTools Read,Write"
+                command shouldContain "--tools Read,Write"
             }
 
             it("THEN command contains --system-prompt-file with the file path") {
@@ -46,7 +46,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/home/user/project",
             model = "opus",
-            allowedTools = listOf("Bash", "Edit", "Read"),
+            tools = listOf("Bash", "Edit", "Read"),
             systemPromptFilePath = "/path/to/append-prompt.txt",
             appendSystemPrompt = true,
             dangerouslySkipPermissions = true,
@@ -70,7 +70,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/tmp/test",
             model = "sonnet",
-            allowedTools = listOf("Read"),
+            tools = listOf("Read"),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = false,
@@ -97,7 +97,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/home/user/project",
             model = "sonnet",
-            allowedTools = listOf("Read"),
+            tools = listOf("Read"),
             systemPromptFilePath = "/path/to/it's-a-prompt.txt",
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
@@ -121,7 +121,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/home/user/it's-a-project",
             model = "sonnet",
-            allowedTools = listOf("Read"),
+            tools = listOf("Read"),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
@@ -140,7 +140,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/tmp/test",
             model = "sonnet",
-            allowedTools = emptyList(),
+            tools = emptyList(),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
@@ -150,7 +150,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             val command = starter.buildStartCommand().command
 
             it("THEN command does not contain --allowedTools") {
-                command shouldNotContain "--allowedTools"
+                command shouldNotContain "--tools"
             }
         }
     }
