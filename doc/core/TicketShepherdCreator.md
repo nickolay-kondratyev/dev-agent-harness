@@ -20,7 +20,7 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 - Resolves workflow JSON from `config/workflows/<name>.json`
 - Parses the ticket (frontmatter `id`, `title`)
 - Initializes `SessionsState`
-- Wires `ContextProvider` for instruction assembly
+- Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
 - Sets up `.ai_out/` directory structure for the branch
 - Creates or resumes `current_state.json`
 - Constructs `TicketShepherd` with `ShepherdContext` + ticket-scoped state
