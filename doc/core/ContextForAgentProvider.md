@@ -215,7 +215,7 @@ data class PublicMdReference(
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 - **Used by** `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) — calls the appropriate
   method before each agent spawn
-- **Depends on**: `AiOutputStructure` (ref.ap.XBNUQHLjDLpAr8F9IOyXU.E) for path resolution
+- **Depends on**: `.ai_out/` directory schema (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for path resolution
 
 ---
 

@@ -1,7 +1,5 @@
 # `.ai_out/` Directory Schema / ap.BXQlLDTec7cVVOrzXWfR7.E
 
-<!-- ref.ap.XBNUQHLjDLpAr8F9IOyXU.E — AiOutputStructure class codifies this schema -->
-
 ## Overview
 
 All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its own isolated tree.
