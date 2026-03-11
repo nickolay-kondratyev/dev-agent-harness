@@ -1,11 +1,11 @@
 ---
 id: nid_gkkanv6kvkr4bzje1bitcek22_E
 title: "Introduce DirectLLM tier interfaces (DirectQuickCheapLLM, DirectMediumLLM, DirectBudgetHighLLM)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T20:43:48Z
-status_updated_iso: 2026-03-11T20:43:48Z
+status_updated_iso: 2026-03-11T21:13:00Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
