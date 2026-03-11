@@ -1,11 +1,11 @@
 ---
 id: nid_ptqrjjc8f7bl3ims5dehpcqdd_E
 title: "Delete CLI implementation: harness-cli-for-agent.sh and test_harness_cli.sh"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T16:05:30Z
-status_updated_iso: 2026-03-11T16:05:30Z
+status_updated_iso: 2026-03-11T16:07:35Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
