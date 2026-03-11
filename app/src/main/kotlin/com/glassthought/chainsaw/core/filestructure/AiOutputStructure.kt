@@ -1,5 +1,6 @@
 package com.glassthought.chainsaw.core.filestructure
 
+import com.asgard.core.annotation.AnchorPoint
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -18,11 +19,12 @@ data class Part(val name: String, val roles: List<String>)
  * All path resolution methods are pure (no I/O) -- they compute and return [Path] instances.
  * Only [ensureStructure] performs I/O by creating directories.
  *
- * ref.ap.XBNUQHLjDLpAr8F9IOyXU.E — See "File Structure" section in the design ticket.
+ * ref.ap.BXQlLDTec7cVVOrzXWfR7.E — See "File Structure"
  *
  * @param repoRoot the root directory of the git repository.
  * @throws IllegalArgumentException if [repoRoot] is not an existing directory on the filesystem.
  */
+@AnchorPoint("ap.XBNUQHLjDLpAr8F9IOyXU.E")
 class AiOutputStructure(
     private val repoRoot: Path,
 ) {

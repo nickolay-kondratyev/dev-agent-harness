@@ -63,7 +63,7 @@ Implemented `AiOutputStructure` class with:
 - `ensureStructure(branch, parts, planningRoles)` for idempotent directory creation
 - `Part` data class co-located for structured parts definition
 - Fail-fast constructor (`Files.isDirectory` check) + blank string validation on all parameters
-- Anchor point: `ap.XBNUQHLjDLpAr8F9IOyXU.E` linked in design ticket and `AiOutputStructure` KDoc
+- Anchor point: `ref.ap.XBNUQHLjDLpAr8F9IOyXU.E` linked in design ticket and `AiOutputStructure` KDoc
 - 43 BDD unit tests (AsgardDescribeSpec) covering all methods, edge cases, idempotency
 - No changes to `build.gradle.kts` — pure Kotlin stdlib
 
