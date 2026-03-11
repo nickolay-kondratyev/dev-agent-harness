@@ -1,11 +1,11 @@
 ---
 id: nid_e0525c8z4eiu1ktey7yu868yv_E
 title: "Remove pre-spec server implementation (HarnessServer, AgentRequests, AgentRequestHandler) for clean rebuild"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T20:37:21Z
-status_updated_iso: 2026-03-11T20:37:21Z
+status_updated_iso: 2026-03-11T20:38:33Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
