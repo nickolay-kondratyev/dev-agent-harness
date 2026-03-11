@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T22:51:36Z
 id: nid_nwg1em2siekphpqeeuhrtl5wk_E
 title: "Fix logging violations in SpawnTmuxAgentSessionUseCaseIntegTest"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T14:49:06Z
-status_updated_iso: 2026-03-11T14:49:06Z
+status_updated_iso: 2026-03-11T22:51:36Z
 type: chore
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
