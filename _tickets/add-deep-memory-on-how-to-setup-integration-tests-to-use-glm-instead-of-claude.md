@@ -1,11 +1,11 @@
 ---
 id: nid_reck1b04pzsj8v3dmhk0f2a1t_E
 title: "Add deep memory on how to setup integration tests to use GLM instead of claude"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T20:50:54Z
-status_updated_iso: 2026-03-11T20:50:54Z
+status_updated_iso: 2026-03-11T20:55:04Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
