@@ -2,6 +2,17 @@
 
 Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
 
+## Vocabulary
+
+| Term | Definition |
+|------|------------|
+| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
+| **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
+| **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md). |
+| **Orchestration Loop** | The harness-side logic that reads the workflow JSON, iterates through parts/sub-parts, spawns agents, evaluates iteration decisions, and manages state. Not an agent — a Kotlin process. |
+
+---
+
 ## Context
 
 Previously, a TOP_LEVEL_AGENT Claude session orchestrated sub-agents. Problem: sub-agent context
@@ -94,13 +105,9 @@ $HOME/.chainsaw_agent_harness/server/port.txt
 Server starts once at harness startup, stays alive across all sub-parts.
 
 ### Agent CLI Script
-<!-- ref.ap.8PB8nMd93D3jipEWhME5n.E -- implementation in scripts/harness-cli-for-agent.sh -->
 
-**`harness-cli-for-agent.sh`** — bash script wrapping curl calls:
-- Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
-- Agent receives `--help` content in its instructions, wrapped in
-  `<critical_to_keep_through_compaction>` tags to survive context compaction
+See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for the full
+agent CLI spec (including `CHAINSAW_HANDSHAKE_GUID` env var contract).
 
 ### Structured Text Delivery — Temp File Pattern
 
@@ -118,12 +125,14 @@ All structured/formatted content sent to agents goes through temp files:
 | `POST /agent/failed` | Unrecoverable error. Triggers `FailedToExecutePlanUseCase`. |
 | `POST /agent/status` | Agent responds to health ping (see Agent Health Monitoring). |
 
-All requests include the **git branch** as identifier (key for future parallelism).
+All requests include the agent's **HandshakeGuid** as identifier (routes to the correct sub-part
+context server-side). See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
+for the full callback contract.
 
 ### Q&A Flow — Attended Only (V1)
 
-1. Agent calls `harness-cli-for-agent.sh question "How should I handle X?"`
-2. CLI POSTs to `/agent/question` with branch + question text
+1. Agent calls `harness-cli question "How should I handle X?"`
+2. CLI POSTs to `/agent/question` with `handshakeGuid` + question text
 3. Harness presents question to human (stdout/interactive)
 4. Human answers (V1: human must be present; no autonomous fallback)
 5. Harness writes answer to temp file (`$HOME/.chainsaw_agent_harness/tmp/agent_comm/`)
@@ -131,26 +140,13 @@ All requests include the **git branch** as identifier (key for future parallelis
 7. Harness responds 200 to the blocked curl (unblocking agent CLI script)
 8. Agent reads temp file, continues
 
-### Agent Lifecycle — New Session
+### Agent Lifecycle — Spawn & Resume
 
-1. Harness creates TMUX session
-2. Harness starts agent (e.g., `claude`) in the TMUX session
-3. Harness sends AgentSessionIdResolver GUID handshake (plain text, directly via send-keys)
-4. AgentSessionIdResolver resolves session ID from GUID
-5. Harness writes instruction file to temp file
-6. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
-7. Agent works, may call CLI for questions
-8. Agent calls `harness-cli-for-agent.sh done` when finished
-9. Harness receives `/agent/done`, kills TMUX session
-10. Harness proceeds to next sub-part
-
-### Agent Lifecycle — Resume Session (after crash)
-
-1. Harness already has session ID (last entry in `sessionIds` array in `current_state.json`)
-2. Harness starts agent with `claude --resume <session_id>` in new TMUX session
-3. Skip GUID/AgentSessionIdResolver step — session already known
-4. Harness writes instruction file, sends path via TMUX send-keys
-5. Flow continues as normal from step 7 above
+See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for:
+- New session spawn flow (GUID generation, env var export, session ID resolution)
+- Resume flow (reuse HandshakeGuid, skip session ID resolution)
+- Session schema in `current_state.json`
+- Agent CLI spec
 
 ---
 
@@ -190,20 +186,9 @@ When plan execution hits blocking issues:
 ---
 
 ## Session ID Tracking — AgentSessionIdResolver
-<!-- ref.ap.gCgRdmWd9eTGXPbHJvyxI.E -->
 
-**Problem:** Claude Code doesn't expose its session ID to the agent itself.
-
-**Solution:** `AgentSessionIdResolver` interface + `ClaudeCodeAgentSessionIdResolver` implementation.
-
-1. Harness generates a GUID for each new session
-2. Harness sends GUID to agent as first message (plain text, directly): `"Here is a GUID: [$GUID]. We will use it to identify this session."`
-3. `ClaudeCodeAgentSessionIdResolver` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
-4. Matched filename = session ID (e.g., `77d5b7ea-cf04-453b-8867-162404763e18.jsonl`)
-5. Session ID stored in `current_state.json` under the sub-part's `sessionIds` array
-6. Enables session resumption after crashes
-
-**Not used during resume** — session ID already known from prior AgentSessionIdResolver resolution.
+See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for full details
+on HandshakeGuid, AgentSessionIdResolver, and session schema.
 
 ---
 
@@ -309,4 +294,5 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Doc | Content |
 |-----|---------|
 | [`doc/ai-out-schema.md`](ai-out-schema.md) | Directory schema, unified parts/sub-parts schema, iteration semantics, session IDs |
+| [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, CLI spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
