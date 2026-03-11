@@ -6,9 +6,6 @@ import com.glassthought.ticketShepherd.core.agent.starter.AgentStarter
 /**
  * Builds the `claude` CLI command for starting a Claude Code agent in a tmux session.
  *
- * All configuration is provided at construction time by the
- * [com.glassthought.ticketShepherd.core.agent.impl.ClaudeCodeAgentStarterBundleFactory].
- *
  * @param workingDir Directory the agent operates in. Used as `cd` target before launching claude.
  * @param model Claude model alias (e.g., "sonnet", "opus").
  * @param tools Tools available to the agent (e.g., ["Bash", "Read", "Write", "Edit"]).
