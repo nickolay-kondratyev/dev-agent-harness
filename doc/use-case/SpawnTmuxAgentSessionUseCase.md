@@ -32,34 +32,10 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 ## Session Schema in current_state.json
 
-Each session record in the `sessionIds` array contains:
-
-```json
-{
-  "name": "1_impl",
-  "role": "IMPLEMENTOR",
-  "sessionIds": [
-    {
-      "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "agent_session_id": "77d5b7ea-cf04-453b-8867-162404763e18",
-      "agent_session_path": null,
-      "agentType": "ClaudeCode",
-      "timestamp": "2026-03-10T15:30:00Z"
-    }
-  ]
-}
-```
-
-| Field | Description |
-|-------|-------------|
-| `handshake_guid` | The harness-generated GUID for this session. Our identifier — used in all communication. |
-| `agent_session_id` | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for `--resume`. |
-| `agent_session_path` | Alternative to `agent_session_id` for agents that use paths (e.g., PI). Null when not applicable. |
-| `agentType` | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
-| `timestamp` | ISO-8601 timestamp of session creation. |
+Session records follow the [Session Record Schema](../schema/plan-and-current-state.md#session-record-schema--apmwzgc1hykvwu3ijqbtew4e) (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E) — the canonical definition for `sessionIds` entries including `handshake_guid`, `agent_session_id`, `agentType`, `model`, and `timestamp`.
 
 **Resume = use the last element** in the `sessionIds` array. The `agent_session_id` (or
-`agent_session_path`) from that entry is used for the `--resume` flag.
+`agent_session_path`) plus `model` from that entry are used for the `--resume` invocation.
 
 ---
 
@@ -74,7 +50,7 @@ Each session record in the `sessionIds` array contains:
 6. Harness sends GUID to agent via TMUX `send-keys` (plain text, directly)
 7. `AgentSessionIdResolver` polls for the GUID in agent session artifacts
    (e.g., Claude Code JSONL files) and resolves the agent session ID
-8. Harness stores `{ handshake_guid, agent_session_id, agentType, timestamp }`
+8. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
    in `current_state.json` under the sub-part's `sessionIds` array
 9. Harness writes instruction file to temp file
 10. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
