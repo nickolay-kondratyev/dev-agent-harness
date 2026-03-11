@@ -69,7 +69,7 @@ what each agent sees.
 ## External Paths (outside repo)
 
 ```
-$HOME/.chainsaw_agent_harness/
+$HOME/.shepherd_agent_harness/
 ├── server/
 │   └── port.txt                        # Harness HTTP server port (written on startup, deleted on shutdown)
 └── tmp/

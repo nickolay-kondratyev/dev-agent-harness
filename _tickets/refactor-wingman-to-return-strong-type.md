@@ -15,7 +15,7 @@ assignee: nickolaykondratyev
 
 Refactor the string that is returned into a data class that is called `ResumableAgentSessionId`
 
-```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/Wingman.kt] Lines=[25-26]
+```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/shepherd/core/wingman/Wingman.kt] Lines=[25-26]
     suspend fun resolveSessionId(guid: HandshakeGuid): String
 ```
 

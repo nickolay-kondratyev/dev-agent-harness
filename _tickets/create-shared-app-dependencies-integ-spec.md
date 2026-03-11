@@ -52,7 +52,7 @@ And so later agents dont forget to provide it let's create `SharedAppDepDescribe
 
 We will add outFactory to be a required field of initialize instead of default console factory
 
-```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/chainsaw/core/initializer/Initializer.kt] Lines=[59-60]
+```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/shepherd/core/initializer/Initializer.kt] Lines=[59-60]
     override suspend fun initialize(environment: Environment): AppDependencies {
         val outFactory = SimpleConsoleOutFactory.standard()
 ```
@@ -71,7 +71,7 @@ interface TestOutManager {
 
 `SharedAppDepIntegFactory` - will have a single instance of initialize and a single instance of AppDependencies
 
-```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/chainsaw/core/initializer/Initializer.kt] Lines=[24-41]
+```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/shepherd/core/initializer/Initializer.kt] Lines=[24-41]
 class AppDependencies(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
@@ -101,12 +101,12 @@ We will encapsulate the information on usage of the `SharedAppDepDescribeSpec` i
 Resolution: Implementation complete on branch CC_nid_q1s3us9fsufo5uglosuthzkr4_E__create-shared-app-dependencies-integ-spec_sonnet-v4.6
 
 ## Created Files
-- app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedAppDepIntegFactory.kt
-- app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedAppDepDescribeSpec.kt (anchor: ap.20lFzpGIVAbuIXO5tUTBg.E)
+- app/src/test/kotlin/com/glassthought/shepherd/integtest/SharedAppDepIntegFactory.kt
+- app/src/test/kotlin/com/glassthought/shepherd/integtest/SharedAppDepDescribeSpec.kt (anchor: ap.20lFzpGIVAbuIXO5tUTBg.E)
 
 ## Modified Files
-- app/src/main/kotlin/com/glassthought/chainsaw/core/initializer/Initializer.kt (outFactory as required parameter)
-- app/src/main/kotlin/com/glassthought/chainsaw/cli/AppMain.kt
+- app/src/main/kotlin/com/glassthought/shepherd/core/initializer/Initializer.kt (outFactory as required parameter)
+- app/src/main/kotlin/com/glassthought/shepherd/cli/AppMain.kt
 - app/src/test/kotlin/org/example/SpawnTmuxAgentSessionUseCaseIntegTest.kt (migrated to SharedAppDepDescribeSpec)
 - app/src/test/kotlin/org/example/TmuxCommunicatorIntegTest.kt (migrated)
 - app/src/test/kotlin/org/example/TmuxSessionManagerIntegTest.kt (migrated)

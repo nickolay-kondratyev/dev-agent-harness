@@ -1,7 +1,7 @@
 ---
 closed_iso: 2026-03-11T15:48:29Z
 id: nid_3ygjxcmvgff95uet7bc8x06zs_E
-title: "refactor chainsaw context and spawn test"
+title: "refactor shepherd context and spawn test"
 status: closed
 deps: []
 links: []
@@ -38,8 +38,8 @@ There are 2 downsides to this:
 2) the tests may not be testing what is in production.
 
 Instead we now have:
-```kt file=[$(git.repo_root)/app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedContextDescribeSpec.kt] Lines=[67-68]
-    val chainsawContext: ChainsawContext = SharedContextIntegFactory.chainsawContext
+```kt file=[$(git.repo_root)/app/src/test/kotlin/com/glassthought/shepherd/integtest/SharedContextDescribeSpec.kt] Lines=[67-68]
+    val shepherdContext: ChainsawContext = SharedContextIntegFactory.shepherdContext
 ```
 
 This context will be very similar to what our production context will be like, and we should use it in the tests.
@@ -53,7 +53,7 @@ As part of this task we should do the following:
     4) Introduce UseCases group as well which will house the use cases.
 
 
-```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/chainsaw/core/initializer/Initializer.kt] Lines=[25-41]
+```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/shepherd/core/initializer/Initializer.kt] Lines=[25-41]
 class ChainsawContext(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
@@ -89,7 +89,7 @@ Then in the test we will be able to just pull from the context instead of spawni
 
 3. **Wired SpawnTmuxAgentSessionUseCase into Initializer** — added `systemPromptFilePath` and `claudeProjectsDir` params
 
-4. **Simplified SpawnTmuxAgentSessionUseCaseIntegTest** — now uses `chainsawContext.useCases.spawnTmuxAgentSession` instead of manually constructing all dependencies
+4. **Simplified SpawnTmuxAgentSessionUseCaseIntegTest** — now uses `shepherdContext.useCases.spawnTmuxAgentSession` instead of manually constructing all dependencies
 
 5. **Updated all references** across 9 files (tests + production code)
 

@@ -20,7 +20,7 @@ import java.io.File
  *
  * ### Usage
  * Extend [SharedContextDescribeSpec] (ref.ap.20lFzpGIVAbuIXO5tUTBg.E) instead of accessing
- * this factory directly. The base class exposes [SharedContextDescribeSpec.chainsawContext].
+ * this factory directly. The base class exposes [SharedContextDescribeSpec.shepherdContext].
  *
  * ### Fail-fast on misconfiguration
  * If initialization fails (e.g., missing env var for LLM API), the exception propagates at
@@ -30,11 +30,11 @@ import java.io.File
 object SharedContextIntegFactory {
     internal val testOutManager: TestOutManager = TestOutManager.standard()
 
-    /** Shared chainsaw context.
+    /** Shared shepherd context.
      *
      *  Meant to be shared between the integration tests to keep the wire up of tests faster.
      *  */
-    internal val chainsawContext: ChainsawContext = runBlocking {
+    internal val shepherdContext: ChainsawContext = runBlocking {
         Initializer.standard().initialize(
             outFactory = testOutManager.outFactory,
             environment = Environment.test(),

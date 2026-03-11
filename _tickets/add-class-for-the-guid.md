@@ -18,7 +18,7 @@ Created `HandshakeGuid` value class for strong typing of the GUID parameter.
 
 ### Changes Made
 
-1. **New file**: `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/HandshakeGuid.kt`
+1. **New file**: `app/src/main/kotlin/com/glassthought/shepherd/core/wingman/HandshakeGuid.kt`
    - Created `@JvmInline value class HandshakeGuid(val value: String)` with custom `toString()`
 
 2. **Updated**: `Wingman.kt`

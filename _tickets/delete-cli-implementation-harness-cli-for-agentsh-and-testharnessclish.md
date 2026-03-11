@@ -30,8 +30,8 @@ Delete `scripts/test_harness_cli.sh`
 
 ### R3 — Remove anchor point references to deleted script
 Search for `ref.ap.8PB8nMd93D3jipEWhME5n.E` and update/remove references:
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/AgentRequests.kt` (KDoc reference)
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/HarnessServer.kt` (KDoc reference)
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/AgentRequests.kt` (KDoc reference)
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/HarnessServer.kt` (KDoc reference)
 - `doc/high-level.md` (section references)
 
 The anchor point itself (`ap.8PB8nMd93D3jipEWhME5n.E`) is deleted with the file.

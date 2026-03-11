@@ -61,7 +61,7 @@ class SpawnTmuxAgentSessionUseCase(
           Val(startCommand.command, ValType.SHELL_COMMAND),
         )
 
-        val sessionName = "chainsaw-${request.phaseType.name.lowercase()}-${System.currentTimeMillis()}"
+        val sessionName = "shepherd-${request.phaseType.name.lowercase()}-${System.currentTimeMillis()}"
 
         val tmuxSession = tmuxSessionManager.createSession(sessionName, startCommand.command)
 

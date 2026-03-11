@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.chainsaw.core.wingman.impl.ClaudeCodeWingmanTest"
+spec: "com.glassthought.shepherd.core.wingman.impl.ClaudeCodeWingmanTest"
 status: PASSED
 failed: 0
 skipped: 0
