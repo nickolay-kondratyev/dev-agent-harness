@@ -162,7 +162,7 @@ This is strict validation — catches misconfigured agents immediately.
 |--------|-----|---------------|
 | `completed` | Doer | Move to reviewer sub-part (or complete part if no reviewer) |
 | `pass` | Reviewer | Part complete → move to next part |
-| `needs_iteration` | Reviewer | Check iteration counter: within budget → resume doer with new instructions, then resume reviewer. Exceeds `iteration.max` → `FailedToConvergeUseCase` |
+| `needs_iteration` | Reviewer | Check iteration counter: within budget → send new instructions to doer via TMUX `send-keys`, then send to reviewer. Exceeds `iteration.max` → `FailedToConvergeUseCase` |
 
 ---
 
@@ -331,5 +331,5 @@ TMUX `send-keys` is the **only** harness-to-agent communication channel. The har
 - Send health pings
 - Send iteration feedback instructions (on `needs_iteration`)
 
-For the full agent lifecycle (spawn, resume, session ID resolution), see
+For the full agent lifecycle (spawn, session ID resolution), see
 [`SpawnTmuxAgentSessionUseCase`](../use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).

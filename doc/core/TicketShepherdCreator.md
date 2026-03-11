@@ -22,7 +22,7 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 - Initializes `SessionsState`
 - Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
 - Sets up `.ai_out/` directory structure for the branch
-- Creates or resumes `current_state.json`
+- Creates `current_state.json` (V2 adds resume-from-existing — ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 - Constructs `TicketShepherd` with `ShepherdContext` + ticket-scoped state
 
 ## Not the Shepherd
