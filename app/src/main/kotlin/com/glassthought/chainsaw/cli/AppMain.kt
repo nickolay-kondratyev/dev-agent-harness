@@ -28,7 +28,7 @@ fun main() {
       val sessionName = "agent-harness__${System.currentTimeMillis()}"
       println("Tmux session name: $sessionName")
 
-      val session = deps.tmuxSessionManager.createSession(sessionName, "claude")
+      val session = deps.infra.tmux.sessionManager.createSession(sessionName, "claude")
 
       // tmux buffers keystrokes, so we can send immediately.
       session.sendKeys("Write 'hello world from tmux' to /tmp/out")

@@ -15,7 +15,7 @@ import io.kotest.matchers.shouldBe
 class TmuxSessionManagerIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN TmuxSessionManager").config(isIntegTestEnabled()) {
-        val sessionManager = chainsawContext.tmuxSessionManager
+        val sessionManager = chainsawContext.infra.tmux.sessionManager
         val createdSessions = mutableListOf<TmuxSession>()
 
         afterEach {

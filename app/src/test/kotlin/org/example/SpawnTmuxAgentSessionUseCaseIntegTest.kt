@@ -1,21 +1,14 @@
 package org.example
 
-import com.glassthought.chainsaw.core.agent.AgentStarterBundleFactory
-import com.glassthought.chainsaw.core.agent.AgentTypeChooser
-import com.glassthought.chainsaw.core.agent.DefaultAgentTypeChooser
 import com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
-import com.glassthought.chainsaw.core.agent.impl.ClaudeCodeAgentStarterBundleFactory
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.data.PhaseType
-import com.glassthought.chainsaw.core.initializer.data.Environment
 import com.glassthought.chainsaw.core.tmux.TmuxSession
 import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
-import java.io.File
-import java.nio.file.Path
 
 /**
  * Integration test for [SpawnTmuxAgentSessionUseCase].
@@ -30,26 +23,9 @@ import java.nio.file.Path
 class SpawnTmuxAgentSessionUseCaseIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN SpawnTmuxAgentSessionUseCase with test configuration").config(isIntegTestEnabled()) {
-        val sessionManager = chainsawContext.tmuxSessionManager
-
-        val systemPromptFilePath = resolveSystemPromptFilePath()
+        val useCase = chainsawContext.useCases.spawnTmuxAgentSession
+        val sessionManager = chainsawContext.infra.tmux.sessionManager
         val out = outFactory.getOutForClass(SpawnTmuxAgentSessionUseCaseIntegTest::class)
-
-        val bundleFactory: AgentStarterBundleFactory = ClaudeCodeAgentStarterBundleFactory(
-            environment = Environment.test(),
-            systemPromptFilePath = systemPromptFilePath,
-            claudeProjectsDir = Path.of(System.getProperty("user.home"), ".claude", "projects"),
-            outFactory = outFactory,
-        )
-
-        val agentTypeChooser: AgentTypeChooser = DefaultAgentTypeChooser()
-
-        val useCase = SpawnTmuxAgentSessionUseCase(
-            agentTypeChooser = agentTypeChooser,
-            bundleFactory = bundleFactory,
-            tmuxSessionManager = sessionManager,
-            outFactory = outFactory,
-        )
 
         val createdSessions = mutableListOf<TmuxSession>()
 
@@ -88,29 +64,3 @@ class SpawnTmuxAgentSessionUseCaseIntegTest : SharedContextDescribeSpec({
         }
     }
 })
-
-/**
- * Resolves the absolute path to the test system prompt file.
- *
- * Walks up from the current working directory to find the git repo root,
- * then resolves `config/prompts/test-agent-system-prompt.txt`.
- */
-private fun resolveSystemPromptFilePath(): String {
-    val repoRoot = findGitRepoRoot(File(System.getProperty("user.dir")))
-    val promptFile = File(repoRoot, "config/prompts/test-agent-system-prompt.txt")
-    require(promptFile.exists()) {
-        "System prompt file not found at [${promptFile.absolutePath}]"
-    }
-    return promptFile.absolutePath
-}
-
-private fun findGitRepoRoot(startDir: File): File {
-    var dir: File? = startDir
-    while (dir != null) {
-        if (File(dir, ".git").exists()) {
-            return dir
-        }
-        dir = dir.parentFile
-    }
-    throw IllegalStateException("Could not find .git directory starting from [${startDir.absolutePath}]")
-}
