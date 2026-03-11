@@ -75,6 +75,7 @@ If an existing `current_state.json` is found, offers to resume from last checkpo
 ## Sub-Agent Invocation — TMUX Only
 
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
+- Why TMUX: 1) to resume (CC --print is not resumable), 2) to observe live.
 
 - `CodeAgent` interface with `ClaudeCodeAgent` implementation
 - Leverages subscription pricing; interface allows swapping agent implementations
