@@ -29,13 +29,13 @@ The git branches will include ticket ids which guarantees not clashing.
 
 ## Key Files
 
-| File | Scope | Purpose |
-|------|-------|---------|
-| `PUBLIC.md` | Per sub-part | Agent's output — the sole communication channel between agents |
-| `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write |
-| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Enables resume. |
+| File | Scope | Purpose                                                                                                                     |
+|------|-------|-----------------------------------------------------------------------------------------------------------------------------|
+| `PUBLIC.md` | Per sub-part | Agent's output — the main communication channel between agents.                                                             |
+| `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write                                                                         |
+| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Enables resume.               |
 | `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. |
-| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture. |
+| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture.                     |
 
 ## Structure Decisions
 
