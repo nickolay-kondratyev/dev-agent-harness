@@ -127,7 +127,7 @@ class ClaudeCodeAgentSessionIdResolver(
                     "session_id_resolved",
                     Val(sessionId, ValType.STRING_USER_AGNOSTIC),
                 )
-                ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, model)
+                ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, sessionId, model)
             }
             else -> {
                 val filenames = matchingFiles.map { it.fileName.toString() }

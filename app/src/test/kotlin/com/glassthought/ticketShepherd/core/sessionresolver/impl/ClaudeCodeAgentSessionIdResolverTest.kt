@@ -38,7 +38,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
 
                         val result = resolver.resolveSessionId(guid)
 
-                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
+                        result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
                 }
             }
@@ -155,7 +155,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
 
                         val result = resolver.resolveSessionId(guid)
 
-                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
+                        result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
                 }
             }
@@ -209,7 +209,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
 
                     val result = resolver.resolveSessionId(guid)
 
-                    result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, "abc-session-id-123", TEST_MODEL)
+                    result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, "abc-session-id-123", TEST_MODEL)
                 }
 
                 it("THEN polls more than once before finding the match") {
