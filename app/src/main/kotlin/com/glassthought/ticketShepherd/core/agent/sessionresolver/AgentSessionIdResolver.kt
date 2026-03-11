@@ -19,7 +19,7 @@ interface AgentSessionIdResolver {
      * Resolves the session ID for the agent session that contains the given GUID.
      *
      * @param guid The unique handshake marker sent to the agent.
-     * @return A [ResumableAgentSessionId] containing the agent type and session ID
+     * @return A [ResumableAgentSessionId] containing the agent type, session ID, and model
      *   (e.g., a UUID derived from the session artifact filename).
      * @throws IllegalStateException if no session or multiple sessions match the GUID.
      */

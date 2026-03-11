@@ -55,6 +55,7 @@ class SpawnTmuxAgentSessionUseCaseIntegTest : SharedContextDescribeSpec({
                 agentSession.tmuxSession.exists() shouldBe true
                 agentSession.resumableAgentSessionId.agentType shouldBe AgentType.CLAUDE_CODE
                 agentSession.resumableAgentSessionId.sessionId.shouldNotBeBlank()
+                agentSession.resumableAgentSessionId.model shouldBe "sonnet"
 
                 val message =
                     "Spawned tmux session [${agentSession.tmuxSession.name}] with GUID [${agentSession.resumableAgentSessionId.sessionId}]"
