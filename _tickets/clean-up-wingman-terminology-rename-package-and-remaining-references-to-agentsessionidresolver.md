@@ -1,11 +1,11 @@
 ---
 id: nid_a4g8sezxri8ex9p7sha44ggdr_E
 title: "Clean up Wingman terminology: rename package and remaining references to AgentSessionIdResolver"
-status: in_progress
+status: open
 deps: []
 links: []
 created_iso: 2026-03-11T15:29:27Z
-status_updated_iso: 2026-03-11T15:31:14Z
+status_updated_iso: 2026-03-11T15:29:27Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
