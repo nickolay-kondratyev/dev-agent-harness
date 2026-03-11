@@ -2,7 +2,7 @@
 id: nid_etxturughxixkl5hmvgazco3j_E
 title: "V2: Live agent sessions across iterations + inter-agent messaging"
 status: open
-deps: []
+deps: [nid_o447e5go809m249bc9u8vblrv_E]
 links: []
 created_iso: 2026-03-11T14:14:08Z
 status_updated_iso: 2026-03-11T14:14:08Z
