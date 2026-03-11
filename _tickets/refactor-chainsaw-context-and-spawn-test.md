@@ -39,13 +39,13 @@ There are 2 downsides to this:
 
 Instead we now have:
 ```kt file=[$(git.repo_root)/app/src/test/kotlin/com/glassthought/shepherd/integtest/SharedContextDescribeSpec.kt] Lines=[67-68]
-    val shepherdContext: ChainsawContext = SharedContextIntegFactory.shepherdContext
+    val shepherdContext: ShepherdContext = SharedContextIntegFactory.shepherdContext
 ```
 
 This context will be very similar to what our production context will be like, and we should use it in the tests.
 
 As part of this task we should do the following:
-1) We should introduce grouping into ChainsawContext
+1) We should introduce grouping into ShepherdContext
     2) Let's group all the Tmux related dependencies together into TmuxInfra
     3) Let's group TmuxInfra and out factory under bigger group called Infra
         4) Under infra we will also have DirectLLMInfra
@@ -54,7 +54,7 @@ As part of this task we should do the following:
 
 
 ```kt file=[$(git.repo_root)/app/src/main/kotlin/com/glassthought/shepherd/core/initializer/Initializer.kt] Lines=[25-41]
-class ChainsawContext(
+class ShepherdContext(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
     val tmuxCommunicator: TmuxCommunicator,
@@ -85,7 +85,7 @@ Then in the test we will be able to just pull from the context instead of spawni
    - `Infra` — groups `outFactory`, `tmux: TmuxInfra`, `directLlm: DirectLlmInfra`
    - `UseCases` — groups `spawnTmuxAgentSession: SpawnTmuxAgentSessionUseCase`
 
-2. **Refactored ChainsawContext** from flat fields to `infra: Infra` + `useCases: UseCases`
+2. **Refactored ShepherdContext** from flat fields to `infra: Infra` + `useCases: UseCases`
 
 3. **Wired SpawnTmuxAgentSessionUseCase into Initializer** — added `systemPromptFilePath` and `claudeProjectsDir` params
 

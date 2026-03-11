@@ -24,7 +24,7 @@ Currently 9 files use ValType in app/src:
 - app/src/main/kotlin/com/glassthought/shepherd/core/tmux/TmuxSessionManager.kt
 - (and others)
 
-Goal: Create shepherd-specific ValTypeV2 constants (e.g. in a ChainsawValType object) for types like TMUX_SESSION_NAME, TMUX_COMMAND, LLM_MODEL_NAME etc., and update Val usages to use them.
+Goal: Create shepherd-specific ValTypeV2 constants (e.g. in a ShepherdValType object) for types like TMUX_SESSION_NAME, TMUX_COMMAND, LLM_MODEL_NAME etc., and update Val usages to use them.
 
 Existing code compiles and works with ValType - this is a code quality improvement only.
 

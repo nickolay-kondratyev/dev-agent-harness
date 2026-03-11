@@ -11,7 +11,7 @@ and resolving the agent's session ID for future resume.
 
 | Term                            | Definition                                                                                                                                                                                               |
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
+| **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
 | **Agent**                       | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously.                                                               |
 | **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
 | **AgentSessionIdResolver**      | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.                                                                                     |

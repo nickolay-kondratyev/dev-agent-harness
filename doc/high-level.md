@@ -1,4 +1,4 @@
-# Chainsaw — High-Level Design (V1)
+# Shepherd — High-Level Design (V1)
 
 Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
 
@@ -6,8 +6,8 @@ Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
 
 | Term | Definition |
 |------|------------|
-| **Ticket** | A markdown file with YAML frontmatter (`id`, `title`). The mandatory starting point for every Chainsaw run — defines what needs to be done. Used for branch naming, state tracking, and agent context. |
-| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
+| **Ticket** | A markdown file with YAML frontmatter (`id`, `title`). The mandatory starting point for every Shepherd run — defines what needs to be done. Used for branch naming, state tracking, and agent context. |
+| **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
 | **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
 | **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md). |
 | **Orchestration Loop** | The harness-side logic that reads the workflow JSON, iterates through parts/sub-parts, spawns agents, evaluates iteration decisions, and manages state. Not an agent — a Kotlin process. |
@@ -29,8 +29,8 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 ## What the Harness Does
 
-**Ticket-driven**: A ticket is the mandatory starting point for every Chainsaw run. The ticket
-defines what needs to be done; the workflow defines how. Without a ticket, Chainsaw does not run.
+**Ticket-driven**: A ticket is the mandatory starting point for every Shepherd run. The ticket
+defines what needs to be done; the workflow defines how. Without a ticket, Shepherd does not run.
 
 [`TicketShepherd`](core/TicketShepherd.md) (ref.ap.P3po8Obvcjw4IXsSUSU91.E) is the central
 coordinator that drives the entire workflow. It:
@@ -56,7 +56,7 @@ ap.mmcagXtg6ulznKYYNKlNP.E
 shepherd run --workflow <name> --ticket <path>
 ```
 
-- `--ticket` **(required)**: path to a ticket markdown file. Chainsaw always operates on a ticket.
+- `--ticket` **(required)**: path to a ticket markdown file. Shepherd always operates on a ticket.
   - Ticket is a markdown file with YAML frontmatter containing at minimum an `id` field and `title` field.
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
@@ -296,7 +296,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
 | Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
-| Package | **com.glassthought.shepherd** | Chainsaw as sub-package under glassthought |
+| Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |

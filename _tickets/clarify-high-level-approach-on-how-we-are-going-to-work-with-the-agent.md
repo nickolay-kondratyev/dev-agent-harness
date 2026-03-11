@@ -12,7 +12,7 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
-# Chainsaw — High-Level Design (V1)
+# Shepherd — High-Level Design (V1)
 
 Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
 
@@ -43,7 +43,7 @@ ap.mmcagXtg6ulznKYYNKlNP.E
 shepherd run --workflow <name> --ticket <path>
 ```
 
-- `--ticket` **(required)**: path to a ticket markdown file. Chainsaw always operates on a ticket.
+- `--ticket` **(required)**: path to a ticket markdown file. Shepherd always operates on a ticket.
   - Ticket is a markdown file with YAML frontmatter containing at minimum an `id` field and `title` field.
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
@@ -459,7 +459,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
 | Session tracking | **Wingman interface** | `ClaudeCodeWingman` impl; abstracted for future agent types |
-| Package | **com.glassthought.shepherd** | Chainsaw as sub-package under glassthought |
+| Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
 | Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |

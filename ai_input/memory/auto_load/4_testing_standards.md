@@ -22,9 +22,9 @@
   `runIntegTests` system property injected by Gradle. Enable via: `./gradlew :app:test -PrunIntegTests=true`.
   This is tracked as a Gradle task input so the cache invalidates automatically (unlike env vars).
 
-### Integration Test Base Class (with ChainsawContext)
-- For integration tests requiring `ChainsawContext` (tmux, LLM, etc.), extend `SharedContextDescribeSpec` instead of `AsgardDescribeSpec` directly.
-- `SharedContextDescribeSpec` provides a shared singleton `ChainsawContext` and pre-configured `AsgardDescribeSpecConfig.FOR_INTEG_TEST` settings.
+### Integration Test Base Class (with ShepherdContext)
+- For integration tests requiring `ShepherdContext` (tmux, LLM, etc.), extend `SharedContextDescribeSpec` instead of `AsgardDescribeSpec` directly.
+- `SharedContextDescribeSpec` provides a shared singleton `ShepherdContext` and pre-configured `AsgardDescribeSpecConfig.FOR_INTEG_TEST` settings.
 - No config required — defaults pull from `SharedContextIntegFactory`.
 - Access shared deps via the `shepherdContext` property (e.g., `shepherdContext.infra.tmux.sessionManager`).
 - See `SharedContextDescribeSpec` (ref.ap.20lFzpGIVAbuIXO5tUTBg.E) for full KDoc and examples.

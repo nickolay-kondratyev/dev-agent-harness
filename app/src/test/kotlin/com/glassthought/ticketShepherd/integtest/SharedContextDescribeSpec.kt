@@ -28,9 +28,9 @@ data class SharedContextSpecConfig(
  * - No config boilerplate — defaults are wired through [SharedContextIntegFactory].
  *
  * ### When to use
- * - Use `SharedContextDescribeSpec` when your integration test needs `ChainsawContext`
+ * - Use `SharedContextDescribeSpec` when your integration test needs `ShepherdContext`
  *   (e.g., `shepherdContext.infra.tmux.sessionManager`, `shepherdContext.infra.directLlm.glmDirectLLM`).
- * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ChainsawContext`.
+ * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ShepherdContext`.
  *
  * ### Example
  * ```kotlin

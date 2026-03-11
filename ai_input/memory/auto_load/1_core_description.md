@@ -12,7 +12,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 ### High-Level Architecture Decisions
 
-**Ticket-driven**: Chainsaw always operates on a ticket (markdown file with YAML frontmatter containing `id` and `title`). The ticket is required input.
+**Ticket-driven**: Shepherd always operates on a ticket (markdown file with YAML frontmatter containing `id` and `title`). The ticket is required input.
 
 **CLI**: `shepherd run --workflow <name> --ticket <path>` via **picocli**.
 

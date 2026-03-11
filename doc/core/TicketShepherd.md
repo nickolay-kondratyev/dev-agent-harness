@@ -24,7 +24,7 @@ reacts to their signals, and decides what happens next.
 
 - **Owns `SessionsState`** — tracks live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
   instances, keyed by HandshakeGuid.
-- **Receives server callbacks** — the `ChainsawServer` routes agent callbacks (`/agent/done`,
+- **Receives server callbacks** — the `ShepherdServer` routes agent callbacks (`/agent/done`,
   `/agent/question`, `/agent/failed`, `/agent/status`) to `TicketShepherd` after looking up
   the HandshakeGuid in `SessionsState`.
 - **Orchestrates use cases** — calls use cases for discrete operations; the shepherd makes
@@ -38,7 +38,7 @@ reacts to their signals, and decides what happens next.
 
 ## Dependencies
 
-Receives `ChainsawContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) for shared infrastructure
+Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) for shared infrastructure
 (tmux, LLM, use cases) plus ticket-scoped state (`SessionsState`, parsed workflow, ticket
 metadata) wired by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
 
