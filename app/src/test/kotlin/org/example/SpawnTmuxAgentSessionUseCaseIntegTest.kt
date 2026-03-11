@@ -38,6 +38,7 @@ class SpawnTmuxAgentSessionUseCaseIntegTest : AsgardDescribeSpec({
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
 
         val systemPromptFilePath = resolveSystemPromptFilePath()
+        val out = outFactory.getOutForClass(SpawnTmuxAgentSessionUseCaseIntegTest::class)
 
         val bundleFactory: AgentStarterBundleFactory = ClaudeCodeAgentStarterBundleFactory(
             environment = Environment.test(),
@@ -83,6 +84,11 @@ class SpawnTmuxAgentSessionUseCaseIntegTest : AsgardDescribeSpec({
                 agentSession.tmuxSession.exists() shouldBe true
                 agentSession.resumableAgentSessionId.agentType shouldBe AgentType.CLAUDE_CODE
                 agentSession.resumableAgentSessionId.sessionId.shouldNotBeBlank()
+
+                val message =
+                    "Spawned tmux session [${agentSession.tmuxSession.name}] with GUID [${agentSession.resumableAgentSessionId.sessionId}]"
+                println(message)
+                out.info(message)
             }
         }
     }
