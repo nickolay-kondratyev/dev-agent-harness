@@ -95,7 +95,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class — stateless, single-responsibility operations that the shepherd delegates to.
 
-**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → `FailedToExecutePlanUseCase` spawns `CLEANUP_AGENT` (via `SingleDoerPartExecutor`, no reviewer). Cleanup agent: commits all work, restores codebase via `git merge-base HEAD origin/$(default.branch)` checkout, enriches ticket with failure context, re-opens ticket (sets `status: open` in frontmatter directly). If cleanup agent itself fails → harness prints red error and halts.
+**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → `FailedToExecutePlanUseCase` prints red error to console and halts — waits for human intervention. V2 will add automated cleanup (see `doc_v2/FailedToExecutePlanUseCaseV2.md`).
 
 **Progress tracking**: `current_state.json` tracks workflow progress. Resume-on-restart is V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 

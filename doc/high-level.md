@@ -144,7 +144,7 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 |---|---|---|
 | `NoStatusCallbackTimeOutUseCase` | No callback after X min | Ping agent via TMUX send-keys |
 | `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX, start new agent session for the sub-part |
-| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Spawn `CLEANUP_AGENT` via `SingleDoerPartExecutor` (no reviewer). Cleanup agent: commits all work, restores codebase via `git merge-base` checkout, enriches ticket with failure context, re-opens ticket (sets `status: open` in frontmatter directly). If cleanup agent itself calls `fail-workflow` → print red error to console, halt. |
+| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md) for V2 automated cleanup. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM, present to user, user decides whether to grant more iterations |
 
 - **Simple encapsulated objects** — NOT a state machine pattern
@@ -155,24 +155,15 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 
 When plan execution hits blocking issues (agent calls `/callback-shepherd/fail-workflow`):
 
-1. Spawn a **`CLEANUP_AGENT`** using `SingleDoerPartExecutor` (single sub-part, no reviewer).
-   The `CLEANUP_AGENT` role is expected in the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR`).
-   Uses the standard TMUX spawn flow and callback protocol.
-2. Cleanup agent analyzes the approach taken and why it failed
-3. Writes failure summary + learnings into the ticket (so next retry is better informed)
-4. Commits all current work (`git add -A && git commit`)
-5. Determines the common ancestor: `git merge-base HEAD origin/$(default.branch)`
-   — default branch resolved via `GitBranchManager.getDefaultBranch()`
-   (shells out to `git symbolic-ref refs/remotes/origin/HEAD`, strips prefix)
-6. Checks out the merge-base commit to restore the codebase to pre-branching state
-7. Re-opens the ticket by setting `status: open` in the ticket's YAML frontmatter directly
-   (does NOT use `tk` CLI)
-8. Calls `callback_shepherd.done.sh completed` when finished
+1. **Print the failure reason in red** to the console
+2. **Halt** the harness process
+3. Wait for human intervention
 
-**Terminal failure — cleanup agent calls `fail-workflow`**: If the cleanup agent itself
-encounters an unrecoverable error and calls `callback_shepherd.fail-workflow.sh`, the harness
-**prints a red error message to the console and halts** — waits for a human to intervene.
-No recursive cleanup. This is a terminal state.
+No automated cleanup, no agent spawning, no git rollback. The human reviews the state and
+decides what to do.
+
+V2 will add automated cleanup — see
+[`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md).
 
 ### FailedToConvergeUseCase Detail
 
@@ -181,7 +172,7 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
 2. Presents summary to user with the iteration history
 3. User decides:
    - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (sends new instructions via TMUX `send-keys`).
-   - **Abort**: triggers `FailedToExecutePlanUseCase` (same cleanup flow)
+   - **Abort**: triggers `FailedToExecutePlanUseCase` (prints red error, halts)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
 
@@ -278,7 +269,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 
 - `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
 - `slugified_title`: the ticket `title` slugified (lowercase, hyphens); compressed via `DirectQuickCheapLLM` if too long
-- `try-{N}`: starts at 1, incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
+- `try-{N}`: starts at 1, incremented on each manual retry (V1: human creates a new run after failure)
 - Delimiter between components: `__` (double underscore)
 
 ### Branch Creation
@@ -346,7 +337,7 @@ for in-progress sub-part).
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
-| Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
+| Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation |
 | Callback scripts | **One script per endpoint** | `callback_shepherd.*.sh` — focused, self-documenting, no flag parsing |

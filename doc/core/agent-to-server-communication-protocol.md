@@ -108,7 +108,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 |---|---|
 | `POST /callback-shepherd/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
 | `POST /callback-shepherd/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
-| `POST /callback-shepherd/fail-workflow` | Unrecoverable error — aborts the entire workflow. Triggers `FailedToExecutePlanUseCase`. |
+| `POST /callback-shepherd/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
 | `POST /callback-shepherd/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
 
 ---

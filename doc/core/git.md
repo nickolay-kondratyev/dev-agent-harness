@@ -137,26 +137,6 @@ not mid-workflow.
 
 ---
 
-## Default Branch Resolution
-
-The harness needs to know the remote's default branch name for `FailedToExecutePlanUseCase`
-cleanup (merge-base computation). This is resolved at runtime, not configured.
-
-**Method**: `GitBranchManager.getDefaultBranch()` — shells out to:
-
-```bash
-git symbolic-ref refs/remotes/origin/HEAD
-# → refs/remotes/origin/main — strip prefix → "main"
-```
-
-**Fail hard** if the ref is not set (e.g., after a bare `git init` without a proper clone).
-Error message should be actionable: _"Run `git remote set-head origin --auto` to set the
-default branch ref."_
-
-**Integration test**: `getDefaultBranch()` returns `"main"` for this repository.
-
----
-
 ## Git Operations Summary
 
 The harness performs these git operations during a workflow:
@@ -165,4 +145,4 @@ The harness performs these git operations during a workflow:
 |---|---|
 | Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](../high-level.md#try-n-resolution) (ref.ap.THL21SyZzJhzInG2m4zl2.E). |
 | `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"` |
-| `FailedToExecutePlanUseCase` cleanup | `CLEANUP_AGENT` (via `SingleDoerPartExecutor`): `git add -A && git commit` all work → `git merge-base HEAD origin/$(default.branch)` → `git checkout <merge-base>` → set ticket `status: open` in frontmatter directly. Default branch resolved via `GitBranchManager.getDefaultBranch()`. |
+| Workflow failure (`FailedToExecutePlanUseCase`) | V1: no git operations on failure — harness prints red error and halts. V2 will add automated cleanup (see `doc_v2/FailedToExecutePlanUseCaseV2.md`). |
