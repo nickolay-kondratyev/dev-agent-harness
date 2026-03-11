@@ -1,11 +1,11 @@
 ---
 id: nid_z2a3qlj5wpuhp5mbr6x4p5ff3_E
 title: "Allowe integration tests to run in intellij always"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T01:51:35Z
-status_updated_iso: 2026-03-11T01:51:35Z
+status_updated_iso: 2026-03-11T01:53:19Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
