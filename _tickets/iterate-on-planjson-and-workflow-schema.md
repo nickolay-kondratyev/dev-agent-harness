@@ -16,7 +16,7 @@ tags: [schema, workflow]
 
 Refine the plan.json and workflow definition schema before updating the parser.
 
-The current schema direction is documented in `doc/ai-out-schema.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E).
+The current schema direction is documented in `doc/schema/plan-and-current-state.md` (ref.ap.56azZbk7lAMll0D4Ot2G0.E).
 
 Key design decisions to finalize:
 - Sub-part structure with iteration config and `loopsBackTo`

@@ -210,13 +210,9 @@ enum ModelTier { QuickCheap, Medium }
 
 ## Workflow Definition, File Structure, and Iteration Semantics
 
-See [`doc/ai-out-schema.md`](ai-out-schema.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for:
-- Unified parts/sub-parts schema (used by static workflows **and** planner-generated plans)
-- `plan.json` / `current_state.json` lifecycle
-- Iteration semantics (sub-part-level iteration with `loopsBackTo`)
-- `.ai_out/` directory tree and scoping rules
-- Cross-agent visibility via ContextProvider
-- Session ID storage in `current_state.json`
+See:
+- [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) — `.ai_out/` directory tree, scoping rules, cross-agent visibility via ContextProvider
+- [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) — unified parts/sub-parts schema, `plan.json` / `current_state.json` lifecycle, iteration semantics, session ID storage
 
 **Key points:**
 - **JSON** under `./config/workflows/`. **Jackson + Kotlin module** for serialization.
@@ -293,6 +289,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 
 | Doc | Content |
 |-----|---------|
-| [`doc/ai-out-schema.md`](ai-out-schema.md) | Directory schema, unified parts/sub-parts schema, iteration semantics, session IDs |
+| [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
+| [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, CLI spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

@@ -16,7 +16,7 @@ tags: [schema, workflow, parser]
 
 Update `WorkflowParser` and workflow JSON definitions to use the new parts/sub-parts schema.
 
-Currently `config/workflows/straightforward.json` and `config/workflows/with-planning.json` use the old structure (parts → phases → role). These need to align with the schema documented in `doc/ai-out-schema.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E).
+Currently `config/workflows/straightforward.json` and `config/workflows/with-planning.json` use the old structure (parts → phases → role). These need to align with the schema documented in `doc/schema/plan-and-current-state.md` (ref.ap.56azZbk7lAMll0D4Ot2G0.E).
 
 ## Blocked By
 

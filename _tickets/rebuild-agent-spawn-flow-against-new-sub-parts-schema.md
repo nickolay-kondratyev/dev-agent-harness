@@ -27,5 +27,5 @@ PhaseType enum (app/src/main/kotlin/com/glassthought/chainsaw/core/data/PhaseTyp
 
 ## Context
 
-The new unified schema uses parts/subParts where each sub-part has a role string. See doc/ai-out-schema.md (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for the schema.
+The new unified schema uses parts/subParts where each sub-part has a role string. See doc/schema/plan-and-current-state.md (ref.ap.56azZbk7lAMll0D4Ot2G0.E) for the schema.
 
