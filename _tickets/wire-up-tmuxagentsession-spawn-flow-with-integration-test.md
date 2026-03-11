@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T00:52:36Z
 id: nid_uwof1vfp1tcqxzyoh5citkz5o_E
 title: "Wire up TmuxAgentSession spawn flow with integration test"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T00:10:10Z
-status_updated_iso: 2026-03-11T00:11:47Z
+status_updated_iso: 2026-03-11T00:52:36Z
 type: feature
 priority: 2
 assignee: nickolaykondratyev
@@ -79,3 +80,32 @@ Starting agent types: ClaudeCode, PI agent.
 - Environment: app/src/main/kotlin/com/glassthought/chainsaw/initializer/
 - Integration test support: app/src/test/kotlin/org/example/integTestSupport.kt
 
+## Resolution
+
+### Implementation Complete
+
+**All 28 unit tests pass + 1 integration test verified.**
+
+**New files created** (in `com.glassthought.chainsaw.core`):
+- `data/PhaseType.kt` — Enum: IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER
+- `agent/data/TmuxStartCommand.kt` — @JvmInline value class
+- `agent/data/StartAgentRequest.kt` — Data class (phaseType + workingDir)
+- `agent/TmuxAgentSession.kt` — Data class (TmuxSession + ResumableAgentSessionId)
+- `agent/starter/AgentStarter.kt` — Interface: buildStartCommand()
+- `agent/starter/impl/ClaudeCodeAgentStarter.kt` — Builds `claude` CLI with bash -c wrapper
+- `agent/AgentTypeChooser.kt` — Interface + DefaultAgentTypeChooser (CLAUDE_CODE in V1)
+- `agent/AgentStarterBundle.kt` — Data class (AgentStarter + AgentSessionIdResolver)
+- `agent/AgentStarterBundleFactory.kt` — Interface
+- `agent/impl/ClaudeCodeAgentStarterBundleFactory.kt` — Test vs production config via Environment
+- `agent/SpawnTmuxAgentSessionUseCase.kt` — Orchestrates full spawn flow with GUID handshake
+- `config/prompts/test-agent-system-prompt.txt` — Minimal test prompt
+
+**Modified**:
+- `initializer/data/Environment.kt` — Added `fun test()` factory method
+
+**Key discoveries during implementation**:
+- Claude CLI uses `--system-prompt` (inline text), NOT `--system-prompt-file`
+- `CLAUDECODE` env var must be unset to avoid nested session detection
+- 5-second configurable startup delay needed before GUID handshake
+
+**Deferred**: ResumeTmuxAgentSessionUseCase → ticket nid_d47u5pku4ldixx23tyggd29ep_E
