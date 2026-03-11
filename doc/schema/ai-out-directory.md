@@ -61,10 +61,10 @@ writes is intended to be shared.
 
 ## Cross-Agent Visibility
 
-Agents do **not** discover other agents' `PUBLIC.md` files themselves. The **instruction creator** (ContextProvider)
-is responsible for gathering pointers to relevant `PUBLIC.md` files and including them in the agent's
-instruction file at assembly time. This avoids a stale index file and keeps the harness in control of
-what each agent sees.
+Agents do **not** discover other agents' `PUBLIC.md` files themselves. The **instruction creator**
+(`ContextForAgentProvider` — ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) is responsible for gathering pointers
+to relevant `PUBLIC.md` files and including them in the agent's instruction file at assembly time.
+This avoids a stale index file and keeps the harness in control of what each agent sees.
 
 ## External Paths (outside repo)
 

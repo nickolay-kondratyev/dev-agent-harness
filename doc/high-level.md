@@ -1,5 +1,9 @@
 # Shepherd — High-Level Design (V1)
 
+> **This document and its linked `doc/` files are the authoritative specification.**
+> When code diverges from these docs, the docs are correct and the code needs updating.
+> Tickets and older notes are context — not spec. If a decision is not captured here, it is not decided.
+
 Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 ## Vocabulary
@@ -225,13 +229,13 @@ See:
 - **Automatic** for doer→reviewer transitions: doer sends `result: "completed"` → reviewer starts
 - **Reviewer-driven** for iteration decisions: reviewer sends `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). The reviewer's verdict is authoritative — no LLM evaluation in this path.
 
-### Context Assembly — ContextProvider
+### Context Assembly — ContextForAgentProvider
 
-A `ContextProvider` interface is responsible for assembling context packages for:
-- Agent instruction files (what gets concatenated)
-- Planner instructions (ticket + role catalog + format instructions)
+A [`ContextForAgentProvider`](core/ContextForAgentProvider.md) (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
+interface is responsible for assembling instruction files for agents:
+- Execution agent instructions (role def + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage)
+- Planner instructions (ticket + role catalog + plan format instructions)
 - PLAN_REVIEWER instructions (includes `plan.json` from `harness_private/`)
-- Convergence failure summaries (for `FailedToConvergeUseCase`)
 
 ### Role Catalog — Auto-Discovered
 <!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
@@ -295,6 +299,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Full agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, user-question flow, callback scripts |
+| [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type |
 | [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, concurrency model, relationship to current_state.json |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
