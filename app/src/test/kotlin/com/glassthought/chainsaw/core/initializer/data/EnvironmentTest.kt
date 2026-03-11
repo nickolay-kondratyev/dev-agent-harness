@@ -24,4 +24,14 @@ class EnvironmentTest : AsgardDescribeSpec({
             }
         }
     }
+
+    describe("GIVEN Environment.test()") {
+        val env = Environment.test()
+
+        describe("WHEN isTest is checked") {
+            it("THEN isTest is true") {
+                env.isTest shouldBe true
+            }
+        }
+    }
 })

@@ -17,6 +17,9 @@ sealed interface Environment {
     companion object {
         /** Returns a [ProductionEnvironment] — the default for production use. */
         fun production(): Environment = ProductionEnvironment()
+
+        /** Returns a [TestEnvironment] — for test contexts. */
+        fun test(): Environment = TestEnvironment()
     }
 }
 
