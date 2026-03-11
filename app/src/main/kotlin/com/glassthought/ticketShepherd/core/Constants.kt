@@ -5,6 +5,9 @@ object Constants {
   object DIRECT_LLM_API_MODEL_NAME {
     /** GLM highest-tier model identifier for the Z.AI Anthropic-compatible API. */
     const val GLM_HIGHEST_TIER = "glm-5"
+
+    /** GLM quick/cheap tier model identifier for Z.AI Anthropic-compatible API. */
+    const val GLM_QUICK_CHEAP = "glm-4.7-flash"
   }
 
   /** Z.AI API configuration constants. */
@@ -17,31 +20,11 @@ object Constants {
     /** Default max tokens for API responses. Can be overridden via environment variable. */
     const val MAX_TOKENS_ENV_VAR = "Z_AI_GLM_MAX_TOKENS"
     const val DEFAULT_MAX_TOKENS = 4096
+    /** Anthropic-compatible API version header value required by the Z.AI messages endpoint. */
+    const val ANTHROPIC_API_VERSION = "2023-06-01"
   }
 
-  fun getConfigurationObject(): Config {
-    val maxTokens = System.getenv(Z_AI_API.MAX_TOKENS_ENV_VAR)?.toIntOrNull()
-      ?: Z_AI_API.DEFAULT_MAX_TOKENS
-
-    return Config(
-      zAiGlmConfig = GLMDirectLLMConfig(
-        modelName = DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,
-        maxTokens = maxTokens,
-      )
-    )
-  }
+  /** Returns the resolved max tokens value — from [Z_AI_API.MAX_TOKENS_ENV_VAR] env var if set, otherwise [Z_AI_API.DEFAULT_MAX_TOKENS]. */
+  fun resolveMaxTokens(): Int =
+    System.getenv(Z_AI_API.MAX_TOKENS_ENV_VAR)?.toIntOrNull() ?: Z_AI_API.DEFAULT_MAX_TOKENS
 }
-
-data class GLMDirectLLMConfig(
-  val modelName: String,
-  val maxTokens: Int,
-)
-
-data class Config(
-  /** Configuration for https://chat.z.ai models
-   *
-   *  GLM could change in the future as the frontier model of Z.AI, BUT
-   *  for now its much easier to remember that we are talking about Z.AI with
-   *  GLM naming*/
-  val zAiGlmConfig: GLMDirectLLMConfig
-)

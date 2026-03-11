@@ -3,31 +3,31 @@ package com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm
 import com.asgard.core.out.OutFactory
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatRequest
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatResponse
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectQuickCheapLLM
 import okhttp3.OkHttpClient
 
 /**
- * [DirectBudgetHighLLM] implementation for Z.AI's GLM highest-tier model.
+ * [DirectQuickCheapLLM] implementation for Z.AI's GLM quick/cheap-tier model.
  *
  * Delegates all HTTP logic to [GlmAnthropicCompatibleApi].
  *
  * @param outFactory Logging factory.
  * @param httpClient Shared OkHttp client instance. Callers should reuse the returned
- *   [DirectBudgetHighLLM] instance rather than calling the factory repeatedly, because OkHttp
+ *   [DirectQuickCheapLLM] instance rather than calling the factory repeatedly, because OkHttp
  *   recommends a single shared client for connection pooling.
- * @param modelName The model identifier to send in the API request (e.g. "glm-5").
+ * @param modelName The model identifier to send in the API request (e.g. "glm-4.7-flash").
  * @param maxTokens Maximum tokens for the response (required by Anthropic API).
  * @param apiEndpoint The Anthropic-compatible endpoint URL.
  * @param apiToken API key for authentication (sent as x-api-key header).
  */
-class GLMHighestTierApi(
+class GLMQuickCheapApi(
     outFactory: OutFactory,
     httpClient: OkHttpClient,
     modelName: String,
     maxTokens: Int,
     apiEndpoint: String,
     apiToken: String,
-) : DirectBudgetHighLLM {
+) : DirectQuickCheapLLM {
 
     private val delegate = GlmAnthropicCompatibleApi(
         outFactory = outFactory,

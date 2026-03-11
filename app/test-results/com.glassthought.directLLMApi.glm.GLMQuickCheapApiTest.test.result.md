@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.directLLMApi.glm.GLMHighestTierApiTest"
+spec: "com.glassthought.directLLMApi.glm.GLMQuickCheapApiTest"
 status: PASSED
 failed: 0
 skipped: 0
@@ -26,5 +26,5 @@ skipped: 0
   - WHEN prompt contains special characters needing JSON escaping
     - [PASS] THEN request body is valid JSON with correctly escaped content
     - [PASS] THEN response is returned successfully
-- GIVEN a GLMHighestTierApi instance
-  - [PASS] THEN it implements DirectBudgetHighLLM
+- GIVEN a GLMQuickCheapApi instance
+  - [PASS] THEN it implements DirectQuickCheapLLM

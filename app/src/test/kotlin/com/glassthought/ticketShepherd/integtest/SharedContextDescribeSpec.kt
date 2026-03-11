@@ -29,7 +29,7 @@ data class SharedContextSpecConfig(
  *
  * ### When to use
  * - Use `SharedContextDescribeSpec` when your integration test needs `ShepherdContext`
- *   (e.g., `shepherdContext.infra.tmux.sessionManager`, `shepherdContext.infra.directLlm.glmDirectLLM`).
+ *   (e.g., `shepherdContext.infra.tmux.sessionManager`, `shepherdContext.infra.directLlm.budgetHigh`).
  * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ShepherdContext`.
  *
  * ### Example

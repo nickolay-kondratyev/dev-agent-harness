@@ -8,8 +8,10 @@ import com.glassthought.ticketShepherd.core.Constants
 import com.glassthought.ticketShepherd.core.agent.DefaultAgentTypeChooser
 import com.glassthought.ticketShepherd.core.useCase.SpawnTmuxAgentSessionUseCase
 import com.glassthought.ticketShepherd.core.agent.impl.ClaudeCodeAgentStarterBundleFactory
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectLLM
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectQuickCheapLLM
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMQuickCheapApi
 import com.glassthought.ticketShepherd.core.initializer.data.Environment
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicatorImpl
@@ -32,10 +34,11 @@ data class TmuxInfra(
  * Groups direct LLM API dependencies.
  *
  * [httpClient] is `internal` because it is only needed for resource cleanup in [ShepherdContext.close].
- * External consumers should use [glmDirectLLM] for API calls.
+ * External consumers should use [quickCheap] or [budgetHigh] for API calls.
  */
 data class DirectLlmInfra(
-    val glmDirectLLM: DirectLLM,
+    val quickCheap: DirectQuickCheapLLM,
+    val budgetHigh: DirectBudgetHighLLM,
     internal val httpClient: OkHttpClient,
 )
 
@@ -148,10 +151,9 @@ class InitializerImpl : Initializer {
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
-        val glmDirectLLM = createGLMDirectLLM(outFactory, httpClient)
-
         val directLlmInfra = DirectLlmInfra(
-            glmDirectLLM = glmDirectLLM,
+            quickCheap = createGLMQuickCheapLLM(outFactory, httpClient),
+            budgetHigh = createGLMBudgetHighLLM(outFactory, httpClient),
             httpClient = httpClient,
         )
 
@@ -187,23 +189,31 @@ class InitializerImpl : Initializer {
         )
     }
 
-    private fun createGLMDirectLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectLLM {
-        val config = Constants.getConfigurationObject()
+    private fun createGLMQuickCheapLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectQuickCheapLLM =
+        GLMQuickCheapApi(
+            outFactory = outFactory,
+            httpClient = httpClient,
+            modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_QUICK_CHEAP,
+            maxTokens = Constants.resolveMaxTokens(),
+            apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
+            apiToken = resolveApiToken(),
+        )
 
-        val apiToken = System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
+    private fun createGLMBudgetHighLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectBudgetHighLLM =
+        GLMHighestTierApi(
+            outFactory = outFactory,
+            httpClient = httpClient,
+            modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,
+            maxTokens = Constants.resolveMaxTokens(),
+            apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
+            apiToken = resolveApiToken(),
+        )
+
+    private fun resolveApiToken(): String =
+        System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
             ?: throw IllegalStateException(
                 "Required environment variable [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] is not set"
             )
-
-        return GLMHighestTierApi(
-            outFactory = outFactory,
-            httpClient = httpClient,
-            modelName = config.zAiGlmConfig.modelName,
-            maxTokens = config.zAiGlmConfig.maxTokens,
-            apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
-            apiToken = apiToken,
-        )
-    }
 
     companion object {
         /** LLM API calls routinely take 10-30 seconds; default OkHttp 10s would cause failures. */
