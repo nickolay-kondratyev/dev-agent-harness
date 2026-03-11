@@ -1,7 +1,7 @@
 # TicketShepherd / ap.P3po8Obvcjw4IXsSUSU91.E
 
 The central coordinator that drives a ticket through its entire workflow lifecycle.
-`TicketShepherd` is the one moving through the motions — it walks the workflow, spawns agents,
+`TicketShepherd` is the one moving ticket through the motions — it walks the workflow, spawns agents,
 reacts to their signals, and decides what happens next.
 
 ## How It Drives the Workflow

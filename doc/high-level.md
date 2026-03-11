@@ -18,6 +18,7 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 - **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
 - **At most 2 sub-parts per part.** First sub-part is the doer (implementor/planner). Optional second sub-part is the reviewer. On review failure, the harness loops back to the doer. This keeps part execution trivially simple.
+  - In V2 we may relax this but in V1 this is KISS constraint.
 
 ---
 
