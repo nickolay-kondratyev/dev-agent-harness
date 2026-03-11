@@ -69,8 +69,6 @@ skipped: 0
     - WHEN harnessPrivateDir is called
       - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/harness_private
       - [PASS] THEN path starts with repo root
-    - WHEN locationsFile is called
-      - [PASS] THEN path ends with shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt
     - WHEN planDir is called
       - [PASS] THEN path ends with .ai_out/feature__my-task__try-1/shared/plan
     - WHEN sharedContextMd is called

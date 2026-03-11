@@ -45,7 +45,6 @@ class AiOutputStructure(
         private const val PUBLIC_MD = "PUBLIC.md"
         private const val PRIVATE_MD = "PRIVATE.md"
         private const val SHARED_CONTEXT_MD = "SHARED_CONTEXT.md"
-        private const val LOCATIONS_FILE = "LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt"
     }
 
     // -- Path resolution (pure, no I/O) --
@@ -99,9 +98,6 @@ class AiOutputStructure(
 
     fun sharedContextMd(branch: String): Path =
         sharedDir(branch).resolve(SHARED_CONTEXT_MD)
-
-    fun locationsFile(branch: String): Path =
-        sharedDir(branch).resolve(LOCATIONS_FILE)
 
     // -- Directory creation (I/O) --
 

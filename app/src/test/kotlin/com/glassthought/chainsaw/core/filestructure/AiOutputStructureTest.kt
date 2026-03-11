@@ -137,14 +137,6 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                 }
             }
 
-            describe("WHEN locationsFile is called") {
-                val result = structure.locationsFile(branch)
-
-                it("THEN path ends with shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt") {
-                    result.toString() shouldEndWith "shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt"
-                }
-            }
-
             describe("AND role is 'PLANNER'") {
                 val plannerRole = "PLANNER"
 

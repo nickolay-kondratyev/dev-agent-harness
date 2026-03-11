@@ -15,7 +15,6 @@ All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its ow
 │   └── PRIVATE.md                      # Harness internal context (if needed)
 ├── shared/
 │   ├── SHARED_CONTEXT.md               # Cross-cutting context for ALL agents (agents can modify)
-│   ├── LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt
 │   └── plan/
 │       ├── PLAN.md                     # Human-readable plan (with-planning only)
 │       └── plan.json                   # Machine-readable plan (with-planning only)
@@ -41,7 +40,6 @@ All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its ow
 | `PUBLIC.md` | Per role per part/planning | Agent's public output — visible to other agents and used in iteration evaluation |
 | `PRIVATE.md` | Per role per part/planning | Agent's private notes — not shared with other agents |
 | `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write |
-| `LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt` | Branch-wide | Index of all PUBLIC.md file paths |
 | `current_state.json` | Branch-wide | Workflow progress — which part/phase is current; enables resume |
 | `PLAN.md` | Branch-wide (shared/plan/) | Human-readable plan (with-planning workflow only) |
 | `plan.json` | Branch-wide (shared/plan/) | Machine-readable plan parsed by harness (with-planning workflow only) |
@@ -52,6 +50,13 @@ All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its ow
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
 - **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained unit of work.
 - **Role isolation**: Within a part, each role has its own directory for PUBLIC/PRIVATE/session_ids.
+
+## Cross-Agent Visibility
+
+Agents do **not** discover other agents' `PUBLIC.md` files themselves. The **instruction creator** (ContextProvider)
+is responsible for gathering pointers to relevant `PUBLIC.md` files and including them in the agent's
+instruction file at assembly time. This avoids a stale index file and keeps the harness in control of
+what each agent sees.
 
 ## Iteration Behavior
 
