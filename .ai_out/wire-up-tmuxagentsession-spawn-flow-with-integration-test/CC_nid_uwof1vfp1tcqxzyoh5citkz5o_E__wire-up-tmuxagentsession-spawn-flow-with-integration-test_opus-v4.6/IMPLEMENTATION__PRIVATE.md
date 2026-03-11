@@ -1,8 +1,9 @@
 # Implementation Private Context
 
-## Status: COMPLETE
+## Status: COMPLETE (post-iteration)
 
 All phases implemented and tested. Integration test passes end-to-end.
+Shell escaping bug fixed in iteration pass.
 
 ## Key Discoveries During Implementation
 
@@ -27,9 +28,17 @@ All phases implemented and tested. Integration test passes end-to-end.
 - `System.getProperty("user.home")` returns `/home/node` correctly.
 - Claude projects dir is at `/home/node/.claude/projects/`.
 
+### Shell Escaping (fixed in iteration)
+- The entire inner command for `bash -c '...'` must be escaped for single-quote context.
+- Previously only `workingDir` was escaped; `claudeCommand` (containing system prompt) was not.
+- Fix: build inner command as plain string, apply `escapeForShell()` once to the whole thing.
+- The `escapeForDoubleQuote()` for the system prompt (inside double quotes) is still needed and
+  works correctly alongside the outer single-quote escaping.
+
 ## Follow-up Tickets Created
 - `nid_d47u5pku4ldixx23tyggd29ep_E` - Implement ResumeTmuxAgentSessionUseCase
 
 ## Commits
 1. `9524dca` - Initial implementation: data types, starter, chooser, factory, use case, unit tests
 2. `276730a` - Fix Claude CLI integration: correct flags, unset CLAUDECODE, add startup delay
+3. `9b9d8b4` - Fix shell escaping: escape entire inner command for single-quote context
