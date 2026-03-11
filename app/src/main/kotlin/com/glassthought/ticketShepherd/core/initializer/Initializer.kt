@@ -11,6 +11,7 @@ import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.ticketShepherd.core.agent.tmux.util.TmuxCommandRunner
+import com.glassthought.ticketShepherd.core.agent.sessionresolver.impl.ClaudeCodeAgentSessionIdResolver
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -35,12 +36,20 @@ data class DirectLlmInfra(
 )
 
 /**
+ * Groups Claude Code agent dependencies.
+ */
+data class ClaudeCodeInfra(
+    val sessionIdResolver: ClaudeCodeAgentSessionIdResolver,
+)
+
+/**
  * Top-level infrastructure grouping — all shared services and IO adapters.
  */
 data class Infra(
     val outFactory: OutFactory,
     val tmux: TmuxInfra,
     val directLlm: DirectLlmInfra,
+    val claudeCode: ClaudeCodeInfra,
 )
 
 /**
@@ -128,10 +137,18 @@ class InitializerImpl : Initializer {
             httpClient = httpClient,
         )
 
+        val claudeCodeInfra = ClaudeCodeInfra(
+            sessionIdResolver = ClaudeCodeAgentSessionIdResolver(
+                claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
+                outFactory = outFactory,
+            ),
+        )
+
         val infra = Infra(
             outFactory = outFactory,
             tmux = tmuxInfra,
             directLlm = directLlmInfra,
+            claudeCode = claudeCodeInfra,
         )
 
         return ShepherdContext(
