@@ -1,7 +1,7 @@
 package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.initializer.ChainsawContext
+import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
 import com.glassthought.ticketShepherd.core.initializer.Initializer
 import com.glassthought.ticketShepherd.core.initializer.data.Environment
 import io.kotest.matchers.shouldBe
@@ -9,7 +9,7 @@ import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 
 /**
- * Verifies that [ChainsawContext] properly implements [com.asgard.core.lifecycle.AsgardCloseable]
+ * Verifies that [ShepherdContext] properly implements [com.asgard.core.lifecycle.AsgardCloseable]
  * and shuts down [OkHttpClient] resources on close.
  */
 class AppDependenciesCloseTest : AsgardDescribeSpec({

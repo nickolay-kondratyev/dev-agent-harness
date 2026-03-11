@@ -3,7 +3,7 @@ package com.glassthought.ticketShepherd.integtest
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
-import com.glassthought.ticketShepherd.core.initializer.ChainsawContext
+import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
 
 /**
  * Wraps [AsgardDescribeSpecConfig] with defaults pulled from [SharedContextIntegFactory].
@@ -16,7 +16,7 @@ data class SharedContextSpecConfig(
 )
 
 /**
- * Base class for integration tests that require [ChainsawContext].
+ * Base class for integration tests that require [ShepherdContext].
  *
  * Extend this instead of [AsgardDescribeSpec] directly when your test needs access to
  * shared application-level dependencies (tmux, LLM, etc.).
@@ -24,7 +24,7 @@ data class SharedContextSpecConfig(
  * ### What it provides
  * - Pre-configured [AsgardDescribeSpecConfig.FOR_INTEG_TEST] settings (stop-on-first-failure,
  *   DEBUG log level, DATA_ERROR log level verification).
- * - A shared [ChainsawContext] singleton via the [chainsawContext] property.
+ * - A shared [ShepherdContext] singleton via the [shepherdContext] property.
  * - No config boilerplate — defaults are wired through [SharedContextIntegFactory].
  *
  * ### When to use
@@ -48,7 +48,7 @@ data class SharedContextSpecConfig(
  * ```
  *
  * ### Lifecycle note
- * The underlying [ChainsawContext] is process-scoped and NOT closed between tests.
+ * The underlying [ShepherdContext] is process-scoped and NOT closed between tests.
  * It is held for the entire JVM test process lifetime. See [SharedContextIntegFactory].
  *
  * ap.20lFzpGIVAbuIXO5tUTBg.E
@@ -64,5 +64,5 @@ abstract class SharedContextDescribeSpec(
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {
-    val chainsawContext: ChainsawContext = SharedContextIntegFactory.chainsawContext
+    val shepherdContext: ShepherdContext = SharedContextIntegFactory.shepherdContext
 }
