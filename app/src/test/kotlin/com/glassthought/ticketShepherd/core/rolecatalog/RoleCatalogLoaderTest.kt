@@ -16,7 +16,7 @@ class RoleCatalogLoaderTest : AsgardDescribeSpec({
     fun resourceDir(name: String): Path =
         Path.of(
             RoleCatalogLoaderTest::class.java
-                .getResource("/com/glassthought/shepherd/core/rolecatalog/$name")!!
+                .getResource("/com/glassthought/ticketShepherd/core/rolecatalog/$name")!!
                 .toURI()
         )
 
