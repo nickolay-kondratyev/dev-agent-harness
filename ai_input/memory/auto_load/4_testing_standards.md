@@ -22,9 +22,9 @@
   `runIntegTests` system property injected by Gradle. Enable via: `./gradlew :app:test -PrunIntegTests=true`.
   This is tracked as a Gradle task input so the cache invalidates automatically (unlike env vars).
 
-### Integration Test Base Class (with AppDependencies)
-- For integration tests requiring `AppDependencies` (tmux, LLM, etc.), extend `SharedAppDepDescribeSpec` instead of `AsgardDescribeSpec` directly.
-- `SharedAppDepDescribeSpec` provides a shared singleton `AppDependencies` and pre-configured `AsgardDescribeSpecConfig.FOR_INTEG_TEST` settings.
+### Integration Test Base Class (with ChainsawContext)
+- For integration tests requiring `ChainsawContext` (tmux, LLM, etc.), extend `SharedAppDepDescribeSpec` instead of `AsgardDescribeSpec` directly.
+- `SharedAppDepDescribeSpec` provides a shared singleton `ChainsawContext` and pre-configured `AsgardDescribeSpecConfig.FOR_INTEG_TEST` settings.
 - No config required — defaults pull from `SharedAppDepIntegFactory`.
 - Access shared deps via the `appDependencies` property (e.g., `appDependencies.tmuxSessionManager`).
 - See `SharedAppDepDescribeSpec` (ref.ap.20lFzpGIVAbuIXO5tUTBg.E) for full KDoc and examples.
