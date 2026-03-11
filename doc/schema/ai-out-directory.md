@@ -33,7 +33,7 @@ The git branches will include ticket ids which guarantees not clashing.
 |------|-------|---------|
 | `PUBLIC.md` | Per sub-part | Agent's output — the main communication channel between agents. |
 | `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write |
-| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Enables resume. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
+| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture. |
 
@@ -42,7 +42,7 @@ The git branches will include ticket ids which guarantees not clashing.
 ### No PRIVATE.md
 
 Agents do not have private output files. An agent's private state lives in its conversation history
-(available via resume). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
+(within its TMUX session). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
 writes is intended to be shared.
 
 - PUBLIC.md: should capture any key decisions that agent has made, it should NOT duplicate decisions that are already captured in the plan or shared context. But it should state decisions that it made and SUCCINCT WHY the decision was made. So that other agents are aware of the tradeoff that was made and rationale behind it. This direction of writing proper public.md file should be given to the agents in their instructions.

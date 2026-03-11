@@ -68,7 +68,9 @@ shepherd run --workflow <name> --ticket <path>
 
 On startup, the CLI uses [`TicketShepherdCreator`](core/TicketShepherdCreator.md)
 (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) to wire all dependencies and create a `TicketShepherd`.
-If an existing `current_state.json` is found, offers to resume from last checkpoint or start fresh.
+V1 does not support resume-on-restart — if the harness dies, you start over.
+`current_state.json` is written for progress tracking but not consumed on restart.
+See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 resume design.
 
 ---
 
@@ -111,11 +113,10 @@ it uses TMUX `send-keys`. No long-lived HTTP connections.
 
 See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the full protocol specification: endpoints, payloads, HandshakeGuid identity, port discovery, user-question flow, and callback scripts.
 
-### Agent Lifecycle — Spawn & Resume
+### Agent Lifecycle — Spawn
 
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for:
 - New session spawn flow (GUID generation, env var export, session ID resolution)
-- Resume flow (reuse HandshakeGuid, skip session ID resolution)
 - Session schema in `current_state.json`
 - Callback script spec
 
@@ -139,7 +140,7 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 | UseCase | Trigger | Action |
 |---|---|---|
 | `NoStatusCallbackTimeOutUseCase` | No callback after X min | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX, attempt resume |
+| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX, start new agent session for the sub-part |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Spin up cleanup agent, enrich ticket, reset codebase, re-open ticket |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM, present to user, user decides whether to grant more iterations |
 
@@ -161,7 +162,7 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
 1. Harness uses **BudgetHigh DirectLLM** to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md + SHARED_CONTEXT.md)
 2. Presents summary to user with the iteration history
 3. User decides:
-   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness resumes the doer→reviewer loop.
+   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (sends new instructions via TMUX `send-keys`).
    - **Abort**: triggers `FailedToExecutePlanUseCase` (same cleanup flow)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
@@ -262,11 +263,15 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 - `try-{N}`: starts at 1, incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
 - Delimiter between components: `__` (double underscore)
 
-## Harness-Level Resume
+## Harness-Level Resume — V2
 
-- `current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs
-- On `shepherd run`, if `current_state.json` exists for the given ticket+branch, offer to resume
-- Resume skips completed sub-parts, picks up from the last in-progress sub-part
+`current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs.
+V1 writes this file for progress tracking but does **not** consume it on restart — if the harness
+dies, you start over.
+
+See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for the V2 layered
+resume design (Layer 1: agent session resume with handshake verification, Layer 2: new agent session
+for in-progress sub-part).
 
 ---
 
@@ -281,7 +286,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
 | Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
-| Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
+| Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
@@ -303,5 +308,5 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, concurrency model, relationship to current_state.json |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
-| [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, callback script spec |
+| [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, callback contract, session schema, callback script spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

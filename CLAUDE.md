@@ -68,7 +68,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Role catalog**: Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`. Every `.md` file is an eligible role; `description` extracted from YAML frontmatter.
 
-**Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs for resume.
+**Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs.
 
 **DirectLLM — tier-scoped interfaces**: `DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM` — all extend `DirectLLM`. Callers depend on the tier interface; `Initializer` wires concrete implementations. V1: `DirectQuickCheapLLM` → GLM-4.7-Flash, `DirectBudgetHighLLM` → GLM-5 (both Z.AI/GLM). **Not used for iteration decisions** — the reviewer's verdict is authoritative.
 
@@ -97,7 +97,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → cleanup agent enriches ticket → codebase reset → ticket re-opened.
 
-**Resume**: `current_state.json` tracks workflow progress. On restart, offers to resume from last checkpoint.
+**Progress tracking**: `current_state.json` tracks workflow progress. Resume-on-restart is V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 **File structure**: `.ai_out/${git_branch}/` with `harness_private/`, `shared/`, `planning/`, `phases/` subdirectories.
 

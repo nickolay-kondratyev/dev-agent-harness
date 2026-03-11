@@ -134,15 +134,15 @@ Run doer (result: completed) → Run reviewer
 ```
 
 The reviewer's `iteration.max` is an iteration **budget** (not a hard limit — user can override
-via `FailedToConvergeUseCase`). On each `needs_iteration` the harness resumes the doer's TMUX
-session with new instructions, then resumes the reviewer's session. The reviewer's verdict is
+via `FailedToConvergeUseCase`). On each `needs_iteration` the harness sends new instructions to the
+doer's TMUX session via `send-keys`, then sends to the reviewer's session. The reviewer's verdict is
 authoritative — no LLM evaluation in this path.
 
 ### Session IDs in current_state.json
 
 All session IDs live in `current_state.json` as a `sessionIds` array on each sub-part — no
 separate `session_ids/` directories. The harness appends a new entry each time a session is
-created. **Resume = use the last element** in the array. Each entry follows the
+created. The last element is the current session. Each entry follows the
 [Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e).
 
 ```json
@@ -179,15 +179,16 @@ Each entry in the `sessionIds` array has the following structure:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `handshake_guid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
-| `agent_session_id` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for `--resume`. Null when `agent_session_path` is used instead. |
+| `agent_session_id` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). Null when `agent_session_path` is used instead. |
 | `agent_session_path` | no | Alternative to `agent_session_id` for agents that use paths (e.g., PI). Null when not applicable. |
 | `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
-| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). Required for resume — cannot resume a session started with one model using a different model. |
+| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). Required for V2 resume — cannot resume a session started with one model using a different model (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `timestamp` | yes | ISO-8601 timestamp of session creation. |
 
 **Exactly one** of `agent_session_id` or `agent_session_path` must be non-null.
-**Resume = use the last element** in the `sessionIds` array. The `agent_session_id` (or
-`agent_session_path`) plus `model` from that entry are used for the `--resume` invocation.
+The last element in the `sessionIds` array is the current session. V2 resume
+(ref.ap.LX1GCIjv6LgmM7AJFas20.E) uses `agent_session_id` (or `agent_session_path`) plus `model`
+from this entry for `--resume` invocation.
 
 ### Sub-Parts Without Iteration
 
@@ -202,7 +203,7 @@ no kill/respawn between iterations. The session is killed only when the **part**
 
 - The agent retains its full conversation history across iterations of the same sub-part.
 - The `sessionIds` array on each sub-part tracks session records. The last element is the
-  current/resumable session.
+  current session.
 
 ### PUBLIC.md Lifecycle
 

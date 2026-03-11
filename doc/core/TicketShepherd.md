@@ -16,7 +16,7 @@ reacts to their signals, and decides what happens next.
    - `result: "completed"` (doer) → move to reviewer (or complete part if single sub-part)
    - `result: "pass"` (reviewer) → move to next part
    - `result: "needs_iteration"` (reviewer) → check iteration counter:
-     - Within budget → resume doer's TMUX session with new instructions, then resume reviewer
+     - Within budget → send new instructions to doer's TMUX session via `send-keys`, then send to reviewer
      - Exceeds `iteration.max` → `FailedToConvergeUseCase`
 5. On `/callback-shepherd/fail-workflow` → delegates to `FailedToExecutePlanUseCase`
 6. On `/callback-shepherd/user-question` → presents to human, sends answer back via TMUX `send-keys`
@@ -33,7 +33,7 @@ reacts to their signals, and decides what happens next.
 - **Orchestrates use cases** — calls use cases for discrete operations; the shepherd makes
   the decisions, use cases do the work.
 - **Drives iteration decisions** — on `/callback-shepherd/done`, reads the reviewer's `result`
-  field to determine whether to loop back (resume doer session) or proceed to the next
+  field to determine whether to loop back (send new instructions to doer) or proceed to the next
   sub-part/part. The reviewer's verdict is authoritative — no LLM evaluation in this path.
 - **Manages part lifecycle** — spawns TMUX sessions for sub-parts within a part, keeps them
   alive across iterations, and kills them when the part completes.

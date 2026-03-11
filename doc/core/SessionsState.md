@@ -89,18 +89,18 @@ shepherd orchestration are both coroutine contexts — blocking a thread with
 - **Owned by** `TicketShepherd` — the shepherd registers/removes sessions as it walks the workflow
 - **Shared with** `ShepherdServer` — the server holds a reference for `lookup` on incoming callbacks
 - Lifecycle: lives for the duration of one ticket's processing. Not persisted — `current_state.json`
-  handles persistence; `SessionsState` is rebuilt from it on resume.
+  handles persistence. V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) will rebuild `SessionsState`
+  from `current_state.json` on harness restart.
 
 ---
 
 ## Relationship to current_state.json
 
 `SessionsState` is **runtime-only** (in-memory). `current_state.json` (ref.ap.56azZbk7lAMll0D4Ot2G0.E)
-is the persistent record. On resume:
+is the persistent record.
 
-1. `TicketShepherdCreator` reads `current_state.json`
-2. For in-progress sub-parts, it respawns sessions (via resume flow in ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
-3. Each respawned session is registered into a fresh `SessionsState`
+V1: The two are independent — `TicketShepherd` writes to `current_state.json` at checkpoints for
+progress tracking, while `SessionsState` reflects live sessions only. No cross-run rebuild.
 
-The two are never in sync automatically — `TicketShepherd` writes to `current_state.json`
-explicitly at checkpoints, while `SessionsState` reflects live sessions only.
+V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) will read `current_state.json` on harness restart,
+respawn sessions for in-progress sub-parts, and register them into a fresh `SessionsState`.

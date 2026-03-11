@@ -1,7 +1,7 @@
 # SpawnTmuxAgentSessionUseCase — Design / ap.hZdTRho3gQwgIXxoUtTqy.E
 
 Orchestrates spawning an agent in a TMUX session, establishing identity via HandshakeGuid,
-and resolving the agent's session ID for future resume.
+and resolving the agent's session ID.
 
 **Implemented in**: `SpawnTmuxAgentSessionUseCase` (ref.ap.M1jzg6RlJkYL4hi8aXr7LnQA.E)
 
@@ -34,8 +34,8 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 Session records follow the [Session Record Schema](../schema/plan-and-current-state.md#session-record-schema--apmwzgc1hykvwu3ijqbtew4e) (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E) — the canonical definition for `sessionIds` entries including `handshake_guid`, `agent_session_id`, `agentType`, `model`, and `timestamp`.
 
-**Resume = use the last element** in the `sessionIds` array. The `agent_session_id` (or
-`agent_session_path`) plus `model` from that entry are used for the `--resume` invocation.
+The last element in the `sessionIds` array is the current session. Session history is tracked
+for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -72,22 +72,15 @@ the TMUX message.
 
 - Exactly one match required; zero (timeout) or multiple matches → `IllegalStateException`
 - Default timeout: 45 seconds, poll interval: 500ms
-- **Not used during resume** — session ID already known
-
 ---
 
-## Spawn Flow — Resume Session (after crash)
+## Agent Crash Recovery (V1)
 
-1. Harness reads last `sessionIds` entry from `current_state.json`
-2. Harness builds the TMUX start command:
-   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude --resume <agent_session_id>`
-3. Harness creates TMUX session running the command
-4. Skip AgentSessionIdResolver — session ID already known
-5. Harness writes instruction file, sends path via TMUX `send-keys`
-6. Flow continues from step 11 of the new session flow
+When `NoReplyToPingUseCase` detects an agent crash, the harness starts a **new** agent session
+for the same sub-part (full spawn flow above). No `--resume` attempt in V1.
 
-Note: on resume, the **same HandshakeGuid** from the original session is reused so
-the server-side registry remains valid.
+See [`doc_v2/resume.md`](../../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 layered
+resume with agent session `--resume` and handshake verification.
 
 ---
 
