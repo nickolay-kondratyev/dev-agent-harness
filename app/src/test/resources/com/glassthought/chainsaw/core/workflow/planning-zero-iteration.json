@@ -1,9 +1,0 @@
-{
-  "name": "planning-zero-iteration",
-  "planningPhases": [
-    { "role": "PLANNER" },
-    { "role": "PLAN_REVIEWER" }
-  ],
-  "planningIteration": { "max": 0 },
-  "executionPhasesFrom": "plan.json"
-}
