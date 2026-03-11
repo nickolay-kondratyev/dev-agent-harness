@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T21:09:20Z
 id: nid_d47u5pku4ldixx23tyggd29ep_E
 title: "Implement ResumeTmuxAgentSessionUseCase"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T00:30:19Z
-status_updated_iso: 2026-03-11T00:30:19Z
+status_updated_iso: 2026-03-11T21:09:20Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
