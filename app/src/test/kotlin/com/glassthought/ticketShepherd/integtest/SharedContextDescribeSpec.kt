@@ -29,7 +29,7 @@ data class SharedContextSpecConfig(
  *
  * ### When to use
  * - Use `SharedContextDescribeSpec` when your integration test needs `ChainsawContext`
- *   (e.g., `chainsawContext.infra.tmux.sessionManager`, `chainsawContext.infra.directLlm.glmDirectLLM`).
+ *   (e.g., `shepherdContext.infra.tmux.sessionManager`, `shepherdContext.infra.directLlm.glmDirectLLM`).
  * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ChainsawContext`.
  *
  * ### Example
@@ -37,7 +37,7 @@ data class SharedContextSpecConfig(
  * @OptIn(ExperimentalKotest::class)
  * class MyIntegTest : SharedContextDescribeSpec({
  *     describe("GIVEN my use case").config(isIntegTestEnabled()) {
- *         val sessionManager = chainsawContext.infra.tmux.sessionManager
+ *         val sessionManager = shepherdContext.infra.tmux.sessionManager
  *         describe("WHEN something happens") {
  *             it("THEN expected result") {
  *                 // assertion
@@ -60,7 +60,7 @@ abstract class SharedContextDescribeSpec(
 ) : AsgardDescribeSpec(
     // Safe cast: every SharedContextDescribeSpec IS an AsgardDescribeSpec.
     // Using SharedContextDescribeSpec as the receiver type allows subclass tests to access
-    // `chainsawContext` directly in their body lambda without a qualified `this` reference.
+    // `shepherdContext` directly in their body lambda without a qualified `this` reference.
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {

@@ -14,7 +14,7 @@ assignee: nickolaykondratyev
 
 # Chainsaw — High-Level Design (V1)
 
-Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
+Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
 
 ## Context
 
@@ -40,7 +40,7 @@ ap.mmcagXtg6ulznKYYNKlNP.E
 **picocli** for CLI parsing. V1 has a single subcommand:
 
 ```
-chainsaw run --workflow <name> --ticket <path>
+shepherd run --workflow <name> --ticket <path>
 ```
 
 - `--ticket` **(required)**: path to a ticket markdown file. Chainsaw always operates on a ticket.
@@ -100,7 +100,7 @@ CodeAgent.run(
 
 Server binds to **port 0** (OS-assigned). On startup, writes the assigned port to:
 ```
-$HOME/.chainsaw_agent_harness/server/port.txt
+$HOME/.shepherd_agent_harness/server/port.txt
 ```
 
 - `harness-cli-for-agent.sh` reads this file to construct the server URL
@@ -116,14 +116,14 @@ Server starts once at harness startup, stays alive across all phases.
 
 **`harness-cli-for-agent.sh`** — bash script wrapping curl calls:
 - Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
+- Reads port from `$HOME/.shepherd_agent_harness/server/port.txt`
 - Agent receives `--help` content in its instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
 
 ### Structured Text Delivery — Temp File Pattern
 
 All structured/formatted content sent to agents goes through temp files:
-- Write content to `$HOME/.chainsaw_agent_harness/tmp/agent_comm/<unique_name>.md`
+- Write content to `$HOME/.shepherd_agent_harness/tmp/agent_comm/<unique_name>.md`
 - Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
 - Applies to: instruction files, Q&A answers, any multi-line content
 - **Exception**: Simple single-line messages (e.g., Wingman GUID handshake) can be sent directly
@@ -145,7 +145,7 @@ All requests include the **git branch** as identifier (key for future parallelis
 2. CLI POSTs to `/agent/question` with branch + question text
 3. Harness presents question to human (stdout/interactive)
 4. Human answers (V1: human must be present; no autonomous fallback)
-5. Harness writes answer to temp file (`$HOME/.chainsaw_agent_harness/tmp/agent_comm/`)
+5. Harness writes answer to temp file (`$HOME/.shepherd_agent_harness/tmp/agent_comm/`)
 6. Harness sends file path to agent via TMUX `send-keys`
 7. Harness responds 200 to the blocked curl (unblocking agent CLI script)
 8. Agent reads temp file, continues
@@ -442,7 +442,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 ## Harness-Level Resume
 
 - `current_state.json` tracks which phase/part the workflow is currently in
-- On `chainsaw run`, if `current_state.json` exists for the given ticket+branch, offer to resume
+- On `shepherd run`, if `current_state.json` exists for the given ticket+branch, offer to resume
 - Resume skips completed phases, picks up from the last in-progress phase
 - More important than individual agent resume (which is deferred to V2)
 
@@ -459,7 +459,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
 | Session tracking | **Wingman interface** | `ClaudeCodeWingman` impl; abstracted for future agent types |
-| Package | **com.glassthought.chainsaw** | Chainsaw as sub-package under glassthought |
+| Package | **com.glassthought.shepherd** | Chainsaw as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
 | Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
@@ -470,13 +470,13 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 ## Cleanup Items
 
 - **Remove `InteractiveProcessRunner`** — prototype, TMUX is the only path
-- **Move classes from `org.example`** to `com.glassthought.chainsaw`
+- **Move classes from `org.example`** to `com.glassthought.shepherd`
 
 ---
 
 ## V1 Scope Summary
 
-1. CLI: `chainsaw run --workflow <name> --ticket <path>` (picocli)
+1. CLI: `shepherd run --workflow <name> --ticket <path>` (picocli)
 2. TMUX-based agent invocation (`CodeAgent` interface, `ClaudeCodeAgent` impl)
 3. Ktor CIO HTTP server (port 0, file-based discovery) for agent→harness callbacks (done/question/failed/status)
 4. Bash CLI script (`harness-cli-for-agent.sh`) for agents to call back (reads port from file)

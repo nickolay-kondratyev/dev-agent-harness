@@ -25,7 +25,7 @@ Implement branch name building from ticket data and git branch creation/checkout
   - `createAndCheckout(branchName: String)` — creates branch and checks it out
   - `getCurrentBranch(): String`
   - Uses `ProcessRunner` from asgardCore for git commands
-- Package: `com.glassthought.chainsaw.core.git`
+- Package: `com.glassthought.shepherd.core.git`
 
 ## Dependencies
 - Uses `TicketData` data class from Ticket Parser ticket (nid_r9on08uqjmumuc6wi2c53e8p9_E)
@@ -48,8 +48,8 @@ Implement branch name building from ticket data and git branch creation/checkout
   - Test: creates and checks out branch in a temp git repo
 
 ## Files touched
-- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/git/`
-- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/git/`
+- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/git/`
+- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/git/`
 - Does NOT touch `app/build.gradle.kts`
 
 ## Reference
@@ -65,10 +65,10 @@ As part of closing this ticket:
 **Completed.** All scope items implemented and tested.
 
 ### Files Created
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/git/BranchNameBuilder.kt` — Kotlin `object`, pure slugify + build
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/git/GitBranchManager.kt` — interface + `GitBranchManagerImpl` wrapping git CLI via ProcessRunner
-- `app/src/test/kotlin/com/glassthought/chainsaw/core/git/BranchNameBuilderTest.kt` — 17 unit tests
-- `app/src/test/kotlin/com/glassthought/chainsaw/core/git/GitBranchManagerIntegTest.kt` — 4 integration tests
+- `app/src/main/kotlin/com/glassthought/shepherd/core/git/BranchNameBuilder.kt` — Kotlin `object`, pure slugify + build
+- `app/src/main/kotlin/com/glassthought/shepherd/core/git/GitBranchManager.kt` — interface + `GitBranchManagerImpl` wrapping git CLI via ProcessRunner
+- `app/src/test/kotlin/com/glassthought/shepherd/core/git/BranchNameBuilderTest.kt` — 17 unit tests
+- `app/src/test/kotlin/com/glassthought/shepherd/core/git/GitBranchManagerIntegTest.kt` — 4 integration tests
 
 ### Anchor Point
 - Created: `ap.THL21SyZzJhzInG2m4zl2.E`

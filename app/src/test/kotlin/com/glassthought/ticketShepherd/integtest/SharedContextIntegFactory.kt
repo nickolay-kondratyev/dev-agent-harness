@@ -30,7 +30,7 @@ import java.io.File
 object SharedContextIntegFactory {
     internal val testOutManager: TestOutManager = TestOutManager.standard()
 
-    /** Shared chainsaw context.
+    /** Shared shepherd context.
      *
      *  Meant to be shared between the integration tests to keep the wire up of tests faster.
      *  */

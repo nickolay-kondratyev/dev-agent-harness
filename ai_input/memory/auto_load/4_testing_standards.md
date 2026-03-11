@@ -26,9 +26,9 @@
 - For integration tests requiring `ChainsawContext` (tmux, LLM, etc.), extend `SharedContextDescribeSpec` instead of `AsgardDescribeSpec` directly.
 - `SharedContextDescribeSpec` provides a shared singleton `ChainsawContext` and pre-configured `AsgardDescribeSpecConfig.FOR_INTEG_TEST` settings.
 - No config required — defaults pull from `SharedContextIntegFactory`.
-- Access shared deps via the `chainsawContext` property (e.g., `chainsawContext.infra.tmux.sessionManager`).
+- Access shared deps via the `shepherdContext` property (e.g., `shepherdContext.infra.tmux.sessionManager`).
 - See `SharedContextDescribeSpec` (ref.ap.20lFzpGIVAbuIXO5tUTBg.E) for full KDoc and examples.
-- Location: `app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedContextDescribeSpec.kt`
+- Location: `app/src/test/kotlin/com/glassthought/shepherd/integtest/SharedContextDescribeSpec.kt`
 
 ### Suspend Context
 - `describe` block bodies are **NOT** suspend contexts.

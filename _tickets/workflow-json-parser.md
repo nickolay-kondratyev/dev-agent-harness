@@ -26,7 +26,7 @@ Implement parsing of workflow JSON definitions into a domain model.
 - Add **Jackson + Kotlin module** dependency to `app/build.gradle.kts`
 - Workflow files live in `./config/workflows/<name>.json`
 - Resolution: `--workflow <name>` → loads `./config/workflows/<name>.json`
-- Package: `com.glassthought.chainsaw.core.workflow`
+- Package: `com.glassthought.shepherd.core.workflow`
 
 ## Dependencies
 - Ticket Parser (nid_r9on08uqjmumuc6wi2c53e8p9_E) must be merged first to avoid build.gradle.kts merge conflicts (both add dependencies)
@@ -48,8 +48,8 @@ Implement parsing of workflow JSON definitions into a domain model.
 
 ## Files touched
 - `app/build.gradle.kts` (add Jackson + kotlin-module dependency)
-- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/workflow/`
-- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/workflow/`
+- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/workflow/`
+- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/workflow/`
 - New files under `config/workflows/` (sample workflow definitions)
 
 ## Reference
@@ -63,7 +63,7 @@ As part of closing this ticket:
 
 ## Resolution
 
-Implemented `com.glassthought.chainsaw.core.workflow` package with:
+Implemented `com.glassthought.shepherd.core.workflow` package with:
 - `WorkflowDefinition` data class (ap.MyWV0mG6ZU8XaQOyo14l4.E): `name`, `parts?`, `planningPhases?`, `planningIteration?`, `executionPhasesFrom?`
 - `Part` data class: `name`, `description`, `phases: List<Phase>`, `iteration: IterationConfig`
 - `Phase` data class: `role: String`

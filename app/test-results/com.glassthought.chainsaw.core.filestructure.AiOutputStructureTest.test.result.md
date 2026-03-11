@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.chainsaw.core.filestructure.AiOutputStructureTest"
+spec: "com.glassthought.shepherd.core.filestructure.AiOutputStructureTest"
 status: PASSED
 failed: 0
 skipped: 0
