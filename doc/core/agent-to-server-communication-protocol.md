@@ -173,13 +173,23 @@ live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E) instances, keyed by Han
 When a callback arrives:
 
 1. Server looks up the HandshakeGuid in `SessionsState`
-2. Finds the associated `TmuxAgentSession` and sub-part context
-3. On `/callback-shepherd/done`: validates the `result` field against the sub-part's role
-4. Routes the callback to `TicketShepherd` which decides what to do next
-   (proceed to next sub-part, loop back, etc.)
+2. Finds the associated `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — includes sub-part context and `signalDeferred`
+3. Updates `lastActivityTimestamp` on the entry (for health monitoring)
+4. On `/callback-shepherd/done`: validates the `result` field against the sub-part's role,
+   then completes `entry.signalDeferred` with `AgentSignal.Done(result)`
+   (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
+5. On `/callback-shepherd/fail-workflow`: completes `entry.signalDeferred` with
+   `AgentSignal.FailWorkflow(reason)`
+6. On `/callback-shepherd/user-question`: side-channel — presents to human, delivers answer
+   via TMUX `send-keys`. Does **not** complete the deferred (executor stays suspended).
+7. On `/callback-shepherd/ping-ack`: side-channel — resets health timer only.
 
-This design naturally supports multiple concurrent agents — each has its own GUID and
-its own `TmuxAgentSession` entry in `SessionsState`.
+The server does **not** route to `TicketShepherd` directly for done/fail-workflow. It
+completes the `CompletableDeferred` on the `SessionEntry`, which wakes the suspended
+`PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E).
+
+This design naturally supports multiple concurrent agents — each has its own GUID, its
+own `TmuxAgentSession`, and its own `CompletableDeferred` in `SessionsState`.
 
 ---
 
