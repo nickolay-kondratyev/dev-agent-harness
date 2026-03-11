@@ -77,6 +77,7 @@ See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) f
 ## Sub-Agent Invocation — TMUX Only
 
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
+- Why TMUX: 1) to resume (CC --print is not resumable), 2) to observe live.
 
 - `CodeAgent` interface with `ClaudeCodeAgent` implementation
 - Leverages subscription pricing; interface allows swapping agent implementations
