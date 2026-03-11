@@ -1,11 +1,8 @@
 package org.example
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
-import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import java.io.File
@@ -13,18 +10,16 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tests for [TmuxCommunicatorImpl].
+ * Tests for [com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl].
  *
  * Requires tmux to be installed on the system. Uses bash sessions to verify
  * that keystrokes are delivered correctly.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxCommunicatorIntegTest : AsgardDescribeSpec({
+class TmuxCommunicatorIntegTest : SharedAppDepDescribeSpec({
 
     describe("GIVEN a tmux session running bash").config(isIntegTestEnabled()) {
-        val commandRunner = TmuxCommandRunner()
-        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+        val sessionManager = appDependencies.tmuxSessionManager
         val createdSessions = mutableListOf<TmuxSession>()
         val createdFiles = mutableListOf<File>()
 
