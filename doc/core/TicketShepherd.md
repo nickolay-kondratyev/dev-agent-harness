@@ -21,7 +21,7 @@ reacts to their signals, and decides what happens next.
 5. On `/callback-shepherd/fail-workflow` → delegates to `FailedToExecutePlanUseCase`
 6. On `/callback-shepherd/user-question` → presents to human, sends answer back via TMUX `send-keys`
 7. When a part completes, kills all TMUX sessions for that part
-8. Handles git commits between sub-parts
+8. Handles git commits via `GitCommitStrategy` — calls `onSubPartDone` / `onPartDone` hooks at the appropriate points. See [Git Commit Strategy](git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 
 ## Responsibilities
 
