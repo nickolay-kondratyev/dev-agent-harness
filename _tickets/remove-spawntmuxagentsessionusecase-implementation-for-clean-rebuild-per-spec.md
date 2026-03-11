@@ -41,3 +41,26 @@ The rebuilt test should follow this same pattern, adapted to the new interface (
 ## Spec for rebuild
 See ref.ap.hZdTRho3gQwgIXxoUtTqy.E for full spawn/resume flow, HandshakeGuid contract, and session schema.
 
+
+## Notes
+
+**2026-03-11T21:36:13Z**
+
+## Resolution
+
+Completed successfully. Removed all misaligned files and their orphaned dependencies:
+
+**Removed (10 files):**
+- `SpawnTmuxAgentSessionUseCase.kt` (the explicitly misaligned use case)
+- `StartAgentRequest.kt` + `PhaseType.kt` (data classes tied to the use case)
+- `AgentStarterBundleFactory.kt` + `AgentTypeChooser.kt` (interfaces exclusively supporting it)
+- `ClaudeCodeAgentStarterBundleFactory.kt` + `AgentStarterBundle.kt` (implementations)
+- `SpawnTmuxAgentSessionUseCaseIntegTest.kt` + 2 unit tests for removed factories
+
+**Modified (6 files):**
+- `Initializer.kt` — removed `UseCases` data class, simplified `initialize()` signature (dropped 3 params used only by removed bundle factory)
+- `SharedContextIntegFactory.kt` — updated to match new signature
+- `AppDependenciesCloseTest.kt` — updated to match new signature
+- KDoc cleanups in `TmuxAgentSession.kt`, `ClaudeCodeAgentStarter.kt`, `HandshakeGuid.kt`
+
+**Result:** Build SUCCESS, 115 tests pass, zero stale references remaining.
