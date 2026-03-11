@@ -14,7 +14,7 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 | **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
 | **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
 | **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [protocol doc](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E). |
-| **Orchestration Loop** | The harness-side logic that reads the workflow JSON, iterates through parts/sub-parts, spawns agents, reads reviewer verdicts, and manages state. Not an agent — a Kotlin process. |
+| **Orchestration Loop** | The harness-side logic that reads the workflow JSON, iterates through parts, and delegates each part to a `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E). The executor owns spawn/wait/iterate for its part. Server callbacks wake executors via `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). Not an agent — a Kotlin process. |
 
 ---
 
@@ -40,12 +40,12 @@ defines what needs to be done; the workflow defines how. Without a ticket, Sheph
 [`TicketShepherd`](core/TicketShepherd.md) (ref.ap.P3po8Obvcjw4IXsSUSU91.E) is the central
 coordinator that drives the entire workflow. It:
 
-- Walks through parts and sub-parts defined in the workflow JSON
-- Calls `SpawnTmuxAgentSessionUseCase` to spawn agents in TMUX sessions
-- Receives callbacks from the server when agents signal done/fail-workflow/user-question
-- Reads reviewer's `result` field on `/callback-shepherd/done` to drive iteration decisions (loop back or move on)
+- Sets up the plan via `SetupPlanUseCase` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) — runs planning executor if needed
+- Creates a [`PartExecutor`](core/PartExecutor.md) (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) for each part and calls `execute()`
+- Delegates the agent spawn → wait → iterate cycle to the executor (no inline iteration loop)
+- Server callbacks wake executors via `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
 - Manages file-based context (PUBLIC.md / SHARED_CONTEXT.md)
-- Handles git commits between sub-parts
+- Handles git commits between parts
 - Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
 
 The harness also runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for
@@ -300,8 +300,9 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Full agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, user-question flow, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type |
-| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, concurrency model, relationship to current_state.json |
-| [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
+| [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
+| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge, concurrency model, relationship to current_state.json |
+| [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, callback script spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

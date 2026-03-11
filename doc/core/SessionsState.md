@@ -2,8 +2,8 @@
 
 The in-memory registry of live agent sessions, keyed by `HandshakeGuid`
 (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). Bridges the HTTP server (which receives
-callbacks identified by GUID) with `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E)
-(which owns workflow context and makes decisions).
+callbacks identified by GUID) with `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E)
+(which is suspended on a `CompletableDeferred<AgentSignal>` waiting for the agent's signal).
 
 ---
 
@@ -13,10 +13,16 @@ When the server receives `/callback-shepherd/done` with a `handshakeGuid`, it ne
 
 1. Find the live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
 2. Know the sub-part's **role** (doer vs. reviewer) to validate the `result` field
-3. Route the callback to `TicketShepherd` with enough context to decide what happens next
+3. Complete the `signalDeferred` so the suspended `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) resumes
 
 `SessionsState` is this lookup table. It is the **single place** where GUID → session
 + sub-part context is resolved.
+
+The server does **not** route `/callback-shepherd/done` or `/callback-shepherd/fail-workflow`
+to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
+(ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
+`/callback-shepherd/user-question` is still handled as a side-channel (server presents to
+human, delivers answer via TMUX `send-keys` — the executor stays suspended).
 
 ---
 
@@ -33,10 +39,22 @@ server-side validation and shepherd-side decision making.
 | `partName` | `String` | Which part this session belongs to (e.g., `"ui_design"`, `"main"`) |
 | `subPartName` | `String` | Sub-part name (e.g., `"impl"`, `"review"`) |
 | `subPartRole` | `SubPartRole` | `DOER` or `REVIEWER` — derived from position in sub-parts array (first = DOER, second = REVIEWER) |
+| `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/done` or `/fail-workflow`, or by health monitor on crash detection. The executor suspends on `.await()`. |
+| `lastActivityTimestamp` | `Instant` | Updated by the server on **every** callback (`done`, `fail-workflow`, `user-question`, `ping-ack`). Read by the health monitor to decide when to ping and when to declare crash. Resets the health timeout even during user-question side-channel interactions. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/done`
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers
 send `pass` or `needs_iteration`.
+
+### signalDeferred Lifecycle
+
+1. **Created by** the `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) before spawning the agent
+2. **Registered** on the `SessionEntry` in `SessionsState`
+3. **Completed by** the server (on `/callback-shepherd/done` or `/callback-shepherd/fail-workflow`)
+   or by the health monitor (on crash detection)
+4. **Awaited by** the executor — `deferred.await()` suspends the executor coroutine until completion
+5. **Replaced** on iteration: when the reviewer signals `needs_iteration`, the executor creates a
+   fresh `CompletableDeferred` and re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
 
 ---
 
@@ -44,8 +62,8 @@ send `pass` or `needs_iteration`.
 
 | Operation | Caller | Description |
 |-----------|--------|-------------|
-| `register(guid, entry)` | `TicketShepherd` (after spawn) | Adds a session to the registry |
-| `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only. |
+| `register(guid, entry)` | `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) (after spawn, and on each iteration with fresh deferred) | Adds or updates a session in the registry |
+| `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
 | `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part |
 
 ---
@@ -54,10 +72,11 @@ send `pass` or `needs_iteration`.
 
 ### Access Pattern
 
-- **Server** (Ktor coroutine dispatcher): calls `lookup` — **read-only**
-- **TicketShepherd** (orchestration coroutine): calls `register`, `removeAllForPart` — **read-write**
+- **Server** (Ktor coroutine dispatcher): calls `lookup`, then completes `signalDeferred` and updates `lastActivityTimestamp`
+- **PartExecutor** (orchestration coroutine): calls `register` (on spawn and on each iteration)
+- **TicketShepherd** (orchestration coroutine): calls `removeAllForPart` — **read-write**
 - V1: strictly serial execution (one agent at a time), but server callbacks arrive on Ktor's
-  dispatcher concurrently with the shepherd's orchestration coroutine.
+  dispatcher concurrently with the executor's orchestration coroutine.
 
 ### Decision: `MutableSynchronizedMap` Is Sufficient
 

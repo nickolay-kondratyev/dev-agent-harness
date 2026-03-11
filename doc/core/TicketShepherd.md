@@ -1,44 +1,65 @@
 # TicketShepherd / ap.P3po8Obvcjw4IXsSUSU91.E
 
 The central coordinator that drives a ticket through its entire workflow lifecycle.
-`TicketShepherd` is the one moving ticket through the motions — it walks the workflow, spawns agents,
-reacts to their signals, and decides what happens next.
+`TicketShepherd` is the one moving ticket through the motions — it sets up the plan,
+creates executors for each part, runs them in sequence, and handles the results.
 
 ## How It Drives the Workflow
 
 1. Initial setup (branch creation, `current_state.json` initialization)
-2. Iterates through the parts in order
-3. For each part, iterates through sub-parts:
-   - Calls `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) to spawn the agent
-   - Sends instructions via TMUX `send-keys`
-   - Waits for agent callback (`/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/user-question`)
-4. On `/callback-shepherd/done`: reads `result` field, validates against sub-part role:
-   - `result: "completed"` (doer) → move to reviewer (or complete part if single sub-part)
-   - `result: "pass"` (reviewer) → move to next part
-   - `result: "needs_iteration"` (reviewer) → check iteration counter:
-     - Within budget → resume doer's TMUX session with new instructions, then resume reviewer
-     - Exceeds `iteration.max` → `FailedToConvergeUseCase`
-5. On `/callback-shepherd/fail-workflow` → delegates to `FailedToExecutePlanUseCase`
-6. On `/callback-shepherd/user-question` → presents to human, sends answer back via TMUX `send-keys`
-7. When a part completes, kills all TMUX sessions for that part
-8. Handles git commits between sub-parts
+2. `SetupPlanUseCase` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `SetupPlanResult`
+   (ref.ap.evYmpQfliHCHUTdK2QRgS.E)
+3. If `SetupPlanResult.NeedsPlanning`:
+   a. `activeExecutor` = planning executor (a `DoerReviewerPartExecutor`
+      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER)
+   b. `planningExecutor.execute()` — runs the planning iteration loop
+   c. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
+4. For each execution Part:
+   a. Create `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
+      - 2 sub-parts → `DoerReviewerPartExecutor`
+      - 1 sub-part → `SingleDoerPartExecutor`
+   b. `activeExecutor` = executor
+   c. `executor.execute()` → `PartResult`
+   d. Handle `PartResult`:
+      - `Completed` → kill TMUX sessions for part, git commit, move to next part
+      - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase`
+      - `FailedToConverge` → delegate to `FailedToConvergeUseCase`
+      - `AgentCrashed` → attempt recovery or abort
+5. On all parts completed → workflow done
+
+## Fields
+
+| Field | Type | Purpose |
+|-------|------|---------|
+| `activeExecutor` | `PartExecutor?` | The currently running executor. Single reference point for health monitoring and cancellation. `null` between parts. |
 
 ## Responsibilities
 
 - **Owns `SessionsState`** (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — tracks live `TmuxAgentSession`
   (ref.ap.DAwDPidjM0HMClPDSldXt.E) instances, keyed by HandshakeGuid.
-- **Receives server callbacks** — the `ShepherdServer` routes agent callbacks (`/callback-shepherd/done`,
-  `/callback-shepherd/user-question`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/ping-ack`)
-  to `TicketShepherd` after looking up the HandshakeGuid in `SessionsState`.
 - **Orchestrates use cases** — calls use cases for discrete operations; the shepherd makes
   the decisions, use cases do the work.
-- **Drives iteration decisions** — on `/callback-shepherd/done`, reads the reviewer's `result`
-  field to determine whether to loop back (resume doer session) or proceed to the next
-  sub-part/part. The reviewer's verdict is authoritative — no LLM evaluation in this path.
-- **Manages part lifecycle** — spawns TMUX sessions for sub-parts within a part, keeps them
-  alive across iterations, and kills them when the part completes.
+- **Delegates iteration to PartExecutor** — does NOT drive the doer↔reviewer loop directly.
+  Creates an appropriate `PartExecutor` for each part and calls `execute()`. The executor
+  owns the spawn → wait → iterate cycle internally.
+- **Manages part lifecycle** — creates executors, kills TMUX sessions when a part completes
+  (`removeAllForPart`), handles git commits between parts.
 - **Monitors agent health** — triggers `NoStatusCallbackTimeOutUseCase` and
-  `NoReplyToPingUseCase` when agents go silent.
+  `NoReplyToPingUseCase` when agents go silent. The `activeExecutor` reference tells the
+  health monitor which executor's deferred to complete with `AgentSignal.Crashed`
+  (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E).
+- **Controls which executor is active** — always holds a single `activeExecutor` reference,
+  giving health monitoring and cancellation one place to look.
+
+## What TicketShepherd Does NOT Do
+
+- Does **not** interpret `/callback-shepherd/done` results directly — the server completes
+  the `signalDeferred` on `SessionEntry`, and the executor reads the `AgentSignal`.
+- Does **not** assemble agent instructions — delegates to `SubPartInstructionProvider`
+  (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) via the executor.
+- Does **not** run the planning iteration loop itself — delegates to a planning
+  `DoerReviewerPartExecutor` created by `DetailedPlanningUseCase`
+  (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E).
 
 ## Dependencies
 
