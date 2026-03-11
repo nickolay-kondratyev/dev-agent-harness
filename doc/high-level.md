@@ -98,7 +98,7 @@ CodeAgent.run(
 ---
 
 ## Agent↔Harness Communication — Bidirectional
-<!-- ref.ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
+<!-- ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
 Communication between agents and the harness is bidirectional through two distinct channels:
 **Agent → Harness** via HTTP POST (`callback_shepherd.*.sh` scripts wrapping curl), and
@@ -238,7 +238,7 @@ interface is responsible for assembling instruction files for agents:
 - PLAN_REVIEWER instructions (includes `plan.json` from `harness_private/`)
 
 ### Role Catalog — Auto-Discovered
-<!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
+<!-- ap.iF4zXT5FUcqOzclp5JVHj.E -->
 
 - Every Markdown file in `$TICKET_SHEPHERD_AGENTS_DIR` is an eligible role
 - Extract `description` (required) and `description_long` (optional) from YAML frontmatter
@@ -253,7 +253,7 @@ interface is responsible for assembling instruction files for agents:
 ---
 
 ## Git Branch / Feature Naming
-<!-- ref.ap.THL21SyZzJhzInG2m4zl2.E -->
+<!-- ap.THL21SyZzJhzInG2m4zl2.E -->
 
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
