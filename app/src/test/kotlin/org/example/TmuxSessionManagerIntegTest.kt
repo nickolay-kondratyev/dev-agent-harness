@@ -1,7 +1,7 @@
 package org.example
 
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
+import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 
@@ -12,10 +12,10 @@ import io.kotest.matchers.shouldBe
  * so they can run in CI environments.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxSessionManagerIntegTest : SharedAppDepDescribeSpec({
+class TmuxSessionManagerIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN TmuxSessionManager").config(isIntegTestEnabled()) {
-        val sessionManager = appDependencies.tmuxSessionManager
+        val sessionManager = chainsawContext.tmuxSessionManager
         val createdSessions = mutableListOf<TmuxSession>()
 
         afterEach {

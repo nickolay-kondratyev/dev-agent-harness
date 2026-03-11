@@ -2,7 +2,7 @@ package org.example
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
+import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import java.io.File
@@ -16,10 +16,10 @@ import kotlin.time.Duration.Companion.seconds
  * that keystrokes are delivered correctly.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxCommunicatorIntegTest : SharedAppDepDescribeSpec({
+class TmuxCommunicatorIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN a tmux session running bash").config(isIntegTestEnabled()) {
-        val sessionManager = appDependencies.tmuxSessionManager
+        val sessionManager = chainsawContext.tmuxSessionManager
         val createdSessions = mutableListOf<TmuxSession>()
         val createdFiles = mutableListOf<File>()
 

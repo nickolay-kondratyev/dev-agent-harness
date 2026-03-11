@@ -3,20 +3,20 @@ package com.glassthought.chainsaw.integtest
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
-import com.glassthought.chainsaw.core.initializer.AppDependencies
+import com.glassthought.chainsaw.core.initializer.ChainsawContext
 
 /**
- * Wraps [AsgardDescribeSpecConfig] with defaults pulled from [SharedAppDepIntegFactory].
+ * Wraps [AsgardDescribeSpecConfig] with defaults pulled from [SharedContextIntegFactory].
  *
  * Callers may override [asgardConfig] to customize individual spec behavior while
- * keeping the shared [SharedAppDepIntegFactory.testOutManager] in place.
+ * keeping the shared [SharedContextIntegFactory.testOutManager] in place.
  */
-data class SharedAppDepSpecConfig(
-    val asgardConfig: AsgardDescribeSpecConfig = SharedAppDepIntegFactory.buildDescribeSpecConfig(),
+data class SharedContextSpecConfig(
+    val asgardConfig: AsgardDescribeSpecConfig = SharedContextIntegFactory.buildDescribeSpecConfig(),
 )
 
 /**
- * Base class for integration tests that require [AppDependencies].
+ * Base class for integration tests that require [ChainsawContext].
  *
  * Extend this instead of [AsgardDescribeSpec] directly when your test needs access to
  * shared application-level dependencies (tmux, LLM, etc.).
@@ -24,8 +24,8 @@ data class SharedAppDepSpecConfig(
  * ### What it provides
  * - Pre-configured [AsgardDescribeSpecConfig.FOR_INTEG_TEST] settings (stop-on-first-failure,
  *   DEBUG log level, DATA_ERROR log level verification).
- * - A shared [AppDependencies] singleton via the [appDependencies] property.
- * - No config boilerplate — defaults are wired through [SharedAppDepIntegFactory].
+ * - A shared [ChainsawContext] singleton via the [chainsawContext] property.
+ * - No config boilerplate — defaults are wired through [SharedContextIntegFactory].
  *
  * ### When to use
  * - Use `SharedAppDepDescribeSpec` when your integration test needs `AppDependencies`
@@ -48,15 +48,15 @@ data class SharedAppDepSpecConfig(
  * ```
  *
  * ### Lifecycle note
- * The underlying [AppDependencies] is process-scoped and NOT closed between tests.
- * It is held for the entire JVM test process lifetime. See [SharedAppDepIntegFactory].
+ * The underlying [ChainsawContext] is process-scoped and NOT closed between tests.
+ * It is held for the entire JVM test process lifetime. See [SharedContextIntegFactory].
  *
  * ap.20lFzpGIVAbuIXO5tUTBg.E
  */
 @AnchorPoint("ap.20lFzpGIVAbuIXO5tUTBg.E")
-abstract class SharedAppDepDescribeSpec(
-    body: SharedAppDepDescribeSpec.() -> Unit,
-    config: SharedAppDepSpecConfig = SharedAppDepSpecConfig(),
+abstract class SharedContextDescribeSpec(
+    body: SharedContextDescribeSpec.() -> Unit,
+    config: SharedContextSpecConfig = SharedContextSpecConfig(),
 ) : AsgardDescribeSpec(
     // Safe cast: every SharedAppDepDescribeSpec IS an AsgardDescribeSpec.
     // Using SharedAppDepDescribeSpec as the receiver type allows subclass tests to access
@@ -64,5 +64,5 @@ abstract class SharedAppDepDescribeSpec(
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {
-    val appDependencies: AppDependencies = SharedAppDepIntegFactory.appDependencies
+    val chainsawContext: ChainsawContext = SharedContextIntegFactory.chainsawContext
 }
