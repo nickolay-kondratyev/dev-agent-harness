@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T23:05:00Z
 id: nid_7taro0wu8r440in4hoosv3rhj_E
 title: "Rebuild agent spawn flow against new sub-parts schema"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T14:27:13Z
-status_updated_iso: 2026-03-11T14:27:13Z
+status_updated_iso: 2026-03-11T23:05:00Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev

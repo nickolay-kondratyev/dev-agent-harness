@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T23:04:38Z
 id: nid_0vxob9hefy36mx7ughy93qw8i_E
 title: "Iterate on plan.json and workflow schema"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T01:39:11Z
-status_updated_iso: 2026-03-11T01:39:11Z
+status_updated_iso: 2026-03-11T23:04:38Z
 type: task
 priority: 2
 assignee: nickolaykondratyev
