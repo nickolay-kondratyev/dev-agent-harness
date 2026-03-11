@@ -63,6 +63,8 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
  *
  * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
  * @param outFactory Factory for structured logging.
+ * @param model The model string used when spawning the agent (e.g. "sonnet"). Stored in
+ *   [ResumableAgentSessionId] so the resume command can pass `--model <model>`.
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
  *
@@ -71,6 +73,7 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
 class ClaudeCodeAgentSessionIdResolver(
     claudeProjectsDir: Path,
     outFactory: OutFactory,
+    private val model: String,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
 ) : AgentSessionIdResolver {
@@ -79,11 +82,13 @@ class ClaudeCodeAgentSessionIdResolver(
     constructor(
         guidScanner: GuidScanner,
         outFactory: OutFactory,
+        model: String,
         resolveTimeoutMs: Long = 45_000L,
         pollIntervalMs: Long = 500L,
     ) : this(
         claudeProjectsDir = PLACEHOLDER_PATH,
         outFactory = outFactory,
+        model = model,
         resolveTimeoutMs = resolveTimeoutMs,
         pollIntervalMs = pollIntervalMs,
     ) {
@@ -122,7 +127,7 @@ class ClaudeCodeAgentSessionIdResolver(
                     "session_id_resolved",
                     Val(sessionId, ValType.STRING_USER_AGNOSTIC),
                 )
-                ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
+                ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, model)
             }
             else -> {
                 val filenames = matchingFiles.map { it.fileName.toString() }

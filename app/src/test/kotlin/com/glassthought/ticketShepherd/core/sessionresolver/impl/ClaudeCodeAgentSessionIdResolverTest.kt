@@ -14,6 +14,8 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 
+private const val TEST_MODEL = "test-model-sonnet"
+
 class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
 
     describe("GIVEN a ClaudeCodeAgentSessionIdResolver with a temp projects directory") {
@@ -31,11 +33,12 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                         )
 
                         val result = resolver.resolveSessionId(guid)
 
-                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
+                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
                 }
             }
@@ -53,6 +56,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
@@ -71,6 +75,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
@@ -97,6 +102,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                         )
 
                         shouldThrow<IllegalStateException> {
@@ -117,6 +123,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
@@ -143,11 +150,12 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                         )
 
                         val result = resolver.resolveSessionId(guid)
 
-                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
+                        result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
                 }
             }
@@ -167,6 +175,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
+                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
@@ -194,12 +203,13 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
+                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
                     val result = resolver.resolveSessionId(guid)
 
-                    result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, "abc-session-id-123")
+                    result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, "abc-session-id-123", TEST_MODEL)
                 }
 
                 it("THEN polls more than once before finding the match") {
@@ -211,6 +221,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
+                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
@@ -232,6 +243,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
+                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
@@ -253,6 +265,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
+                      model = TEST_MODEL,
                       resolveTimeoutMs = 100L,
                       pollIntervalMs = 10L,
                     )
@@ -271,6 +284,7 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
+                      model = TEST_MODEL,
                       resolveTimeoutMs = 100L,
                       pollIntervalMs = 10L,
                     )

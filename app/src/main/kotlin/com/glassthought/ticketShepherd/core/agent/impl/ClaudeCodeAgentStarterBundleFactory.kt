@@ -37,10 +37,12 @@ class ClaudeCodeAgentStarterBundleFactory(
             "ClaudeCodeAgentStarterBundleFactory only supports CLAUDE_CODE, got [$agentType]"
         }
 
+        val model = if (environment.isTest) TEST_MODEL else PRODUCTION_MODEL
+
         val starter = if (environment.isTest) {
             ClaudeCodeAgentStarter(
                 workingDir = request.workingDir,
-                model = TEST_MODEL,
+                model = model,
                 tools = TEST_TOOLS,
                 systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = false,
@@ -49,7 +51,7 @@ class ClaudeCodeAgentStarterBundleFactory(
         } else {
             ClaudeCodeAgentStarter(
                 workingDir = request.workingDir,
-                model = PRODUCTION_MODEL,
+                model = model,
                 tools = PRODUCTION_TOOLS,
                 systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = true,
@@ -60,6 +62,7 @@ class ClaudeCodeAgentStarterBundleFactory(
         val sessionIdResolver = ClaudeCodeAgentSessionIdResolver(
             claudeProjectsDir = claudeProjectsDir,
             outFactory = outFactory,
+            model = model,
         )
 
         return AgentStarterBundle(
