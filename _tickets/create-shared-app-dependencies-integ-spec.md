@@ -1,12 +1,12 @@
 ---
-closed_iso: 2026-03-11T14:41:05Z
+closed_iso: 2026-03-11T14:52:07Z
 id: nid_q1s3us9fsufo5uglosuthzkr4_E
 title: "Create shared app dependencies integ spec"
 status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T13:19:44Z
-status_updated_iso: 2026-03-11T14:41:05Z
+status_updated_iso: 2026-03-11T14:52:07Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -94,3 +94,24 @@ class AppDependencies(
 Which will be shared across tests.
 
 We will encapsulate the information on usage of the `SharedAppDepDescribeSpec` in `SharedAppDepDescribeSpec` KDoc and point to it by name and anchor point from auto loaded memory.
+## Notes
+
+**2026-03-11T14:52:03Z**
+
+Resolution: Implementation complete on branch CC_nid_q1s3us9fsufo5uglosuthzkr4_E__create-shared-app-dependencies-integ-spec_sonnet-v4.6
+
+## Created Files
+- app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedAppDepIntegFactory.kt
+- app/src/test/kotlin/com/glassthought/chainsaw/integtest/SharedAppDepDescribeSpec.kt (anchor: ap.20lFzpGIVAbuIXO5tUTBg.E)
+
+## Modified Files
+- app/src/main/kotlin/com/glassthought/chainsaw/core/initializer/Initializer.kt (outFactory as required parameter)
+- app/src/main/kotlin/com/glassthought/chainsaw/cli/AppMain.kt
+- app/src/test/kotlin/org/example/SpawnTmuxAgentSessionUseCaseIntegTest.kt (migrated to SharedAppDepDescribeSpec)
+- app/src/test/kotlin/org/example/TmuxCommunicatorIntegTest.kt (migrated)
+- app/src/test/kotlin/org/example/TmuxSessionManagerIntegTest.kt (migrated)
+- ai_input/memory/auto_load/4_testing_standards.md (added guidance section)
+
+## Follow-up Tickets
+- nid_nwg1em2siekphpqeeuhrtl5wk_E: Fix logging violations in SpawnTmuxAgentSessionUseCaseIntegTest
+- nid_g3z2de5zpq5dz608l9c651tam_E: Fix resource leak in CallGLMApiSandboxMain
