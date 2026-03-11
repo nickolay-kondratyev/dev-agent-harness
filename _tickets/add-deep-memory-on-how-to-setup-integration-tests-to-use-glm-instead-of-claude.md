@@ -39,3 +39,6 @@ We should be able to something like it when we stand up tmux sessions in our int
 This task is to create DEEP memory that 
 1) we prefer to use GLM for integration in tests of running actual agents.
 2) setup a reference to above setup on how we have set up claude code to run with GLM successfully in shell.
+
+
+no-review
