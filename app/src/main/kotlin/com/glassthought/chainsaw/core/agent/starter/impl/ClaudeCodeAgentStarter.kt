@@ -12,10 +12,10 @@ import com.glassthought.chainsaw.core.agent.starter.AgentStarter
  * @param workingDir Directory the agent operates in. Used as `cd` target before launching claude.
  * @param model Claude model alias (e.g., "sonnet", "opus").
  * @param allowedTools Tools the agent is allowed to use (e.g., ["Read", "Write"]).
- * @param systemPromptFilePath Path to the system prompt file, or null to use default.
- * @param appendSystemPrompt When true, uses `--append-system-prompt-file` (preserves built-in prompt).
- *                           When false, uses `--system-prompt-file` (replaces built-in prompt).
- *                           Ignored when [systemPromptFilePath] is null.
+ * @param systemPrompt System prompt text, or null to use Claude's default prompt.
+ * @param appendSystemPrompt When true, uses `--append-system-prompt` (preserves built-in prompt).
+ *                           When false, uses `--system-prompt` (replaces built-in prompt).
+ *                           Ignored when [systemPrompt] is null.
  * @param dangerouslySkipPermissions When true, adds `--dangerously-skip-permissions` flag.
  *                                   Required for non-interactive tmux usage.
  */
@@ -23,7 +23,7 @@ class ClaudeCodeAgentStarter(
     private val workingDir: String,
     private val model: String,
     private val allowedTools: List<String>,
-    private val systemPromptFilePath: String?,
+    private val systemPrompt: String?,
     private val appendSystemPrompt: Boolean,
     private val dangerouslySkipPermissions: Boolean,
 ) : AgentStarter {
@@ -39,14 +39,15 @@ class ClaudeCodeAgentStarter(
             parts.add(allowedTools.joinToString(","))
         }
 
-        if (systemPromptFilePath != null) {
+        if (systemPrompt != null) {
             val flag = if (appendSystemPrompt) {
-                "--append-system-prompt-file"
+                "--append-system-prompt"
             } else {
-                "--system-prompt-file"
+                "--system-prompt"
             }
             parts.add(flag)
-            parts.add(systemPromptFilePath)
+            // Shell-quote the prompt to handle spaces and special characters.
+            parts.add("\"${escapeForDoubleQuote(systemPrompt)}\"")
         }
 
         if (dangerouslySkipPermissions) {
@@ -54,8 +55,10 @@ class ClaudeCodeAgentStarter(
         }
 
         val claudeCommand = parts.joinToString(" ")
-        // Wrap in bash -c with cd to set the working directory for the agent.
-        val fullCommand = "bash -c 'cd ${escapeForShell(workingDir)} && $claudeCommand'"
+        // [unset CLAUDECODE]: Claude Code refuses to start when the CLAUDECODE env var is set
+        // (nested session detection). The harness spawns Claude in a tmux session which inherits
+        // the parent environment, so we must explicitly unset it.
+        val fullCommand = "bash -c 'cd ${escapeForShell(workingDir)} && unset CLAUDECODE && $claudeCommand'"
 
         return TmuxStartCommand(fullCommand)
     }
@@ -67,5 +70,15 @@ class ClaudeCodeAgentStarter(
          */
         private fun escapeForShell(value: String): String =
             value.replace("'", "'\\''")
+
+        /**
+         * Escapes a string for safe inclusion inside double quotes within a bash command.
+         */
+        private fun escapeForDoubleQuote(value: String): String =
+            value
+                .replace("\\", "\\\\")
+                .replace("\"", "\\\"")
+                .replace("$", "\\$")
+                .replace("`", "\\`")
     }
 }

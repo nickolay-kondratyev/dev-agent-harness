@@ -1,7 +1,6 @@
 package com.glassthought.chainsaw.core.agent.starter.impl
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 
@@ -12,7 +11,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/home/user/project",
             model = "sonnet",
             allowedTools = listOf("Read", "Write"),
-            systemPromptFilePath = "/path/to/prompt.txt",
+            systemPrompt = "You are a test agent.",
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
@@ -28,8 +27,9 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
                 command shouldContain "--allowedTools Read,Write"
             }
 
-            it("THEN command contains --system-prompt-file") {
-                command shouldContain "--system-prompt-file /path/to/prompt.txt"
+            it("THEN command contains --system-prompt with the prompt text") {
+                command shouldContain "--system-prompt"
+                command shouldContain "You are a test agent."
             }
 
             it("THEN command contains --dangerously-skip-permissions") {
@@ -37,7 +37,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             }
 
             it("THEN command starts with bash -c and includes cd to working dir") {
-                command shouldContain "bash -c 'cd /home/user/project && claude"
+                command shouldContain "bash -c 'cd /home/user/project && unset CLAUDECODE && claude"
             }
         }
     }
@@ -47,7 +47,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/home/user/project",
             model = "opus",
             allowedTools = listOf("Bash", "Edit", "Read"),
-            systemPromptFilePath = "/path/to/prod-prompt.txt",
+            systemPrompt = "Additional context for the agent.",
             appendSystemPrompt = true,
             dangerouslySkipPermissions = true,
         )
@@ -55,24 +55,25 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN command contains --append-system-prompt-file") {
-                command shouldContain "--append-system-prompt-file /path/to/prod-prompt.txt"
+            it("THEN command contains --append-system-prompt") {
+                command shouldContain "--append-system-prompt"
+                command shouldContain "Additional context for the agent."
             }
 
-            it("THEN command does NOT contain --system-prompt-file (without append prefix)") {
+            it("THEN command does NOT contain bare --system-prompt (without append prefix)") {
                 // Remove the append variant to check for the non-append variant
-                val withoutAppend = command.replace("--append-system-prompt-file", "")
-                withoutAppend shouldNotContain "--system-prompt-file"
+                val withoutAppend = command.replace("--append-system-prompt", "")
+                withoutAppend shouldNotContain "--system-prompt"
             }
         }
     }
 
-    describe("GIVEN ClaudeCodeAgentStarter without system prompt file") {
+    describe("GIVEN ClaudeCodeAgentStarter without system prompt") {
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/tmp/test",
             model = "sonnet",
             allowedTools = listOf("Read"),
-            systemPromptFilePath = null,
+            systemPrompt = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = false,
         )
@@ -80,12 +81,12 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN command does not contain --system-prompt-file") {
-                command shouldNotContain "--system-prompt-file"
+            it("THEN command does not contain --system-prompt") {
+                command shouldNotContain "--system-prompt"
             }
 
-            it("THEN command does not contain --append-system-prompt-file") {
-                command shouldNotContain "--append-system-prompt-file"
+            it("THEN command does not contain --append-system-prompt") {
+                command shouldNotContain "--append-system-prompt"
             }
 
             it("THEN command does not contain --dangerously-skip-permissions") {
@@ -99,7 +100,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/tmp/test",
             model = "sonnet",
             allowedTools = emptyList(),
-            systemPromptFilePath = null,
+            systemPrompt = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
