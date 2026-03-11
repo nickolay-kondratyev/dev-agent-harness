@@ -93,12 +93,15 @@ interface Initializer {
      * @param environment Runtime environment (test vs production).
      * @param systemPromptFilePath Absolute path to a system prompt file for the agent CLI, or null for default behavior.
      * @param claudeProjectsDir Directory where Claude stores session JSONL files.
+     * @param httpClient Custom [OkHttpClient] to use for LLM API calls, or null to create a default one.
+     *   Primarily useful for tests that need to verify resource cleanup behavior.
      */
     suspend fun initialize(
         outFactory: OutFactory,
         environment: Environment = Environment.production(),
         systemPromptFilePath: String? = null,
         claudeProjectsDir: Path = Path.of(System.getProperty("user.home"), ".claude", "projects"),
+        httpClient: OkHttpClient? = null,
     ): ChainsawContext
 
     companion object {
@@ -113,11 +116,12 @@ class InitializerImpl : Initializer {
         environment: Environment,
         systemPromptFilePath: String?,
         claudeProjectsDir: Path,
+        httpClient: OkHttpClient?,
     ): ChainsawContext {
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
         return out.time(
-            { initializeImpl(outFactory, environment, systemPromptFilePath, claudeProjectsDir) },
+            { initializeImpl(outFactory, environment, systemPromptFilePath, claudeProjectsDir, httpClient) },
             "initializer.initialize",
         )
     }
@@ -127,6 +131,7 @@ class InitializerImpl : Initializer {
         environment: Environment,
         systemPromptFilePath: String?,
         claudeProjectsDir: Path,
+        httpClient: OkHttpClient?,
     ): ChainsawContext {
         // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
@@ -139,7 +144,7 @@ class InitializerImpl : Initializer {
             sessionManager = sessionManager,
         )
 
-        val httpClient = OkHttpClient.Builder()
+        val httpClient = httpClient ?: OkHttpClient.Builder()
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 

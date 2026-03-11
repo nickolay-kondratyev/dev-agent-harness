@@ -35,7 +35,7 @@ data class SharedContextSpecConfig(
  * ### Example
  * ```kotlin
  * @OptIn(ExperimentalKotest::class)
- * class MyIntegTest : SharedAppDepDescribeSpec({
+ * class MyIntegTest : SharedContextDescribeSpec({
  *     describe("GIVEN my use case").config(isIntegTestEnabled()) {
  *         val sessionManager = chainsawContext.infra.tmux.sessionManager
  *         describe("WHEN something happens") {
@@ -58,9 +58,9 @@ abstract class SharedContextDescribeSpec(
     body: SharedContextDescribeSpec.() -> Unit,
     config: SharedContextSpecConfig = SharedContextSpecConfig(),
 ) : AsgardDescribeSpec(
-    // Safe cast: every SharedAppDepDescribeSpec IS an AsgardDescribeSpec.
-    // Using SharedAppDepDescribeSpec as the receiver type allows subclass tests to access
-    // `appDependencies` directly in their body lambda without a qualified `this` reference.
+    // Safe cast: every SharedContextDescribeSpec IS an AsgardDescribeSpec.
+    // Using SharedContextDescribeSpec as the receiver type allows subclass tests to access
+    // `chainsawContext` directly in their body lambda without a qualified `this` reference.
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {
