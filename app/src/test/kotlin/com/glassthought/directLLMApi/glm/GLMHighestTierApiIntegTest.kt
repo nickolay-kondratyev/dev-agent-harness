@@ -26,8 +26,6 @@ class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
                 "Integration test requires [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] environment variable to be set"
             )
 
-        val config = Constants.getConfigurationObject()
-
         val httpClient = OkHttpClient.Builder()
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
@@ -35,8 +33,8 @@ class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
         val api = GLMHighestTierApi(
           outFactory = outFactory,
           httpClient = httpClient,
-          modelName = config.zAiGlmConfig.modelName,
-          maxTokens = config.zAiGlmConfig.maxTokens,
+          modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,
+          maxTokens = Constants.resolveMaxTokens(),
           apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
           apiToken = apiToken,
         )

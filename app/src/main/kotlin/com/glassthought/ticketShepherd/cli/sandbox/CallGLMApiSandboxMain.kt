@@ -5,7 +5,7 @@ import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatRequest
 import com.glassthought.ticketShepherd.core.initializer.Initializer
 
 suspend fun main(args: Array<String>) {
-  val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.glmDirectLLM
+  val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.budgetHigh
 
 
   llm.call(ChatRequest("Say hello in Russian")).also { response ->

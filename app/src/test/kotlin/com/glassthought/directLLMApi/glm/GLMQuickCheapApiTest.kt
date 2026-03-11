@@ -1,24 +1,24 @@
 package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectQuickCheapLLM
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMQuickCheapApi
 import io.kotest.matchers.types.shouldBeInstanceOf
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
- * Unit tests for [GLMHighestTierApi] using MockWebServer to verify
+ * Unit tests for [GLMQuickCheapApi] using MockWebServer to verify
  * HTTP request construction and response parsing without real network calls.
  *
  * Shared HTTP contract tests are in [glmApiHttpContractTests].
  */
-class GLMHighestTierApiTest : AsgardDescribeSpec({
+class GLMQuickCheapApiTest : AsgardDescribeSpec({
 
-    val modelName = "glm-5"
+    val modelName = "glm-4.7-flash"
 
     glmApiHttpContractTests(modelName) { outFactory, httpClient, model, maxTokens, endpoint, token ->
-        GLMHighestTierApi(
+        GLMQuickCheapApi(
             outFactory = outFactory,
             httpClient = httpClient,
             modelName = model,
@@ -28,9 +28,9 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
         )
     }
 
-    describe("GIVEN a GLMHighestTierApi instance") {
-        it("THEN it implements DirectBudgetHighLLM") {
-            val api = GLMHighestTierApi(
+    describe("GIVEN a GLMQuickCheapApi instance") {
+        it("THEN it implements DirectQuickCheapLLM") {
+            val api = GLMQuickCheapApi(
                 outFactory = outFactory,
                 httpClient = OkHttpClient.Builder().readTimeout(5, TimeUnit.SECONDS).build(),
                 modelName = modelName,
@@ -39,7 +39,7 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
                 apiToken = "test-token-123",
             )
 
-            api.shouldBeInstanceOf<DirectBudgetHighLLM>()
+            api.shouldBeInstanceOf<DirectQuickCheapLLM>()
         }
     }
 })
