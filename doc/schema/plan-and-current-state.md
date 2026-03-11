@@ -208,7 +208,7 @@ no kill/respawn between iterations. The session is killed only when the **part**
 
 - **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
   including relevant context in its output.
-- **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
-  changes is preserved in git — no need for versioned files.
+- **Trackability via git**: The harness commits via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E),
+  so the full history of `PUBLIC.md` changes is preserved in git — no need for versioned files.
 - The TMUX session stays alive — the agent receives updated instructions via `send-keys` and
   retains its full conversation history across iterations of the same sub-part.

@@ -45,7 +45,7 @@ coordinator that drives the entire workflow. It:
 - Delegates the agent spawn → wait → iterate cycle to the executor (no inline iteration loop)
 - Server callbacks wake executors via `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
 - Manages file-based context (PUBLIC.md / SHARED_CONTEXT.md)
-- Handles git commits between parts
+- Handles git commits via pluggable `GitCommitStrategy` — see [Git Commit Strategy](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E)
 - Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
 
 The harness also runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for
@@ -262,6 +262,18 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 - `try-{N}`: starts at 1, incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
 - Delimiter between components: `__` (double underscore)
 
+## Git Commit Strategy
+
+Harness owns all git commits — agents never commit. Commit timing, message format, and author
+attribution are fully specified in [`doc/core/git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+
+**Key points:**
+- Pluggable `GitCommitStrategy` interface with hooks: `onSubPartDone`, `onPartDone`
+- V1 default: `CommitPerSubPart` (maximum iteration history granularity)
+- Commits the entire working tree (`git add -A`)
+- Commit author encodes agent type, model, version, and host user (e.g., `CC_sonnet-v4.6_WITH-nickolaykondratyev`)
+- Requires `HOST_USERNAME` and `MODEL_VERSION_DIR` env vars — validated at initialization (fail hard)
+
 ## Harness-Level Resume
 
 - `current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs
@@ -289,6 +301,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation |
 | Callback scripts | **One script per endpoint** | `callback_shepherd.*.sh` — focused, self-documenting, no flag parsing |
+| Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 
 ---
 
@@ -304,5 +317,6 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge, concurrency model, relationship to current_state.json |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
+| [`doc/core/git.md`](core/git.md) | Git commit strategy — timing, message format, author attribution, model version resolution, env var requirements |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, callback script spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

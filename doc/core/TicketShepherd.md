@@ -21,7 +21,7 @@ creates executors for each part, runs them in sequence, and handles the results.
    b. `activeExecutor` = executor
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
-      - `Completed` → kill TMUX sessions for part, git commit, move to next part
+      - `Completed` → kill TMUX sessions for part, `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase`
       - `FailedToConverge` → delegate to `FailedToConvergeUseCase`
       - `AgentCrashed` → attempt recovery or abort
@@ -43,7 +43,7 @@ creates executors for each part, runs them in sequence, and handles the results.
   Creates an appropriate `PartExecutor` for each part and calls `execute()`. The executor
   owns the spawn → wait → iterate cycle internally.
 - **Manages part lifecycle** — creates executors, kills TMUX sessions when a part completes
-  (`removeAllForPart`), handles git commits between parts.
+  (`removeAllForPart`), triggers `GitCommitStrategy` hooks (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 - **Monitors agent health** — triggers `NoStatusCallbackTimeOutUseCase` and
   `NoReplyToPingUseCase` when agents go silent. The `activeExecutor` reference tells the
   health monitor which executor's deferred to complete with `AgentSignal.Crashed`
