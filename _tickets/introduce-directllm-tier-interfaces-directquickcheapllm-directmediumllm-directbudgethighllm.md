@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T21:41:04Z
 id: nid_gkkanv6kvkr4bzje1bitcek22_E
 title: "Introduce DirectLLM tier interfaces (DirectQuickCheapLLM, DirectMediumLLM, DirectBudgetHighLLM)"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T20:43:48Z
-status_updated_iso: 2026-03-11T21:13:00Z
+status_updated_iso: 2026-03-11T21:41:04Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -36,3 +37,15 @@ interface DirectBudgetHighLLM : DirectLLM   // expensive (FailedToConvergeUseCas
 - `DirectBudgetHighLLM`: FailedToConvergeUseCase (state summarization) — needed later but interface should exist now
 - `DirectMediumLLM`: no V1 callers — interface only, no implementation required yet
 
+
+## Notes
+
+**2026-03-11T21:41:04Z**
+
+Completed. All tier interfaces introduced:
+- DirectQuickCheapLLM (GLM-4.7-Flash via GLMQuickCheapApi)
+- DirectMediumLLM (interface only, no V1 callers)
+- DirectBudgetHighLLM (GLM-5 via GLMHighestTierApi)
+- GlmAnthropicCompatibleApi internal delegate avoids duplication
+- DirectLlmInfra now has quickCheap + budgetHigh tier-scoped fields
+- 150 tests passing. Commit: 5807ed0
