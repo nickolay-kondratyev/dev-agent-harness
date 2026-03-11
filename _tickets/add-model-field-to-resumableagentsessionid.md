@@ -1,11 +1,11 @@
 ---
 id: nid_pem1dso3jg39azl0v9lpzjvf4_E
 title: "Add model field to ResumableAgentSessionId"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T00:31:20Z
-status_updated_iso: 2026-03-11T00:31:20Z
+status_updated_iso: 2026-03-11T20:57:10Z
 type: task
 priority: 2
 assignee: nickolaykondratyev
