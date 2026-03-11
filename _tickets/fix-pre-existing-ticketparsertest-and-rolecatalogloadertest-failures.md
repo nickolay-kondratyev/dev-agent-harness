@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T21:02:59Z
 id: nid_611rashdkhgxp74gwwkvpeo35_E
 title: "Fix pre-existing TicketParserTest and RoleCatalogLoaderTest failures"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T20:42:43Z
-status_updated_iso: 2026-03-11T20:42:43Z
+status_updated_iso: 2026-03-11T21:02:59Z
 type: bug
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
