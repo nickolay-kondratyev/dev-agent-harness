@@ -11,7 +11,7 @@ and resolving the agent's session ID for future resume.
 
 | Term                            | Definition                                                                                                                                                                                               |
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
+| **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
 | **Agent**                       | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously.                                                               |
 | **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
 | **AgentSessionIdResolver**      | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.                                                                                     |
@@ -31,7 +31,7 @@ be multi-agent ready — multiple agents alive at the same time (example impleme
 Every agent session gets a **HandshakeGuid** — a harness-generated identifier with format
 `handshake.${UUID}`. This GUID:
 
-1. Is exported as `CHAINSAW_HANDSHAKE_GUID` env var when the TMUX session is spawned
+1. Is exported as `TICKET_SHEPHERD_HANDSHAKE_GUID` env var when the TMUX session is spawned
 2. Is sent to the agent as the first TMUX message (for AgentSessionIdResolver resolution)
 3. Is included by the agent CLI in **every** callback to the server
 4. Is stored in `current_state.json` alongside the agent's session ID
@@ -49,14 +49,14 @@ val guid = HandshakeGuid.generate()
 The TMUX session command exports the GUID before starting the agent:
 
 ```bash
-export CHAINSAW_HANDSHAKE_GUID=handshake.a1b2c3d4-... && claude
+export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && claude
 ```
 
-The agent CLI script reads `$CHAINSAW_HANDSHAKE_GUID` from the environment and includes
+The agent CLI script reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from the environment and includes
 it in every HTTP callback to the server. The agent itself does not need to know about
 the GUID — it's transparent, handled entirely by the CLI script.
 
-The CLI should hard fail when $CHAINSAW_HANDSHAKE_GUID is not found.
+The CLI should hard fail when $TICKET_SHEPHERD_HANDSHAKE_GUID is not found.
 
 ---
 
@@ -135,7 +135,7 @@ Each session record in the `sessionIds` array contains:
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
 2. Harness chooses agent type (from sub-part config or role catalog)
 3. Harness builds the TMUX start command:
-   `export CHAINSAW_HANDSHAKE_GUID=handshake.xxx && claude [flags]`
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude [flags]`
 4. Harness creates TMUX session running the command
 5. Harness waits for agent startup (agent CLI needs time to initialize)
 6. Harness sends GUID to agent via TMUX `send-keys` (plain text, directly)
@@ -171,7 +171,7 @@ the TMUX message.
 
 1. Harness reads last `sessionIds` entry from `current_state.json`
 2. Harness builds the TMUX start command:
-   `export CHAINSAW_HANDSHAKE_GUID=handshake.xxx && claude --resume <agent_session_id>`
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude --resume <agent_session_id>`
 3. Harness creates TMUX session running the command
 4. Skip AgentSessionIdResolver — session ID already known
 5. Harness writes instruction file, sends path via TMUX `send-keys`
@@ -187,8 +187,8 @@ the server-side registry remains valid.
 **`harness-cli-for-agent.sh`** — bash script wrapping curl calls.
 
 - Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
-- Reads `$CHAINSAW_HANDSHAKE_GUID` from environment, includes in every request
+- Reads port from `$HOME/.shepherd_agent_harness/server/port.txt`
+- Reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from environment, includes in every request
 - Agent receives `--help` content in its instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
 
@@ -201,7 +201,7 @@ harness-cli failed "<reason>"       # Signal unrecoverable failure
 harness-cli status                  # Reply to health ping
 ```
 
-**Fail-fast:** If `CHAINSAW_HANDSHAKE_GUID` is not set, the script must exit with a
+**Fail-fast:** If `TICKET_SHEPHERD_HANDSHAKE_GUID` is not set, the script must exit with a
 clear error. This catches misconfigured spawns immediately.
 
 ---

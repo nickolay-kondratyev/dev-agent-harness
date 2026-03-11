@@ -17,7 +17,7 @@ Create the bash CLI script that agents use to communicate back to the harness vi
 
 ## Scope
 - Create `harness-cli-for-agent.sh` bash script
-- Reads server port from `$HOME/.chainsaw_agent_harness/server/port.txt`
+- Reads server port from `$HOME/.shepherd_agent_harness/server/port.txt`
 - Subcommands: `done`, `question "<text>"`, `failed "<reason>"`, `status`
 - Each subcommand wraps a `curl` POST to the corresponding `/agent/*` endpoint
 - Includes `--help` output (this will be embedded in agent instructions)
@@ -60,7 +60,7 @@ As part of closing this ticket:
 
 ### Implementation Details
 - **JSON construction**: Uses `jq -n --arg` for safe escaping of all special characters
-- **Port discovery**: Reads from `$HOME/.chainsaw_agent_harness/server/port.txt` via `read -r`
+- **Port discovery**: Reads from `$HOME/.shepherd_agent_harness/server/port.txt` via `read -r`
 - **Test seam**: `HARNESS_CLI_DRY_RUN` env var prints URL + JSON body instead of executing curl
 - **Anchor point**: `ap.8PB8nMd93D3jipEWhME5n.E` defined in script, cross-referenced in design ticket
 

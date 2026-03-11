@@ -1,7 +1,7 @@
 package com.glassthought.ticketShepherd.core.supporting.ticket
 
 /**
- * Parsed representation of a Chainsaw ticket file.
+ * Parsed representation of a Shepherd ticket file.
  *
  * A ticket is a markdown file with YAML frontmatter.
  * [id] and [title] are required (parsed from frontmatter).

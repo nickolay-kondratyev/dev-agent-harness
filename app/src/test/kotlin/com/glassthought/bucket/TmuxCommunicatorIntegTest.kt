@@ -19,7 +19,7 @@ import kotlin.time.Duration.Companion.seconds
 class TmuxCommunicatorIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN a tmux session running bash").config(isIntegTestEnabled()) {
-        val sessionManager = chainsawContext.infra.tmux.sessionManager
+        val sessionManager = shepherdContext.infra.tmux.sessionManager
         val createdSessions = mutableListOf<TmuxSession>()
         val createdFiles = mutableListOf<File>()
 

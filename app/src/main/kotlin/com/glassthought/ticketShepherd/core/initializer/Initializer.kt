@@ -31,7 +31,7 @@ data class TmuxInfra(
 /**
  * Groups direct LLM API dependencies.
  *
- * [httpClient] is `internal` because it is only needed for resource cleanup in [ChainsawContext.close].
+ * [httpClient] is `internal` because it is only needed for resource cleanup in [ShepherdContext.close].
  * External consumers should use [glmDirectLLM] for API calls.
  */
 data class DirectLlmInfra(
@@ -66,7 +66,7 @@ data class UseCases(
  * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
  */
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
-class ChainsawContext(
+class ShepherdContext(
     val infra: Infra,
     val useCases: UseCases,
 ) : AsgardCloseable {
@@ -102,7 +102,7 @@ interface Initializer {
         systemPromptFilePath: String? = null,
         claudeProjectsDir: Path = Path.of(System.getProperty("user.home"), ".claude", "projects"),
         httpClient: OkHttpClient? = null,
-    ): ChainsawContext
+    ): ShepherdContext
 
     companion object {
         fun standard(): Initializer = InitializerImpl()
@@ -117,7 +117,7 @@ class InitializerImpl : Initializer {
         systemPromptFilePath: String?,
         claudeProjectsDir: Path,
         httpClient: OkHttpClient?,
-    ): ChainsawContext {
+    ): ShepherdContext {
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
         return out.time(
@@ -132,7 +132,7 @@ class InitializerImpl : Initializer {
         systemPromptFilePath: String?,
         claudeProjectsDir: Path,
         httpClient: OkHttpClient?,
-    ): ChainsawContext {
+    ): ShepherdContext {
         // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
@@ -181,7 +181,7 @@ class InitializerImpl : Initializer {
             spawnTmuxAgentSession = spawnTmuxAgentSession,
         )
 
-        return ChainsawContext(
+        return ShepherdContext(
             infra = infra,
             useCases = useCases,
         )

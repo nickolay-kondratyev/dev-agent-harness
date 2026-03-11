@@ -75,9 +75,9 @@ Starting agent types: ClaudeCode, PI agent.
 
 ### Key Files
 
-- AgentSessionIdResolver interface + ClaudeCodeAgentSessionIdResolver: app/src/main/kotlin/com/glassthought/chainsaw/wingman/ (already exists, recently renamed from Wingman)
-- TmuxSessionManager: app/src/main/kotlin/com/glassthought/chainsaw/tmux/
-- Environment: app/src/main/kotlin/com/glassthought/chainsaw/initializer/
+- AgentSessionIdResolver interface + ClaudeCodeAgentSessionIdResolver: app/src/main/kotlin/com/glassthought/shepherd/wingman/ (already exists, recently renamed from Wingman)
+- TmuxSessionManager: app/src/main/kotlin/com/glassthought/shepherd/tmux/
+- Environment: app/src/main/kotlin/com/glassthought/shepherd/initializer/
 - Integration test support: app/src/test/kotlin/org/example/integTestSupport.kt
 
 ## Resolution
@@ -86,7 +86,7 @@ Starting agent types: ClaudeCode, PI agent.
 
 **All 28 unit tests pass + 1 integration test verified.**
 
-**New files created** (in `com.glassthought.chainsaw.core`):
+**New files created** (in `com.glassthought.shepherd.core`):
 - `data/PhaseType.kt` — Enum: IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER
 - `agent/data/TmuxStartCommand.kt` — @JvmInline value class
 - `agent/data/StartAgentRequest.kt` — Data class (phaseType + workingDir)

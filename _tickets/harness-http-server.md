@@ -18,7 +18,7 @@ Implement the Ktor CIO HTTP server for agent→harness communication.
 ## Scope
 - Create `HarnessServer` interface + implementation using Ktor CIO
 - Bind to port 0 (OS-assigned random port)
-- On startup: write assigned port to `$HOME/.chainsaw_agent_harness/server/port.txt`
+- On startup: write assigned port to `$HOME/.shepherd_agent_harness/server/port.txt`
 - On shutdown: delete port file
 - Endpoint stubs (accept requests, return 200, log receipt):
   - `POST /agent/done` — agent completed its task
@@ -27,7 +27,7 @@ Implement the Ktor CIO HTTP server for agent→harness communication.
   - `POST /agent/status` — agent responds to health ping
 - All endpoints accept JSON body with at minimum a `branch` field
 - Add **Ktor CIO** dependencies to `app/build.gradle.kts`
-- Package: `com.glassthought.chainsaw.core.server`
+- Package: `com.glassthought.shepherd.core.server`
 
 ## Dependencies
 - Workflow JSON Parser (nid_w5b16tby0fjiovxfr3ft22ix2_E) must be merged first to avoid build.gradle.kts merge conflicts (both add dependencies)
@@ -50,8 +50,8 @@ Implement the Ktor CIO HTTP server for agent→harness communication.
 
 ## Files touched
 - `app/build.gradle.kts` (add Ktor CIO + content-negotiation + jackson dependencies)
-- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/server/`
-- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/server/`
+- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/server/`
+- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/server/`
 
 ## Reference
 - See "Agent↔Harness Communication" and "V1 Server Endpoints" sections in `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`
@@ -67,11 +67,11 @@ As part of closing this ticket:
 **Completed.** Anchor point: `ap.NAVMACFCbnE7L6Geutwyk.E`
 
 ### Files Created
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/HarnessServer.kt` — Interface + KtorHarnessServer
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/AgentRequests.kt` — 4 request data classes with AgentRequest interface
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/PortFileManager.kt` — Port file write/delete
-- `app/src/test/kotlin/com/glassthought/chainsaw/core/server/KtorHarnessServerTest.kt` — 8 BDD tests (lifecycle + endpoints)
-- `app/src/test/kotlin/com/glassthought/chainsaw/core/server/PortFileManagerTest.kt` — 4 BDD tests
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/HarnessServer.kt` — Interface + KtorHarnessServer
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/AgentRequests.kt` — 4 request data classes with AgentRequest interface
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/PortFileManager.kt` — Port file write/delete
+- `app/src/test/kotlin/com/glassthought/shepherd/core/server/KtorHarnessServerTest.kt` — 8 BDD tests (lifecycle + endpoints)
+- `app/src/test/kotlin/com/glassthought/shepherd/core/server/PortFileManagerTest.kt` — 4 BDD tests
 
 ### Files Modified
 - `app/build.gradle.kts` — Added Ktor CIO deps (ktor-server-core, ktor-server-cio, ktor-server-content-negotiation, ktor-serialization-jackson) v3.1.1

@@ -21,7 +21,7 @@ Claude Code cannot switch models when resuming a session. If a session was start
 ## What
 
 Add `val model: String` to `ResumableAgentSessionId` in:
-`app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/ResumableAgentSessionId.kt`
+`app/src/main/kotlin/com/glassthought/shepherd/core/wingman/ResumableAgentSessionId.kt`
 
 This enables `ResumeTmuxAgentSessionUseCase` to build: `claude --resume <sessionId> --model <model>`
 

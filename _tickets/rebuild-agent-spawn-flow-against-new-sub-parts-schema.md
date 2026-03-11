@@ -12,18 +12,18 @@ assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 tags: [schema, agent-spawn]
 ---
 
-PhaseType enum (app/src/main/kotlin/com/glassthought/chainsaw/core/data/PhaseType.kt) is a hardcoded set of role categories (IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER). In the new schema, roles are open-ended strings from the role catalog ($CHAINSAW_AGENTS_DIR/*.md).
+PhaseType enum (app/src/main/kotlin/com/glassthought/shepherd/core/data/PhaseType.kt) is a hardcoded set of role categories (IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER). In the new schema, roles are open-ended strings from the role catalog ($TICKET_SHEPHERD_AGENTS_DIR/*.md).
 
 ## Changes needed
 
-1. Replace PhaseType enum with role string (from sub-part) in StartAgentRequest (app/src/main/kotlin/com/glassthought/chainsaw/core/agent/data/StartAgentRequest.kt)
+1. Replace PhaseType enum with role string (from sub-part) in StartAgentRequest (app/src/main/kotlin/com/glassthought/shepherd/core/agent/data/StartAgentRequest.kt)
 2. Update SpawnTmuxAgentSessionUseCase and callers to pass role string instead of PhaseType
 3. Update session naming to use role string for debuggability
 4. Delete PhaseType.kt
 5. Update affected tests:
    - app/src/test/kotlin/org/example/SpawnTmuxAgentSessionUseCaseIntegTest.kt
-   - app/src/test/kotlin/com/glassthought/chainsaw/core/agent/impl/ClaudeCodeAgentStarterBundleFactoryTest.kt
-   - app/src/test/kotlin/com/glassthought/chainsaw/core/agent/DefaultAgentTypeChooserTest.kt
+   - app/src/test/kotlin/com/glassthought/shepherd/core/agent/impl/ClaudeCodeAgentStarterBundleFactoryTest.kt
+   - app/src/test/kotlin/com/glassthought/shepherd/core/agent/DefaultAgentTypeChooserTest.kt
 
 ## Context
 

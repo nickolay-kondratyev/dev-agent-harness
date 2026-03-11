@@ -18,10 +18,10 @@ Implement auto-discovery and loading of agent role definitions from a directory 
 ## Scope
 - Create `RoleDefinition` data class: `name` (derived from filename), `description`, `descriptionLong` (optional), `filePath`
 - Create `RoleCatalogLoader` interface + implementation: `load(dir: Path): List<RoleDefinition>`
-- Scan `$CHAINSAW_AGENTS_DIR` for all `.md` files (every .md file is an eligible role)
+- Scan `$TICKET_SHEPHERD_AGENTS_DIR` for all `.md` files (every .md file is an eligible role)
 - Parse YAML frontmatter to extract `description` (required) and `description_long` (optional)
 - Role name derived from filename (e.g., `IMPLEMENTOR.md` → name = `IMPLEMENTOR`)
-- Package: `com.glassthought.chainsaw.core.rolecatalog`
+- Package: `com.glassthought.shepherd.core.rolecatalog`
 
 ## Dependencies
 - Reuses `YamlFrontmatterParser` utility from Ticket Parser ticket (nid_r9on08uqjmumuc6wi2c53e8p9_E)
@@ -42,8 +42,8 @@ Implement auto-discovery and loading of agent role definitions from a directory 
 - Test: `description_long` is optional and correctly parsed when present
 
 ## Files touched
-- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/rolecatalog/`
-- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/rolecatalog/`
+- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/rolecatalog/`
+- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/rolecatalog/`
 - Does NOT touch `app/build.gradle.kts` (YAML dep already added by Ticket Parser)
 
 ## Reference
@@ -60,10 +60,10 @@ As part of closing this ticket:
 All requirements implemented and tests passing.
 
 ### Files Created
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleDefinition.kt` — data class with `name`, `description`, `descriptionLong?`, `filePath`
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleCatalogLoader.kt` — interface + `RoleCatalogLoaderImpl`
-- `app/src/test/kotlin/com/glassthought/chainsaw/core/rolecatalog/RoleCatalogLoaderTest.kt` — 14 BDD tests
-- Test resources in `app/src/test/resources/com/glassthought/chainsaw/core/rolecatalog/` (valid-catalog, missing-description, single-role, empty-catalog)
+- `app/src/main/kotlin/com/glassthought/shepherd/core/rolecatalog/RoleDefinition.kt` — data class with `name`, `description`, `descriptionLong?`, `filePath`
+- `app/src/main/kotlin/com/glassthought/shepherd/core/rolecatalog/RoleCatalogLoader.kt` — interface + `RoleCatalogLoaderImpl`
+- `app/src/test/kotlin/com/glassthought/shepherd/core/rolecatalog/RoleCatalogLoaderTest.kt` — 14 BDD tests
+- Test resources in `app/src/test/resources/com/glassthought/shepherd/core/rolecatalog/` (valid-catalog, missing-description, single-role, empty-catalog)
 
 ### Anchor Point
 - Created `ap.iF4zXT5FUcqOzclp5JVHj.E` in design doc at "Role Catalog — Auto-Discovered" heading

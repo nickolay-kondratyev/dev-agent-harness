@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.chainsaw.core.ticket.YamlFrontmatterParserTest"
+spec: "com.glassthought.shepherd.core.ticket.YamlFrontmatterParserTest"
 status: PASSED
 failed: 0
 skipped: 0

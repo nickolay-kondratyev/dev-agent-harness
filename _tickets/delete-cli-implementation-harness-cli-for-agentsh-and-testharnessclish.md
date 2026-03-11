@@ -16,7 +16,7 @@ tags: [cleanup, cli]
 ## Context
 
 The CLI script implementation jumped ahead of the design. We are iterating on the spec
-(HandshakeGuid in all callbacks, dropping branch from requests, CHAINSAW_HANDSHAKE_GUID env var).
+(HandshakeGuid in all callbacks, dropping branch from requests, TICKET_SHEPHERD_HANDSHAKE_GUID env var).
 The existing implementation does not include these design changes and should be deleted
 for a clean break. A fresh implementation will follow once the spec is finalized.
 
@@ -30,8 +30,8 @@ Delete `scripts/test_harness_cli.sh`
 
 ### R3 — Remove anchor point references to deleted script
 Search for `ref.ap.8PB8nMd93D3jipEWhME5n.E` and update/remove references:
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/AgentRequests.kt` (KDoc reference)
-- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/HarnessServer.kt` (KDoc reference)
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/AgentRequests.kt` (KDoc reference)
+- `app/src/main/kotlin/com/glassthought/shepherd/core/server/HarnessServer.kt` (KDoc reference)
 - `doc/high-level.md` (section references)
 
 The anchor point itself (`ap.8PB8nMd93D3jipEWhME5n.E`) is deleted with the file.

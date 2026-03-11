@@ -61,7 +61,7 @@ tasks.register("tasksJson") {
 
 
 /**
- * Publishes all asgard libraries required by chainsaw to maven local.
+ * Publishes all asgard libraries required by shepherd to maven local.
  *
  * Requires THORG_ROOT to be set pointing to a standalone thorg-root checkout:
  *   export THORG_ROOT=$HOME/thorg-root

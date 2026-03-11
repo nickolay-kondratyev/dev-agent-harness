@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.chainsaw.core.git.BranchNameBuilderTest"
+spec: "com.glassthought.shepherd.core.git.BranchNameBuilderTest"
 status: PASSED
 failed: 0
 skipped: 0
