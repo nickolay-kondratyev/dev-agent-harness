@@ -5,6 +5,7 @@ package com.glassthought.chainsaw.cli
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.use
+import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
 import com.glassthought.chainsaw.core.initializer.Initializer
 import kotlinx.coroutines.runBlocking
 
@@ -20,7 +21,7 @@ import kotlinx.coroutines.runBlocking
 fun main() {
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {
-    val deps = Initializer.standard().initialize()
+    val deps = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard())
 
 
     deps.use { _ ->

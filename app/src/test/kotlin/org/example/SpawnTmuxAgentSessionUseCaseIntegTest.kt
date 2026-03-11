@@ -1,6 +1,5 @@
 package org.example
 
-import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.chainsaw.core.agent.AgentStarterBundleFactory
 import com.glassthought.chainsaw.core.agent.AgentTypeChooser
 import com.glassthought.chainsaw.core.agent.DefaultAgentTypeChooser
@@ -10,10 +9,8 @@ import com.glassthought.chainsaw.core.agent.impl.ClaudeCodeAgentStarterBundleFac
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.data.PhaseType
 import com.glassthought.chainsaw.core.initializer.data.Environment
-import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
@@ -30,12 +27,10 @@ import java.nio.file.Path
  * Gated with [isIntegTestEnabled].
  */
 @OptIn(ExperimentalKotest::class)
-class SpawnTmuxAgentSessionUseCaseIntegTest : AsgardDescribeSpec({
+class SpawnTmuxAgentSessionUseCaseIntegTest : SharedAppDepDescribeSpec({
 
     describe("GIVEN SpawnTmuxAgentSessionUseCase with test configuration").config(isIntegTestEnabled()) {
-        val commandRunner = TmuxCommandRunner()
-        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+        val sessionManager = appDependencies.tmuxSessionManager
 
         val systemPromptFilePath = resolveSystemPromptFilePath()
         val out = outFactory.getOutForClass(SpawnTmuxAgentSessionUseCaseIntegTest::class)

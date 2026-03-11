@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T14:41:05Z
 id: nid_q1s3us9fsufo5uglosuthzkr4_E
 title: "Create shared app dependencies integ spec"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T13:19:44Z
-status_updated_iso: 2026-03-11T13:21:14Z
+status_updated_iso: 2026-03-11T14:41:05Z
 type: task
 priority: 3
 assignee: nickolaykondratyev

@@ -1,26 +1,21 @@
 package org.example
 
-import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 
 /**
- * Tests for [TmuxSessionManager].
+ * Tests for [com.glassthought.chainsaw.core.tmux.TmuxSessionManager].
  *
  * Requires tmux to be installed on the system. Tests use bash sessions (not claude)
  * so they can run in CI environments.
  */
 @OptIn(ExperimentalKotest::class)
-class TmuxSessionManagerIntegTest : AsgardDescribeSpec({
+class TmuxSessionManagerIntegTest : SharedAppDepDescribeSpec({
 
     describe("GIVEN TmuxSessionManager").config(isIntegTestEnabled()) {
-        val commandRunner = TmuxCommandRunner()
-        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-        val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
+        val sessionManager = appDependencies.tmuxSessionManager
         val createdSessions = mutableListOf<TmuxSession>()
 
         afterEach {
