@@ -19,7 +19,7 @@ import kotlinx.coroutines.sync.withLock
 /**
  * HTTP server for agent-to-harness communication. ap.NAVMACFCbnE7L6Geutwyk.E
  *
- * Agents call endpoints via harness-cli-for-agent.sh (ref.ap.8PB8nMd93D3jipEWhME5n.E).
+ * Agents call endpoints via a CLI script (script removed; will be rebuilt per updated spec).
  * The server binds to an OS-assigned port and publishes it via a port file.
  *
  * See design: ref.ap.7sZveqPcid5z1ntmLs27UqN6.E (Agent↔Harness Communication section)
