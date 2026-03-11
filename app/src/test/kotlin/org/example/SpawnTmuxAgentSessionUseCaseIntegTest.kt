@@ -1,6 +1,6 @@
 package org.example
 
-import com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase
+import com.glassthought.chainsaw.core.useCase.SpawnTmuxAgentSessionUseCase
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.data.PhaseType

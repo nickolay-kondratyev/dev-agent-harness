@@ -1,7 +1,7 @@
 package com.glassthought.chainsaw.core.agent.impl
 
 import com.asgard.core.out.OutFactory
-import com.glassthought.chainsaw.core.agent.AgentStarterBundle
+import com.glassthought.chainsaw.core.agent.data.AgentStarterBundle
 import com.glassthought.chainsaw.core.agent.AgentStarterBundleFactory
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
 import com.glassthought.chainsaw.core.agent.starter.impl.ClaudeCodeAgentStarter

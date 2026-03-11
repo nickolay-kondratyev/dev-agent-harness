@@ -3,7 +3,7 @@ package com.glassthought.chainsaw.core.agent.data
 import com.glassthought.chainsaw.core.data.PhaseType
 
 /**
- * Input to [com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase].
+ * Input to [com.glassthought.chainsaw.core.useCase.SpawnTmuxAgentSessionUseCase].
  *
  * Contains the information needed to spawn a new agent session.
  * Extensible for future fields (agent type override, model preference, etc.).

@@ -7,7 +7,7 @@ import com.glassthought.chainsaw.core.agent.sessionresolver.ResumableAgentSessio
 /**
  * Pairs a live tmux session handle with the resolved agent session identity.
  *
- * Created by [SpawnTmuxAgentSessionUseCase] after a successful GUID handshake.
+ * Created by [com.glassthought.chainsaw.core.useCase.SpawnTmuxAgentSessionUseCase] after a successful GUID handshake.
  * The [tmuxSession] allows sending further instructions; [resumableAgentSessionId]
  * enables session resumption after a harness restart.
  */

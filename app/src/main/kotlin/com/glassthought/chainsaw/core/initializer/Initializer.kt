@@ -6,7 +6,7 @@ import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
 import com.glassthought.chainsaw.core.Constants
 import com.glassthought.chainsaw.core.agent.DefaultAgentTypeChooser
-import com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase
+import com.glassthought.chainsaw.core.useCase.SpawnTmuxAgentSessionUseCase
 import com.glassthought.chainsaw.core.agent.impl.ClaudeCodeAgentStarterBundleFactory
 import com.glassthought.chainsaw.core.supporting.directLLMApi.DirectLLM
 import com.glassthought.chainsaw.core.supporting.directLLMApi.glm.GLMHighestTierApi
