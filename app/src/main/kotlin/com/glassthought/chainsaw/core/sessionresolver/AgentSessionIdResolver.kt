@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.wingman
+package com.glassthought.chainsaw.core.sessionresolver
 
 import com.asgard.core.annotation.AnchorPoint
 
@@ -10,7 +10,7 @@ import com.asgard.core.annotation.AnchorPoint
  * session contains the GUID, thereby mapping a GUID to a concrete session ID.
  *
  * See ref.ap.7sZveqPcid5z1ntmLs27UqN6.E for TmuxSession (the caller context).
- * See ref.ap.gCgRdmWd9eTGXPbHJvyxI.E for the ClaudeCodeWingman implementation.
+ * See ref.ap.gCgRdmWd9eTGXPbHJvyxI.E for the ClaudeCodeAgentSessionIdResolver implementation.
  */
 @AnchorPoint("ap.D3ICqiFdFFgbFIPLMTYdoyss.E")
 interface AgentSessionIdResolver {

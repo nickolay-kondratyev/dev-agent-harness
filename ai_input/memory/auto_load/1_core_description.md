@@ -33,7 +33,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Role catalog**: Auto-discovered from `$CHAINSAW_AGENTS_DIR`. Every `.md` file is an eligible role; `description` extracted from YAML frontmatter.
 
-**Session tracking**: `Wingman` interface (`ClaudeCodeWingman` impl) — GUID handshake to discover Claude Code session IDs for resume.
+**Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs for resume.
 
 **Harness decisions**: `DirectLLMApi` for iteration evaluation, title compression, etc. Structured JSON responses. Tiers: `QuickCheap`, `Medium`.
 
@@ -45,7 +45,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Phase transitions — hybrid**: Automatic for straightforward transitions (implementor → reviewer). LLM-evaluated for iteration decisions: `DirectLLMApi` receives reviewer's PUBLIC.md + reviewed role's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason).
 
-**Agent lifecycle**: TMUX session created → agent started → Wingman GUID handshake → instruction file sent via `send-keys` → agent works (may call Q&A) → agent calls `/agent/done` → harness kills session → next phase.
+**Agent lifecycle**: TMUX session created → agent started → AgentSessionIdResolver GUID handshake → instruction file sent via `send-keys` → agent works (may call Q&A) → agent calls `/agent/done` → harness kills session → next phase.
 
 **Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`).
 

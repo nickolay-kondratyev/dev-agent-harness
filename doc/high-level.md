@@ -107,7 +107,7 @@ Server starts once at harness startup, stays alive across all sub-parts.
 All structured/formatted content sent to agents goes through temp files:
 - Write content to `$HOME/.chainsaw_agent_harness/tmp/agent_comm/<unique_name>.md`
 - Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
-- **Exception**: Simple single-line messages (e.g., Wingman GUID handshake) can be sent directly
+- **Exception**: Simple single-line messages (e.g., AgentSessionIdResolver GUID handshake) can be sent directly
 
 ### V1 Server Endpoints
 
@@ -135,8 +135,8 @@ All requests include the **git branch** as identifier (key for future parallelis
 
 1. Harness creates TMUX session
 2. Harness starts agent (e.g., `claude`) in the TMUX session
-3. Harness sends Wingman GUID handshake (plain text, directly via send-keys)
-4. Wingman resolves session ID from GUID
+3. Harness sends AgentSessionIdResolver GUID handshake (plain text, directly via send-keys)
+4. AgentSessionIdResolver resolves session ID from GUID
 5. Harness writes instruction file to temp file
 6. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
 7. Agent works, may call CLI for questions
@@ -148,7 +148,7 @@ All requests include the **git branch** as identifier (key for future parallelis
 
 1. Harness already has session ID (last entry in `sessionIds` array in `current_state.json`)
 2. Harness starts agent with `claude --resume <session_id>` in new TMUX session
-3. Skip GUID/Wingman step — session already known
+3. Skip GUID/AgentSessionIdResolver step — session already known
 4. Harness writes instruction file, sends path via TMUX send-keys
 5. Flow continues as normal from step 7 above
 
@@ -189,21 +189,21 @@ When plan execution hits blocking issues:
 
 ---
 
-## Session ID Tracking — Wingman
+## Session ID Tracking — AgentSessionIdResolver
 <!-- ref.ap.gCgRdmWd9eTGXPbHJvyxI.E -->
 
 **Problem:** Claude Code doesn't expose its session ID to the agent itself.
 
-**Solution:** `Wingman` interface + `ClaudeCodeWingman` implementation.
+**Solution:** `AgentSessionIdResolver` interface + `ClaudeCodeAgentSessionIdResolver` implementation.
 
 1. Harness generates a GUID for each new session
 2. Harness sends GUID to agent as first message (plain text, directly): `"Here is a GUID: [$GUID]. We will use it to identify this session."`
-3. `ClaudeCodeWingman` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
+3. `ClaudeCodeAgentSessionIdResolver` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
 4. Matched filename = session ID (e.g., `77d5b7ea-cf04-453b-8867-162404763e18.jsonl`)
 5. Session ID stored in `current_state.json` under the sub-part's `sessionIds` array
 6. Enables session resumption after crashes
 
-**Not used during resume** — session ID already known from prior Wingman resolution.
+**Not used during resume** — session ID already known from prior AgentSessionIdResolver resolution.
 
 ---
 
@@ -295,7 +295,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
-| Session tracking | **Wingman interface** | `ClaudeCodeWingman` impl; abstracted for future agent types |
+| Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
 | Package | **com.glassthought.chainsaw** | Chainsaw as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |

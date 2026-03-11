@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.wingman
+package com.glassthought.chainsaw.core.sessionresolver
 
 /**
  * Strongly-typed GUID marker used for handshake between harness and agent.

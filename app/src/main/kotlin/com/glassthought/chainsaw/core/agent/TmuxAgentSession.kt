@@ -1,7 +1,7 @@
 package com.glassthought.chainsaw.core.agent
 
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.core.wingman.ResumableAgentSessionId
+import com.glassthought.chainsaw.core.sessionresolver.ResumableAgentSessionId
 
 /**
  * Pairs a live tmux session handle with the resolved agent session identity.

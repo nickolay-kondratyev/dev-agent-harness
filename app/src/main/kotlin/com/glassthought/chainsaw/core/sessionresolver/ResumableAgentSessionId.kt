@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.wingman
+package com.glassthought.chainsaw.core.sessionresolver
 
 import com.glassthought.chainsaw.core.data.AgentType
 
