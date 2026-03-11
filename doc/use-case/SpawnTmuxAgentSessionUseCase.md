@@ -13,87 +13,20 @@ and resolving the agent's session ID for future resume.
 |---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
 | **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
 | **Agent**                       | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously.                                                               |
-| **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
+| **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) for agent identity. See [protocol doc](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E). |
 | **AgentSessionIdResolver**      | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.                                                                                     |
 
 ---
 
-## HandshakeGuid — Agent Identity Key
+## HandshakeGuid
 
-### Problem
-
-The server needs to know **which agent** is calling on every callback (`/agent/done`,
-`/agent/question`, etc.). In a single-agent world, this is trivial. But the design must
-be multi-agent ready — multiple agents alive at the same time (example implementor and reviewer talking to each other).
-
-### Solution
-
-Every agent session gets a **HandshakeGuid** — a harness-generated identifier with format
-`handshake.${UUID}`. This GUID:
-
-1. Is exported as `TICKET_SHEPHERD_HANDSHAKE_GUID` env var when the TMUX session is spawned
-2. Is sent to the agent as the first TMUX message (for AgentSessionIdResolver resolution)
-3. Is included by the agent CLI in **every** callback to the server
-4. Is stored in `current_state.json` alongside the agent's session ID
-
-The `handshake.` prefix makes GUIDs greppable in logs and distinguishable from agent session IDs.
-
-```kotlin
-// HandshakeGuid value class — ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E
-// Generation — always use the factory to enforce the prefix
-val guid = HandshakeGuid.generate()
-```
-
-### How the Agent CLI Knows Its GUID
-
-The TMUX session command exports the GUID before starting the agent:
-
-```bash
-export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && claude
-```
-
-The agent CLI script reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from the environment and includes
-it in every HTTP callback to the server. The agent itself does not need to know about
-the GUID — it's transparent, handled entirely by the CLI script.
-
-The CLI should hard fail when $TICKET_SHEPHERD_HANDSHAKE_GUID is not found.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the full HandshakeGuid specification — format, env var contract, and how it's used in every callback.
 
 ---
 
 ## Agent Callback Contract
 
-All agent→server HTTP requests include `handshakeGuid` as the identity field.
-No `branch` field — the server derives branch and sub-part context from its internal
-GUID→sub-part registry.
-
-### Request Payloads
-
-```json
-// POST /agent/done
-{ "handshakeGuid": "handshake.a1b2c3d4-..." }
-
-// POST /agent/question
-{ "handshakeGuid": "handshake.a1b2c3d4-...", "question": "How should I handle X?" }
-
-// POST /agent/failed
-{ "handshakeGuid": "handshake.a1b2c3d4-...", "reason": "Cannot compile" }
-
-// POST /agent/status
-{ "handshakeGuid": "handshake.a1b2c3d4-..." }
-```
-
-### Server-Side Coordination
-
-A `SessionsState` class tracks live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
-instances, keyed by HandshakeGuid. When a callback arrives:
-
-1. Server looks up the HandshakeGuid in `SessionsState`
-2. Finds the associated `TmuxAgentSession` and sub-part context
-3. Routes the callback to `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E)
-   which decides what to do next (proceed to next sub-part, loop back, etc.)
-
-This design naturally supports multiple concurrent agents: each has its own GUID,
-its own `TmuxAgentSession` entry in `SessionsState`.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the callback contract, request payloads, and server-side routing via `SessionsState`.
 
 ---
 
@@ -182,27 +115,9 @@ the server-side registry remains valid.
 
 ---
 
-## Agent CLI Script (spec — implementation pending)
+## Agent CLI Script
 
-**`harness-cli-for-agent.sh`** — bash script wrapping curl calls.
-
-- Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.shepherd_agent_harness/server/port.txt`
-- Reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from environment, includes in every request
-- Agent receives `--help` content in its instructions, wrapped in
-  `<critical_to_keep_through_compaction>` tags to survive context compaction
-
-**Commands:**
-
-```
-harness-cli done                    # Signal task completion
-harness-cli question "<text>"       # Ask human a question (answer delivered via TMUX)
-harness-cli failed "<reason>"       # Signal unrecoverable failure
-harness-cli status                  # Reply to health ping
-```
-
-**Fail-fast:** If `TICKET_SHEPHERD_HANDSHAKE_GUID` is not set, the script must exit with a
-clear error. This catches misconfigured spawns immediately.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `harness-cli-for-agent.sh` specification.
 
 ---
 

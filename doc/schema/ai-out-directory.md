@@ -76,6 +76,8 @@ $HOME/.shepherd_agent_harness/
     └── agent_comm/                     # Temp instruction/answer files sent to agents via TMUX send-keys
 ```
 
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for protocol details on port discovery and temp file delivery.
+
 ## Codified In
 
 To be rebuilt: `AiOutputStructure` class for path resolution + `ensureStructure()` for directory creation.

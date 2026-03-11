@@ -18,7 +18,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Agent invocation — TMUX only**: All agents spawned as interactive TMUX sessions. Strictly serial (one agent at a time) in V1. Separate session per phase — context carries via files.
 
-**Agent↔Harness communication — bidirectional**:
+**Agent↔Harness communication — bidirectional** (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E):
 - Agent → Harness: HTTP POST via `harness-cli-for-agent.sh` (wraps curl)
 - Harness → Agent: TMUX `send-keys` / ref.ap.7sZveqPcid5z1ntmLs27UqN6.E
 - Structured content delivered via temp files (write file, send path)
@@ -37,7 +37,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Harness decisions**: `DirectLLMApi` for iteration evaluation, title compression, etc. Structured JSON responses. Tiers: `QuickCheap`, `Medium`.
 
-**Server endpoints (V1)**: `POST /agent/done` (task complete), `/agent/question` (Q&A, curl blocks until human answers), `/agent/failed` (unrecoverable error → `FailedToExecutePlanUseCase`), `/agent/status` (health ping reply). All requests include git branch as identifier.
+**Server endpoints (V1)** (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E): `POST /agent/done` (task complete), `/agent/question` (Q&A, curl blocks until human answers), `/agent/failed` (unrecoverable error → `FailedToExecutePlanUseCase`), `/agent/status` (health ping reply). All requests include HandshakeGuid as identifier.
 
 **CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile, privateOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
 

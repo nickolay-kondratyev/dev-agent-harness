@@ -9,7 +9,7 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 | **Ticket** | A markdown file with YAML frontmatter (`id`, `title`). The mandatory starting point for every Shepherd run — defines what needs to be done. Used for branch naming, state tracking, and agent context. |
 | **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
 | **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
-| **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md). |
+| **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [protocol doc](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E). |
 | **Orchestration Loop** | The harness-side logic that reads the workflow JSON, iterates through parts/sub-parts, spawns agents, evaluates iteration decisions, and manages state. Not an agent — a Kotlin process. |
 
 ---
@@ -96,68 +96,12 @@ CodeAgent.run(
 ## Agent↔Harness Communication — Bidirectional
 <!-- ref.ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
-### Architecture
+Communication between agents and the harness is bidirectional through two distinct channels:
+**Agent → Harness** via HTTP POST (curl wrapped by `harness-cli-for-agent.sh`), and
+**Harness → Agent** via TMUX `send-keys` (the only way to push content to a running agent).
+The harness runs a Ktor CIO server (port 0, OS-assigned) that stays alive for the entire run.
 
-```
-┌────────────┐    HTTP (curl)     ┌──────────────────┐
-│  Agent      │ ──────────────→  │  Harness Server   │
-│  (in TMUX)  │                   │  (Ktor CIO)       │
-│             │ ←──────────────  │                    │
-│             │   TMUX send-keys  │                    │
-└────────────┘                   └──────────────────┘
-```
-
-- **Agent → Harness**: HTTP POST via `harness-cli-for-agent.sh` (wraps curl)
-- **Harness → Agent**: TMUX `send-keys` (only way to communicate with running agents)
-
-### Server Port — File-Based Discovery
-
-Server binds to **port 0** (OS-assigned). On startup, writes the assigned port to:
-```
-$HOME/.shepherd_agent_harness/server/port.txt
-```
-
-- `harness-cli-for-agent.sh` reads this file to construct the server URL
-- On server shutdown, this file is **deleted**
-- **No env var needed** — eliminates port collision risk entirely
-
-Server starts once at harness startup, stays alive across all sub-parts.
-
-### Agent CLI Script
-
-See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for the full
-agent CLI spec (including `TICKET_SHEPHERD_HANDSHAKE_GUID` env var contract).
-
-### Structured Text Delivery — Temp File Pattern
-
-All structured/formatted content sent to agents goes through temp files:
-- Write content to `$HOME/.shepherd_agent_harness/tmp/agent_comm/<unique_name>.md`
-- Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
-- **Exception**: Simple single-line messages (e.g., AgentSessionIdResolver GUID handshake) can be sent directly
-
-### V1 Server Endpoints
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /agent/done` | Agent completed its task. TMUX session stays alive; killed only when the part completes. |
-| `POST /agent/question` | Agent has a question. Curl blocks until human answers. Answer delivered via TMUX send-keys (temp file). |
-| `POST /agent/failed` | Unrecoverable error. Triggers `FailedToExecutePlanUseCase`. |
-| `POST /agent/status` | Agent responds to health ping (see Agent Health Monitoring). |
-
-All requests include the agent's **HandshakeGuid** as identifier (routes to the correct sub-part
-context server-side). See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
-for the full callback contract.
-
-### Q&A Flow — Attended Only (V1)
-
-1. Agent calls `harness-cli question "How should I handle X?"`
-2. CLI POSTs to `/agent/question` with `handshakeGuid` + question text
-3. Harness presents question to human (stdout/interactive)
-4. Human answers (V1: human must be present; no autonomous fallback)
-5. Harness writes answer to temp file (`$HOME/.shepherd_agent_harness/tmp/agent_comm/`)
-6. Harness sends file path to agent via TMUX `send-keys`
-7. Harness responds 200 to the blocked curl (unblocking agent CLI script)
-8. Agent reads temp file, continues
+See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the full protocol specification: endpoints, payloads, HandshakeGuid identity, port discovery, Q&A flow, and agent CLI script.
 
 ### Agent Lifecycle — Spawn & Resume
 
@@ -310,6 +254,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 |-----|---------|
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
+| [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Full agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, Q&A flow, CLI script |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, CLI spec |
