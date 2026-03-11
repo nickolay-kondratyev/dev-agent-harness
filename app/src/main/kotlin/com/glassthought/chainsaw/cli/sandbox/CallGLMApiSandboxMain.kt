@@ -5,7 +5,7 @@ import com.glassthought.chainsaw.core.directLLMApi.ChatRequest
 import com.glassthought.chainsaw.core.initializer.Initializer
 
 suspend fun main(args: Array<String>) {
-  val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).glmDirectLLM
+  val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.glmDirectLLM
 
 
   llm.call(ChatRequest("Say hello in Russian")).also { response ->

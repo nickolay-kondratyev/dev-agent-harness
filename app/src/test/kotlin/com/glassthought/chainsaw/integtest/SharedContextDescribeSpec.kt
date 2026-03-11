@@ -28,16 +28,16 @@ data class SharedContextSpecConfig(
  * - No config boilerplate — defaults are wired through [SharedContextIntegFactory].
  *
  * ### When to use
- * - Use `SharedAppDepDescribeSpec` when your integration test needs `AppDependencies`
- *   (e.g., `appDependencies.tmuxSessionManager`, `appDependencies.glmDirectLLM`).
- * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `AppDependencies`.
+ * - Use `SharedContextDescribeSpec` when your integration test needs `ChainsawContext`
+ *   (e.g., `chainsawContext.infra.tmux.sessionManager`, `chainsawContext.infra.directLlm.glmDirectLLM`).
+ * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ChainsawContext`.
  *
  * ### Example
  * ```kotlin
  * @OptIn(ExperimentalKotest::class)
- * class MyIntegTest : SharedAppDepDescribeSpec({
+ * class MyIntegTest : SharedContextDescribeSpec({
  *     describe("GIVEN my use case").config(isIntegTestEnabled()) {
- *         val sessionManager = appDependencies.tmuxSessionManager
+ *         val sessionManager = chainsawContext.infra.tmux.sessionManager
  *         describe("WHEN something happens") {
  *             it("THEN expected result") {
  *                 // assertion
@@ -58,9 +58,9 @@ abstract class SharedContextDescribeSpec(
     body: SharedContextDescribeSpec.() -> Unit,
     config: SharedContextSpecConfig = SharedContextSpecConfig(),
 ) : AsgardDescribeSpec(
-    // Safe cast: every SharedAppDepDescribeSpec IS an AsgardDescribeSpec.
-    // Using SharedAppDepDescribeSpec as the receiver type allows subclass tests to access
-    // `appDependencies` directly in their body lambda without a qualified `this` reference.
+    // Safe cast: every SharedContextDescribeSpec IS an AsgardDescribeSpec.
+    // Using SharedContextDescribeSpec as the receiver type allows subclass tests to access
+    // `chainsawContext` directly in their body lambda without a qualified `this` reference.
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {

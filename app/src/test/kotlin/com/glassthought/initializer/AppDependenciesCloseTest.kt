@@ -2,11 +2,10 @@ package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.chainsaw.core.initializer.ChainsawContext
-import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
-import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
-import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.core.initializer.Initializer
+import com.glassthought.chainsaw.core.initializer.data.Environment
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
 
 /**
@@ -15,31 +14,17 @@ import okhttp3.OkHttpClient
  */
 class AppDependenciesCloseTest : AsgardDescribeSpec({
 
-    fun buildDepsWithHttpClient(httpClient: OkHttpClient): ChainsawContext {
-        val commandRunner = TmuxCommandRunner()
-        val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-        return ChainsawContext(
-          outFactory = outFactory,
-          tmuxCommandRunner = commandRunner,
-          tmuxCommunicator = communicator,
-          tmuxSessionManager = TmuxSessionManager(outFactory, commandRunner, communicator),
-          glmDirectLLM = GLMHighestTierApi(
-            outFactory = outFactory,
-            httpClient = httpClient,
-            modelName = "test-model",
-            maxTokens = 100,
-            apiEndpoint = "http://localhost/test",
-            apiToken = "test-token",
-          ),
-          httpClient = httpClient,
-        )
-    }
-
     describe("GIVEN AppDependencies") {
         describe("WHEN close() is called") {
             it("THEN OkHttpClient dispatcher executor service is shut down") {
                 val httpClient = OkHttpClient.Builder().build()
-                val deps = buildDepsWithHttpClient(httpClient)
+                val deps = runBlocking {
+                    Initializer.standard().initialize(
+                        outFactory = outFactory,
+                        environment = Environment.test(),
+                        httpClient = httpClient,
+                    )
+                }
 
                 deps.close()
 

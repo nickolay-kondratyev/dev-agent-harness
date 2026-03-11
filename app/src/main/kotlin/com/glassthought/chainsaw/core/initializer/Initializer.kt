@@ -5,6 +5,9 @@ import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
 import com.glassthought.chainsaw.core.Constants
+import com.glassthought.chainsaw.core.agent.DefaultAgentTypeChooser
+import com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase
+import com.glassthought.chainsaw.core.agent.impl.ClaudeCodeAgentStarterBundleFactory
 import com.glassthought.chainsaw.core.directLLMApi.DirectLLM
 import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
 import com.glassthought.chainsaw.core.initializer.data.Environment
@@ -13,30 +16,67 @@ import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
 import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
 import okhttp3.OkHttpClient
+import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 /**
+ * Groups tmux-related dependencies.
+ */
+data class TmuxInfra(
+    val commandRunner: TmuxCommandRunner,
+    val communicator: TmuxCommunicator,
+    val sessionManager: TmuxSessionManager,
+)
+
+/**
+ * Groups direct LLM API dependencies.
+ *
+ * [httpClient] is `internal` because it is only needed for resource cleanup in [ChainsawContext.close].
+ * External consumers should use [glmDirectLLM] for API calls.
+ */
+data class DirectLlmInfra(
+    val glmDirectLLM: DirectLLM,
+    internal val httpClient: OkHttpClient,
+)
+
+/**
+ * Top-level infrastructure grouping — all shared services and IO adapters.
+ */
+data class Infra(
+    val outFactory: OutFactory,
+    val tmux: TmuxInfra,
+    val directLlm: DirectLlmInfra,
+)
+
+/**
+ * Groups application use cases.
+ */
+data class UseCases(
+    val spawnTmuxAgentSession: SpawnTmuxAgentSessionUseCase,
+)
+
+/**
  * Encapsulates all application-level dependencies created during initialization.
+ *
+ * Dependencies are organized into logical groups:
+ * - [infra] — shared services and IO adapters (tmux, LLM, logging)
+ * - [useCases] — application-level orchestration use cases
  *
  * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
  * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
  */
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
 class ChainsawContext(
-    val outFactory: OutFactory,
-    val tmuxCommandRunner: TmuxCommandRunner,
-    val tmuxCommunicator: TmuxCommunicator,
-    val tmuxSessionManager: TmuxSessionManager,
-    val glmDirectLLM: DirectLLM,
-    private val httpClient: OkHttpClient,
+    val infra: Infra,
+    val useCases: UseCases,
 ) : AsgardCloseable {
 
     override suspend fun close() {
         // Shut down OkHttpClient connection and thread pools to prevent resource leaks
         // in long-running server usage. Order matters: dispatcher first, then connections.
-        httpClient.dispatcher.executorService.shutdown()
-        httpClient.connectionPool.evictAll()
-        outFactory.close()
+        infra.directLlm.httpClient.dispatcher.executorService.shutdown()
+        infra.directLlm.httpClient.connectionPool.evictAll()
+        infra.outFactory.close()
     }
 }
 
@@ -48,43 +88,102 @@ class ChainsawContext(
  * dependencies directly.
  */
 interface Initializer {
+    /**
+     * @param outFactory Structured logging factory.
+     * @param environment Runtime environment (test vs production).
+     * @param systemPromptFilePath Absolute path to a system prompt file for the agent CLI, or null for default behavior.
+     * @param claudeProjectsDir Directory where Claude stores session JSONL files.
+     * @param httpClient Custom [OkHttpClient] to use for LLM API calls, or null to create a default one.
+     *   Primarily useful for tests that need to verify resource cleanup behavior.
+     */
     suspend fun initialize(
         outFactory: OutFactory,
         environment: Environment = Environment.production(),
+        systemPromptFilePath: String? = null,
+        claudeProjectsDir: Path = Path.of(System.getProperty("user.home"), ".claude", "projects"),
+        httpClient: OkHttpClient? = null,
     ): ChainsawContext
 
-    companion object{
+    companion object {
         fun standard(): Initializer = InitializerImpl()
     }
 }
 
 class InitializerImpl : Initializer {
 
-    override suspend fun initialize(outFactory: OutFactory, environment: Environment): ChainsawContext {
+    override suspend fun initialize(
+        outFactory: OutFactory,
+        environment: Environment,
+        systemPromptFilePath: String?,
+        claudeProjectsDir: Path,
+        httpClient: OkHttpClient?,
+    ): ChainsawContext {
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
-        return out.time({initializeImpl(outFactory, environment)}, "initializer.initialize")
+        return out.time(
+            { initializeImpl(outFactory, environment, systemPromptFilePath, claudeProjectsDir, httpClient) },
+            "initializer.initialize",
+        )
     }
 
-    private fun initializeImpl(outFactory: OutFactory, environment: Environment): ChainsawContext {
+    private fun initializeImpl(
+        outFactory: OutFactory,
+        environment: Environment,
+        systemPromptFilePath: String?,
+        claudeProjectsDir: Path,
+        httpClient: OkHttpClient?,
+    ): ChainsawContext {
         // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
 
-        val httpClient = OkHttpClient.Builder()
+        val tmuxInfra = TmuxInfra(
+            commandRunner = commandRunner,
+            communicator = communicator,
+            sessionManager = sessionManager,
+        )
+
+        val httpClient = httpClient ?: OkHttpClient.Builder()
             .readTimeout(READ_TIMEOUT_SECONDS, TimeUnit.SECONDS)
             .build()
 
         val glmDirectLLM = createGLMDirectLLM(outFactory, httpClient)
 
-        return ChainsawContext(
-            outFactory = outFactory,
-            tmuxCommandRunner = commandRunner,
-            tmuxCommunicator = communicator,
-            tmuxSessionManager = sessionManager,
+        val directLlmInfra = DirectLlmInfra(
             glmDirectLLM = glmDirectLLM,
             httpClient = httpClient,
+        )
+
+        val infra = Infra(
+            outFactory = outFactory,
+            tmux = tmuxInfra,
+            directLlm = directLlmInfra,
+        )
+
+        val bundleFactory = ClaudeCodeAgentStarterBundleFactory(
+            environment = environment,
+            systemPromptFilePath = systemPromptFilePath,
+            claudeProjectsDir = claudeProjectsDir,
+            outFactory = outFactory,
+        )
+
+        val agentTypeChooser = DefaultAgentTypeChooser()
+
+        val spawnTmuxAgentSession = SpawnTmuxAgentSessionUseCase(
+            agentTypeChooser = agentTypeChooser,
+            bundleFactory = bundleFactory,
+            tmuxSessionManager = sessionManager,
+            outFactory = outFactory,
+        )
+
+        val useCases = UseCases(
+            spawnTmuxAgentSession = spawnTmuxAgentSession,
+        )
+
+        return ChainsawContext(
+            infra = infra,
+            useCases = useCases,
         )
     }
 

@@ -6,6 +6,7 @@ import com.glassthought.chainsaw.core.initializer.ChainsawContext
 import com.glassthought.chainsaw.core.initializer.Initializer
 import com.glassthought.chainsaw.core.initializer.data.Environment
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
 /**
  * Process-scoped singleton that provides a shared [ChainsawContext] and [TestOutManager]
@@ -37,9 +38,34 @@ object SharedContextIntegFactory {
         Initializer.standard().initialize(
             outFactory = testOutManager.outFactory,
             environment = Environment.test(),
+            systemPromptFilePath = resolveSystemPromptFilePath(),
         )
     }
 
     internal fun buildDescribeSpecConfig(): AsgardDescribeSpecConfig =
         AsgardDescribeSpecConfig.FOR_INTEG_TEST.copy(testOutManager = testOutManager)
+
+    /**
+     * Resolves the absolute path to the test system prompt file by walking up
+     * from the current working directory to find the git repo root.
+     */
+    private fun resolveSystemPromptFilePath(): String {
+        val repoRoot = findGitRepoRoot(File(System.getProperty("user.dir")))
+        val promptFile = File(repoRoot, "config/prompts/test-agent-system-prompt.txt")
+        require(promptFile.exists()) {
+            "System prompt file not found at [${promptFile.absolutePath}]"
+        }
+        return promptFile.absolutePath
+    }
+
+    private fun findGitRepoRoot(startDir: File): File {
+        var dir: File? = startDir
+        while (dir != null) {
+            if (File(dir, ".git").exists()) {
+                return dir
+            }
+            dir = dir.parentFile
+        }
+        throw IllegalStateException("Could not find .git directory starting from [${startDir.absolutePath}]")
+    }
 }
