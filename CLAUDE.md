@@ -59,9 +59,10 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Agent invocation — TMUX only**: All agents spawned as interactive TMUX sessions. Strictly serial (one agent at a time) in V1. Separate session per phase — context carries via files.
 
-**Agent↔Harness communication — bidirectional**:
-- Agent → Harness: HTTP POST via `harness-cli-for-agent.sh` (wraps curl)
+**Agent↔Harness communication — bidirectional** (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E):
+- Agent → Harness: HTTP POST via `callback_shepherd.*.sh` scripts (one per endpoint, wraps curl)
 - Harness → Agent: TMUX `send-keys` / ref.ap.7sZveqPcid5z1ntmLs27UqN6.E
+- **All HTTP callbacks are non-blocking** — every callback returns 200 immediately. Responses (Q&A answers, iteration feedback) delivered via TMUX `send-keys`, never via HTTP response.
 - Structured content delivered via temp files (write file, send path)
 
 **HTTP server**: Ktor CIO, binds port 0 (OS-assigned), writes port to `$HOME/.shepherd_agent_harness/server/port.txt`. Starts once, stays alive across all phases.
@@ -76,21 +77,32 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs for resume.
 
-**Harness decisions**: `DirectLLMApi` for iteration evaluation, title compression, etc. Structured JSON responses. Tiers: `QuickCheap`, `Medium`.
+**DirectLLM — tier-scoped interfaces**: `DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM` — all extend `DirectLLM`. Callers depend on the tier interface; `Initializer` wires concrete implementations. V1: `DirectQuickCheapLLM` → GLM-4.7-Flash, `DirectBudgetHighLLM` → GLM-5 (both Z.AI/GLM). **Not used for iteration decisions** — the reviewer's verdict is authoritative.
 
-**Server endpoints (V1)**: `POST /agent/done` (task complete), `/agent/question` (Q&A, curl blocks until human answers), `/agent/failed` (unrecoverable error → `FailedToExecutePlanUseCase`), `/agent/status` (health ping reply). All requests include git branch as identifier.
+**Server endpoints (V1)** (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E):
+- `POST /callback-shepherd/done` — task complete with required `result` field (`completed` for doers, `pass`/`needs_iteration` for reviewers). Server validates result against sub-part role.
+- `POST /callback-shepherd/user-question` — question for human. Returns 200 immediately; answer delivered via TMUX.
+- `POST /callback-shepherd/fail-workflow` — unrecoverable error, aborts entire workflow → `FailedToExecutePlanUseCase`.
+- `POST /callback-shepherd/ping-ack` — acknowledges health ping.
+- All requests include HandshakeGuid as identifier.
 
-**CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile, privateOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
+**Callback scripts**: Four focused bash scripts, one per endpoint:
+- `callback_shepherd.done.sh <completed|pass|needs_iteration>`
+- `callback_shepherd.user-question.sh "<text>"`
+- `callback_shepherd.fail-workflow.sh "<reason>"`
+- `callback_shepherd.ping-ack.sh`
 
-**Context assembly**: `ContextProvider` interface assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + harness CLI help), iteration decision prompts, and planner instructions (ticket + role catalog).
+**CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
 
-**Phase transitions — hybrid**: Automatic for straightforward transitions (implementor → reviewer). LLM-evaluated for iteration decisions: `DirectLLMApi` receives reviewer's PUBLIC.md + reviewed role's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason).
+**Context assembly**: `ContextProvider` interface assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage), planner instructions (ticket + role catalog).
 
-**Agent lifecycle**: TMUX session created → agent started → AgentSessionIdResolver GUID handshake → instruction file sent via `send-keys` → agent works (may call Q&A) → agent calls `/agent/done` → harness kills session → next phase.
+**Iteration decisions — reviewer-authoritative**: Reviewer signals `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). No LLM re-evaluation of the reviewer's verdict. On `needs_iteration` beyond `iteration.max` → `FailedToConvergeUseCase` (BudgetHigh DirectLLM summarizes state, user decides whether to grant more iterations).
 
-**Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`).
+**Agent lifecycle**: TMUX session created → agent started → AgentSessionIdResolver GUID handshake → instruction file sent via `send-keys` → agent works (may call user-question) → agent calls `callback_shepherd.done.sh <result>` → harness reads result, proceeds accordingly.
 
-**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `/agent/failed` → cleanup agent enriches ticket → codebase reset → ticket re-opened.
+**Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`).
+
+**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → cleanup agent enriches ticket → codebase reset → ticket re-opened.
 
 **Resume**: `current_state.json` tracks workflow progress. On restart, offers to resume from last checkpoint.
 

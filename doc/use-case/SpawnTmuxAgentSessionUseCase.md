@@ -78,9 +78,9 @@ Each session record in the `sessionIds` array contains:
    in `current_state.json` under the sub-part's `sessionIds` array
 9. Harness writes instruction file to temp file
 10. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
-11. Agent works (may call CLI for questions)
-12. Agent calls `harness-cli done` → server receives `/agent/done` with GUID
-13. Harness kills TMUX session, proceeds to next sub-part
+11. Agent works (may call callback scripts for questions)
+12. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result
+13. Harness validates result against sub-part role, proceeds accordingly
 
 ### AgentSessionIdResolver
 
@@ -115,9 +115,9 @@ the server-side registry remains valid.
 
 ---
 
-## Agent CLI Script
+## Callback Scripts
 
-See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `harness-cli-for-agent.sh` specification.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `callback_shepherd.*.sh` scripts specification.
 
 ---
 

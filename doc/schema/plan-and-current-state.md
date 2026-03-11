@@ -120,21 +120,23 @@ A workflow is either **straightforward** (has `parts`) or **with-planning** (has
 Each part has at most 2 sub-parts: a **doer** (first) and an optional **reviewer** (second).
 This keeps part execution trivially simple — no multi-reviewer skip logic needed.
 
-- **1 sub-part**: Doer runs once. Part complete.
-- **2 sub-parts**: Doer runs, then reviewer runs. On review failure, loop back to doer.
+- **1 sub-part**: Doer sends `result: "completed"`. Part complete.
+- **2 sub-parts**: Doer sends `result: "completed"`, then reviewer runs. On `result: "needs_iteration"`, loop back to doer.
 
 ### Execution Flow Within a Part
 
 ```
-Run doer → Run reviewer
-  reviewer FAIL → Run doer → Run reviewer (counter: 2)
-  reviewer FAIL → Run doer → Run reviewer (counter: 3)
-  reviewer PASS → Part complete
-  counter > iteration.max → Part failed
+Run doer (result: completed) → Run reviewer
+  reviewer result: needs_iteration → Run doer → Run reviewer (counter: 2)
+  reviewer result: needs_iteration → Run doer → Run reviewer (counter: 3)
+  reviewer result: pass → Part complete
+  counter > iteration.max → FailedToConvergeUseCase (user decides whether to grant more)
 ```
 
-The reviewer's `iteration.max` caps the number of loop-backs. On each failure the harness
-resumes the doer's TMUX session with new instructions, then resumes the reviewer's session.
+The reviewer's `iteration.max` is an iteration **budget** (not a hard limit — user can override
+via `FailedToConvergeUseCase`). On each `needs_iteration` the harness resumes the doer's TMUX
+session with new instructions, then resumes the reviewer's session. The reviewer's verdict is
+authoritative — no LLM evaluation in this path.
 
 ### Session IDs in current_state.json
 
