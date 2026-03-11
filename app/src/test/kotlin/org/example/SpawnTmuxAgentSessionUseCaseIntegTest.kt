@@ -1,11 +1,11 @@
 package org.example
 
-import com.glassthought.chainsaw.core.useCase.SpawnTmuxAgentSessionUseCase
-import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
-import com.glassthought.chainsaw.core.data.AgentType
-import com.glassthought.chainsaw.core.data.PhaseType
-import com.glassthought.chainsaw.core.agent.tmux.TmuxSession
-import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
+import com.glassthought.ticketShepherd.core.useCase.SpawnTmuxAgentSessionUseCase
+import com.glassthought.ticketShepherd.core.agent.data.StartAgentRequest
+import com.glassthought.ticketShepherd.core.data.AgentType
+import com.glassthought.ticketShepherd.core.data.PhaseType
+import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSession
+import com.glassthought.ticketShepherd.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
@@ -14,7 +14,7 @@ import io.kotest.matchers.string.shouldNotBeBlank
  * Integration test for [SpawnTmuxAgentSessionUseCase].
  *
  * Spawns a real Claude Code session in tmux, performs the GUID handshake,
- * and verifies the returned [com.glassthought.chainsaw.core.agent.TmuxAgentSession].
+ * and verifies the returned [com.glassthought.ticketShepherd.core.agent.TmuxAgentSession].
  *
  * Requires: tmux installed, claude CLI installed and authenticated.
  * Gated with [isIntegTestEnabled].

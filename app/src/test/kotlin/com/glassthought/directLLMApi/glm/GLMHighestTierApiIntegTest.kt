@@ -1,9 +1,9 @@
 package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.Constants
-import com.glassthought.chainsaw.core.supporting.directLLMApi.ChatRequest
-import com.glassthought.chainsaw.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.ticketShepherd.core.Constants
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatRequest
+import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.string.shouldNotBeBlank
 import okhttp3.OkHttpClient

@@ -1,12 +1,12 @@
 package org.example
 
-import com.glassthought.chainsaw.core.agent.tmux.TmuxSession
-import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
+import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSession
+import com.glassthought.ticketShepherd.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 
 /**
- * Tests for [com.glassthought.chainsaw.core.agent.tmux.TmuxSessionManager].
+ * Tests for [com.glassthought.ticketShepherd.core.agent.tmux.TmuxSessionManager].
  *
  * Requires tmux to be installed on the system. Tests use bash sessions (not claude)
  * so they can run in CI environments.
