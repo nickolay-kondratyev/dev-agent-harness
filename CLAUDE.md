@@ -41,7 +41,7 @@ heal a missing dependency — the build fails at configuration before the healin
 <file name="1_core_description.md">
 ## Project Overview
 
-Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
+Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 CLI Kotlin Agent Harness — replaces a top-level orchestrator agent with a Kotlin CLI process.
 Sub-agents are spawned as independent processes with fully isolated context windows.
@@ -72,7 +72,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 - `straightforward` — static parts, no planning
 - `with-planning` — PLANNER → PLAN_REVIEWER iteration loop, then dynamic execution from `plan.json`
 
-**Role catalog**: Auto-discovered from `$CHAINSAW_AGENTS_DIR`. Every `.md` file is an eligible role; `description` extracted from YAML frontmatter.
+**Role catalog**: Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`. Every `.md` file is an eligible role; `description` extracted from YAML frontmatter.
 
 **Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs for resume.
 

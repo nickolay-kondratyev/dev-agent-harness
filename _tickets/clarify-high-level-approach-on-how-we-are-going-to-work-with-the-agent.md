@@ -14,7 +14,7 @@ assignee: nickolaykondratyev
 
 # Shepherd — High-Level Design (V1)
 
-Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
+Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 ## Context
 
@@ -371,9 +371,9 @@ Example `plan.json`:
 #### Role Catalog — Auto-Discovered
 <!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
 
-The planner needs to know what roles are available. The catalog is **auto-discovered** from `$CHAINSAW_AGENTS_DIR`:
+The planner needs to know what roles are available. The catalog is **auto-discovered** from `$TICKET_SHEPHERD_AGENTS_DIR`:
 
-- Every Markdown file in `$CHAINSAW_AGENTS_DIR` is an eligible role (no opt-in flag needed)
+- Every Markdown file in `$TICKET_SHEPHERD_AGENTS_DIR` is an eligible role (no opt-in flag needed)
 - Extract `description` (required) and `description_long` (optional) from YAML frontmatter
 - Present the catalog to the planner agent in its instructions
 
@@ -424,7 +424,7 @@ Codified in `AiOutputStructure` class (ref.ap.XBNUQHLjDLpAr8F9IOyXU.E).
 
 ## Agent Role Definitions
 
-- Each ROLE has a corresponding Markdown file in `$CHAINSAW_AGENTS_DIR`
+- Each ROLE has a corresponding Markdown file in `$TICKET_SHEPHERD_AGENTS_DIR`
 - **Fail-fast on startup** if role file is missing
 - Instruction file assembled by ContextProvider — concatenation of role definition, ticket,
   SHARED_CONTEXT.md, relevant PUBLIC.md pointers, and harness CLI help
@@ -462,7 +462,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
 | Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
-| Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
+| Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
 | Plan review | **Agent-based (PLAN_REVIEWER)** | Same iteration pattern as other review phases |
 | Plan output | **Separate files** | PLAN.md (human) + plan.json (machine) in `shared/plan/` |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
@@ -485,7 +485,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 7. Temp file pattern for all structured content delivery to agents
 8. JSON workflow definitions with shared "parts" schema (`straightforward` static; `with-planning` dynamic)
 9. With-planning: PLANNER → PLAN_REVIEWER iteration loop → dynamic execution phases from plan.json
-10. Role catalog auto-discovered from `$CHAINSAW_AGENTS_DIR` (every .md file is eligible; `description` from frontmatter)
+10. Role catalog auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR` (every .md file is eligible; `description` from frontmatter)
 11. ContextProvider interface for assembling context packages (incl. planner instructions with role catalog)
 12. Hybrid phase transitions (automatic + LLM-evaluated via DirectLLMApi returning structured JSON)
 13. Agent health monitoring: timeout → ping → crash detection (UseCase pattern)

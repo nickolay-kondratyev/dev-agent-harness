@@ -14,7 +14,7 @@ parts/sub-parts schema. One parser handles everything.
 | Field | Required | Description |
 |-------|----------|-------------|
 | `name` | yes | Directory name and identifier (e.g., `"impl"`, `"review"`). Execution order is determined by array position. |
-| `role` | yes | Role from the role catalog (`$CHAINSAW_AGENTS_DIR/*.md`). |
+| `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
 | `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` (int). |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. |

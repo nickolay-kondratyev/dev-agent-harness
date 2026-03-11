@@ -16,7 +16,7 @@ tags: [cleanup, cli]
 ## Context
 
 The CLI script implementation jumped ahead of the design. We are iterating on the spec
-(HandshakeGuid in all callbacks, dropping branch from requests, CHAINSAW_HANDSHAKE_GUID env var).
+(HandshakeGuid in all callbacks, dropping branch from requests, TICKET_SHEPHERD_HANDSHAKE_GUID env var).
 The existing implementation does not include these design changes and should be deleted
 for a clean break. A fresh implementation will follow once the spec is finalized.
 

@@ -18,7 +18,7 @@ Implement auto-discovery and loading of agent role definitions from a directory 
 ## Scope
 - Create `RoleDefinition` data class: `name` (derived from filename), `description`, `descriptionLong` (optional), `filePath`
 - Create `RoleCatalogLoader` interface + implementation: `load(dir: Path): List<RoleDefinition>`
-- Scan `$CHAINSAW_AGENTS_DIR` for all `.md` files (every .md file is an eligible role)
+- Scan `$TICKET_SHEPHERD_AGENTS_DIR` for all `.md` files (every .md file is an eligible role)
 - Parse YAML frontmatter to extract `description` (required) and `description_long` (optional)
 - Role name derived from filename (e.g., `IMPLEMENTOR.md` → name = `IMPLEMENTOR`)
 - Package: `com.glassthought.shepherd.core.rolecatalog`

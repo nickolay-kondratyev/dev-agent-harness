@@ -1,6 +1,6 @@
 # Shepherd — High-Level Design (V1)
 
-Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
+Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 ## Vocabulary
 
@@ -125,7 +125,7 @@ Server starts once at harness startup, stays alive across all sub-parts.
 ### Agent CLI Script
 
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for the full
-agent CLI spec (including `CHAINSAW_HANDSHAKE_GUID` env var contract).
+agent CLI spec (including `TICKET_SHEPHERD_HANDSHAKE_GUID` env var contract).
 
 ### Structured Text Delivery — Temp File Pattern
 
@@ -254,7 +254,7 @@ A `ContextProvider` interface is responsible for assembling context packages for
 ### Role Catalog — Auto-Discovered
 <!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
 
-- Every Markdown file in `$CHAINSAW_AGENTS_DIR` is an eligible role
+- Every Markdown file in `$TICKET_SHEPHERD_AGENTS_DIR` is an eligible role
 - Extract `description` (required) and `description_long` (optional) from YAML frontmatter
 - **Fail-fast on startup** if a role referenced in the workflow is missing
 
@@ -298,7 +298,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
-| Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
+| Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
 
 ---

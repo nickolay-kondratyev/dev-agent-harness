@@ -12,7 +12,7 @@ assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 tags: [schema, agent-spawn]
 ---
 
-PhaseType enum (app/src/main/kotlin/com/glassthought/shepherd/core/data/PhaseType.kt) is a hardcoded set of role categories (IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER). In the new schema, roles are open-ended strings from the role catalog ($CHAINSAW_AGENTS_DIR/*.md).
+PhaseType enum (app/src/main/kotlin/com/glassthought/shepherd/core/data/PhaseType.kt) is a hardcoded set of role categories (IMPLEMENTOR, REVIEWER, PLANNER, PLAN_REVIEWER). In the new schema, roles are open-ended strings from the role catalog ($TICKET_SHEPHERD_AGENTS_DIR/*.md).
 
 ## Changes needed
 
