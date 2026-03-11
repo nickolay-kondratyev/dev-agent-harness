@@ -25,8 +25,8 @@ reacts to their signals, and decides what happens next.
 
 ## Responsibilities
 
-- **Owns `SessionsState`** — tracks live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
-  instances, keyed by HandshakeGuid.
+- **Owns `SessionsState`** (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — tracks live `TmuxAgentSession`
+  (ref.ap.DAwDPidjM0HMClPDSldXt.E) instances, keyed by HandshakeGuid.
 - **Receives server callbacks** — the `ShepherdServer` routes agent callbacks (`/callback-shepherd/done`,
   `/callback-shepherd/user-question`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/ping-ack`)
   to `TicketShepherd` after looking up the HandshakeGuid in `SessionsState`.

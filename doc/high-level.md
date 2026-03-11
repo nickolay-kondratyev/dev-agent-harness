@@ -295,6 +295,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Full agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, user-question flow, callback scripts |
+| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, concurrency model, relationship to current_state.json |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, callback script spec |
