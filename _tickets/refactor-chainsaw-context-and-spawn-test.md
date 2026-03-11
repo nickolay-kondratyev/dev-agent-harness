@@ -1,11 +1,11 @@
 ---
 id: nid_3ygjxcmvgff95uet7bc8x06zs_E
 title: "refactor chainsaw context and spawn test"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T15:25:40Z
-status_updated_iso: 2026-03-11T15:25:40Z
+status_updated_iso: 2026-03-11T15:27:44Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
