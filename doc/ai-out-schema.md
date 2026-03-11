@@ -45,6 +45,8 @@ Agents do not have private output files. An agent's private state lives in its c
 (available via resume). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
 writes is intended to be shared.
 
+- PUBLIC.md: should capture any key decisions that agent has made, it should NOT duplicate decisions that are already captured in the plan or shared context. But it should state decisions that it made and SUCCINCT WHY the decision was made. So that other agents are aware of the tradeoff that was made and rationale behind it. This direction of writing proper public.md file should be given to the agents in their instructions.
+
 ### Parts and Sub-Parts
 
 - **Part** = iteration group. Groups sub-parts that may loop (e.g., impl ↔ review).
@@ -53,7 +55,7 @@ writes is intended to be shared.
 
 ---
 
-## Unified Schema — Parts and Sub-Parts
+## Unified Plan Schema — Parts and Sub-Parts
 
 All workflow JSON files (static workflows **and** planner-generated `plan.json`) use the **same**
 parts/sub-parts schema. One parser handles everything.
