@@ -15,7 +15,7 @@ class TicketParserTest : AsgardDescribeSpec({
     fun resourcePath(name: String): Path =
         Path.of(
             TicketParserTest::class.java
-                .getResource("/com/glassthought/shepherd/core/ticket/$name")!!
+                .getResource("/com/glassthought/ticketShepherd/core/ticket/$name")!!
                 .toURI()
         )
 
