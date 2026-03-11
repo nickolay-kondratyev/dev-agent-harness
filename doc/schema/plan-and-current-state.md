@@ -13,7 +13,7 @@ parts/sub-parts schema. One parser handles everything.
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `name` | yes | Directory name and identifier (e.g., `"1_impl"`, `"2_review"`). Numbered prefix for execution order. |
+| `name` | yes | Directory name and identifier (e.g., `"impl"`, `"review"`). Execution order is determined by array position. |
 | `role` | yes | Role from the role catalog (`$CHAINSAW_AGENTS_DIR/*.md`). |
 | `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
 | `iteration` | no | Present only on reviewer sub-parts. Contains `max` (int) and `loopsBackTo` (string). |
@@ -38,20 +38,20 @@ static workflow JSON.
       "name": "ui_design",
       "description": "Design the dashboard UI",
       "subParts": [
-        { "name": "1_impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
-        { "name": "2_review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
-          "iteration": { "max": 3, "loopsBackTo": "1_impl" } },
-        { "name": "3_security_review", "role": "SECURITY_REVIEWER", "agentType": "PI",
-          "iteration": { "max": 2, "loopsBackTo": "1_impl" } }
+        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
+        { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
+          "iteration": { "max": 3, "loopsBackTo": "impl" } },
+        { "name": "security_review", "role": "SECURITY_REVIEWER", "agentType": "PI",
+          "iteration": { "max": 2, "loopsBackTo": "impl" } }
       ]
     },
     {
       "name": "backend_impl",
       "description": "Implement API endpoints",
       "subParts": [
-        { "name": "1_impl", "role": "IMPLEMENTOR" },
-        { "name": "2_review", "role": "IMPLEMENTATION_REVIEWER",
-          "iteration": { "max": 4, "loopsBackTo": "1_impl" } }
+        { "name": "impl", "role": "IMPLEMENTOR" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
+          "iteration": { "max": 4, "loopsBackTo": "impl" } }
       ]
     }
   ]
@@ -81,9 +81,9 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
       "name": "main",
       "description": "Implement and review",
       "subParts": [
-        { "name": "1_impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
-        { "name": "2_review", "role": "IMPLEMENTATION_REVIEWER",
-          "iteration": { "max": 4, "loopsBackTo": "1_impl" } }
+        { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
+          "iteration": { "max": 4, "loopsBackTo": "impl" } }
       ]
     }
   ]
@@ -96,9 +96,9 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
 {
   "name": "with-planning",
   "planningSubParts": [
-    { "name": "1_plan", "role": "PLANNER" },
-    { "name": "2_plan_review", "role": "PLAN_REVIEWER",
-      "iteration": { "max": 3, "loopsBackTo": "1_plan" } }
+    { "name": "plan", "role": "PLANNER" },
+    { "name": "plan_review", "role": "PLAN_REVIEWER",
+      "iteration": { "max": 3, "loopsBackTo": "plan" } }
   ],
   "executionPhasesFrom": "plan.json"
 }
@@ -139,18 +139,18 @@ determines the review did not pass):
 
 ```
 Part: backend
-  1_impl (IMPLEMENTOR)
-  2_security (SECURITY_REVIEWER, max: 2, loopsBackTo: 1_impl)
-  3_code_review (CODE_REVIEWER, max: 4, loopsBackTo: 1_impl)
+  impl (IMPLEMENTOR)
+  security (SECURITY_REVIEWER, max: 2, loopsBackTo: impl)
+  code_review (CODE_REVIEWER, max: 4, loopsBackTo: impl)
 ```
 
 Execution:
 ```
-Run 1_impl → Run 2_security
-  2_security FAIL → Run 1_impl → Run 2_security (counter: 2)
-  2_security PASS → Run 3_code_review
-  3_code_review FAIL → Run 1_impl → Run 3_code_review (counter: 2; skip 2_security)
-  3_code_review PASS → Part complete
+Run impl → Run security
+  security FAIL → Run impl → Run security (counter: 2)
+  security PASS → Run code_review
+  code_review FAIL → Run impl → Run code_review (counter: 2; skip security)
+  code_review PASS → Part complete
 ```
 
 ### Session IDs in current_state.json
@@ -161,7 +161,7 @@ created. **Resume = use the last element** in the array.
 
 ```json
 {
-  "name": "1_impl",
+  "name": "impl",
   "role": "IMPLEMENTOR",
   "sessionIds": [
     { "id": "77d5b7ea-cf04-453b-8867-162404763e18", "agentType": "ClaudeCode", "timestamp": "2026-03-10T15:30:00Z" },

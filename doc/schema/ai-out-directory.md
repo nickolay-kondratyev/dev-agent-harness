@@ -19,11 +19,11 @@ The git branches will include ticket ids which guarantees not clashing.
 │   └── plan/
 │       └── PLAN.md                     # Human-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
-│   └── ${sub_part}/                    # e.g., 1_plan, 2_plan_review (numbered for execution order)
+│   └── ${sub_part}/                    # e.g., plan, plan_review (order from array position in JSON)
 │       └── PUBLIC.md
 └── phases/                             # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
-        └── ${sub_part}/                # Numbered sub-part (e.g., 1_impl, 2_review, 3_security_review)
+        └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
             └── PUBLIC.md
 ```
 
