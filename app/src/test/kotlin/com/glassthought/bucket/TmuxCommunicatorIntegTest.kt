@@ -1,4 +1,4 @@
-package org.example
+package com.glassthought.bucket
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSession

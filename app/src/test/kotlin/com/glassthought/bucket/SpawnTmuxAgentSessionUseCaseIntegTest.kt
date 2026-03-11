@@ -1,4 +1,4 @@
-package org.example
+package com.glassthought.bucket
 
 import com.glassthought.ticketShepherd.core.useCase.SpawnTmuxAgentSessionUseCase
 import com.glassthought.ticketShepherd.core.agent.data.StartAgentRequest

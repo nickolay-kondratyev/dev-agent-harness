@@ -6,7 +6,7 @@ import com.glassthought.ticketShepherd.core.supporting.git.GitBranchManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
-import org.example.isIntegTestEnabled
+import com.glassthought.bucket.isIntegTestEnabled
 import java.nio.file.Files
 
 /**

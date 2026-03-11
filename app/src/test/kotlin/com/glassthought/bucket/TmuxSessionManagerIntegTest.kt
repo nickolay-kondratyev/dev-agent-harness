@@ -1,4 +1,4 @@
-package org.example
+package com.glassthought.bucket
 
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSession
 import com.glassthought.ticketShepherd.integtest.SharedContextDescribeSpec

@@ -7,7 +7,7 @@ import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighe
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.string.shouldNotBeBlank
 import okhttp3.OkHttpClient
-import org.example.isIntegTestEnabled
+import com.glassthought.bucket.isIntegTestEnabled
 import java.util.concurrent.TimeUnit
 
 /**
