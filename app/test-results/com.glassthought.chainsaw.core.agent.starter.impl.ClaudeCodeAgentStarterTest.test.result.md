@@ -19,6 +19,14 @@ skipped: 0
 - GIVEN ClaudeCodeAgentStarter with empty allowedTools
   - WHEN buildStartCommand is called
     - [PASS] THEN command does not contain --allowedTools
+- GIVEN ClaudeCodeAgentStarter with system prompt containing single quotes
+  - WHEN buildStartCommand is called
+    - [PASS] THEN single quotes in the prompt are escaped for the outer bash -c wrapper
+    - [PASS] THEN the command is a valid bash -c wrapper with proper start and end quotes
+    - [PASS] THEN the prompt is still double-quoted within the inner command
+- GIVEN ClaudeCodeAgentStarter with workingDir containing single quote
+  - WHEN buildStartCommand is called
+    - [PASS] THEN single quote in workingDir is properly escaped
 - GIVEN ClaudeCodeAgentStarter without system prompt
   - WHEN buildStartCommand is called
     - [PASS] THEN command does not contain --append-system-prompt

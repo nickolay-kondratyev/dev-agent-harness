@@ -1,6 +1,7 @@
 package com.glassthought.chainsaw.core.agent.starter.impl
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 
@@ -91,6 +92,58 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
 
             it("THEN command does not contain --dangerously-skip-permissions") {
                 command shouldNotContain "--dangerously-skip-permissions"
+            }
+        }
+    }
+
+    describe("GIVEN ClaudeCodeAgentStarter with system prompt containing single quotes") {
+        val starter = ClaudeCodeAgentStarter(
+            workingDir = "/home/user/project",
+            model = "sonnet",
+            allowedTools = listOf("Read", "Write"),
+            systemPrompt = "You're a test agent. Don't do anything unexpected.",
+            appendSystemPrompt = false,
+            dangerouslySkipPermissions = true,
+        )
+
+        describe("WHEN buildStartCommand is called") {
+            val command = starter.buildStartCommand().command
+
+            it("THEN single quotes in the prompt are escaped for the outer bash -c wrapper") {
+                // The outer wrapper is: bash -c '<inner>'
+                // Single quotes inside must use the end-quote, escaped-quote, start-quote idiom: '\''
+                // So "You're" becomes "You'\''re" inside the outer single-quoted string.
+                command shouldContain "You'\\''re"
+                command shouldContain "Don'\\''t"
+            }
+
+            it("THEN the command is a valid bash -c wrapper with proper start and end quotes") {
+                command.startsWith("bash -c '") shouldBe true
+                command.endsWith("'") shouldBe true
+            }
+
+            it("THEN the prompt is still double-quoted within the inner command") {
+                // The double quotes around the prompt text must survive the single-quote escaping
+                command shouldContain "--system-prompt \""
+            }
+        }
+    }
+
+    describe("GIVEN ClaudeCodeAgentStarter with workingDir containing single quote") {
+        val starter = ClaudeCodeAgentStarter(
+            workingDir = "/home/user/it's-a-project",
+            model = "sonnet",
+            allowedTools = listOf("Read"),
+            systemPrompt = null,
+            appendSystemPrompt = false,
+            dangerouslySkipPermissions = true,
+        )
+
+        describe("WHEN buildStartCommand is called") {
+            val command = starter.buildStartCommand().command
+
+            it("THEN single quote in workingDir is properly escaped") {
+                command shouldContain "cd /home/user/it'\\''s-a-project"
             }
         }
     }

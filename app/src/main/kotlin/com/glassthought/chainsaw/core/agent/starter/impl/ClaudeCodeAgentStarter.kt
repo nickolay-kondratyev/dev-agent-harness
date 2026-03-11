@@ -58,7 +58,8 @@ class ClaudeCodeAgentStarter(
         // [unset CLAUDECODE]: Claude Code refuses to start when the CLAUDECODE env var is set
         // (nested session detection). The harness spawns Claude in a tmux session which inherits
         // the parent environment, so we must explicitly unset it.
-        val fullCommand = "bash -c 'cd ${escapeForShell(workingDir)} && unset CLAUDECODE && $claudeCommand'"
+        val innerCommand = "cd $workingDir && unset CLAUDECODE && $claudeCommand"
+        val fullCommand = "bash -c '${escapeForShell(innerCommand)}'"
 
         return TmuxStartCommand(fullCommand)
     }
