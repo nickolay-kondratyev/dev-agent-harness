@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T20:42:48Z
 id: nid_e0525c8z4eiu1ktey7yu868yv_E
 title: "Remove pre-spec server implementation (HarnessServer, AgentRequests, AgentRequestHandler) for clean rebuild"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T20:37:21Z
-status_updated_iso: 2026-03-11T20:38:33Z
+status_updated_iso: 2026-03-11T20:42:48Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -34,3 +35,9 @@ The technology choices ARE already captured in `doc/high-level.md` (line 277: Kt
 ## Rebuild will follow spec
 New implementation will be built per ref.ap.wLpW8YbvqpRdxDplnN7Vh.E with HandshakeGuid-based routing, non-blocking callbacks, and result validation.
 
+
+## Notes
+
+**2026-03-11T20:42:56Z**
+
+Completed: Deleted 6 files (4 source + 2 test) under app/src/*/server/. Zero external references confirmed by exploration. No new test failures introduced — TicketParserTest and RoleCatalogLoaderTest failures were pre-existing. Follow-up ticket nid_611rashdkhgxp74gwwkvpeo35_E created for those.
