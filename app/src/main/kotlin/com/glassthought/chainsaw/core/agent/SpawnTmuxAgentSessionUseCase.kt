@@ -1,5 +1,6 @@
 package com.glassthought.chainsaw.core.agent
 
+import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
@@ -12,23 +13,9 @@ import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Orchestrates the full agent spawn flow:
- * 1. Choose agent type from request
- * 2. Create agent-specific starter bundle (command builder + session ID resolver)
- * 3. Build the tmux start command
- * 4. Create a tmux session running the agent
- * 5. Send the GUID handshake marker
- * 6. Resolve the agent session ID via polling
- * 7. Return a [TmuxAgentSession] pairing the live tmux handle with the session identity
- *
- * Dependencies are injected via constructor; no production wiring into AppDependencies
- * is performed in this ticket.
- *
- * @param agentStartupDelay Wait time between creating the tmux session and sending the GUID.
- *   The agent CLI (e.g., Claude Code) needs time to initialize its interactive prompt.
- *   If the GUID is sent before the agent is ready, it will be consumed by the shell
- *   rather than the agent's input handler.
+ * Specification of SpawnTmuxAgentSessionUseCase in ap.hZdTRho3gQwgIXxoUtTqy.E
  */
+@AnchorPoint("ap.M1jzg6RlJkYL4hi8aXr7LnQA.E")
 class SpawnTmuxAgentSessionUseCase(
     private val agentTypeChooser: AgentTypeChooser,
     private val bundleFactory: AgentStarterBundleFactory,

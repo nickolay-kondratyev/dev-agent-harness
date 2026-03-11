@@ -1,9 +1,9 @@
-# SpawnTmuxAgentSessionUseCase — Design
+# SpawnTmuxAgentSessionUseCase — Design / ap.hZdTRho3gQwgIXxoUtTqy.E
 
 Orchestrates spawning an agent in a TMUX session, establishing identity via HandshakeGuid,
 and resolving the agent's session ID for future resume.
 
-**Implemented in**: `SpawnTmuxAgentSessionUseCase` (ref.ap.7sZveqPcid5z1ntmLs27UqN6.E)
+**Implemented in**: `SpawnTmuxAgentSessionUseCase` (ref.ap.M1jzg6RlJkYL4hi8aXr7LnQA.E)
 
 ---
 
