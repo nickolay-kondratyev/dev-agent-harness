@@ -1,9 +1,9 @@
-package com.glassthought.chainsaw.core.wingman.impl
+package com.glassthought.chainsaw.core.sessionresolver.impl
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.chainsaw.core.data.AgentType
-import com.glassthought.chainsaw.core.wingman.HandshakeGuid
-import com.glassthought.chainsaw.core.wingman.ResumableAgentSessionId
+import com.glassthought.chainsaw.core.sessionresolver.HandshakeGuid
+import com.glassthought.chainsaw.core.sessionresolver.ResumableAgentSessionId
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -12,9 +12,9 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 
-class ClaudeCodeWingmanTest : AsgardDescribeSpec({
+class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
 
-    describe("GIVEN a ClaudeCodeWingman with a temp projects directory") {
+    describe("GIVEN a ClaudeCodeAgentSessionIdResolver with a temp projects directory") {
         val guid = HandshakeGuid("test-guid-abc123-unique-marker")
 
         describe("AND a single JSONL file containing the target GUID") {
@@ -26,12 +26,12 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"type":"message","content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
 
-                        val result = wingman.resolveSessionId(guid)
+                        val result = resolver.resolveSessionId(guid)
 
                         result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
                     }
@@ -48,14 +48,14 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         )
 
                         // Short timeout so the test is fast; real timeout is 45 seconds.
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            wingman.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid)
                         }
                     }
                 }
@@ -66,14 +66,14 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"type":"message","content":"different-content"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
-                            wingman.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid)
                         }
                         exception.message shouldContain guid.value
                     }
@@ -92,13 +92,13 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            wingman.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid)
                         }
                     }
                 }
@@ -112,13 +112,13 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
-                            wingman.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid)
                         }
                         exception.message shouldContain "Ambiguous"
                     }
@@ -138,12 +138,12 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
 
-                        val result = wingman.resolveSessionId(guid)
+                        val result = resolver.resolveSessionId(guid)
 
                         result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, sessionId)
                     }
@@ -162,14 +162,14 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val wingman = ClaudeCodeAgentSessionIdResolver(
+                        val resolver = ClaudeCodeAgentSessionIdResolver(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            wingman.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid)
                         }
                     }
                 }
@@ -177,7 +177,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a ClaudeCodeWingman with a fake GuidScanner") {
+    describe("GIVEN a ClaudeCodeAgentSessionIdResolver with a fake GuidScanner") {
         val guid = HandshakeGuid("polling-test-guid")
         val matchPath = Path.of("/fake/sessions/abc-session-id-123.jsonl")
 
@@ -189,13 +189,13 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeAgentSessionIdResolver(
+                    val resolver = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
                     )
 
-                    val result = wingman.resolveSessionId(guid)
+                    val result = resolver.resolveSessionId(guid)
 
                     result shouldBe ResumableAgentSessionId(AgentType.CLAUDE_CODE, "abc-session-id-123")
                 }
@@ -206,13 +206,13 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeAgentSessionIdResolver(
+                    val resolver = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
                     )
 
-                    wingman.resolveSessionId(guid)
+                    resolver.resolveSessionId(guid)
 
                     fakeScanner.callCount shouldBe 2
                 }
@@ -227,13 +227,13 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = listOf(matchPath),
                     )
 
-                    val wingman = ClaudeCodeAgentSessionIdResolver(
+                    val resolver = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         pollIntervalMs = 1L,
                     )
 
-                    wingman.resolveSessionId(guid)
+                    resolver.resolveSessionId(guid)
 
                     fakeScanner.callCount shouldBe 4
                 }
@@ -248,7 +248,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = emptyList(),
                     )
 
-                    val wingman = ClaudeCodeAgentSessionIdResolver(
+                    val resolver = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         resolveTimeoutMs = 100L,
@@ -256,7 +256,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                     )
 
                     shouldThrow<IllegalStateException> {
-                        wingman.resolveSessionId(guid)
+                        resolver.resolveSessionId(guid)
                     }
                 }
 
@@ -266,7 +266,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                         matchOnSuccess = emptyList(),
                     )
 
-                    val wingman = ClaudeCodeAgentSessionIdResolver(
+                    val resolver = ClaudeCodeAgentSessionIdResolver(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
                         resolveTimeoutMs = 100L,
@@ -274,7 +274,7 @@ class ClaudeCodeWingmanTest : AsgardDescribeSpec({
                     )
 
                     val exception = shouldThrow<IllegalStateException> {
-                        wingman.resolveSessionId(guid)
+                        resolver.resolveSessionId(guid)
                     }
                     exception.message shouldContain guid.value
                 }
@@ -304,7 +304,7 @@ private class CountingFakeGuidScanner(
 }
 
 private suspend fun withTempDir(block: suspend (Path) -> Unit) {
-    val tempDir = createTempDirectory("wingman-test-")
+    val tempDir = createTempDirectory("session-resolver-test-")
     try {
         block(tempDir)
     } finally {

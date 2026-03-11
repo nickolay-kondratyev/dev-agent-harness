@@ -5,7 +5,7 @@ import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
 import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.wingman.HandshakeGuid
+import com.glassthought.chainsaw.core.sessionresolver.HandshakeGuid
 import kotlinx.coroutines.delay
 import java.util.UUID
 import kotlin.time.Duration

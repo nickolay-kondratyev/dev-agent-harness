@@ -1,7 +1,7 @@
 package com.glassthought.chainsaw.core.agent
 
 import com.glassthought.chainsaw.core.agent.starter.AgentStarter
-import com.glassthought.chainsaw.core.wingman.AgentSessionIdResolver
+import com.glassthought.chainsaw.core.sessionresolver.AgentSessionIdResolver
 
 /**
  * Pairs an [AgentStarter] (builds the launch command) with an [AgentSessionIdResolver]

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T15:52:07Z
 id: nid_a4g8sezxri8ex9p7sha44ggdr_E
 title: "Clean up Wingman terminology: rename package and remaining references to AgentSessionIdResolver"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T15:29:27Z
-status_updated_iso: 2026-03-11T15:32:00Z
+status_updated_iso: 2026-03-11T15:52:07Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -84,3 +85,30 @@ Run `./CLAUDE.generate.sh` after doc changes.
 - `app/test-results/` (regenerated on next test run)
 - Anchor point IDs themselves (APs are stable; only description text at definition site gets updated)
 
+
+## Notes
+
+**2026-03-11T15:52:01Z**
+
+## Resolution
+
+Completed all 10 requirements successfully:
+
+### Changes Made
+1. **R1 - Package rename**: `com.glassthought.chainsaw.core.wingman` → `com.glassthought.chainsaw.core.sessionresolver`
+2. **R2 - Test file rename**: `ClaudeCodeWingmanTest.kt` → `ClaudeCodeAgentSessionIdResolverTest.kt`
+3. **R3 - Variable names**: All `wingman` → `resolver` in tests
+4. **R4 - Test helper prefix**: `wingman-test-` → `session-resolver-test-`
+5. **R5 - Test describe strings**: Updated to `ClaudeCodeAgentSessionIdResolver`
+6. **R6 - doc/high-level.md**: All Wingman references updated
+7. **R7 - ai_input/memory/auto_load/1_core_description.md**: Updated session tracking line
+8. **R8 - AgentSessionIdResolver.kt KDoc**: Updated implementation reference
+9. **R9 - CLAUDE.md**: Regenerated
+10. **R10 - Tests**: All pass (`./gradlew :app:test`)
+
+### Verification
+- `grep -ri wingman` across `app/src/`, `doc/`, `ai_input/` returns zero hits
+- `./gradlew :app:compileKotlin :app:compileTestKotlin` compiles clean
+- `./gradlew :app:test` passes
+
+Commit: 5cbff25
