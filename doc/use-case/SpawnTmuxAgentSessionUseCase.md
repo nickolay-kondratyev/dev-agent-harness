@@ -9,12 +9,12 @@ and resolving the agent's session ID for future resume.
 
 ## Vocabulary
 
-| Term | Definition |
-|------|------------|
-| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
-| **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
-| **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
-| **AgentSessionIdResolver** | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker. |
+| Term                            | Definition                                                                                                                                                                                               |
+|---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
+| **Agent**                       | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously.                                                               |
+| **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
+| **AgentSessionIdResolver**      | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.                                                                                     |
 
 ---
 
@@ -24,8 +24,7 @@ and resolving the agent's session ID for future resume.
 
 The server needs to know **which agent** is calling on every callback (`/agent/done`,
 `/agent/question`, etc.). In a single-agent world, this is trivial. But the design must
-be multi-agent ready — multiple agents alive on separate worktrees, potentially messaging
-each other.
+be multi-agent ready — multiple agents alive at the same time (example implementor and reviewer talking to each other).
 
 ### Solution
 
@@ -40,7 +39,7 @@ Every agent session gets a **HandshakeGuid** — a harness-generated identifier 
 The `handshake.` prefix makes GUIDs greppable in logs and distinguishable from agent session IDs.
 
 ```kotlin
-// HandshakeGuid value class — ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E
+// HandshakeGuid value class — ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E
 @JvmInline
 value class HandshakeGuid(val value: String) {
     override fun toString(): String = value

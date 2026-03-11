@@ -1,5 +1,7 @@
 package com.glassthought.chainsaw.core.sessionresolver
 
+import com.asgard.core.annotation.AnchorPoint
+
 /**
  * Strongly-typed GUID marker used for handshake between harness and agent.
  *
@@ -8,6 +10,7 @@ package com.glassthought.chainsaw.core.sessionresolver
  *
  * This is used by [AgentSessionIdResolver]/ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E to resolve the agent session ID from the GUID.
  */
+@AnchorPoint("ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E")
 @JvmInline
 value class HandshakeGuid(val value: String) {
     override fun toString(): String = value
