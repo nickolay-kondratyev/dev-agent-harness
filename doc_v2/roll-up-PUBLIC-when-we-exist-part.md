@@ -1,0 +1,1 @@
+We can optimize context by compressing the PUBLIC.md when we exit the part so that next part gets the rolled up PUBLIC version from all the subparts of the part.
