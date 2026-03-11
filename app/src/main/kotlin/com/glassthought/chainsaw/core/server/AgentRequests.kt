@@ -6,8 +6,6 @@ package com.glassthought.chainsaw.core.server
  * Each endpoint has its own type for type safety, even when some share the same shape today.
  * Jackson + Kotlin module handles deserialization from JSON.
  *
- * JSON payloads match the contract defined in harness-cli-for-agent.sh
- * (ref.ap.8PB8nMd93D3jipEWhME5n.E).
  */
 
 /** Common interface for all agent-to-harness request payloads. */

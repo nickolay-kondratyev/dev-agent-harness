@@ -94,13 +94,9 @@ $HOME/.chainsaw_agent_harness/server/port.txt
 Server starts once at harness startup, stays alive across all sub-parts.
 
 ### Agent CLI Script
-<!-- ref.ap.8PB8nMd93D3jipEWhME5n.E -- implementation in scripts/harness-cli-for-agent.sh -->
 
-**`harness-cli-for-agent.sh`** — bash script wrapping curl calls:
-- Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
-- Agent receives `--help` content in its instructions, wrapped in
-  `<critical_to_keep_through_compaction>` tags to survive context compaction
+> **Removed**: `scripts/harness-cli-for-agent.sh` and `scripts/test_harness_cli.sh` have been
+> deleted. A replacement CLI script will be built per the updated spec.
 
 ### Structured Text Delivery — Temp File Pattern
 
