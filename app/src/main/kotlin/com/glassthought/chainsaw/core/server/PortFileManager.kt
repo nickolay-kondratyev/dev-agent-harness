@@ -20,7 +20,6 @@ interface PortPublisher {
  * Manages the port file that agents read to discover the harness server port.
  *
  * Default path: $HOME/.chainsaw_agent_harness/server/port.txt
- * (matches ref.ap.8PB8nMd93D3jipEWhME5n.E harness-cli-for-agent.sh)
  *
  * @param portFilePath Path where the port number will be written.
  */
@@ -44,7 +43,7 @@ class PortFileManager(private val portFilePath: Path) : PortPublisher {
     }
 
     companion object {
-        // MUST match PORT_FILE in scripts/harness-cli-for-agent.sh (ref.ap.8PB8nMd93D3jipEWhME5n.E)
+        // Port file path convention: $HOME/.chainsaw_agent_harness/server/port.txt
         val DEFAULT_PATH: Path = Path.of(
             System.getProperty("user.home"),
             ".chainsaw_agent_harness", "server", "port.txt"

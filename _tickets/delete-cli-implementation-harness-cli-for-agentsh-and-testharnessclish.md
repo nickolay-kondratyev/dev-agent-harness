@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T16:26:56Z
 id: nid_ptqrjjc8f7bl3ims5dehpcqdd_E
 title: "Delete CLI implementation: harness-cli-for-agent.sh and test_harness_cli.sh"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T16:05:30Z
-status_updated_iso: 2026-03-11T16:07:35Z
+status_updated_iso: 2026-03-11T16:26:56Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
@@ -45,3 +46,9 @@ References should note the script was removed and will be rebuilt per updated sp
 - Updating AgentRequests.kt to use handshakeGuid (design iteration still in progress)
 - Updating doc/high-level.md CLI spec section (being rewritten as part of design iteration)
 
+
+## Notes
+
+**2026-03-11T16:26:56Z**
+
+Completed successfully. Deleted both scripts, cleaned up all ref.ap.8PB8nMd93D3jipEWhME5n.E references (AgentRequests.kt, HarnessServer.kt, PortFileManager.kt, doc/high-level.md). Build and tests verified clean. Committed on branch CC_nid_ptqrjjc8f7bl3ims5dehpcqdd_E__delete-cli-implementation-harness-cli-for-agentsh-and-testharnessclish_sonnet-v4.6 at 9669c75.
