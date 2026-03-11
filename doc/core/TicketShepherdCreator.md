@@ -19,9 +19,13 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 
 - Resolves workflow JSON from `config/workflows/<name>.json`
 - Parses the ticket (frontmatter `id`, `title`)
+- **Resolves try-N** — scans both local branches and `.ai_out/` directories to find the first
+  N where neither exists (see [Try-N Resolution](../high-level.md#try-n-resolution)
+  ref.ap.THL21SyZzJhzInG2m4zl2.E)
+- **Creates feature branch** (`git checkout -b`) from current HEAD
 - Initializes `SessionsState`
 - Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
-- Sets up `.ai_out/` directory structure for the branch
+- Sets up `.ai_out/` directory structure for the branch (depends on branch name from previous steps)
 - Creates `current_state.json` (V2 adds resume-from-existing — ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 - Constructs `TicketShepherd` with `ShepherdContext` + ticket-scoped state
 

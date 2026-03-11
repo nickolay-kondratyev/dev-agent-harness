@@ -143,6 +143,6 @@ The harness performs these git operations during a workflow:
 
 | When | Operation |
 |---|---|
-| Workflow start | `git checkout -b {branch}` (ref.ap.THL21SyZzJhzInG2m4zl2.E) |
+| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](../high-level.md#try-n-resolution) (ref.ap.THL21SyZzJhzInG2m4zl2.E). |
 | `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"` |
 | `FailedToExecutePlanUseCase` cleanup | Reset codebase to starting state (cleanup agent responsibility) |

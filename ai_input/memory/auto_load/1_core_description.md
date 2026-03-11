@@ -53,7 +53,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
 
-**Context assembly**: `ContextProvider` interface assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage), planner instructions (ticket + role catalog).
+**Context assembly**: `ContextForAgentProvider` interface (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage), planner instructions (ticket + role catalog).
 
 **Iteration decisions — reviewer-authoritative**: Reviewer signals `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). No LLM re-evaluation of the reviewer's verdict. On `needs_iteration` beyond `iteration.max` → `FailedToConvergeUseCase` (BudgetHigh DirectLLM summarizes state, user decides whether to grant more iterations).
 
@@ -67,7 +67,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **File structure**: `.ai_out/${git_branch}/` with `harness_private/`, `shared/`, `planning/`, `phases/` subdirectories.
 
-**Git branching**: Derived from ticket. `{TICKET_ID}__{slugified_title}__try-{N}` (`__` delimiter). try-N starts at 1, increments on retry after failure.
+**Git branching**: Derived from ticket. `{TICKET_ID}__{slugified_title}__try-{N}` (`__` delimiter). try-N resolved by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — dual check: scans both local branches and `.ai_out/` directories, picks first N where neither exists.
 
 ### Dependencies
 - Will take dependencies on well established third-party libraries.
