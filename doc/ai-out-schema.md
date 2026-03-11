@@ -226,23 +226,32 @@ This applies to **both** execution sub-parts and planning sub-parts — all stat
 Sub-parts that lack an `iteration` field execute exactly **once**. These are typically
 implementors or one-shot tasks.
 
+### Agent Session Lifecycle (V1)
+
+V1 **kills the agent session between iterations** — each sub-part run spawns a fresh session.
+Context carries exclusively via files (PUBLIC.md, SHARED_CONTEXT.md) assembled by ContextProvider.
+
+**V2 evolution**: The design should not preclude keeping agent sessions alive across iterations
+when the context window has room. The `sessionIds` array already supports multiple sessions per
+sub-part, and the harness can decide per-iteration whether to resume or start fresh based on
+context usage. See ticket `nid_etxturughxixkl5hmvgazco3j_E`.
+
 ### PUBLIC.md Lifecycle
 
 - **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
   including relevant context in its output.
 - **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
   changes is preserved in git — no need for versioned files.
-- **Fresh reviewer**: To use a brand new reviewer (no prior conversation), the harness deletes the
-  reviewer's `PUBLIC.md` and starts a new session (no resume). The fresh reviewer picks up context
-  purely from the implementor's `PUBLIC.md` and other files assembled by ContextProvider.
-- **Resumed reviewer**: To continue with the same reviewer, the harness resumes the session.
-  The reviewer retains its full conversation history.
+- **Fresh session** (V1 default): The harness starts a new session. The agent picks up context
+  purely from PUBLIC.md files and other files assembled by ContextProvider.
+- **Resumed session** (V2): The harness resumes the session using the last `sessionIds` entry.
+  The agent retains its full conversation history.
 
 ## Scoping Rules
 
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
 - **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained iteration group.
-- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md and session_ids.
+- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md.
 
 ## Cross-Agent Visibility
 
@@ -263,4 +272,5 @@ $HOME/.chainsaw_agent_harness/
 
 ## Codified In
 
-`AiOutputStructure` class (`app/src/main/kotlin/com/glassthought/chainsaw/core/filestructure/AiOutputStructure.kt`) — pure path resolution + `ensureStructure()` for directory creation.
+To be rebuilt: `AiOutputStructure` class for path resolution + `ensureStructure()` for directory creation.
+Previous implementation deleted for clean rebuild against the new schema.

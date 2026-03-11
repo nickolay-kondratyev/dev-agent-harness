@@ -1,17 +1,3 @@
----
-closed_iso: 2026-03-11T14:16:24Z
-id: nid_j54dq6ra33hix1e8aavanb8bz_E
-title: "High level approach on how we are going to work with the agent"
-status: closed
-deps: []
-links: []
-created_iso: 2026-03-07T14:51:08Z
-status_updated_iso: 2026-03-11T14:16:24Z
-type: task
-priority: 3
-assignee: nickolaykondratyev
----
-
 # Chainsaw — High-Level Design (V1)
 
 Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
