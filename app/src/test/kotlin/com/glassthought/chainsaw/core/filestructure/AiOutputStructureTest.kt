@@ -13,8 +13,8 @@ private data class TestFixture(val repoRoot: Path, val structure: AiOutputStruct
 class AiOutputStructureTest : AsgardDescribeSpec({
 
     val branch = "feature__my-task__try-1"
-    val role = "IMPLEMENTOR"
-    val part = "part_1"
+    val subPart = "1_impl"
+    val part = "ui_design"
 
     fun createTestFixture(): TestFixture {
         val repoRoot = Files.createTempDirectory("ai-output-structure-test")
@@ -69,24 +69,24 @@ class AiOutputStructureTest : AsgardDescribeSpec({
             }
         }
 
-        describe("WHEN role is blank") {
-            it("THEN planningRoleDir throws IllegalArgumentException") {
+        describe("WHEN subPart is blank") {
+            it("THEN planningSubPartDir throws IllegalArgumentException") {
                 shouldThrow<IllegalArgumentException> {
-                    structure.planningRoleDir(branch, "")
+                    structure.planningSubPartDir(branch, "")
                 }
             }
 
-            it("THEN phaseRoleDir throws IllegalArgumentException") {
+            it("THEN subPartDir throws IllegalArgumentException") {
                 shouldThrow<IllegalArgumentException> {
-                    structure.phaseRoleDir(branch, part, "")
+                    structure.subPartDir(branch, part, "")
                 }
             }
         }
 
         describe("WHEN part is blank") {
-            it("THEN phaseRoleDir throws IllegalArgumentException") {
+            it("THEN subPartDir throws IllegalArgumentException") {
                 shouldThrow<IllegalArgumentException> {
-                    structure.phaseRoleDir(branch, "", role)
+                    structure.subPartDir(branch, "", subPart)
                 }
             }
         }
@@ -137,22 +137,14 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                 }
             }
 
-            describe("WHEN locationsFile is called") {
-                val result = structure.locationsFile(branch)
+            describe("AND planning sub-part is '1_plan'") {
+                val planSubPart = "1_plan"
 
-                it("THEN path ends with shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt") {
-                    result.toString() shouldEndWith "shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt"
-                }
-            }
+                describe("WHEN planningSubPartDir is called") {
+                    val result = structure.planningSubPartDir(branch, planSubPart)
 
-            describe("AND role is 'PLANNER'") {
-                val plannerRole = "PLANNER"
-
-                describe("WHEN planningRoleDir is called") {
-                    val result = structure.planningRoleDir(branch, plannerRole)
-
-                    it("THEN path ends with .ai_out/$branch/planning/PLANNER") {
-                        result.toString() shouldEndWith ".ai_out/$branch/planning/PLANNER"
+                    it("THEN path ends with .ai_out/$branch/planning/1_plan") {
+                        result.toString() shouldEndWith ".ai_out/$branch/planning/1_plan"
                     }
 
                     it("THEN path starts with repo root") {
@@ -161,37 +153,29 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                 }
 
                 describe("WHEN planningPublicMd is called") {
-                    val result = structure.planningPublicMd(branch, plannerRole)
+                    val result = structure.planningPublicMd(branch, planSubPart)
 
-                    it("THEN path ends with planning/PLANNER/PUBLIC.md") {
-                        result.toString() shouldEndWith "planning/PLANNER/PUBLIC.md"
-                    }
-                }
-
-                describe("WHEN planningPrivateMd is called") {
-                    val result = structure.planningPrivateMd(branch, plannerRole)
-
-                    it("THEN path ends with planning/PLANNER/PRIVATE.md") {
-                        result.toString() shouldEndWith "planning/PLANNER/PRIVATE.md"
+                    it("THEN path ends with planning/1_plan/PUBLIC.md") {
+                        result.toString() shouldEndWith "planning/1_plan/PUBLIC.md"
                     }
                 }
 
                 describe("WHEN planningSessionIdsDir is called") {
-                    val result = structure.planningSessionIdsDir(branch, plannerRole)
+                    val result = structure.planningSessionIdsDir(branch, planSubPart)
 
-                    it("THEN path ends with planning/PLANNER/session_ids") {
-                        result.toString() shouldEndWith "planning/PLANNER/session_ids"
+                    it("THEN path ends with planning/1_plan/session_ids") {
+                        result.toString() shouldEndWith "planning/1_plan/session_ids"
                     }
                 }
             }
 
-            describe("AND part is '$part' AND role is '$role'") {
+            describe("AND part is '$part' AND subPart is '$subPart'") {
 
-                describe("WHEN phaseRoleDir is called") {
-                    val result = structure.phaseRoleDir(branch, part, role)
+                describe("WHEN subPartDir is called") {
+                    val result = structure.subPartDir(branch, part, subPart)
 
-                    it("THEN path ends with phases/$part/$role") {
-                        result.toString() shouldEndWith "phases/$part/$role"
+                    it("THEN path ends with phases/$part/$subPart") {
+                        result.toString() shouldEndWith "phases/$part/$subPart"
                     }
 
                     it("THEN path starts with repo root") {
@@ -200,26 +184,18 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                 }
 
                 describe("WHEN sessionIdsDir is called") {
-                    val result = structure.sessionIdsDir(branch, part, role)
+                    val result = structure.sessionIdsDir(branch, part, subPart)
 
-                    it("THEN path ends with phases/$part/$role/session_ids") {
-                        result.toString() shouldEndWith "phases/$part/$role/session_ids"
+                    it("THEN path ends with phases/$part/$subPart/session_ids") {
+                        result.toString() shouldEndWith "phases/$part/$subPart/session_ids"
                     }
                 }
 
                 describe("WHEN publicMd is called") {
-                    val result = structure.publicMd(branch, part, role)
+                    val result = structure.publicMd(branch, part, subPart)
 
-                    it("THEN path ends with phases/$part/$role/PUBLIC.md") {
-                        result.toString() shouldEndWith "phases/$part/$role/PUBLIC.md"
-                    }
-                }
-
-                describe("WHEN privateMd is called") {
-                    val result = structure.privateMd(branch, part, role)
-
-                    it("THEN path ends with phases/$part/$role/PRIVATE.md") {
-                        result.toString() shouldEndWith "phases/$part/$role/PRIVATE.md"
+                    it("THEN path ends with phases/$part/$subPart/PUBLIC.md") {
+                        result.toString() shouldEndWith "phases/$part/$subPart/PUBLIC.md"
                     }
                 }
             }
@@ -231,8 +207,8 @@ class AiOutputStructureTest : AsgardDescribeSpec({
         describe("WHEN ensureStructure is called with branch and parts") {
             val (repoRoot, structure) = createTestFixture()
             val parts = listOf(
-                Part("part_1", listOf("IMPLEMENTOR", "REVIEWER")),
-                Part("part_2", listOf("IMPLEMENTOR")),
+                Part("ui_design", listOf("1_impl", "2_review")),
+                Part("backend", listOf("1_impl")),
             )
             structure.ensureStructure(branch, parts)
 
@@ -248,61 +224,61 @@ class AiOutputStructureTest : AsgardDescribeSpec({
                 Files.isDirectory(structure.planDir(branch)) shouldBe true
             }
 
-            it("THEN phase role directory exists for part_1/IMPLEMENTOR") {
-                Files.isDirectory(structure.phaseRoleDir(branch, "part_1", "IMPLEMENTOR")) shouldBe true
+            it("THEN sub-part directory exists for ui_design/1_impl") {
+                Files.isDirectory(structure.subPartDir(branch, "ui_design", "1_impl")) shouldBe true
             }
 
-            it("THEN phase role directory exists for part_1/REVIEWER") {
-                Files.isDirectory(structure.phaseRoleDir(branch, "part_1", "REVIEWER")) shouldBe true
+            it("THEN sub-part directory exists for ui_design/2_review") {
+                Files.isDirectory(structure.subPartDir(branch, "ui_design", "2_review")) shouldBe true
             }
 
-            it("THEN phase role directory exists for part_2/IMPLEMENTOR") {
-                Files.isDirectory(structure.phaseRoleDir(branch, "part_2", "IMPLEMENTOR")) shouldBe true
+            it("THEN sub-part directory exists for backend/1_impl") {
+                Files.isDirectory(structure.subPartDir(branch, "backend", "1_impl")) shouldBe true
             }
 
-            it("THEN session_ids directory exists for part_1/IMPLEMENTOR") {
-                Files.isDirectory(structure.sessionIdsDir(branch, "part_1", "IMPLEMENTOR")) shouldBe true
+            it("THEN session_ids directory exists for ui_design/1_impl") {
+                Files.isDirectory(structure.sessionIdsDir(branch, "ui_design", "1_impl")) shouldBe true
             }
 
-            it("THEN session_ids directory exists for part_1/REVIEWER") {
-                Files.isDirectory(structure.sessionIdsDir(branch, "part_1", "REVIEWER")) shouldBe true
+            it("THEN session_ids directory exists for ui_design/2_review") {
+                Files.isDirectory(structure.sessionIdsDir(branch, "ui_design", "2_review")) shouldBe true
             }
 
-            it("THEN session_ids directory exists for part_2/IMPLEMENTOR") {
-                Files.isDirectory(structure.sessionIdsDir(branch, "part_2", "IMPLEMENTOR")) shouldBe true
+            it("THEN session_ids directory exists for backend/1_impl") {
+                Files.isDirectory(structure.sessionIdsDir(branch, "backend", "1_impl")) shouldBe true
             }
         }
 
-        describe("WHEN ensureStructure is called with planningRoles") {
-            val (repoRoot, structure) = createTestFixture()
-            val planningRoles = listOf("PLANNER", "PLAN_REVIEWER")
-            structure.ensureStructure(branch, emptyList(), planningRoles)
+        describe("WHEN ensureStructure is called with planningSubParts") {
+            val (_, structure) = createTestFixture()
+            val planningSubParts = listOf("1_plan", "2_plan_review")
+            structure.ensureStructure(branch, emptyList(), planningSubParts)
 
-            it("THEN planning/PLANNER directory exists") {
-                Files.isDirectory(structure.planningRoleDir(branch, "PLANNER")) shouldBe true
+            it("THEN planning/1_plan directory exists") {
+                Files.isDirectory(structure.planningSubPartDir(branch, "1_plan")) shouldBe true
             }
 
-            it("THEN planning/PLANNER/session_ids directory exists") {
-                Files.isDirectory(structure.planningSessionIdsDir(branch, "PLANNER")) shouldBe true
+            it("THEN planning/1_plan/session_ids directory exists") {
+                Files.isDirectory(structure.planningSessionIdsDir(branch, "1_plan")) shouldBe true
             }
 
-            it("THEN planning/PLAN_REVIEWER directory exists") {
-                Files.isDirectory(structure.planningRoleDir(branch, "PLAN_REVIEWER")) shouldBe true
+            it("THEN planning/2_plan_review directory exists") {
+                Files.isDirectory(structure.planningSubPartDir(branch, "2_plan_review")) shouldBe true
             }
 
-            it("THEN planning/PLAN_REVIEWER/session_ids directory exists") {
-                Files.isDirectory(structure.planningSessionIdsDir(branch, "PLAN_REVIEWER")) shouldBe true
+            it("THEN planning/2_plan_review/session_ids directory exists") {
+                Files.isDirectory(structure.planningSessionIdsDir(branch, "2_plan_review")) shouldBe true
             }
         }
 
         describe("WHEN ensureStructure is called twice") {
             it("THEN does not throw (idempotent)") {
                 val (_, structure) = createTestFixture()
-                val parts = listOf(Part("part_1", listOf("IMPLEMENTOR")))
-                val planningRoles = listOf("PLANNER")
+                val parts = listOf(Part("ui_design", listOf("1_impl")))
+                val planningSubParts = listOf("1_plan")
 
-                structure.ensureStructure(branch, parts, planningRoles)
-                structure.ensureStructure(branch, parts, planningRoles)
+                structure.ensureStructure(branch, parts, planningSubParts)
+                structure.ensureStructure(branch, parts, planningSubParts)
                 // No exception means idempotent
             }
         }
