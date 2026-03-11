@@ -3,7 +3,6 @@ package com.glassthought.initializer
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
 import com.glassthought.ticketShepherd.core.initializer.Initializer
-import com.glassthought.ticketShepherd.core.initializer.data.Environment
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -21,7 +20,6 @@ class AppDependenciesCloseTest : AsgardDescribeSpec({
                 val deps = runBlocking {
                     Initializer.standard().initialize(
                         outFactory = outFactory,
-                        environment = Environment.test(),
                         httpClient = httpClient,
                     )
                 }

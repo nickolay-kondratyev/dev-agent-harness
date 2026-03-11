@@ -7,7 +7,6 @@ import com.glassthought.ticketShepherd.core.agent.sessionresolver.ResumableAgent
 /**
  * Pairs a live tmux session handle with the resolved agent session identity.
  *
- * Created by [com.glassthought.ticketShepherd.core.useCase.SpawnTmuxAgentSessionUseCase] after a successful GUID handshake.
  * The [tmuxSession] allows sending further instructions; [resumableAgentSessionId]
  * enables session resumption after a harness restart.
  */

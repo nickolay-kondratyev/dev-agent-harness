@@ -13,7 +13,6 @@ import java.util.UUID
  * The prefix makes GUIDs greppable in logs and distinguishable from agent session IDs.
  *
  * This is used by [AgentSessionIdResolver]/ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E to resolve the agent session ID from the GUID.
- * - captured in SpawnTmuxAgentSessionUseCase.md/ref.ap.hZdTRho3gQwgIXxoUtTqy.E
  */
 @AnchorPoint("ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E")
 @JvmInline

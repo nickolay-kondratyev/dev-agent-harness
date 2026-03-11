@@ -5,18 +5,13 @@ import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
 import com.glassthought.ticketShepherd.core.Constants
-import com.glassthought.ticketShepherd.core.agent.DefaultAgentTypeChooser
-import com.glassthought.ticketShepherd.core.useCase.SpawnTmuxAgentSessionUseCase
-import com.glassthought.ticketShepherd.core.agent.impl.ClaudeCodeAgentStarterBundleFactory
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectLLM
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
-import com.glassthought.ticketShepherd.core.initializer.data.Environment
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.ticketShepherd.core.agent.tmux.util.TmuxCommandRunner
 import okhttp3.OkHttpClient
-import java.nio.file.Path
 import java.util.concurrent.TimeUnit
 
 /**
@@ -49,18 +44,10 @@ data class Infra(
 )
 
 /**
- * Groups application use cases.
- */
-data class UseCases(
-    val spawnTmuxAgentSession: SpawnTmuxAgentSessionUseCase,
-)
-
-/**
  * Encapsulates all application-level dependencies created during initialization.
  *
  * Dependencies are organized into logical groups:
  * - [infra] — shared services and IO adapters (tmux, LLM, logging)
- * - [useCases] — application-level orchestration use cases
  *
  * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
  * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
@@ -68,7 +55,6 @@ data class UseCases(
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
 class ShepherdContext(
     val infra: Infra,
-    val useCases: UseCases,
 ) : AsgardCloseable {
 
     override suspend fun close() {
@@ -90,17 +76,11 @@ class ShepherdContext(
 interface Initializer {
     /**
      * @param outFactory Structured logging factory.
-     * @param environment Runtime environment (test vs production).
-     * @param systemPromptFilePath Absolute path to a system prompt file for the agent CLI, or null for default behavior.
-     * @param claudeProjectsDir Directory where Claude stores session JSONL files.
      * @param httpClient Custom [OkHttpClient] to use for LLM API calls, or null to create a default one.
      *   Primarily useful for tests that need to verify resource cleanup behavior.
      */
     suspend fun initialize(
         outFactory: OutFactory,
-        environment: Environment = Environment.production(),
-        systemPromptFilePath: String? = null,
-        claudeProjectsDir: Path = Path.of(System.getProperty("user.home"), ".claude", "projects"),
         httpClient: OkHttpClient? = null,
     ): ShepherdContext
 
@@ -113,27 +93,20 @@ class InitializerImpl : Initializer {
 
     override suspend fun initialize(
         outFactory: OutFactory,
-        environment: Environment,
-        systemPromptFilePath: String?,
-        claudeProjectsDir: Path,
         httpClient: OkHttpClient?,
     ): ShepherdContext {
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
         return out.time(
-            { initializeImpl(outFactory, environment, systemPromptFilePath, claudeProjectsDir, httpClient) },
+            { initializeImpl(outFactory, httpClient) },
             "initializer.initialize",
         )
     }
 
     private fun initializeImpl(
         outFactory: OutFactory,
-        environment: Environment,
-        systemPromptFilePath: String?,
-        claudeProjectsDir: Path,
         httpClient: OkHttpClient?,
     ): ShepherdContext {
-        // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
         val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
@@ -161,29 +134,8 @@ class InitializerImpl : Initializer {
             directLlm = directLlmInfra,
         )
 
-        val bundleFactory = ClaudeCodeAgentStarterBundleFactory(
-            environment = environment,
-            systemPromptFilePath = systemPromptFilePath,
-            claudeProjectsDir = claudeProjectsDir,
-            outFactory = outFactory,
-        )
-
-        val agentTypeChooser = DefaultAgentTypeChooser()
-
-        val spawnTmuxAgentSession = SpawnTmuxAgentSessionUseCase(
-            agentTypeChooser = agentTypeChooser,
-            bundleFactory = bundleFactory,
-            tmuxSessionManager = sessionManager,
-            outFactory = outFactory,
-        )
-
-        val useCases = UseCases(
-            spawnTmuxAgentSession = spawnTmuxAgentSession,
-        )
-
         return ShepherdContext(
             infra = infra,
-            useCases = useCases,
         )
     }
 

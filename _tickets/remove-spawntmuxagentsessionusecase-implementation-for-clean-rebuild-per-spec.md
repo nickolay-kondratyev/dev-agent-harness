@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T21:30:54Z
 id: nid_lzjoy65o0vxu4lt1utk9e6iy6_E
 title: "Remove SpawnTmuxAgentSessionUseCase implementation for clean rebuild per spec"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T20:42:18Z
-status_updated_iso: 2026-03-11T21:05:06Z
+status_updated_iso: 2026-03-11T21:30:54Z
 type: chore
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
