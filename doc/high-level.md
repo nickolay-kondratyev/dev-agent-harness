@@ -6,6 +6,7 @@ Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
 
 | Term | Definition |
 |------|------------|
+| **Ticket** | A markdown file with YAML frontmatter (`id`, `title`). The mandatory starting point for every Chainsaw run — defines what needs to be done. Used for branch naming, state tracking, and agent context. |
 | **ChainsawServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
 | **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
 | **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md). |
@@ -21,7 +22,9 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 ## What the Harness Does
 
-- Reads a task/ticket
+**Ticket-driven**: A ticket is the mandatory starting point for every Chainsaw run. The ticket
+defines what needs to be done; the workflow defines how. Without a ticket, Chainsaw does not run.
+
 - Orchestrates workflow sub-parts (defined in **JSON**)
 - Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
 - Runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for entire harness process
