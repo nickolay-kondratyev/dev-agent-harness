@@ -1,11 +1,11 @@
 ---
 id: nid_e17r2p173udtcuipttb4w4gsu_E
 title: "Add HandshakeGuid to ResumableAgentSessionId"
-status: open
+status: in_progress
 deps: [nid_lzjoy65o0vxu4lt1utk9e6iy6_E]
 links: []
 created_iso: 2026-03-11T20:43:08Z
-status_updated_iso: 2026-03-11T20:43:08Z
+status_updated_iso: 2026-03-11T22:52:58Z
 type: task
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
