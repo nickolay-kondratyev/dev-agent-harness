@@ -16,9 +16,8 @@ parts/sub-parts schema. One parser handles everything.
 | `name` | yes | Directory name and identifier (e.g., `"impl"`, `"review"`). Execution order is determined by array position. |
 | `role` | yes | Role from the role catalog (`$CHAINSAW_AGENTS_DIR/*.md`). |
 | `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
-| `iteration` | no | Present only on reviewer sub-parts. Contains `max` (int) and `loopsBackTo` (string). |
-| `iteration.max` | yes (when `iteration` present) | Maximum number of times **this reviewer** can trigger a loop-back. |
-| `iteration.loopsBackTo` | yes (when `iteration` present) | Name of the sub-part to return to on failure (typically the implementor). |
+| `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` (int). |
+| `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. |
 | `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. Each entry: `{ "id": "...", "agentType": "ClaudeCode", "timestamp": "..." }`. |
 
 ### plan.json / current_state.json Schema
@@ -40,9 +39,7 @@ static workflow JSON.
       "subParts": [
         { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
         { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
-          "iteration": { "max": 3, "loopsBackTo": "impl" } },
-        { "name": "security_review", "role": "SECURITY_REVIEWER", "agentType": "PI",
-          "iteration": { "max": 2, "loopsBackTo": "impl" } }
+          "iteration": { "max": 3 } }
       ]
     },
     {
@@ -51,7 +48,7 @@ static workflow JSON.
       "subParts": [
         { "name": "impl", "role": "IMPLEMENTOR" },
         { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
-          "iteration": { "max": 4, "loopsBackTo": "impl" } }
+          "iteration": { "max": 4 } }
       ]
     }
   ]
@@ -83,7 +80,7 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
       "subParts": [
         { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
         { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
-          "iteration": { "max": 4, "loopsBackTo": "impl" } }
+          "iteration": { "max": 4 } }
       ]
     }
   ]
@@ -98,7 +95,7 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
   "planningSubParts": [
     { "name": "plan", "role": "PLANNER" },
     { "name": "plan_review", "role": "PLAN_REVIEWER",
-      "iteration": { "max": 3, "loopsBackTo": "plan" } }
+      "iteration": { "max": 3 } }
   ],
   "executionPhasesFrom": "plan.json"
 }
@@ -118,40 +115,26 @@ A workflow is either **straightforward** (has `parts`) or **with-planning** (has
 
 ## Iteration Semantics
 
-### Sub-Part-Level Iteration
+### At Most 2 Sub-Parts Per Part
 
-Iteration is defined **per reviewer sub-part**, not per part. Each reviewer has:
-- Its own iteration budget (`iteration.max`)
-- An explicit loop-back target (`iteration.loopsBackTo`)
+Each part has at most 2 sub-parts: a **doer** (first) and an optional **reviewer** (second).
+This keeps part execution trivially simple — no multi-reviewer skip logic needed.
+
+- **1 sub-part**: Doer runs once. Part complete.
+- **2 sub-parts**: Doer runs, then reviewer runs. On review failure, loop back to doer.
 
 ### Execution Flow Within a Part
 
-Sub-parts execute **sequentially** in order. When a reviewer sub-part fails (LLM evaluation
-determines the review did not pass):
-
-1. The harness re-runs the `loopsBackTo` target (typically the implementor).
-2. The harness then re-runs **only the failing reviewer** — intermediate sub-parts that already
-   passed are **skipped**.
-3. The failing reviewer's iteration counter increments.
-4. If the counter exceeds `iteration.max`, the part is considered failed.
-
-**Example — 3 sub-parts:**
-
 ```
-Part: backend
-  impl (IMPLEMENTOR)
-  security (SECURITY_REVIEWER, max: 2, loopsBackTo: impl)
-  code_review (CODE_REVIEWER, max: 4, loopsBackTo: impl)
+Run doer → Run reviewer
+  reviewer FAIL → Run doer → Run reviewer (counter: 2)
+  reviewer FAIL → Run doer → Run reviewer (counter: 3)
+  reviewer PASS → Part complete
+  counter > iteration.max → Part failed
 ```
 
-Execution:
-```
-Run impl → Run security
-  security FAIL → Run impl → Run security (counter: 2)
-  security PASS → Run code_review
-  code_review FAIL → Run impl → Run code_review (counter: 2; skip security)
-  code_review PASS → Part complete
-```
+The reviewer's `iteration.max` caps the number of loop-backs. On each failure the harness
+resumes the doer's TMUX session with new instructions, then resumes the reviewer's session.
 
 ### Session IDs in current_state.json
 
@@ -177,15 +160,15 @@ This applies to **both** execution sub-parts and planning sub-parts — all stat
 Sub-parts that lack an `iteration` field execute exactly **once**. These are typically
 implementors or one-shot tasks.
 
-### Agent Session Lifecycle (V1)
+### Agent Session Lifecycle
 
-V1 **kills the agent session between iterations** — each sub-part run spawns a fresh session.
-Context carries exclusively via files (PUBLIC.md, SHARED_CONTEXT.md) assembled by ContextProvider.
+**One TMUX session per sub-part.** The harness spawns a TMUX session on a sub-part's first run
+and keeps it alive across iteration loops. New instructions are delivered via TMUX `send-keys` —
+no kill/respawn between iterations. The session is killed only when the **part** completes.
 
-**V2 evolution**: The design should not preclude keeping agent sessions alive across iterations
-when the context window has room. The `sessionIds` array already supports multiple sessions per
-sub-part, and the harness can decide per-iteration whether to resume or start fresh based on
-context usage. See ticket `nid_etxturughxixkl5hmvgazco3j_E`.
+- The agent retains its full conversation history across iterations of the same sub-part.
+- The `sessionIds` array on each sub-part tracks session records. The last element is the
+  current/resumable session.
 
 ### PUBLIC.md Lifecycle
 
@@ -193,7 +176,5 @@ context usage. See ticket `nid_etxturughxixkl5hmvgazco3j_E`.
   including relevant context in its output.
 - **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
   changes is preserved in git — no need for versioned files.
-- **Fresh session** (V1 default): The harness starts a new session. The agent picks up context
-  purely from PUBLIC.md files and other files assembled by ContextProvider.
-- **Resumed session** (V2): The harness resumes the session using the last `sessionIds` entry.
-  The agent retains its full conversation history.
+- The TMUX session stays alive — the agent receives updated instructions via `send-keys` and
+  retains its full conversation history across iterations of the same sub-part.

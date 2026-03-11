@@ -14,6 +14,13 @@ Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
 
 ---
 
+## Hard Constraints
+
+- **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
+- **At most 2 sub-parts per part.** First sub-part is the doer (implementor/planner). Optional second sub-part is the reviewer. On review failure, the harness loops back to the doer. This keeps part execution trivially simple.
+
+---
+
 ## Context
 
 Previously, a TOP_LEVEL_AGENT Claude session orchestrated sub-agents. Problem: sub-agent context
@@ -59,7 +66,7 @@ All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager`
 - `CodeAgent` interface with `ClaudeCodeAgent` implementation
 - Leverages subscription pricing; interface allows swapping agent implementations
 - **Strictly serial** execution for V1 (1 harness → 1 TMUX session at a time)
-- **Separate sessions per sub-part** — each run spawns a fresh agent. Context carries via files.
+- **One TMUX session per sub-part** — kept alive across iteration loops (see Hard Constraints). New instructions delivered via `send-keys`.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
 
 ### CodeAgent Abstraction
@@ -123,7 +130,7 @@ All structured/formatted content sent to agents goes through temp files:
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /agent/done` | Agent completed its task. Harness kills TMUX session, proceeds to next sub-part. |
+| `POST /agent/done` | Agent completed its task. TMUX session stays alive; killed only when the part completes. |
 | `POST /agent/question` | Agent has a question. Curl blocks until human answers. Answer delivered via TMUX send-keys (temp file). |
 | `POST /agent/failed` | Unrecoverable error. Triggers `FailedToExecutePlanUseCase`. |
 | `POST /agent/status` | Agent responds to health ping (see Agent Health Monitoring). |
