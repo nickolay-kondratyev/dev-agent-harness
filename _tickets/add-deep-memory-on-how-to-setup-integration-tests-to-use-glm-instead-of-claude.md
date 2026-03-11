@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-11T20:58:54Z
 id: nid_reck1b04pzsj8v3dmhk0f2a1t_E
 title: "Add deep memory on how to setup integration tests to use GLM instead of claude"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T20:50:54Z
-status_updated_iso: 2026-03-11T20:55:04Z
+status_updated_iso: 2026-03-11T20:58:54Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
@@ -42,3 +43,8 @@ This task is to create DEEP memory that
 
 
 no-review: since then no sub-agents
+## Notes
+
+**2026-03-11T20:59:02Z**
+
+Completed: Created deep memory at ai_input/memory/deep/integ_tests__use_glm_for_agent_spawning.md documenting (1) the preference to use GLM for integration tests that spawn real agents, (2) the env-var injection mechanism (ANTHROPIC_BASE_URL, ANTHROPIC_AUTH_TOKEN, model aliases), and (3) the implementation hook in ClaudeCodeAgentStarter/ClaudeCodeAgentStarterBundleFactory. Updated z_deep_memory_pointers.md and regenerated CLAUDE.md.
