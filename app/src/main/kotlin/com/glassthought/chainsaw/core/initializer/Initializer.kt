@@ -1,5 +1,6 @@
 package com.glassthought.chainsaw.core.initializer
 
+import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit
  * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
  * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
  */
+@AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
 class ChainsawContext(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
