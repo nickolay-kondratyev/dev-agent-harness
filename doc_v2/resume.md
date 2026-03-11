@@ -86,3 +86,13 @@ attempt). This avoids the complexity of the handshake verification protocol.
 - Should the `resumed` status in ping-ack include agent-side diagnostics (e.g., context window
   usage, conversation turn count)?
 - How many Layer 1 attempts before falling through to Layer 2? (Proposal: exactly 1)
+
+## Risks — Try-N Interaction
+
+V1 creates a new try on every `shepherd run` (ref.ap.THL21SyZzJhzInG2m4zl2.E). V2 resume
+must **not** increment try-N — it must re-checkout the existing branch and pick up where it
+left off. New try-N only on `FailedToExecutePlanUseCase` (which is a fresh start, not a resume).
+
+`TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) will need a resume-vs-fresh-start
+code path: on resume, derive the branch name from existing state rather than running the
+try-N resolution algorithm.

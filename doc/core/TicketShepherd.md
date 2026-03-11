@@ -6,7 +6,8 @@ creates executors for each part, runs them in sequence, and handles the results.
 
 ## How It Drives the Workflow
 
-1. Initial setup (branch creation, `current_state.json` initialization)
+1. Initial setup (`current_state.json` initialization — branch already created by
+   `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 2. `SetupPlanUseCase` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `SetupPlanResult`
    (ref.ap.evYmpQfliHCHUTdK2QRgS.E)
 3. If `SetupPlanResult.NeedsPlanning`:

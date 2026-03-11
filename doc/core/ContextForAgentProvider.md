@@ -63,8 +63,9 @@ Concatenation order:
 | 5 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
 | 6 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part | What the reviewer found lacking |
 | 7 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
-| 8 | **PUBLIC.md writing guidelines** | Static text | Directions on what to capture (decisions + rationale, no duplication) |
-| 9 | **Callback script usage** | Static help text, wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
+| 8 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
+| 9 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
+| 10 | **Callback script usage** | Static help text, wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
 
 ### Planner
 

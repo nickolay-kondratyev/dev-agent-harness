@@ -264,6 +264,29 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 - `try-{N}`: starts at 1, incremented on each retry after `FailedToExecutePlanUseCase` resets and re-opens
 - Delimiter between components: `__` (double underscore)
 
+### Branch Creation
+
+- **No base branch concept** — branch created from current HEAD at time of `shepherd run`.
+- **Every `shepherd run` = new try** (V1). No resume-on-restart
+  (ref.ap.LX1GCIjv6LgmM7AJFas20.E — V2).
+- **Owner**: `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — resolves try-N,
+  creates the branch, then sets up `.ai_out/`.
+
+### Try-N Resolution
+
+Try-N is determined by checking **both** local branches and `.ai_out/` directories. N is the
+first value where **neither** exists:
+
+1. Build candidate branch name via `BranchNameBuilder.build(ticket, candidateN)`
+2. Check: does a local branch with that name exist? (`git branch --list '{candidate}'`)
+3. Check: does `.ai_out/{candidate}/` directory exist?
+4. If **either** exists → increment candidateN, repeat
+5. If **neither** exists → use candidateN
+
+Dual check prevents collisions when a branch was deleted but `.ai_out/` artifacts remain,
+or `.ai_out/` was cleaned up but the branch still exists. Failed try branches and their
+`.ai_out/` directories are left in place — the next run naturally skips past them.
+
 ## Git Commit Strategy
 
 Harness owns all git commits — agents never commit. Commit timing, message format, and author
