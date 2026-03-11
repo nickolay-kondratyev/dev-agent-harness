@@ -77,7 +77,7 @@ enum class DoneResult {
 
 | Callback | Why not | Handler |
 |----------|---------|---------|
-| `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server handles directly: presents to human, delivers answer via TMUX `send-keys` |
+| `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E), delivers answer via TMUX `send-keys` |
 | `/callback-shepherd/ping-ack` | Side-channel — resets health timer only | Health monitor resets its timer |
 
 Both side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`

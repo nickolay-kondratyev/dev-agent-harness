@@ -21,8 +21,9 @@ When the server receives `/callback-shepherd/done` with a `handshakeGuid`, it ne
 The server does **not** route `/callback-shepherd/done` or `/callback-shepherd/fail-workflow`
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
-`/callback-shepherd/user-question` is still handled as a side-channel (server presents to
-human, delivers answer via TMUX `send-keys` — the executor stays suspended).
+`/callback-shepherd/user-question` is still handled as a side-channel — server delegates to
+`UserQuestionHandler` (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E), delivers answer via TMUX `send-keys`.
+The executor stays suspended.
 
 ---
 

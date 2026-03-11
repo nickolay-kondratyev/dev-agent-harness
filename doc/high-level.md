@@ -283,7 +283,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
-| Q&A mode | **Attended only (V1)** | Human must be at terminal |
+| Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
