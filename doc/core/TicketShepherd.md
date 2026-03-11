@@ -23,7 +23,10 @@ creates executors for each part, runs them in sequence, and handles the results.
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
       - `Completed` → kill TMUX sessions for part, `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
-      - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase`
+      - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase` (spawns `CLEANUP_AGENT`
+        via `SingleDoerPartExecutor`). If the **cleanup agent itself** returns
+        `FailedWorkflow` → print red error to console and **halt** (terminal state, no
+        recursive cleanup — wait for human intervention).
       - `FailedToConverge` → delegate to `FailedToConvergeUseCase`
       - `AgentCrashed` → attempt recovery or abort
 5. On all parts completed → workflow done

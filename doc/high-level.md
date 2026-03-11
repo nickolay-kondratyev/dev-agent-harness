@@ -10,7 +10,7 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 | Term | Definition |
 |------|------------|
-| **Ticket** | A markdown file with YAML frontmatter (`id`, `title`). The mandatory starting point for every Shepherd run — defines what needs to be done. Used for branch naming, state tracking, and agent context. |
+| **Ticket** | A markdown file with YAML frontmatter (`id`, `title`, `status`). The mandatory starting point for every Shepherd run — defines what needs to be done. Must have `status: in_progress` on entry (see Hard Constraints). Used for branch naming, state tracking, and agent context. |
 | **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
 | **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
 | **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. See [protocol doc](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E). |
@@ -23,6 +23,7 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 - **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
 - **At most 2 sub-parts per part.** First sub-part is the doer (implementor/planner). Optional second sub-part is the reviewer. On review `needs_iteration`, the harness loops back to the doer. This keeps part execution trivially simple.
   - In V2 we may relax this but in V1 this is KISS constraint.
+- **Ticket must be `in_progress` on entry.** The ticket passed to `shepherd run` must have `status: in_progress` in its YAML frontmatter. Fail hard if not. Marking the ticket as `in_progress` (and pushing to remote) is the **caller's responsibility** — outside Shepherd's scope.
 
 ---
 
@@ -62,7 +63,8 @@ shepherd run --workflow <name> --ticket <path>
 ```
 
 - `--ticket` **(required)**: path to a ticket markdown file. Shepherd always operates on a ticket.
-  - Ticket is a markdown file with YAML frontmatter containing at minimum an `id` field and `title` field.
+  - Ticket is a markdown file with YAML frontmatter containing at minimum `id`, `title`, and `status` fields.
+  - `status` must be `in_progress` — fail hard otherwise (see Hard Constraints).
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
 
@@ -142,20 +144,35 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 |---|---|---|
 | `NoStatusCallbackTimeOutUseCase` | No callback after X min | Ping agent via TMUX send-keys |
 | `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX, start new agent session for the sub-part |
-| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Spin up cleanup agent, enrich ticket, reset codebase, re-open ticket |
+| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Spawn `CLEANUP_AGENT` via `SingleDoerPartExecutor` (no reviewer). Cleanup agent: commits all work, restores codebase via `git merge-base` checkout, enriches ticket with failure context, re-opens ticket (sets `status: open` in frontmatter directly). If cleanup agent itself calls `fail-workflow` → print red error to console, halt. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM, present to user, user decides whether to grant more iterations |
 
 - **Simple encapsulated objects** — NOT a state machine pattern
 - Each UseCase handles one well-defined scenario
+- **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class. UseCases are stateless, single-responsibility operations that the shepherd delegates to. If you can name it as a UseCase, it should be one.
 
 ### FailedToExecutePlanUseCase Detail
 
 When plan execution hits blocking issues (agent calls `/callback-shepherd/fail-workflow`):
-1. Spin up a **cleanup agent** (full write access — needs to run cleanup commands)
+
+1. Spawn a **`CLEANUP_AGENT`** using `SingleDoerPartExecutor` (single sub-part, no reviewer).
+   The `CLEANUP_AGENT` role is expected in the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR`).
+   Uses the standard TMUX spawn flow and callback protocol.
 2. Cleanup agent analyzes the approach taken and why it failed
 3. Writes failure summary + learnings into the ticket (so next retry is better informed)
-4. Runs cleanup commands to restore codebase to starting state
-5. Ticket re-opened via `tk reopen <id>`
+4. Commits all current work (`git add -A && git commit`)
+5. Determines the common ancestor: `git merge-base HEAD origin/$(default.branch)`
+   — default branch resolved via `GitBranchManager.getDefaultBranch()`
+   (shells out to `git symbolic-ref refs/remotes/origin/HEAD`, strips prefix)
+6. Checks out the merge-base commit to restore the codebase to pre-branching state
+7. Re-opens the ticket by setting `status: open` in the ticket's YAML frontmatter directly
+   (does NOT use `tk` CLI)
+8. Calls `callback_shepherd.done.sh completed` when finished
+
+**Terminal failure — cleanup agent calls `fail-workflow`**: If the cleanup agent itself
+encounters an unrecoverable error and calls `callback_shepherd.fail-workflow.sh`, the harness
+**prints a red error message to the console and halts** — waits for a human to intervene.
+No recursive cleanup. This is a terminal state.
 
 ### FailedToConvergeUseCase Detail
 
@@ -266,11 +283,14 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 
 ### Branch Creation
 
-- **No base branch concept** — branch created from current HEAD at time of `shepherd run`.
+- **Ticket must be `in_progress`** — validated by `TicketShepherdCreator` before any git
+  operations. Caller is responsible for marking the ticket and pushing to remote before
+  invoking `shepherd run`.
+- Branch created from **current HEAD** at time of `shepherd run`.
 - **Every `shepherd run` = new try** (V1). No resume-on-restart
   (ref.ap.LX1GCIjv6LgmM7AJFas20.E — V2).
-- **Owner**: `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — resolves try-N,
-  creates the branch, then sets up `.ai_out/`.
+- **Owner**: `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — validates ticket
+  status, resolves try-N, creates the branch, then sets up `.ai_out/`.
 
 ### Try-N Resolution
 

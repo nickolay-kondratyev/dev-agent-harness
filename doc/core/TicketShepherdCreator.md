@@ -18,7 +18,10 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 ## What It Does
 
 - Resolves workflow JSON from `config/workflows/<name>.json`
-- Parses the ticket (frontmatter `id`, `title`)
+- Parses the ticket (frontmatter `id`, `title`, `status`)
+- **Validates ticket status** — `status` must be `in_progress`. Fail hard with clear error
+  if not. Marking the ticket as `in_progress` and pushing to remote is the caller's
+  responsibility — outside Shepherd scope.
 - **Resolves try-N** — scans both local branches and `.ai_out/` directories to find the first
   N where neither exists (see [Try-N Resolution](../high-level.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)

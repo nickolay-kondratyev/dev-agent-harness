@@ -12,7 +12,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 ### High-Level Architecture Decisions
 
-**Ticket-driven**: Shepherd always operates on a ticket (markdown file with YAML frontmatter containing `id` and `title`). The ticket is required input.
+**Ticket-driven**: Shepherd always operates on a ticket (markdown file with YAML frontmatter containing `id`, `title`, and `status`). The ticket is required input. Ticket must have `status: in_progress` on entry — fail hard otherwise. Marking the ticket `in_progress` is the caller's responsibility, outside Shepherd scope.
 
 **CLI**: `shepherd run --workflow <name> --ticket <path>` via **picocli**.
 
@@ -59,9 +59,9 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Agent lifecycle**: TMUX session created → agent started → AgentSessionIdResolver GUID handshake → instruction file sent via `send-keys` → agent works (may call user-question) → agent calls `callback_shepherd.done.sh <result>` → harness reads result, proceeds accordingly.
 
-**Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`).
+**Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class — stateless, single-responsibility operations that the shepherd delegates to.
 
-**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → cleanup agent enriches ticket → codebase reset → ticket re-opened.
+**Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → `FailedToExecutePlanUseCase` spawns `CLEANUP_AGENT` (via `SingleDoerPartExecutor`, no reviewer). Cleanup agent: commits all work, restores codebase via `git merge-base HEAD origin/$(default.branch)` checkout, enriches ticket with failure context, re-opens ticket (sets `status: open` in frontmatter directly). If cleanup agent itself fails → harness prints red error and halts.
 
 **Progress tracking**: `current_state.json` tracks workflow progress. Resume-on-restart is V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
