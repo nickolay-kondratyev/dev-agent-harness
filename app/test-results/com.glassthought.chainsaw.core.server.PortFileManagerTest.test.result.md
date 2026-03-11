@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.server.PortFileManagerTest"
+spec: "com.glassthought.chainsaw.core.server.PortFileManagerTest"
 status: PASSED
 failed: 0
 skipped: 0

@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.initializer.data.EnvironmentTest"
+spec: "com.glassthought.chainsaw.core.initializer.data.EnvironmentTest"
 status: PASSED
 failed: 0
 skipped: 0

@@ -27,23 +27,23 @@ What remains is cleaning up the **package name**, **test class name**, **variabl
 ## Requirements
 
 ### R1 — Package rename
-Rename package `com.glassthought.shepherd.core.wingman` → `com.glassthought.shepherd.core.sessionresolver`.
+Rename package `com.glassthought.chainsaw.core.wingman` → `com.glassthought.chainsaw.core.sessionresolver`.
 Affects 4 source files:
-- `app/src/main/kotlin/com/glassthought/shepherd/core/wingman/AgentSessionIdResolver.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/wingman/impl/ClaudeCodeAgentSessionIdResolver.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/wingman/HandshakeGuid.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/wingman/ResumableAgentSessionId.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/AgentSessionIdResolver.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/impl/ClaudeCodeAgentSessionIdResolver.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/HandshakeGuid.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/ResumableAgentSessionId.kt`
 
 And all files importing from the old package:
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/AgentStarterBundle.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/TmuxAgentSession.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/SpawnTmuxAgentSessionUseCase.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/impl/ClaudeCodeAgentStarterBundleFactory.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/data/AgentType.kt` (KDoc reference)
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/AgentStarterBundle.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/TmuxAgentSession.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/SpawnTmuxAgentSessionUseCase.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/impl/ClaudeCodeAgentStarterBundleFactory.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/data/AgentType.kt` (KDoc reference)
 
 ### R2 — Test file rename
-Rename `app/src/test/kotlin/com/glassthought/shepherd/core/wingman/impl/ClaudeCodeWingmanTest.kt`
-→ `app/src/test/kotlin/com/glassthought/shepherd/core/sessionresolver/impl/ClaudeCodeAgentSessionIdResolverTest.kt`
+Rename `app/src/test/kotlin/com/glassthought/chainsaw/core/wingman/impl/ClaudeCodeWingmanTest.kt`
+→ `app/src/test/kotlin/com/glassthought/chainsaw/core/sessionresolver/impl/ClaudeCodeAgentSessionIdResolverTest.kt`
 Update class name and package declaration.
 
 ### R3 — Local variable names in tests
@@ -95,7 +95,7 @@ Run `./CLAUDE.generate.sh` after doc changes.
 Completed all 10 requirements successfully:
 
 ### Changes Made
-1. **R1 - Package rename**: `com.glassthought.shepherd.core.wingman` → `com.glassthought.shepherd.core.sessionresolver`
+1. **R1 - Package rename**: `com.glassthought.chainsaw.core.wingman` → `com.glassthought.chainsaw.core.sessionresolver`
 2. **R2 - Test file rename**: `ClaudeCodeWingmanTest.kt` → `ClaudeCodeAgentSessionIdResolverTest.kt`
 3. **R3 - Variable names**: All `wingman` → `resolver` in tests
 4. **R4 - Test helper prefix**: `wingman-test-` → `session-resolver-test-`

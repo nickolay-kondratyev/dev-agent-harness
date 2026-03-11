@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.agent.impl.ClaudeCodeAgentStarterBundleFactoryTest"
+spec: "com.glassthought.chainsaw.core.agent.impl.ClaudeCodeAgentStarterBundleFactoryTest"
 status: PASSED
 failed: 0
 skipped: 0

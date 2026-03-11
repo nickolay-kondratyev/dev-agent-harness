@@ -18,7 +18,7 @@ Replace the 5-second `delay()` in `SpawnTmuxAgentSessionUseCase.spawn()` with a 
 
 ## Current Problem
 
-`SpawnTmuxAgentSessionUseCase` (at `app/src/main/kotlin/com/glassthought/shepherd/core/agent/SpawnTmuxAgentSessionUseCase.kt`) uses `delay(agentStartupDelay)` (default 5s) between creating the tmux session and sending the GUID handshake marker. This is fundamentally fragile:
+`SpawnTmuxAgentSessionUseCase` (at `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/SpawnTmuxAgentSessionUseCase.kt`) uses `delay(agentStartupDelay)` (default 5s) between creating the tmux session and sending the GUID handshake marker. This is fundamentally fragile:
 - Too short: GUID arrives before Claude initializes, consumed by bash shell
 - Too long: wastes time on every spawn
 - Non-deterministic: startup time varies by system load, model, network
@@ -36,10 +36,10 @@ Instead of the harness blindly waiting, the agent should call back to the harnes
 This eliminates the timing race entirely — the agent self-reports readiness.
 
 ## Key Files
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/SpawnTmuxAgentSessionUseCase.kt` — contains the delay
-- `app/src/main/kotlin/com/glassthought/shepherd/core/agent/starter/impl/ClaudeCodeAgentStarter.kt` — builds the claude CLI command
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/SpawnTmuxAgentSessionUseCase.kt` — contains the delay
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/agent/starter/impl/ClaudeCodeAgentStarter.kt` — builds the claude CLI command
 - `config/prompts/test-agent-system-prompt.txt` — system prompt for test agents
-- `app/src/main/kotlin/com/glassthought/shepherd/core/server/` — existing HarnessServer with Ktor
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/server/` — existing HarnessServer with Ktor
 
 ## Acceptance Criteria
 - No `delay()` in the spawn flow

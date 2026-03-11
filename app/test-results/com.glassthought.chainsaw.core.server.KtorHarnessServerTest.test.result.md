@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.server.KtorHarnessServerTest"
+spec: "com.glassthought.chainsaw.core.server.KtorHarnessServerTest"
 status: PASSED
 failed: 0
 skipped: 0

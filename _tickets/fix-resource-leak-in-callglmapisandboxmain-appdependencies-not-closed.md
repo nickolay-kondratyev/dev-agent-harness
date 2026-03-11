@@ -11,7 +11,7 @@ priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 ---
 
-In app/src/main/kotlin/com/glassthought/shepherd/cli/sandbox/CallGLMApiSandboxMain.kt line 8, the AppDependencies instance is discarded without calling close():
+In app/src/main/kotlin/com/glassthought/chainsaw/cli/sandbox/CallGLMApiSandboxMain.kt line 8, the AppDependencies instance is discarded without calling close():
 
 ```kotlin
 val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).glmDirectLLM

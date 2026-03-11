@@ -61,7 +61,7 @@ GOAL: Let's add publishing to local maven from asgard libraries in thorg-root so
 
 In our library we will depend on the published versions of the library.
 
-In our shepherd Gradle builds we will have a target that can trigger the publishing of asgard library, using $THORG_ROOT env variable as reference point to find where asgard libraries are located. ($THORG_ROOT later will not be a submodule but it will point to the same file structure as /home/nickolaykondratyev/git_repos/nickolay-kondratyev_dev-agent-harness-mirror-2/submodules/thorg-root currently does). In shepherd builds we should have a fast way to check whether we need to trigger this publish to local maven or whether the libraries are already present in local maven cache.
+In our chainsaw Gradle builds we will have a target that can trigger the publishing of asgard library, using $THORG_ROOT env variable as reference point to find where asgard libraries are located. ($THORG_ROOT later will not be a submodule but it will point to the same file structure as /home/nickolaykondratyev/git_repos/nickolay-kondratyev_dev-agent-harness-mirror-2/submodules/thorg-root currently does). In chainsaw builds we should have a fast way to check whether we need to trigger this publish to local maven or whether the libraries are already present in local maven cache.
 
 
 ## Notes

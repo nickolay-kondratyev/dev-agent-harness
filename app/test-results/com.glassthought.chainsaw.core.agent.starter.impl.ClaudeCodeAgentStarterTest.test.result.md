@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.agent.starter.impl.ClaudeCodeAgentStarterTest"
+spec: "com.glassthought.chainsaw.core.agent.starter.impl.ClaudeCodeAgentStarterTest"
 status: PASSED
 failed: 0
 skipped: 0

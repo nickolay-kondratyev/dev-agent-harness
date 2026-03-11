@@ -24,9 +24,9 @@ Currently `config/workflows/straightforward.json` and `config/workflows/with-pla
 
 ## Key Files
 
-- `app/src/main/kotlin/com/glassthought/shepherd/core/workflow/WorkflowParser.kt`
-- `app/src/main/kotlin/com/glassthought/shepherd/core/workflow/WorkflowDefinition.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/workflow/WorkflowParser.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/workflow/WorkflowDefinition.kt`
 - `config/workflows/straightforward.json`
 - `config/workflows/with-planning.json`
-- `app/src/test/kotlin/com/glassthought/shepherd/core/workflow/WorkflowParserTest.kt`
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/workflow/WorkflowParserTest.kt`
 

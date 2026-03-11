@@ -23,8 +23,8 @@ import io.kotest.matchers.string.shouldNotBeBlank
 class SpawnTmuxAgentSessionUseCaseIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN SpawnTmuxAgentSessionUseCase with test configuration").config(isIntegTestEnabled()) {
-        val useCase = shepherdContext.useCases.spawnTmuxAgentSession
-        val sessionManager = shepherdContext.infra.tmux.sessionManager
+        val useCase = chainsawContext.useCases.spawnTmuxAgentSession
+        val sessionManager = chainsawContext.infra.tmux.sessionManager
         val out = outFactory.getOutForClass(SpawnTmuxAgentSessionUseCaseIntegTest::class)
 
         val createdSessions = mutableListOf<TmuxSession>()

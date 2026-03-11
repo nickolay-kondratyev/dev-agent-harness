@@ -1,6 +1,6 @@
 ## Project Overview
 
-Codename: **CHAINSAW**. Package: `com.glassthought.shepherd`.
+Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
 
 CLI Kotlin Agent Harness — replaces a top-level orchestrator agent with a Kotlin CLI process.
 Sub-agents are spawned as independent processes with fully isolated context windows.
@@ -14,7 +14,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Ticket-driven**: Chainsaw always operates on a ticket (markdown file with YAML frontmatter containing `id` and `title`). The ticket is required input.
 
-**CLI**: `shepherd run --workflow <name> --ticket <path>` via **picocli**.
+**CLI**: `chainsaw run --workflow <name> --ticket <path>` via **picocli**.
 
 **Agent invocation — TMUX only**: All agents spawned as interactive TMUX sessions. Strictly serial (one agent at a time) in V1. Separate session per phase — context carries via files.
 
@@ -23,7 +23,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 - Harness → Agent: TMUX `send-keys` / ref.ap.7sZveqPcid5z1ntmLs27UqN6.E
 - Structured content delivered via temp files (write file, send path)
 
-**HTTP server**: Ktor CIO, binds port 0 (OS-assigned), writes port to `$HOME/.shepherd_agent_harness/server/port.txt`. Starts once, stays alive across all phases.
+**HTTP server**: Ktor CIO, binds port 0 (OS-assigned), writes port to `$HOME/.chainsaw_agent_harness/server/port.txt`. Starts once, stays alive across all phases.
 
 **Workflow definitions**: JSON under `./config/workflows/`. Shared "parts" schema for both static and planner-generated workflows. **Jackson + Kotlin module** for all serialization.
 

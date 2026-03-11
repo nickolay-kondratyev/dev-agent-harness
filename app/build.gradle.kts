@@ -72,7 +72,7 @@ java {
 
 application {
     // Define the main class for the application.
-    mainClass = "com.glassthought.shepherd.cli.AppMainKt"
+    mainClass = "com.glassthought.chainsaw.cli.AppMainKt"
 }
 
 // NOTE: ensureAsgardInMavenLocal cannot be wired here via dependsOn.

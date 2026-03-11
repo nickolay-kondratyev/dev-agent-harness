@@ -187,7 +187,7 @@ the server-side registry remains valid.
 **`harness-cli-for-agent.sh`** — bash script wrapping curl calls.
 
 - Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.shepherd_agent_harness/server/port.txt`
+- Reads port from `$HOME/.chainsaw_agent_harness/server/port.txt`
 - Reads `$CHAINSAW_HANDSHAKE_GUID` from environment, includes in every request
 - Agent receives `--help` content in its instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction

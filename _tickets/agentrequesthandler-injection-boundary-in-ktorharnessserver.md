@@ -15,7 +15,7 @@ tags: [server, architecture, ktor]
 
 Introduce an AgentRequestHandler interface to KtorHarnessServer so the server owns HTTP protocol concerns only, and the phase runner wires in behavior (especially the blocking /agent/question behavior).
 
-Context: app/src/main/kotlin/com/glassthought/shepherd/core/server/HarnessServer.kt
+Context: app/src/main/kotlin/com/glassthought/chainsaw/core/server/HarnessServer.kt
 
 V1 all four endpoints (/agent/done, /agent/question, /agent/failed, /agent/status) are stubs that log and return {"status":"ok"} immediately. When real behavior is added, it will need to enter KtorHarnessServer — inject it via AgentRequestHandler to keep SRP clean.
 

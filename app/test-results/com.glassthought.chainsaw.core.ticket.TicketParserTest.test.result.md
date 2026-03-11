@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.ticket.TicketParserTest"
+spec: "com.glassthought.chainsaw.core.ticket.TicketParserTest"
 status: PASSED
 failed: 0
 skipped: 0

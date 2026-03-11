@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.rolecatalog.RoleCatalogLoaderTest"
+spec: "com.glassthought.chainsaw.core.rolecatalog.RoleCatalogLoaderTest"
 status: PASSED
 failed: 0
 skipped: 0

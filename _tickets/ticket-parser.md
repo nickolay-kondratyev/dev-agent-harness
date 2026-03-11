@@ -20,7 +20,7 @@ Implement a TicketParser that reads markdown files with YAML frontmatter and ret
 - Create `TicketParser` interface + implementation: `parse(path: Path): TicketData`
 - Create a reusable `YamlFrontmatterParser` utility that splits markdown into frontmatter (YAML) + body
 - Add YAML parsing dependency to `app/build.gradle.kts` (e.g., snakeyaml)
-- Package: `com.glassthought.shepherd.core.ticket`
+- Package: `com.glassthought.chainsaw.core.ticket`
 
 ## Key Decisions
 - Ticket is a markdown file with YAML frontmatter containing at minimum `id` and `title` fields
@@ -36,8 +36,8 @@ Implement a TicketParser that reads markdown files with YAML frontmatter and ret
 
 ## Files touched
 - `app/build.gradle.kts` (add YAML dependency)
-- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/ticket/`
-- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/ticket/`
+- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/ticket/`
+- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/ticket/`
 
 ## Reference
 - See ticket design: `_tickets/clarify-high-level-approach-on-how-we-are-going-to-work-with-the-agent.md`
@@ -51,7 +51,7 @@ As part of closing this ticket:
 
 ## Resolution
 
-Implemented `com.glassthought.shepherd.core.ticket` package with:
+Implemented `com.glassthought.chainsaw.core.ticket` package with:
 - `TicketData` data class: `id`, `title`, `status`, `description` (body text), `additionalFields: Map<String, Any>`
 - `YamlFrontmatterParser` object: `parse(content: String): FrontmatterParseResult` — reusable frontmatter splitter with non-string key guard
 - `TicketParser` interface + `TicketParserImpl`: `suspend fun parse(path: Path): TicketData`

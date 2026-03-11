@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.workflow.WorkflowParserTest"
+spec: "com.glassthought.chainsaw.core.workflow.WorkflowParserTest"
 status: PASSED
 failed: 0
 skipped: 0

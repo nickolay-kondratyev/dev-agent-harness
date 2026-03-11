@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.agent.DefaultAgentTypeChooserTest"
+spec: "com.glassthought.chainsaw.core.agent.DefaultAgentTypeChooserTest"
 status: PASSED
 failed: 0
 skipped: 0

@@ -24,12 +24,12 @@ data class SharedContextSpecConfig(
  * ### What it provides
  * - Pre-configured [AsgardDescribeSpecConfig.FOR_INTEG_TEST] settings (stop-on-first-failure,
  *   DEBUG log level, DATA_ERROR log level verification).
- * - A shared [ChainsawContext] singleton via the [shepherdContext] property.
+ * - A shared [ChainsawContext] singleton via the [chainsawContext] property.
  * - No config boilerplate — defaults are wired through [SharedContextIntegFactory].
  *
  * ### When to use
  * - Use `SharedContextDescribeSpec` when your integration test needs `ChainsawContext`
- *   (e.g., `shepherdContext.infra.tmux.sessionManager`, `shepherdContext.infra.directLlm.glmDirectLLM`).
+ *   (e.g., `chainsawContext.infra.tmux.sessionManager`, `chainsawContext.infra.directLlm.glmDirectLLM`).
  * - Use plain `AsgardDescribeSpec` for unit tests or tests that do NOT need `ChainsawContext`.
  *
  * ### Example
@@ -37,7 +37,7 @@ data class SharedContextSpecConfig(
  * @OptIn(ExperimentalKotest::class)
  * class MyIntegTest : SharedContextDescribeSpec({
  *     describe("GIVEN my use case").config(isIntegTestEnabled()) {
- *         val sessionManager = shepherdContext.infra.tmux.sessionManager
+ *         val sessionManager = chainsawContext.infra.tmux.sessionManager
  *         describe("WHEN something happens") {
  *             it("THEN expected result") {
  *                 // assertion
@@ -60,9 +60,9 @@ abstract class SharedContextDescribeSpec(
 ) : AsgardDescribeSpec(
     // Safe cast: every SharedContextDescribeSpec IS an AsgardDescribeSpec.
     // Using SharedContextDescribeSpec as the receiver type allows subclass tests to access
-    // `shepherdContext` directly in their body lambda without a qualified `this` reference.
+    // `chainsawContext` directly in their body lambda without a qualified `this` reference.
     @Suppress("UNCHECKED_CAST") (body as AsgardDescribeSpec.() -> Unit),
     config.asgardConfig,
 ) {
-    val shepherdContext: ChainsawContext = SharedContextIntegFactory.shepherdContext
+    val chainsawContext: ChainsawContext = SharedContextIntegFactory.chainsawContext
 }

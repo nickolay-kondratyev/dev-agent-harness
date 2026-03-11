@@ -13,7 +13,7 @@ assignee: nickolaykondratyev
 tags: [asgardCore]
 ---
 
-Remove the thorg-root git submodule entirely from the shepherd repo. Instead rely on $THORG_ROOT env var pointing to a standalone checkout of thorg-root.
+Remove the thorg-root git submodule entirely from the chainsaw repo. Instead rely on $THORG_ROOT env var pointing to a standalone checkout of thorg-root.
 
 ### Current state
 - submodules/thorg-root is a git submodule (checked in under .gitmodules)

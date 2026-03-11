@@ -17,7 +17,7 @@ The secondary (test-injection) constructor delegates to the primary with PLACEHO
 
 Fix: Refactor ClaudeCodeWingman to accept GuidScanner as the primary constructor parameter (with a convenience secondary constructor wrapping FilesystemGuidScanner(claudeProjectsDir)), allowing the field to be `val`.
 
-File: app/src/main/kotlin/com/glassthought/shepherd/core/wingman/ClaudeCodeWingman.kt lines ~87-93
+File: app/src/main/kotlin/com/glassthought/chainsaw/core/wingman/ClaudeCodeWingman.kt lines ~87-93
 
 Identified during review of ticket nid_47z6remhu28wwoi4clb1b0pb9_E.
 

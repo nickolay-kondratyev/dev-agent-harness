@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.sessionresolver.impl.ClaudeCodeAgentSessionIdResolverTest"
+spec: "com.glassthought.chainsaw.core.sessionresolver.impl.ClaudeCodeAgentSessionIdResolverTest"
 status: PASSED
 failed: 0
 skipped: 0

@@ -12,7 +12,7 @@ assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 
 AppMain.kt line 23 calls `InitializerImpl().initialize()` directly, bypassing the `Initializer` interface factory.
 
-File: app/src/main/kotlin/com/glassthought/shepherd/cli/AppMain.kt
+File: app/src/main/kotlin/com/glassthought/chainsaw/cli/AppMain.kt
 Line: ~23
 
 Found during review of ticket nid_61on3cjpjxkn9rltnp0syo6ya_E (add Environment interface).

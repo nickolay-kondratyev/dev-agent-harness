@@ -27,7 +27,7 @@ Implement path resolution and directory creation for the .ai_out/${branch}/ dire
   - `publicMd(branch, part, role): Path`, `privateMd(...)`, `sharedContextMd(branch): Path`
   - `locationsFile(branch): Path` → `.ai_out/${branch}/shared/LOCATIONS_OF_PUBLIC_INFO_FROM_OTHER_AGENTS.txt`
 - Directory creation: `ensureStructure(branch, parts)` creates all needed directories upfront
-- Package: `com.glassthought.shepherd.core.filestructure`
+- Package: `com.glassthought.chainsaw.core.filestructure`
 
 ## Key Decisions
 - All paths are relative to the repository root (takes root as constructor parameter)
@@ -42,8 +42,8 @@ Implement path resolution and directory creation for the .ai_out/${branch}/ dire
 - Test: ensureStructure is idempotent
 
 ## Files touched
-- New files under `app/src/main/kotlin/com/glassthought/shepherd/core/filestructure/`
-- New files under `app/src/test/kotlin/com/glassthought/shepherd/core/filestructure/`
+- New files under `app/src/main/kotlin/com/glassthought/chainsaw/core/filestructure/`
+- New files under `app/src/test/kotlin/com/glassthought/chainsaw/core/filestructure/`
 - Does NOT touch `app/build.gradle.kts`
 
 ## Reference
@@ -68,6 +68,6 @@ Implemented `AiOutputStructure` class with:
 - No changes to `build.gradle.kts` — pure Kotlin stdlib
 
 ### Files Created
-- `app/src/main/kotlin/com/glassthought/shepherd/core/filestructure/AiOutputStructure.kt`
-- `app/src/test/kotlin/com/glassthought/shepherd/core/filestructure/AiOutputStructureTest.kt`
+- `app/src/main/kotlin/com/glassthought/chainsaw/core/filestructure/AiOutputStructure.kt`
+- `app/src/test/kotlin/com/glassthought/chainsaw/core/filestructure/AiOutputStructureTest.kt`
 

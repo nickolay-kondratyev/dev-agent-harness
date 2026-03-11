@@ -1,5 +1,5 @@
 ---
-spec: "com.glassthought.shepherd.core.git.GitBranchManagerIntegTest"
+spec: "com.glassthought.chainsaw.core.git.GitBranchManagerIntegTest"
 status: PASSED
 failed: 0
 skipped: 0
