@@ -31,15 +31,20 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 **Ticket-driven**: A ticket is the mandatory starting point for every Chainsaw run. The ticket
 defines what needs to be done; the workflow defines how. Without a ticket, Chainsaw does not run.
-See [`ProcessTicketUseCase`](use-case/ProcessTicketUseCase.md) (ref.ap.zIDNFuU8yNQtj2lZonyH2.E).
 
-- Orchestrates workflow sub-parts (defined in **JSON**)
-- Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
-- Runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for entire harness process
+[`TicketShepherd`](core/TicketShepherd.md) (ref.ap.P3po8Obvcjw4IXsSUSU91.E) is the central
+coordinator that drives the entire workflow. It:
+
+- Walks through parts and sub-parts defined in the workflow JSON
+- Calls `SpawnTmuxAgentSessionUseCase` to spawn agents in TMUX sessions
+- Receives callbacks from the server when agents signal done/failed/question
+- Evaluates iteration decisions via `DirectLLMApi` (loop back or move on)
 - Manages file-based context (PUBLIC.md / SHARED_CONTEXT.md)
 - Handles git commits between sub-parts
-- Monitors convergence via timeout + ping mechanism (see Agent Health Monitoring)
-- Uses `DirectLLMApi` for its own decisions (not everything is hardcoded Kotlin logic)
+- Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
+
+The harness also runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for
+the entire harness process. The server routes agent callbacks to `TicketShepherd`.
 
 ## CLI Entry Point
 
@@ -56,7 +61,9 @@ chainsaw run --workflow <name> --ticket <path>
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
 
-On startup, checks for existing `current_state.json`. If found, offers to resume from last checkpoint or start fresh.
+On startup, the CLI uses [`TicketShepherdCreator`](core/TicketShepherdCreator.md)
+(ref.ap.cJbeC4udcM3J8UFoWXfGh.E) to wire all dependencies and create a `TicketShepherd`.
+If an existing `current_state.json` is found, offers to resume from last checkpoint or start fresh.
 
 ---
 
@@ -302,6 +309,7 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 |-----|---------|
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
-| [`doc/use-case/ProcessTicketUseCase.md`](use-case/ProcessTicketUseCase.md) | Starting point for ticket processing, lifecycle and cleanup |
+| [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, receives server callbacks, drives iteration decisions |
+| [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, CLI spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

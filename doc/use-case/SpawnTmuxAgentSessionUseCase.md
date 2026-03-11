@@ -89,7 +89,7 @@ instances, keyed by HandshakeGuid. When a callback arrives:
 
 1. Server looks up the HandshakeGuid in `SessionsState`
 2. Finds the associated `TmuxAgentSession` and sub-part context
-3. Routes the callback to `ProcessTicketUseCase` (ref.ap.zIDNFuU8yNQtj2lZonyH2.E)
+3. Routes the callback to `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E)
    which decides what to do next (proceed to next sub-part, loop back, etc.)
 
 This design naturally supports multiple concurrent agents: each has its own GUID,
