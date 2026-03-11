@@ -18,7 +18,7 @@ parts/sub-parts schema. One parser handles everything.
 | `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` (int). |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. |
-| `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. Each entry: `{ "id": "...", "agentType": "ClaudeCode", "timestamp": "..." }`. |
+| `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. See [Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e). |
 
 ### plan.json / current_state.json Schema
 
@@ -142,20 +142,52 @@ authoritative — no LLM evaluation in this path.
 
 All session IDs live in `current_state.json` as a `sessionIds` array on each sub-part — no
 separate `session_ids/` directories. The harness appends a new entry each time a session is
-created. **Resume = use the last element** in the array.
+created. **Resume = use the last element** in the array. Each entry follows the
+[Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e).
 
 ```json
 {
   "name": "impl",
   "role": "IMPLEMENTOR",
   "sessionIds": [
-    { "id": "77d5b7ea-cf04-453b-8867-162404763e18", "agentType": "ClaudeCode", "timestamp": "2026-03-10T15:30:00Z" },
-    { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "agentType": "ClaudeCode", "timestamp": "2026-03-10T16:45:00Z" }
+    {
+      "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agent_session_id": "77d5b7ea-cf04-453b-8867-162404763e18",
+      "agent_session_path": null,
+      "agentType": "ClaudeCode",
+      "model": "sonnet",
+      "timestamp": "2026-03-10T15:30:00Z"
+    },
+    {
+      "handshake_guid": "handshake.f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+      "agent_session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agent_session_path": null,
+      "agentType": "ClaudeCode",
+      "model": "sonnet",
+      "timestamp": "2026-03-10T16:45:00Z"
+    }
   ]
 }
 ```
 
 This applies to **both** execution sub-parts and planning sub-parts — all state in one file.
+
+### Session Record Schema / ap.mwzGc1hYkVwu3IJQbTeW4.E
+
+Each entry in the `sessionIds` array has the following structure:
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `handshake_guid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
+| `agent_session_id` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for `--resume`. Null when `agent_session_path` is used instead. |
+| `agent_session_path` | no | Alternative to `agent_session_id` for agents that use paths (e.g., PI). Null when not applicable. |
+| `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
+| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). Required for resume — cannot resume a session started with one model using a different model. |
+| `timestamp` | yes | ISO-8601 timestamp of session creation. |
+
+**Exactly one** of `agent_session_id` or `agent_session_path` must be non-null.
+**Resume = use the last element** in the `sessionIds` array. The `agent_session_id` (or
+`agent_session_path`) plus `model` from that entry are used for the `--resume` invocation.
 
 ### Sub-Parts Without Iteration
 
