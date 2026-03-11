@@ -276,9 +276,11 @@ attribution are fully specified in [`doc/core/git.md`](core/git.md) (ref.ap.BvNC
 
 ## Harness-Level Resume
 
-- `current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs
+- `current_state.json` tracks `SubPartStatus` (`NOT_STARTED`, `IN_PROGRESS`, `COMPLETED`, `FAILED`)
+  on every sub-part, plus `iteration.current` on reviewers and `sessionIds` arrays.
+  See [`plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E).
 - On `shepherd run`, if `current_state.json` exists for the given ticket+branch, offer to resume
-- Resume skips completed sub-parts, picks up from the last in-progress sub-part
+- Resume skips `COMPLETED` sub-parts, picks up from the first non-`COMPLETED` sub-part
 
 ---
 

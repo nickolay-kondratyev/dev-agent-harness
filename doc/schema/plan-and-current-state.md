@@ -16,19 +16,66 @@ parts/sub-parts schema. One parser handles everything.
 | `name` | yes | Directory name and identifier (e.g., `"impl"`, `"review"`). Execution order is determined by array position. |
 | `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
 | `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
-| `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` (int). |
-| `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. |
+| `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
+| `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
+| `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can override via `FailedToConvergeUseCase`. |
+| `iteration.current` | runtime | Current iteration count. Added by harness. Starts at `0`, incremented each time the reviewer signals `needs_iteration`. See [Iteration Counter](#iteration-counter). |
 | `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. See [Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e). |
+
+### SubPartStatus
+
+```kotlin
+enum class SubPartStatus {
+    NOT_STARTED,   // initial state — sub-part has not been attempted
+    IN_PROGRESS,   // agent has been spawned and is working
+    COMPLETED,     // agent signaled done successfully (doer: "completed", reviewer: "pass")
+    FAILED,        // unrecoverable failure (fail-workflow, crash, failed-to-converge)
+}
+```
+
+**State transitions:**
+
+```
+NOT_STARTED → IN_PROGRESS    (harness spawns agent for this sub-part)
+IN_PROGRESS → COMPLETED      (doer: "completed", reviewer: "pass")
+IN_PROGRESS → FAILED         (fail-workflow, agent crash, or failed-to-converge)
+IN_PROGRESS → IN_PROGRESS    (reviewer: "needs_iteration" — counter increments, status stays)
+```
+
+**Part-level status is derived** — no explicit part status field:
+- All sub-parts `COMPLETED` → part complete
+- Any sub-part `FAILED` → part failed
+- First non-`COMPLETED` sub-part → resume point
+
+### Iteration Counter
+
+The `iteration.current` counter lives on the **reviewer sub-part** alongside `iteration.max`.
+It tracks how many times the reviewer has looped back to the doer.
+
+| Value | Meaning |
+|-------|---------|
+| `0` | Doer's first pass (reviewer has not yet run) |
+| `1` | Reviewer ran once and signaled `needs_iteration`; doer is on second pass |
+| `N` | Reviewer has signaled `needs_iteration` N times |
+
+**Incremented when:** reviewer signals `needs_iteration` (before resuming the doer).
+**Checked against:** `iteration.max` — if `current >= max`, triggers `FailedToConvergeUseCase`
+(ref.ap.fFr7GUmCYQEV5SJi8p6AS.E).
 
 ### plan.json / current_state.json Schema
 
-The plan and execution state share the **same** data structure. `plan.json` is the planner's
-raw output (all sub-parts at `NOT_STARTED`). After planning converges, the harness converts
-it to `current_state.json` — adding runtime progress (sub-part status, iteration counters).
-For straightforward workflows, the harness generates `current_state.json` directly from the
-static workflow JSON.
+The plan and execution state share the **same** base structure (parts → sub-parts). They differ
+in whether runtime fields are present:
 
-**Example `plan.json` (planner output):**
+| File | Runtime fields | Source |
+|------|---------------|--------|
+| `plan.json` | **Absent** — no `status`, no `iteration.current`, no `sessionIds` | Planner output |
+| `current_state.json` | **Present** — `status` on every sub-part, `iteration.current` on reviewers, `sessionIds` as sessions are created | Harness-managed |
+
+For straightforward workflows, the harness generates `current_state.json` directly from the
+static workflow JSON (no `plan.json` involved).
+
+**Example `plan.json` (planner output — no runtime fields):**
 
 ```json
 {
@@ -55,14 +102,87 @@ static workflow JSON.
 }
 ```
 
+**Example `current_state.json` (mid-execution — runtime fields present):**
+
+```json
+{
+  "parts": [
+    {
+      "name": "ui_design",
+      "description": "Design the dashboard UI",
+      "subParts": [
+        {
+          "name": "impl",
+          "role": "UI_DESIGNER",
+          "agentType": "ClaudeCode",
+          "status": "COMPLETED",
+          "sessionIds": [
+            {
+              "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "agent_session_id": "77d5b7ea-cf04-453b-8867-162404763e18",
+              "agent_session_path": null,
+              "agentType": "ClaudeCode",
+              "model": "sonnet",
+              "timestamp": "2026-03-10T15:30:00Z"
+            }
+          ]
+        },
+        {
+          "name": "review",
+          "role": "UI_REVIEWER",
+          "agentType": "ClaudeCode",
+          "status": "IN_PROGRESS",
+          "iteration": { "max": 3, "current": 1 },
+          "sessionIds": [
+            {
+              "handshake_guid": "handshake.b2c3d4e5-f6a7-8901-bcde-f12345678901",
+              "agent_session_id": "88e6c8fb-df15-564c-9978-273515874f29",
+              "agent_session_path": null,
+              "agentType": "ClaudeCode",
+              "model": "sonnet",
+              "timestamp": "2026-03-10T15:45:00Z"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "backend_impl",
+      "description": "Implement API endpoints",
+      "subParts": [
+        {
+          "name": "impl",
+          "role": "IMPLEMENTOR",
+          "status": "NOT_STARTED"
+        },
+        {
+          "name": "review",
+          "role": "IMPLEMENTATION_REVIEWER",
+          "status": "NOT_STARTED",
+          "iteration": { "max": 4, "current": 0 }
+        }
+      ]
+    }
+  ]
+}
+```
+
+In this example: `ui_design` doer is done, reviewer is on its second pass (`current: 1` means
+one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
+```
+
 ### plan.json → current_state.json Lifecycle
 
 1. **With-planning**: Planner writes `plan.json` to `harness_private/`. PLAN_REVIEWER sees it
    via ContextProvider (not because it's in `shared/`). After planning converges, harness
-   converts `plan.json` → `current_state.json` (same structure + runtime status fields).
-   `plan.json` is deleted.
+   converts `plan.json` → `current_state.json` and deletes `plan.json`.
 2. **Straightforward**: No `plan.json`. Harness generates `current_state.json` directly from
    `config/workflows/straightforward.json`.
+
+**Conversion adds these runtime fields:**
+- `status: "NOT_STARTED"` on every sub-part
+- `iteration.current: 0` on every reviewer sub-part (where `iteration` block exists)
+- `sessionIds` is absent initially — added when agents are spawned
 
 ### Workflow JSON Schema (static workflows)
 
@@ -149,6 +269,7 @@ created. **Resume = use the last element** in the array. Each entry follows the
 {
   "name": "impl",
   "role": "IMPLEMENTOR",
+  "status": "IN_PROGRESS",
   "sessionIds": [
     {
       "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
