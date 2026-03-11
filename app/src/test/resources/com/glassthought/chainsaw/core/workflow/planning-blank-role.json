@@ -1,8 +1,0 @@
-{
-  "name": "blank-planning-role",
-  "planningPhases": [
-    { "role": "" }
-  ],
-  "planningIteration": { "max": 3 },
-  "executionPhasesFrom": "plan.json"
-}

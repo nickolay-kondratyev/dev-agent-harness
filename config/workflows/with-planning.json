@@ -1,9 +1,9 @@
 {
   "name": "with-planning",
-  "planningPhases": [
-    { "role": "PLANNER" },
-    { "role": "PLAN_REVIEWER" }
+  "planningSubParts": [
+    { "name": "1_plan", "role": "PLANNER" },
+    { "name": "2_plan_review", "role": "PLAN_REVIEWER",
+      "iteration": { "max": 3, "loopsBackTo": "1_plan" } }
   ],
-  "planningIteration": { "max": 3 },
   "executionPhasesFrom": "plan.json"
 }

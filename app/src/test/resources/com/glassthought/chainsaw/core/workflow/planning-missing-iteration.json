@@ -1,8 +1,0 @@
-{
-  "name": "broken-planning",
-  "planningPhases": [
-    { "role": "PLANNER" },
-    { "role": "PLAN_REVIEWER" }
-  ],
-  "executionPhasesFrom": "plan.json"
-}

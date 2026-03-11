@@ -5,41 +5,37 @@
 ## Overview
 
 All agent artifacts live under `.ai_out/${git_branch}/`. Each branch gets its own isolated tree.
+The git branches will include ticket ids which guarantees not clashing.
 
 ## Directory Tree
 
 ```
 .ai_out/${git_branch}/
 ├── harness_private/
-│   └── current_state.json              # Serialized workflow state (incl. resolved parts); enables resume
+│   ├── current_state.json              # Plan blueprint + execution progress + session IDs (single source of truth)
+│   └── plan.json                       # Planner output (with-planning only); becomes current_state.json after convergence
 ├── shared/
 │   ├── SHARED_CONTEXT.md               # Cross-cutting context for ALL agents (agents can modify)
 │   └── plan/
-│       ├── PLAN.md                     # Human-readable plan (with-planning only)
-│       └── plan.json                   # Machine-readable plan (with-planning only)
+│       └── PLAN.md                     # Human-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
 │   └── ${sub_part}/                    # e.g., 1_plan, 2_plan_review (numbered for execution order)
-│       ├── PUBLIC.md
-│       └── session_ids/
-│           └── ${timestamp}.json       # Session ID + agent type
+│       └── PUBLIC.md
 └── phases/                             # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
         └── ${sub_part}/                # Numbered sub-part (e.g., 1_impl, 2_review, 3_security_review)
-            ├── PUBLIC.md
-            └── session_ids/
-                └── ${timestamp}.json   # Session ID + agent type
+            └── PUBLIC.md
 ```
 
 ## Key Files
 
-| File | Scope | Purpose |
-|------|-------|---------|
-| `PUBLIC.md` | Per sub-part | Agent's output — the sole communication channel between agents |
-| `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write |
-| `current_state.json` | Branch-wide | Workflow progress — which part/sub-part is current; enables resume |
-| `PLAN.md` | Branch-wide (shared/plan/) | Human-readable plan (with-planning workflow only) |
-| `plan.json` | Branch-wide (shared/plan/) | Machine-readable plan parsed by harness (with-planning workflow only) |
-| `${timestamp}.json` | Per sub-part session_ids/ | Persisted session ID + agent type for resume capability |
+| File | Scope | Purpose                                                                                                                     |
+|------|-------|-----------------------------------------------------------------------------------------------------------------------------|
+| `PUBLIC.md` | Per sub-part | Agent's output — the main communication channel between agents.                                                             |
+| `SHARED_CONTEXT.md` | Branch-wide | Cross-cutting context all agents can read and write                                                                         |
+| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Enables resume.               |
+| `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. |
+| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture.                     |
 
 ## Structure Decisions
 
@@ -53,15 +49,43 @@ writes is intended to be shared.
 
 - **Part** = iteration group. Groups sub-parts that may loop (e.g., impl ↔ review).
 - **Sub-part** = one unit of work by one agent. Numbered for execution order within the part.
-- Role and agent type metadata live in `plan.json`, not in directory names.
+- Role and agent type metadata live in `current_state.json` / workflow JSON, not in directory names.
 
-### plan.json Schema
+---
+
+## Unified Schema — Parts and Sub-Parts
+
+All workflow JSON files (static workflows **and** planner-generated `plan.json`) use the **same**
+parts/sub-parts schema. One parser handles everything.
+
+### SubPart Fields
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | yes | Directory name and identifier (e.g., `"1_impl"`, `"2_review"`). Numbered prefix for execution order. |
+| `role` | yes | Role from the role catalog (`$CHAINSAW_AGENTS_DIR/*.md`). |
+| `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
+| `iteration` | no | Present only on reviewer sub-parts. Contains `max` (int) and `loopsBackTo` (string). |
+| `iteration.max` | yes (when `iteration` present) | Maximum number of times **this reviewer** can trigger a loop-back. |
+| `iteration.loopsBackTo` | yes (when `iteration` present) | Name of the sub-part to return to on failure (typically the implementor). |
+| `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. Each entry: `{ "id": "...", "agentType": "ClaudeCode", "timestamp": "..." }`. |
+
+### plan.json / current_state.json Schema
+
+The plan and execution state share the **same** data structure. `plan.json` is the planner's
+raw output (all sub-parts at `NOT_STARTED`). After planning converges, the harness converts
+it to `current_state.json` — adding runtime progress (sub-part status, iteration counters).
+For straightforward workflows, the harness generates `current_state.json` directly from the
+static workflow JSON.
+
+**Example `plan.json` (planner output):**
 
 ```json
 {
   "parts": [
     {
       "name": "ui_design",
+      "description": "Design the dashboard UI",
       "subParts": [
         { "name": "1_impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
         { "name": "2_review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
@@ -69,21 +93,165 @@ writes is intended to be shared.
         { "name": "3_security_review", "role": "SECURITY_REVIEWER", "agentType": "PI",
           "iteration": { "max": 2, "loopsBackTo": "1_impl" } }
       ]
+    },
+    {
+      "name": "backend_impl",
+      "description": "Implement API endpoints",
+      "subParts": [
+        { "name": "1_impl", "role": "IMPLEMENTOR" },
+        { "name": "2_review", "role": "IMPLEMENTATION_REVIEWER",
+          "iteration": { "max": 4, "loopsBackTo": "1_impl" } }
+      ]
     }
   ]
 }
 ```
 
-- `iteration` on a review sub-part defines the impl ↔ review loop budget.
-- `loopsBackTo` names the sub-part to return to when review fails — typically the implementor.
-- The implementor can fix or push back on feedback; then the reviewer runs again.
-- Sub-parts without `iteration` execute once.
+### plan.json → current_state.json Lifecycle
+
+1. **With-planning**: Planner writes `plan.json` to `harness_private/`. PLAN_REVIEWER sees it
+   via ContextProvider (not because it's in `shared/`). After planning converges, harness
+   converts `plan.json` → `current_state.json` (same structure + runtime status fields).
+   `plan.json` is deleted.
+2. **Straightforward**: No `plan.json`. Harness generates `current_state.json` directly from
+   `config/workflows/straightforward.json`.
+
+### Workflow JSON Schema (static workflows)
+
+Static workflow definitions (`config/workflows/*.json`) use the **same** sub-parts structure.
+
+**`config/workflows/straightforward.json`:**
+
+```json
+{
+  "name": "straightforward",
+  "parts": [
+    {
+      "name": "main",
+      "description": "Implement and review",
+      "subParts": [
+        { "name": "1_impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
+        { "name": "2_review", "role": "IMPLEMENTATION_REVIEWER",
+          "iteration": { "max": 4, "loopsBackTo": "1_impl" } }
+      ]
+    }
+  ]
+}
+```
+
+**`config/workflows/with-planning.json`:**
+
+```json
+{
+  "name": "with-planning",
+  "planningSubParts": [
+    { "name": "1_plan", "role": "PLANNER" },
+    { "name": "2_plan_review", "role": "PLAN_REVIEWER",
+      "iteration": { "max": 3, "loopsBackTo": "1_plan" } }
+  ],
+  "executionPhasesFrom": "plan.json"
+}
+```
+
+### WorkflowDefinition — Two Modes
+
+A workflow is either **straightforward** (has `parts`) or **with-planning** (has `planningSubParts` +
+`executionPhasesFrom`). These are mutually exclusive — exactly one set of fields will be non-null.
+
+- **Straightforward**: `parts` contains the full execution plan (static).
+- **With-planning**: `planningSubParts` defines the planning loop (PLANNER ↔ PLAN_REVIEWER).
+  `executionPhasesFrom` names the file the planner generates (e.g., `"plan.json"`) in `harness_private/`.
+  After planning converges, the harness converts `plan.json` → `current_state.json` and deletes `plan.json`.
+
+---
+
+## Iteration Semantics
+
+### Sub-Part-Level Iteration
+
+Iteration is defined **per reviewer sub-part**, not per part. Each reviewer has:
+- Its own iteration budget (`iteration.max`)
+- An explicit loop-back target (`iteration.loopsBackTo`)
+
+### Execution Flow Within a Part
+
+Sub-parts execute **sequentially** in order. When a reviewer sub-part fails (LLM evaluation
+determines the review did not pass):
+
+1. The harness re-runs the `loopsBackTo` target (typically the implementor).
+2. The harness then re-runs **only the failing reviewer** — intermediate sub-parts that already
+   passed are **skipped**.
+3. The failing reviewer's iteration counter increments.
+4. If the counter exceeds `iteration.max`, the part is considered failed.
+
+**Example — 3 sub-parts:**
+
+```
+Part: backend
+  1_impl (IMPLEMENTOR)
+  2_security (SECURITY_REVIEWER, max: 2, loopsBackTo: 1_impl)
+  3_code_review (CODE_REVIEWER, max: 4, loopsBackTo: 1_impl)
+```
+
+Execution:
+```
+Run 1_impl → Run 2_security
+  2_security FAIL → Run 1_impl → Run 2_security (counter: 2)
+  2_security PASS → Run 3_code_review
+  3_code_review FAIL → Run 1_impl → Run 3_code_review (counter: 2; skip 2_security)
+  3_code_review PASS → Part complete
+```
+
+### Session IDs in current_state.json
+
+All session IDs live in `current_state.json` as a `sessionIds` array on each sub-part — no
+separate `session_ids/` directories. The harness appends a new entry each time a session is
+created. **Resume = use the last element** in the array.
+
+```json
+{
+  "name": "1_impl",
+  "role": "IMPLEMENTOR",
+  "sessionIds": [
+    { "id": "77d5b7ea-cf04-453b-8867-162404763e18", "agentType": "ClaudeCode", "timestamp": "2026-03-10T15:30:00Z" },
+    { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890", "agentType": "ClaudeCode", "timestamp": "2026-03-10T16:45:00Z" }
+  ]
+}
+```
+
+This applies to **both** execution sub-parts and planning sub-parts — all state in one file.
+
+### Sub-Parts Without Iteration
+
+Sub-parts that lack an `iteration` field execute exactly **once**. These are typically
+implementors or one-shot tasks.
+
+### Agent Session Lifecycle (V1)
+
+V1 **kills the agent session between iterations** — each sub-part run spawns a fresh session.
+Context carries exclusively via files (PUBLIC.md, SHARED_CONTEXT.md) assembled by ContextProvider.
+
+**V2 evolution**: The design should not preclude keeping agent sessions alive across iterations
+when the context window has room. The `sessionIds` array already supports multiple sessions per
+sub-part, and the harness can decide per-iteration whether to resume or start fresh based on
+context usage. See ticket `nid_etxturughxixkl5hmvgazco3j_E`.
+
+### PUBLIC.md Lifecycle
+
+- **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
+  including relevant context in its output.
+- **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
+  changes is preserved in git — no need for versioned files.
+- **Fresh session** (V1 default): The harness starts a new session. The agent picks up context
+  purely from PUBLIC.md files and other files assembled by ContextProvider.
+- **Resumed session** (V2): The harness resumes the session using the last `sessionIds` entry.
+  The agent retains its full conversation history.
 
 ## Scoping Rules
 
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
 - **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained iteration group.
-- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md and session_ids.
+- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md.
 
 ## Cross-Agent Visibility
 
@@ -91,18 +259,6 @@ Agents do **not** discover other agents' `PUBLIC.md` files themselves. The **ins
 is responsible for gathering pointers to relevant `PUBLIC.md` files and including them in the agent's
 instruction file at assembly time. This avoids a stale index file and keeps the harness in control of
 what each agent sees.
-
-## Iteration Behavior
-
-- **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
-  including relevant context in its output.
-- **Trackability via git**: The harness commits between iterations, so the full history of `PUBLIC.md`
-  changes is preserved in git — no need for versioned files.
-- **Fresh reviewer**: To use a brand new reviewer (no prior conversation), the harness deletes the
-  reviewer's `PUBLIC.md` and starts a new session (no resume). The fresh reviewer picks up context
-  purely from the implementor's `PUBLIC.md` and other files assembled by ContextProvider.
-- **Resumed reviewer**: To continue with the same reviewer, the harness resumes the session.
-  The reviewer retains its full conversation history.
 
 ## External Paths (outside repo)
 
@@ -116,4 +272,5 @@ $HOME/.chainsaw_agent_harness/
 
 ## Codified In
 
-`AiOutputStructure` class (`app/src/main/kotlin/com/glassthought/chainsaw/core/filestructure/AiOutputStructure.kt`) — pure path resolution + `ensureStructure()` for directory creation.
+To be rebuilt: `AiOutputStructure` class for path resolution + `ensureStructure()` for directory creation.
+Previous implementation deleted for clean rebuild against the new schema.

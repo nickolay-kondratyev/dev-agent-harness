@@ -1,17 +1,3 @@
----
-closed_iso: 2026-03-11T14:16:24Z
-id: nid_j54dq6ra33hix1e8aavanb8bz_E
-title: "High level approach on how we are going to work with the agent"
-status: closed
-deps: []
-links: []
-created_iso: 2026-03-07T14:51:08Z
-status_updated_iso: 2026-03-11T14:16:24Z
-type: task
-priority: 3
-assignee: nickolaykondratyev
----
-
 # Chainsaw — High-Level Design (V1)
 
 Codename: **CHAINSAW**. Package: `com.glassthought.chainsaw`.
@@ -25,11 +11,11 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 ## What the Harness Does
 
 - Reads a task/ticket
-- Orchestrates workflow phases (defined in **JSON**)
+- Orchestrates workflow sub-parts (defined in **JSON**)
 - Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
 - Runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for entire harness process
-- Manages file-based context (PUBLIC.md / PRIVATE.md / SHARED_CONTEXT.md)
-- Handles git commits between phases
+- Manages file-based context (PUBLIC.md / SHARED_CONTEXT.md)
+- Handles git commits between sub-parts
 - Monitors convergence via timeout + ping mechanism (see Agent Health Monitoring)
 - Uses `DirectLLMApi` for its own decisions (not everything is hardcoded Kotlin logic)
 
@@ -55,22 +41,20 @@ On startup, checks for existing `current_state.json`. If found, offers to resume
 ## Sub-Agent Invocation — TMUX Only
 
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
-`InteractiveProcessRunner` was a prototype — **remove it**.
 
 - `CodeAgent` interface with `ClaudeCodeAgent` implementation
 - Leverages subscription pricing; interface allows swapping agent implementations
 - **Strictly serial** execution for V1 (1 harness → 1 TMUX session at a time)
-- **Separate sessions per phase** — each phase spawns a fresh agent. Context carries via files.
+- **Separate sessions per sub-part** — each run spawns a fresh agent. Context carries via files.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
 
-### CodeAgent Abstraction (rough)
+### CodeAgent Abstraction
 
 ```
 CodeAgent.run(
     instructionFile: Path,       // Markdown file with full instructions
     workingDir: Path,
     publicOutputFile: Path,      // explicit PUBLIC.md path
-    privateOutputFile: Path,     // explicit PRIVATE.md path
 ) -> AgentResult { exitCode, stdout }
 ```
 
@@ -104,12 +88,10 @@ $HOME/.chainsaw_agent_harness/server/port.txt
 ```
 
 - `harness-cli-for-agent.sh` reads this file to construct the server URL
-- Single helper method in the CLI encapsulates URL construction
 - On server shutdown, this file is **deleted**
-- CLI errors out if file does not exist (server not running)
 - **No env var needed** — eliminates port collision risk entirely
 
-Server starts once at harness startup, stays alive across all phases.
+Server starts once at harness startup, stays alive across all sub-parts.
 
 ### Agent CLI Script
 <!-- ref.ap.8PB8nMd93D3jipEWhME5n.E -- implementation in scripts/harness-cli-for-agent.sh -->
@@ -125,16 +107,15 @@ Server starts once at harness startup, stays alive across all phases.
 All structured/formatted content sent to agents goes through temp files:
 - Write content to `$HOME/.chainsaw_agent_harness/tmp/agent_comm/<unique_name>.md`
 - Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
-- Applies to: instruction files, Q&A answers, any multi-line content
 - **Exception**: Simple single-line messages (e.g., Wingman GUID handshake) can be sent directly
 
 ### V1 Server Endpoints
 
 | Endpoint | Purpose |
 |---|---|
-| `POST /agent/done` | Agent completed its task. Harness kills TMUX session, proceeds to next phase. |
+| `POST /agent/done` | Agent completed its task. Harness kills TMUX session, proceeds to next sub-part. |
 | `POST /agent/question` | Agent has a question. Curl blocks until human answers. Answer delivered via TMUX send-keys (temp file). |
-| `POST /agent/failed` | Unrecoverable error. Triggers `FailedPhaseUseCase`. |
+| `POST /agent/failed` | Unrecoverable error. Triggers `FailedToExecutePlanUseCase`. |
 | `POST /agent/status` | Agent responds to health ping (see Agent Health Monitoring). |
 
 All requests include the **git branch** as identifier (key for future parallelism).
@@ -161,11 +142,11 @@ All requests include the **git branch** as identifier (key for future parallelis
 7. Agent works, may call CLI for questions
 8. Agent calls `harness-cli-for-agent.sh done` when finished
 9. Harness receives `/agent/done`, kills TMUX session
-10. Harness proceeds to next workflow phase
+10. Harness proceeds to next sub-part
 
 ### Agent Lifecycle — Resume Session (after crash)
 
-1. Harness already has session ID from Wingman (saved previously)
+1. Harness already has session ID (last entry in `sessionIds` array in `current_state.json`)
 2. Harness starts agent with `claude --resume <session_id>` in new TMUX session
 3. Skip GUID/Wingman step — session already known
 4. Harness writes instruction file, sends path via TMUX send-keys
@@ -182,7 +163,7 @@ Timeout + ping mechanism to detect crashed/hung agents.
 1. **No callback timeout** (default: 30 min): If no `/agent/done`, `/agent/failed`, or `/agent/question` within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `POST /agent/status`
 3. **Ping timeout** (default: 3 min): If no `/agent/status` reply → triggers `NoReplyToPingUseCase`
-4. **Crash handling**: Kill TMUX session → attempt to RESUME agent session using Wingman-saved session ID
+4. **Crash handling**: Kill TMUX session → attempt to RESUME agent session using last `sessionIds` entry
 
 ### UseCase Classes
 
@@ -195,7 +176,6 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 | `FailedToExecutePlanUseCase` | Agent calls `/agent/failed` during plan execution | Spin up cleanup agent, enrich ticket, reset codebase, re-open ticket |
 
 - **Simple encapsulated objects** — NOT a state machine pattern
-- Live in their own namespace, separate from detailed implementation
 - Each UseCase handles one well-defined scenario
 
 ### FailedToExecutePlanUseCase Detail
@@ -220,7 +200,7 @@ When plan execution hits blocking issues:
 2. Harness sends GUID to agent as first message (plain text, directly): `"Here is a GUID: [$GUID]. We will use it to identify this session."`
 3. `ClaudeCodeWingman` searches `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
 4. Matched filename = session ID (e.g., `77d5b7ea-cf04-453b-8867-162404763e18.jsonl`)
-5. Session ID stored in `.ai_out/${git_branch}/phases/${part}/${ROLE}/session_ids/${timestamp}.json`
+5. Session ID stored in `current_state.json` under the sub-part's `sessionIds` array
 6. Enables session resumption after crashes
 
 **Not used during resume** — session ID already known from prior Wingman resolution.
@@ -243,167 +223,26 @@ enum ModelTier { QuickCheap, Medium }
 
 ---
 
-## Workflow Definition — Kotlin + JSON
-<!-- ref.ap.Wya4gZPW6RPpJHdtoJqZO.E -->
+## Workflow Definition, File Structure, and Iteration Semantics
 
-Core engine in Kotlin; workflow phases defined in **JSON** under `./config/workflows/`.
-JSON chosen because: 1) easy for LLMs to generate during planning phase, 2) strong tooling support.
+See [`doc/ai-out-schema.md`](ai-out-schema.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for:
+- Unified parts/sub-parts schema (used by static workflows **and** planner-generated plans)
+- `plan.json` / `current_state.json` lifecycle
+- Iteration semantics (sub-part-level iteration with `loopsBackTo`)
+- `.ai_out/` directory tree and scoping rules
+- Cross-agent visibility via ContextProvider
+- Session ID storage in `current_state.json`
 
-**Serialization: Jackson + Kotlin module** throughout (workflow definitions, current_state.json, DirectLLMApi responses).
+**Key points:**
+- **JSON** under `./config/workflows/`. **Jackson + Kotlin module** for serialization.
+- `--workflow <name>` → loads `./config/workflows/<name>.json`. Fail-fast if not found.
+- Two modes: **straightforward** (static parts) and **with-planning** (planning loop → dynamic execution).
+- `current_state.json` in `harness_private/` is the single source of truth for plan + progress + session IDs.
 
-**Workflow resolution**: `--workflow <name>` → loads `./config/workflows/<name>.json`. Fail-fast if not found.
-
-### Shared Schema — Parts
-
-Both static and dynamic workflows use the same **parts** schema. One parser handles all workflows.
-
-A **part** is a sequential unit of work with an ordered list of phases (typically implementor → reviewer) and an iteration config:
-
-```json
-{
-  "parts": [
-    {
-      "name": "part_name",
-      "description": "What this part accomplishes",
-      "phases": [
-        { "role": "SOME_IMPLEMENTOR" },
-        { "role": "SOME_REVIEWER" }
-      ],
-      "iteration": { "max": 4 }
-    }
-  ]
-}
-```
-
-- Parts execute **sequentially** (part_1 completes before part_2 starts)
-- Within a part, phases execute sequentially (implementor → reviewer)
-- Iteration loops back within the part (implementor ↔ reviewer) up to `max` times
-
-### Straightforward Workflow (static parts)
-
-```json
-// config/workflows/straightforward.json
-{
-  "name": "straightforward",
-  "parts": [
-    {
-      "name": "main",
-      "description": "Implement and review",
-      "phases": [
-        { "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
-        { "role": "IMPLEMENTATION_REVIEWER" }
-      ],
-      "iteration": { "max": 4 }
-    }
-  ]
-}
-```
-
-Single part, single iteration loop. No planning, no dynamic phase generation.
-
-### With-Planning Workflow (planning loop + dynamic execution)
-
-```json
-// config/workflows/with-planning.json
-{
-  "name": "with-planning",
-  "planningPhases": [
-    { "role": "PLANNER" },
-    { "role": "PLAN_REVIEWER" }
-  ],
-  "planningIteration": { "max": 3 },
-  "executionPhasesFrom": "plan.json"
-}
-```
-
-#### Startup Flow — With Planning
-
-```
-1. Load with-planning.json
-2. PLANNING LOOP:
-   a. Spawn PLANNER agent (explores codebase, asks questions via Q&A, writes plan)
-      - Planner receives: ticket, role catalog, plan format instructions
-      - Planner outputs: PLAN.md (human-readable) + plan.json (machine-readable)
-   b. Spawn PLAN_REVIEWER agent (reviews the plan)
-   c. LLM evaluates: plan approved? → exit loop / needs revision? → back to (a)
-   d. Max 3 iterations
-3. Harness parses plan.json → resolves into parts (same schema as straightforward)
-4. Resolved parts stored in-memory + persisted in current_state.json (for resume)
-5. EXECUTION: parts execute sequentially, each with its own iteration loop
-6. If major blocking issues during execution → FailedToExecutePlanUseCase
-```
-
-#### Planner Output — Separate Files
-
-```
-.ai_out/${git_branch}/shared/plan/
-├── PLAN.md        # Human-readable plan (rationale, approach, risks)
-└── plan.json      # Machine-readable (parts schema, parsed by harness)
-```
-
-Example `plan.json`:
-```json
-{
-  "parts": [
-    {
-      "name": "ui_design",
-      "description": "Design the dashboard UI",
-      "phases": [
-        { "role": "UI_DESIGNER" },
-        { "role": "UI_REVIEWER" }
-      ],
-      "iteration": { "max": 3 }
-    },
-    {
-      "name": "backend_impl",
-      "description": "Implement API endpoints",
-      "phases": [
-        { "role": "IMPLEMENTOR" },
-        { "role": "SECURITY_REVIEWER" },
-        { "role": "IMPLEMENTATION_REVIEWER" }
-      ],
-      "iteration": { "max": 4 }
-    }
-  ]
-}
-```
-
-#### Role Catalog — Auto-Discovered
-<!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
-
-The planner needs to know what roles are available. The catalog is **auto-discovered** from `$CHAINSAW_AGENTS_DIR`:
-
-- Every Markdown file in `$CHAINSAW_AGENTS_DIR` is an eligible role (no opt-in flag needed)
-- Extract `description` (required) and `description_long` (optional) from YAML frontmatter
-- Present the catalog to the planner agent in its instructions
-
-Example role file frontmatter:
-```yaml
----
-description: "Reviews code for security vulnerabilities and OWASP top 10"
-description_long: "Performs deep security analysis including auth flows, input validation, SQL injection, XSS..."
----
-```
-
-#### Plan Mutability During Execution
-
-- **Minor adjustments OK**: Implementor can adjust approach within a part and keep going
-- **Major deviations → fail explicitly**: If blocking issues or fundamental approach changes are needed, agent calls `/agent/failed` → `FailedToExecutePlanUseCase` (cleanup, enrich ticket, re-open for retry)
-- Do NOT attempt to patch the plan mid-execution
-
-### Startup Flow — Straightforward (No Planning)
-
-```
-1. Load straightforward.json
-2. Parse parts (static, defined in JSON)
-3. Parts stored in-memory + persisted in current_state.json
-4. EXECUTION: parts execute sequentially, each with its own iteration loop
-```
-
-### Phase Transitions — Hybrid
+### Sub-Part Transitions — Hybrid
 
 - **Automatic** for straightforward transitions (implementor done → reviewer starts)
-- **LLM-evaluated** for iteration decisions: DirectLLMApi receives reviewer's PUBLIC.md + reviewed role's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason)
+- **LLM-evaluated** for iteration decisions: DirectLLMApi receives reviewer's PUBLIC.md + implementor's PUBLIC.md + SHARED_CONTEXT.md, returns structured JSON (pass/fail + reason)
 
 ### Context Assembly — ContextProvider
 
@@ -411,23 +250,22 @@ A `ContextProvider` interface is responsible for assembling context packages for
 - Iteration decision prompts (what the LLM sees)
 - Agent instruction files (what gets concatenated)
 - Planner instructions (ticket + role catalog + format instructions)
-- Easy to adjust and clear to see what is being shared
+- PLAN_REVIEWER instructions (includes `plan.json` from `harness_private/`)
+
+### Role Catalog — Auto-Discovered
+<!-- ref.ap.iF4zXT5FUcqOzclp5JVHj.E -->
+
+- Every Markdown file in `$CHAINSAW_AGENTS_DIR` is an eligible role
+- Extract `description` (required) and `description_long` (optional) from YAML frontmatter
+- **Fail-fast on startup** if a role referenced in the workflow is missing
+
+### Plan Mutability During Execution
+
+- **Minor adjustments OK**: Implementor can adjust approach within a part
+- **Major deviations → fail explicitly**: Agent calls `/agent/failed` → `FailedToExecutePlanUseCase`
+- Do NOT attempt to patch the plan mid-execution
 
 ---
-
-## File Structure
-
-See `doc/ai-out-schema.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for the full directory schema,
-plan.json format, iteration behavior, and cross-agent visibility rules.
-
-Codified in `AiOutputStructure` class (ref.ap.XBNUQHLjDLpAr8F9IOyXU.E).
-
-## Agent Role Definitions
-
-- Each ROLE has a corresponding Markdown file in `$CHAINSAW_AGENTS_DIR`
-- **Fail-fast on startup** if role file is missing
-- Instruction file assembled by ContextProvider — concatenation of role definition, ticket,
-  SHARED_CONTEXT.md, relevant PUBLIC.md pointers, and harness CLI help
 
 ## Git Branch / Feature Naming
 <!-- ref.ap.THL21SyZzJhzInG2m4zl2.E -->
@@ -441,10 +279,9 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 
 ## Harness-Level Resume
 
-- `current_state.json` tracks which phase/part the workflow is currently in
+- `current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs
 - On `chainsaw run`, if `current_state.json` exists for the given ticket+branch, offer to resume
-- Resume skips completed phases, picks up from the last in-progress phase
-- More important than individual agent resume (which is deferred to V2)
+- Resume skips completed sub-parts, picks up from the last in-progress sub-part
 
 ---
 
@@ -453,52 +290,23 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 | Decision | Choice | Rationale |
 |---|---|---|
 | Workflow format | **JSON** | Easy for LLMs to generate; strong tooling |
-| Workflow schema | **Shared "parts" structure** | Same schema for static workflows and planner output; one parser |
+| Workflow schema | **Unified parts/sub-parts** | Same schema for static workflows and planner output; one parser |
 | JSON library | **Jackson + Kotlin module** | Battle-tested, runtime reflection |
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
 | Session tracking | **Wingman interface** | `ClaudeCodeWingman` impl; abstracted for future agent types |
+| Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; last element = resumable |
 | Package | **com.glassthought.chainsaw** | Chainsaw as sub-package under glassthought |
 | Q&A mode | **Attended only (V1)** | Human must be at terminal |
-| Cleanup agent | **Full write access** | Runs cleanup commands, enriches ticket, restores starting state |
 | Role catalog | **Auto-discovered from `$CHAINSAW_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
-| Plan review | **Agent-based (PLAN_REVIEWER)** | Same iteration pattern as other review phases |
-| Plan output | **Separate files** | PLAN.md (human) + plan.json (machine) in `shared/plan/` |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly via FailedToExecutePlanUseCase |
-
-## Cleanup Items
-
-- **Remove `InteractiveProcessRunner`** — prototype, TMUX is the only path
-- **Move classes from `org.example`** to `com.glassthought.chainsaw`
-
----
-
-## V1 Scope Summary
-
-1. CLI: `chainsaw run --workflow <name> --ticket <path>` (picocli)
-2. TMUX-based agent invocation (`CodeAgent` interface, `ClaudeCodeAgent` impl)
-3. Ktor CIO HTTP server (port 0, file-based discovery) for agent→harness callbacks (done/question/failed/status)
-4. Bash CLI script (`harness-cli-for-agent.sh`) for agents to call back (reads port from file)
-5. Wingman interface + ClaudeCodeWingman for session ID discovery
-6. File-based cross-agent context — phase-oriented directory structure under `.ai_out/${git_branch}/`
-7. Temp file pattern for all structured content delivery to agents
-8. JSON workflow definitions with shared "parts" schema (`straightforward` static; `with-planning` dynamic)
-9. With-planning: PLANNER → PLAN_REVIEWER iteration loop → dynamic execution phases from plan.json
-10. Role catalog auto-discovered from `$CHAINSAW_AGENTS_DIR` (every .md file is eligible; `description` from frontmatter)
-11. ContextProvider interface for assembling context packages (incl. planner instructions with role catalog)
-12. Hybrid phase transitions (automatic + LLM-evaluated via DirectLLMApi returning structured JSON)
-13. Agent health monitoring: timeout → ping → crash detection (UseCase pattern)
-14. FailedToExecutePlanUseCase: cleanup agent (write access) → enrich ticket → restore starting state → re-open ticket
-15. DirectLLMApi for harness decisions (GLM QuickCheap tier first)
-16. Git commits between phases; branch naming with try-N for retries
-17. `current_state.json` for harness-level resume (Jackson serialization, incl. resolved parts)
-18. Strictly serial execution (1 harness → 1 agent at a time)
-19. Separate sessions per phase (individual agent resume deferred to V2)
 
 ---
 
 ## Linked Documentation
 
-This high-level plan is mirrored in `ai_input/memory/auto_load/1_core_description.md` (auto-loaded into every agent's context).
-**If this plan changes, update that file explicitly to keep sub-agents aligned.**
+| Doc | Content |
+|-----|---------|
+| [`doc/ai-out-schema.md`](ai-out-schema.md) | Directory schema, unified parts/sub-parts schema, iteration semantics, session IDs |
+| `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
