@@ -2,6 +2,7 @@
 - **MAINLY LEAN ON UNIT TESTS**
   - Have select little integration, especially be careful with integration tests that invoke real coding agents.
 
+
 ### Framework & Style
 - **BDD with GIVEN/WHEN/THEN** using Kotest `DescribeSpec`.
 - Unit tests extend `AsgardDescribeSpec`.
