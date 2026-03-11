@@ -1,7 +1,7 @@
 package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.initializer.AppDependencies
+import com.glassthought.chainsaw.core.initializer.ChainsawContext
 import com.glassthought.chainsaw.core.directLLMApi.glm.GLMHighestTierApi
 import com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl
 import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
@@ -10,15 +10,15 @@ import io.kotest.matchers.shouldBe
 import okhttp3.OkHttpClient
 
 /**
- * Verifies that [AppDependencies] properly implements [com.asgard.core.lifecycle.AsgardCloseable]
+ * Verifies that [ChainsawContext] properly implements [com.asgard.core.lifecycle.AsgardCloseable]
  * and shuts down [OkHttpClient] resources on close.
  */
 class AppDependenciesCloseTest : AsgardDescribeSpec({
 
-    fun buildDepsWithHttpClient(httpClient: OkHttpClient): AppDependencies {
+    fun buildDepsWithHttpClient(httpClient: OkHttpClient): ChainsawContext {
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
-        return AppDependencies(
+        return ChainsawContext(
           outFactory = outFactory,
           tmuxCommandRunner = commandRunner,
           tmuxCommunicator = communicator,

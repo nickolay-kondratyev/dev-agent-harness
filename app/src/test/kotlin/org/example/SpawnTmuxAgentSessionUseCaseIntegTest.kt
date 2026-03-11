@@ -10,7 +10,7 @@ import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.data.PhaseType
 import com.glassthought.chainsaw.core.initializer.data.Environment
 import com.glassthought.chainsaw.core.tmux.TmuxSession
-import com.glassthought.chainsaw.integtest.SharedAppDepDescribeSpec
+import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldNotBeBlank
@@ -27,10 +27,10 @@ import java.nio.file.Path
  * Gated with [isIntegTestEnabled].
  */
 @OptIn(ExperimentalKotest::class)
-class SpawnTmuxAgentSessionUseCaseIntegTest : SharedAppDepDescribeSpec({
+class SpawnTmuxAgentSessionUseCaseIntegTest : SharedContextDescribeSpec({
 
     describe("GIVEN SpawnTmuxAgentSessionUseCase with test configuration").config(isIntegTestEnabled()) {
-        val sessionManager = appDependencies.tmuxSessionManager
+        val sessionManager = chainsawContext.tmuxSessionManager
 
         val systemPromptFilePath = resolveSystemPromptFilePath()
         val out = outFactory.getOutForClass(SpawnTmuxAgentSessionUseCaseIntegTest::class)

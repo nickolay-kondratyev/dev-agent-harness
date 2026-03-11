@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
  * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
  * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
  */
-class AppDependencies(
+class ChainsawContext(
     val outFactory: OutFactory,
     val tmuxCommandRunner: TmuxCommandRunner,
     val tmuxCommunicator: TmuxCommunicator,
@@ -49,7 +49,7 @@ interface Initializer {
     suspend fun initialize(
         outFactory: OutFactory,
         environment: Environment = Environment.production(),
-    ): AppDependencies
+    ): ChainsawContext
 
     companion object{
         fun standard(): Initializer = InitializerImpl()
@@ -58,13 +58,13 @@ interface Initializer {
 
 class InitializerImpl : Initializer {
 
-    override suspend fun initialize(outFactory: OutFactory, environment: Environment): AppDependencies {
+    override suspend fun initialize(outFactory: OutFactory, environment: Environment): ChainsawContext {
         val out = outFactory.getOutForClass(InitializerImpl::class)
 
         return out.time({initializeImpl(outFactory, environment)}, "initializer.initialize")
     }
 
-    private fun initializeImpl(outFactory: OutFactory, environment: Environment): AppDependencies {
+    private fun initializeImpl(outFactory: OutFactory, environment: Environment): ChainsawContext {
         // TODO(ap.ifrXkqXjkvAajrA4QCy7V.E): use environment.isTest to swap external services for test doubles
         val commandRunner = TmuxCommandRunner()
         val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
@@ -76,7 +76,7 @@ class InitializerImpl : Initializer {
 
         val glmDirectLLM = createGLMDirectLLM(outFactory, httpClient)
 
-        return AppDependencies(
+        return ChainsawContext(
             outFactory = outFactory,
             tmuxCommandRunner = commandRunner,
             tmuxCommunicator = communicator,
