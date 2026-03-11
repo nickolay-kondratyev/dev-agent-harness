@@ -1,10 +1,10 @@
-package com.glassthought.chainsaw.core.tmux
+package com.glassthought.chainsaw.core.agent.tmux
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import com.glassthought.chainsaw.core.tmux.data.TmuxSessionName
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.core.agent.tmux.data.TmuxSessionName
+import com.glassthought.chainsaw.core.agent.tmux.util.TmuxCommandRunner
 
 /**
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.

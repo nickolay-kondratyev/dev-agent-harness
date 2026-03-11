@@ -1,7 +1,7 @@
 package org.example
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
-import com.glassthought.chainsaw.core.tmux.TmuxSession
+import com.glassthought.chainsaw.core.agent.tmux.TmuxSession
 import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tests for [com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl].
+ * Tests for [com.glassthought.chainsaw.core.agent.tmux.TmuxCommunicatorImpl].
  *
  * Requires tmux to be installed on the system. Uses bash sessions to verify
  * that keystrokes are delivered correctly.

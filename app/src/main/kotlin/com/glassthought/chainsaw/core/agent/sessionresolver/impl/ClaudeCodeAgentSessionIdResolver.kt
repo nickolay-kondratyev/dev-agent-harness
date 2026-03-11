@@ -1,13 +1,13 @@
-package com.glassthought.chainsaw.core.sessionresolver.impl
+package com.glassthought.chainsaw.core.agent.sessionresolver.impl
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.chainsaw.core.data.AgentType
-import com.glassthought.chainsaw.core.sessionresolver.HandshakeGuid
-import com.glassthought.chainsaw.core.sessionresolver.ResumableAgentSessionId
-import com.glassthought.chainsaw.core.sessionresolver.AgentSessionIdResolver
+import com.glassthought.chainsaw.core.agent.sessionresolver.HandshakeGuid
+import com.glassthought.chainsaw.core.agent.sessionresolver.ResumableAgentSessionId
+import com.glassthought.chainsaw.core.agent.sessionresolver.AgentSessionIdResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay

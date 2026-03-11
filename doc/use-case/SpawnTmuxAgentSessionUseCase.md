@@ -40,13 +40,8 @@ The `handshake.` prefix makes GUIDs greppable in logs and distinguishable from a
 
 ```kotlin
 // HandshakeGuid value class — ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E
-@JvmInline
-value class HandshakeGuid(val value: String) {
-    override fun toString(): String = value
-}
-
-// Generation
-val guid = HandshakeGuid("handshake.${UUID.randomUUID()}")
+// Generation — always use the factory to enforce the prefix
+val guid = HandshakeGuid.generate()
 ```
 
 ### How the Agent CLI Knows Its GUID
@@ -60,6 +55,8 @@ export CHAINSAW_HANDSHAKE_GUID=handshake.a1b2c3d4-... && claude
 The agent CLI script reads `$CHAINSAW_HANDSHAKE_GUID` from the environment and includes
 it in every HTTP callback to the server. The agent itself does not need to know about
 the GUID — it's transparent, handled entirely by the CLI script.
+
+The CLI should hard fail when $CHAINSAW_HANDSHAKE_GUID is not found.
 
 ---
 
@@ -87,15 +84,16 @@ GUID→sub-part registry.
 
 ### Server-Side Coordination
 
-The server maintains a registry mapping live HandshakeGuids to sub-part context. When
-a callback arrives:
+A `SessionsState` class tracks live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
+instances, keyed by HandshakeGuid. When a callback arrives:
 
-1. Server looks up the HandshakeGuid in its registry
-2. Finds the associated sub-part and signal mechanism (e.g., `CompletableDeferred`)
-3. Completes the signal — the orchestration loop `await()`s it and proceeds
+1. Server looks up the HandshakeGuid in `SessionsState`
+2. Finds the associated `TmuxAgentSession` and sub-part context
+3. Routes the callback to `ProcessTicketUseCase` (ref.ap.zIDNFuU8yNQtj2lZonyH2.E)
+   which decides what to do next (proceed to next sub-part, loop back, etc.)
 
 This design naturally supports multiple concurrent agents: each has its own GUID,
-its own registry entry, its own signal.
+its own `TmuxAgentSession` entry in `SessionsState`.
 
 ---
 

@@ -7,7 +7,7 @@ import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
 import com.glassthought.chainsaw.core.agent.starter.impl.ClaudeCodeAgentStarter
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.initializer.data.Environment
-import com.glassthought.chainsaw.core.sessionresolver.impl.ClaudeCodeAgentSessionIdResolver
+import com.glassthought.chainsaw.core.agent.sessionresolver.impl.ClaudeCodeAgentSessionIdResolver
 import java.nio.file.Path
 
 /**

@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.rolecatalog
+package com.glassthought.chainsaw.core.agent.rolecatalog
 
 import java.nio.file.Path
 

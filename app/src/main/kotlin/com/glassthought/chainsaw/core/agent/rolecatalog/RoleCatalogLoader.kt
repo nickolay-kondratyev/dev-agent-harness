@@ -1,9 +1,9 @@
-package com.glassthought.chainsaw.core.rolecatalog
+package com.glassthought.chainsaw.core.agent.rolecatalog
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import com.glassthought.chainsaw.core.ticket.YamlFrontmatterParser
+import com.glassthought.chainsaw.core.supporting.ticket.YamlFrontmatterParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files

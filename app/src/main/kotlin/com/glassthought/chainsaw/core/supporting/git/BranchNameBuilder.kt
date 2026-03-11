@@ -1,6 +1,6 @@
-package com.glassthought.chainsaw.core.git
+package com.glassthought.chainsaw.core.supporting.git
 
-import com.glassthought.chainsaw.core.ticket.TicketData
+import com.glassthought.chainsaw.core.supporting.ticket.TicketData
 
 /**
  * Stateless utility for building git branch names from [TicketData].
@@ -49,7 +49,7 @@ object BranchNameBuilder {
      *
      * Visible as `internal` for direct testing of edge cases.
      */
-    internal fun slugify(title: String): String {
+    fun slugify(title: String): String {
         val result = title
             .lowercase()
             .replace(Regex("[^a-z0-9-]"), "-")

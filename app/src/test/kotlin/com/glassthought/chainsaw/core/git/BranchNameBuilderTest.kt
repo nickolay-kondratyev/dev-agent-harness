@@ -1,7 +1,8 @@
 package com.glassthought.chainsaw.core.git
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.ticket.TicketData
+import com.glassthought.chainsaw.core.supporting.git.BranchNameBuilder
+import com.glassthought.chainsaw.core.supporting.ticket.TicketData
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldEndWith

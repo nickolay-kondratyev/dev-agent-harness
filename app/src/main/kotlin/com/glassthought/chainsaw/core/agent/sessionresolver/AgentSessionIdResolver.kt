@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.sessionresolver
+package com.glassthought.chainsaw.core.agent.sessionresolver
 
 import com.asgard.core.annotation.AnchorPoint
 

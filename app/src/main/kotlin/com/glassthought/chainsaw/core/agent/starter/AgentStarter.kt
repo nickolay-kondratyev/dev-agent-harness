@@ -14,7 +14,7 @@ interface AgentStarter {
      * Returns the fully constructed shell command to launch the agent.
      *
      * The returned [TmuxStartCommand] is passed to
-     * [com.glassthought.chainsaw.core.tmux.TmuxSessionManager.createSession].
+     * [com.glassthought.chainsaw.core.agent.tmux.TmuxSessionManager.createSession].
      */
     fun buildStartCommand(): TmuxStartCommand
 }

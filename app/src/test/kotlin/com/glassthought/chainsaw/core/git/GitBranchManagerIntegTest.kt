@@ -2,6 +2,7 @@ package com.glassthought.chainsaw.core.git
 
 import com.asgard.core.processRunner.ProcessRunner
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.chainsaw.core.supporting.git.GitBranchManager
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
@@ -9,7 +10,7 @@ import org.example.isIntegTestEnabled
 import java.nio.file.Files
 
 /**
- * Integration tests for [GitBranchManager].
+ * Integration tests for [com.glassthought.chainsaw.core.supporting.git.GitBranchManager].
  *
  * Requires git to be installed. Gated with [isIntegTestEnabled].
  * Each test creates an isolated temporary git repository.

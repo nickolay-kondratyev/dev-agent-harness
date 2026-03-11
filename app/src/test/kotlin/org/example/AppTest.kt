@@ -1,7 +1,7 @@
 package org.example
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.chainsaw.core.tmux.util.TmuxCommandRunner
+import com.glassthought.chainsaw.core.agent.tmux.util.TmuxCommandRunner
 import io.kotest.matchers.shouldNotBe
 
 /**

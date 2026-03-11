@@ -1,6 +1,7 @@
 package com.glassthought.chainsaw.core.ticket
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.chainsaw.core.supporting.ticket.YamlFrontmatterParser
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.maps.shouldContainKey
 import io.kotest.matchers.shouldBe

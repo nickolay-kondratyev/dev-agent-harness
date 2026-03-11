@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.ticket
+package com.glassthought.chainsaw.core.supporting.ticket
 
 /**
  * Parsed representation of a Chainsaw ticket file.

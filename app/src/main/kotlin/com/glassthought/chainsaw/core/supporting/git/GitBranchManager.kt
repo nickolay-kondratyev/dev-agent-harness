@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.git
+package com.glassthought.chainsaw.core.supporting.git
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType

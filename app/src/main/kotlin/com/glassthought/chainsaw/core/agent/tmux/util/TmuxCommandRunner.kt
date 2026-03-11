@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.tmux.util
+package com.glassthought.chainsaw.core.agent.tmux.util
 
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -6,7 +6,7 @@ import kotlinx.coroutines.withContext
 /**
  * Executes tmux CLI commands and returns the exit code.
  *
- * Shared infrastructure for [com.glassthought.chainsaw.core.tmux.TmuxSessionManager] and [com.glassthought.chainsaw.core.tmux.TmuxCommunicatorImpl].
+ * Shared infrastructure for [com.glassthought.chainsaw.core.agent.tmux.TmuxSessionManager] and [com.glassthought.chainsaw.core.agent.tmux.TmuxCommunicatorImpl].
  * Runs commands on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
  */
 class TmuxCommandRunner {

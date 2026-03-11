@@ -4,7 +4,7 @@ import com.glassthought.chainsaw.core.agent.SpawnTmuxAgentSessionUseCase
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.data.PhaseType
-import com.glassthought.chainsaw.core.tmux.TmuxSession
+import com.glassthought.chainsaw.core.agent.tmux.TmuxSession
 import com.glassthought.chainsaw.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe

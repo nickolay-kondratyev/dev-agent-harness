@@ -1,4 +1,4 @@
-package com.glassthought.chainsaw.core.ticket
+package com.glassthought.chainsaw.core.supporting.ticket
 
 import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.LoaderOptions

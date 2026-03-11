@@ -21,7 +21,7 @@ The git branches will include ticket ids which guarantees not clashing.
 ├── planning/                           # Planning loop (with-planning workflow only)
 │   └── ${sub_part}/                    # e.g., plan, plan_review (order from array position in JSON)
 │       └── PUBLIC.md
-└── phases/                             # Execution phases
+└── execution/                          # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
         └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
             └── PUBLIC.md
@@ -56,7 +56,7 @@ writes is intended to be shared.
 ## Scoping Rules
 
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
-- **Part isolation**: Each part (`phases/${part_name}/`) is a self-contained iteration group.
+- **Part isolation**: Each part (`execution/${part_name}/`) is a self-contained iteration group.
 - **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md.
 
 ## Cross-Agent Visibility

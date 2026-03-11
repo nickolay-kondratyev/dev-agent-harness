@@ -5,15 +5,14 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.chainsaw.core.agent.data.StartAgentRequest
-import com.glassthought.chainsaw.core.tmux.TmuxSessionManager
-import com.glassthought.chainsaw.core.sessionresolver.HandshakeGuid
+import com.glassthought.chainsaw.core.agent.tmux.TmuxSessionManager
+import com.glassthought.chainsaw.core.agent.sessionresolver.HandshakeGuid
 import kotlinx.coroutines.delay
-import java.util.UUID
 import kotlin.time.Duration
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Specification of SpawnTmuxAgentSessionUseCase in ap.hZdTRho3gQwgIXxoUtTqy.E
+ * Specification of SpawnTmuxAgentSessionUseCase in ref.ap.hZdTRho3gQwgIXxoUtTqy.E
  */
 @AnchorPoint("ap.M1jzg6RlJkYL4hi8aXr7LnQA.E")
 class SpawnTmuxAgentSessionUseCase(
@@ -34,7 +33,7 @@ class SpawnTmuxAgentSessionUseCase(
      * @throws IllegalStateException if tmux session creation or GUID resolution fails.
      */
     suspend fun spawn(request: StartAgentRequest): TmuxAgentSession {
-        val guid = HandshakeGuid(UUID.randomUUID().toString())
+        val guid = HandshakeGuid.generate()
 
         out.info(
             "spawning_agent_session",

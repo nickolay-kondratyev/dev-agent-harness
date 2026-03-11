@@ -31,6 +31,7 @@ orchestrator. Sub-agents are spawned as independent processes — their context 
 
 **Ticket-driven**: A ticket is the mandatory starting point for every Chainsaw run. The ticket
 defines what needs to be done; the workflow defines how. Without a ticket, Chainsaw does not run.
+See [`ProcessTicketUseCase`](use-case/ProcessTicketUseCase.md) (ref.ap.zIDNFuU8yNQtj2lZonyH2.E).
 
 - Orchestrates workflow sub-parts (defined in **JSON**)
 - Spawns code agents (Claude Code, Droid, etc.) via **TMUX**
@@ -301,5 +302,6 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 |-----|---------|
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
+| [`doc/use-case/ProcessTicketUseCase.md`](use-case/ProcessTicketUseCase.md) | Starting point for ticket processing, lifecycle and cleanup |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn/resume flow, HandshakeGuid, callback contract, session schema, CLI spec |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

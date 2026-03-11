@@ -1,7 +1,7 @@
 package com.glassthought.chainsaw.cli.sandbox
 
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
-import com.glassthought.chainsaw.core.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.supporting.directLLMApi.ChatRequest
 import com.glassthought.chainsaw.core.initializer.Initializer
 
 suspend fun main(args: Array<String>) {

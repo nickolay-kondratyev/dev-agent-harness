@@ -1,11 +1,11 @@
-package com.glassthought.chainsaw.core.directLLMApi.glm
+package com.glassthought.chainsaw.core.supporting.directLLMApi.glm
 
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import com.glassthought.chainsaw.core.directLLMApi.ChatRequest
-import com.glassthought.chainsaw.core.directLLMApi.ChatResponse
-import com.glassthought.chainsaw.core.directLLMApi.DirectLLM
+import com.glassthought.chainsaw.core.supporting.directLLMApi.ChatRequest
+import com.glassthought.chainsaw.core.supporting.directLLMApi.ChatResponse
+import com.glassthought.chainsaw.core.supporting.directLLMApi.DirectLLM
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
