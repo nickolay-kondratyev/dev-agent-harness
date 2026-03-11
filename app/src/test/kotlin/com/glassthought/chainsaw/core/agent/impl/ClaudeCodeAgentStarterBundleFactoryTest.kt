@@ -10,7 +10,6 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import io.kotest.matchers.types.shouldBeInstanceOf
-import java.io.File
 import java.nio.file.Path
 
 class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
@@ -21,18 +20,12 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
     )
 
     describe("GIVEN factory with test environment and a system prompt file") {
-        val promptFile = createTempPromptFile("You are a test agent.")
-
         val factory = ClaudeCodeAgentStarterBundleFactory(
             environment = Environment.test(),
-            systemPromptFilePath = promptFile.absolutePath,
+            systemPromptFilePath = "/path/to/test-prompt.txt",
             claudeProjectsDir = Path.of("/fake/claude/projects"),
             outFactory = outFactory,
         )
-
-        afterSpec {
-            promptFile.delete()
-        }
 
         describe("WHEN create is called with CLAUDE_CODE") {
             val bundle = factory.create(AgentType.CLAUDE_CODE, testRequest)
@@ -41,17 +34,16 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
                 bundle.starter.shouldBeInstanceOf<ClaudeCodeAgentStarter>()
             }
 
-            it("THEN start command uses --system-prompt (not append)") {
+            it("THEN start command uses --system-prompt-file (not append)") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldContain "--system-prompt"
-                // Ensure it is NOT --append-system-prompt
-                val withoutAppend = command.replace("--append-system-prompt", "")
-                withoutAppend shouldContain "--system-prompt"
+                command shouldContain "--system-prompt-file"
+                val withoutAppend = command.replace("--append-system-prompt-file", "")
+                withoutAppend shouldContain "--system-prompt-file"
             }
 
-            it("THEN start command contains the prompt text") {
+            it("THEN start command contains the file path") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldContain "You are a test agent."
+                command shouldContain "/path/to/test-prompt.txt"
             }
 
             it("THEN start command uses sonnet model") {
@@ -77,25 +69,19 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN factory with production environment and a system prompt file") {
-        val promptFile = createTempPromptFile("Production system prompt.")
-
         val factory = ClaudeCodeAgentStarterBundleFactory(
             environment = Environment.production(),
-            systemPromptFilePath = promptFile.absolutePath,
+            systemPromptFilePath = "/path/to/prod-prompt.txt",
             claudeProjectsDir = Path.of("/fake/claude/projects"),
             outFactory = outFactory,
         )
 
-        afterSpec {
-            promptFile.delete()
-        }
-
         describe("WHEN create is called with CLAUDE_CODE") {
             val bundle = factory.create(AgentType.CLAUDE_CODE, testRequest)
 
-            it("THEN start command uses --append-system-prompt") {
+            it("THEN start command uses --append-system-prompt-file") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldContain "--append-system-prompt"
+                command shouldContain "--append-system-prompt-file"
             }
 
             it("THEN start command uses full allowed tools set") {
@@ -125,9 +111,9 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
         describe("WHEN create is called with CLAUDE_CODE") {
             val bundle = factory.create(AgentType.CLAUDE_CODE, testRequest)
 
-            it("THEN start command does not contain --system-prompt") {
+            it("THEN start command does not contain --system-prompt-file") {
                 val command = bundle.starter.buildStartCommand().command
-                command shouldNotContain "--system-prompt"
+                command shouldNotContain "--system-prompt-file"
             }
 
             it("THEN start command uses sonnet model") {
@@ -137,12 +123,3 @@ class ClaudeCodeAgentStarterBundleFactoryTest : AsgardDescribeSpec({
         }
     }
 })
-
-/**
- * Creates a temporary file with the given prompt content for testing.
- */
-private fun createTempPromptFile(content: String): File {
-    val file = File.createTempFile("test-prompt-", ".txt")
-    file.writeText(content)
-    return file
-}

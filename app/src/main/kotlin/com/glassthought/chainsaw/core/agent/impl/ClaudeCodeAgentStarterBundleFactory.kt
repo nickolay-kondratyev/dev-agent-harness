@@ -8,21 +8,20 @@ import com.glassthought.chainsaw.core.agent.starter.impl.ClaudeCodeAgentStarter
 import com.glassthought.chainsaw.core.data.AgentType
 import com.glassthought.chainsaw.core.initializer.data.Environment
 import com.glassthought.chainsaw.core.wingman.impl.ClaudeCodeAgentSessionIdResolver
-import java.io.File
 import java.nio.file.Path
 
 /**
  * Creates [AgentStarterBundle] for [AgentType.CLAUDE_CODE].
  *
  * Uses [Environment.isTest] to determine agent configuration:
- * - **Test mode**: `--model sonnet`, `--allowedTools Read,Write`, `--system-prompt`,
+ * - **Test mode**: `--model sonnet`, `--allowedTools Read,Write`, `--system-prompt-file`,
  *   `--dangerously-skip-permissions`. Minimal configuration to reduce cost.
  * - **Production mode**: `--model sonnet`, `--allowedTools Bash,Edit,Read,Write,Glob,Grep`,
- *   `--append-system-prompt`, `--dangerously-skip-permissions`.
+ *   `--append-system-prompt-file`, `--dangerously-skip-permissions`.
  *
  * @param environment Runtime environment (test vs production).
- * @param systemPromptFilePath Path to a file containing the system prompt text, or null for default behavior.
- *   The file content is read at bundle creation time and passed inline to the claude CLI.
+ * @param systemPromptFilePath Absolute path to a system prompt file, or null for default behavior.
+ *   Passed directly to the claude CLI via `--system-prompt-file` or `--append-system-prompt-file`.
  * @param claudeProjectsDir Directory where Claude stores session JSONL files (typically `~/.claude/projects`).
  * @param outFactory Factory for structured logging, passed to the session ID resolver.
  */
@@ -38,14 +37,12 @@ class ClaudeCodeAgentStarterBundleFactory(
             "ClaudeCodeAgentStarterBundleFactory only supports CLAUDE_CODE, got [$agentType]"
         }
 
-        val systemPrompt = readSystemPrompt()
-
         val starter = if (environment.isTest) {
             ClaudeCodeAgentStarter(
                 workingDir = request.workingDir,
                 model = TEST_MODEL,
                 allowedTools = TEST_ALLOWED_TOOLS,
-                systemPrompt = systemPrompt,
+                systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = false,
                 dangerouslySkipPermissions = true,
             )
@@ -54,7 +51,7 @@ class ClaudeCodeAgentStarterBundleFactory(
                 workingDir = request.workingDir,
                 model = PRODUCTION_MODEL,
                 allowedTools = PRODUCTION_ALLOWED_TOOLS,
-                systemPrompt = systemPrompt,
+                systemPromptFilePath = systemPromptFilePath,
                 appendSystemPrompt = true,
                 dangerouslySkipPermissions = true,
             )
@@ -69,20 +66,6 @@ class ClaudeCodeAgentStarterBundleFactory(
             starter = starter,
             sessionIdResolver = sessionIdResolver,
         )
-    }
-
-    /**
-     * Reads the system prompt from the configured file path.
-     * Returns null if no file path is configured.
-     */
-    private fun readSystemPrompt(): String? {
-        if (systemPromptFilePath == null) return null
-
-        val file = File(systemPromptFilePath)
-        require(file.exists()) {
-            "System prompt file not found at [$systemPromptFilePath]"
-        }
-        return file.readText().trim()
     }
 
     companion object {

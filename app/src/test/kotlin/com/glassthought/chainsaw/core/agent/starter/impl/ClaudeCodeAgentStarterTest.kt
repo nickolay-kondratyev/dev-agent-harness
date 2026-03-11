@@ -12,7 +12,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/home/user/project",
             model = "sonnet",
             allowedTools = listOf("Read", "Write"),
-            systemPrompt = "You are a test agent.",
+            systemPromptFilePath = "/path/to/prompt.txt",
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
@@ -28,9 +28,8 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
                 command shouldContain "--allowedTools Read,Write"
             }
 
-            it("THEN command contains --system-prompt with the prompt text") {
-                command shouldContain "--system-prompt"
-                command shouldContain "You are a test agent."
+            it("THEN command contains --system-prompt-file with the file path") {
+                command shouldContain "--system-prompt-file /path/to/prompt.txt"
             }
 
             it("THEN command contains --dangerously-skip-permissions") {
@@ -48,7 +47,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/home/user/project",
             model = "opus",
             allowedTools = listOf("Bash", "Edit", "Read"),
-            systemPrompt = "Additional context for the agent.",
+            systemPromptFilePath = "/path/to/append-prompt.txt",
             appendSystemPrompt = true,
             dangerouslySkipPermissions = true,
         )
@@ -56,25 +55,23 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN command contains --append-system-prompt") {
-                command shouldContain "--append-system-prompt"
-                command shouldContain "Additional context for the agent."
+            it("THEN command contains --append-system-prompt-file") {
+                command shouldContain "--append-system-prompt-file /path/to/append-prompt.txt"
             }
 
-            it("THEN command does NOT contain bare --system-prompt (without append prefix)") {
-                // Remove the append variant to check for the non-append variant
-                val withoutAppend = command.replace("--append-system-prompt", "")
-                withoutAppend shouldNotContain "--system-prompt"
+            it("THEN command does NOT contain bare --system-prompt-file (without append prefix)") {
+                val withoutAppend = command.replace("--append-system-prompt-file", "")
+                withoutAppend shouldNotContain "--system-prompt-file"
             }
         }
     }
 
-    describe("GIVEN ClaudeCodeAgentStarter without system prompt") {
+    describe("GIVEN ClaudeCodeAgentStarter without system prompt file") {
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/tmp/test",
             model = "sonnet",
             allowedTools = listOf("Read"),
-            systemPrompt = null,
+            systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = false,
         )
@@ -82,12 +79,12 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN command does not contain --system-prompt") {
-                command shouldNotContain "--system-prompt"
+            it("THEN command does not contain --system-prompt-file") {
+                command shouldNotContain "--system-prompt-file"
             }
 
-            it("THEN command does not contain --append-system-prompt") {
-                command shouldNotContain "--append-system-prompt"
+            it("THEN command does not contain --append-system-prompt-file") {
+                command shouldNotContain "--append-system-prompt-file"
             }
 
             it("THEN command does not contain --dangerously-skip-permissions") {
@@ -96,12 +93,12 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN ClaudeCodeAgentStarter with system prompt containing single quotes") {
+    describe("GIVEN ClaudeCodeAgentStarter with file path containing single quotes") {
         val starter = ClaudeCodeAgentStarter(
             workingDir = "/home/user/project",
             model = "sonnet",
-            allowedTools = listOf("Read", "Write"),
-            systemPrompt = "You're a test agent. Don't do anything unexpected.",
+            allowedTools = listOf("Read"),
+            systemPromptFilePath = "/path/to/it's-a-prompt.txt",
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
@@ -109,22 +106,13 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN single quotes in the prompt are escaped for the outer bash -c wrapper") {
-                // The outer wrapper is: bash -c '<inner>'
-                // Single quotes inside must use the end-quote, escaped-quote, start-quote idiom: '\''
-                // So "You're" becomes "You'\''re" inside the outer single-quoted string.
-                command shouldContain "You'\\''re"
-                command shouldContain "Don'\\''t"
+            it("THEN single quotes in the file path are escaped for the bash -c wrapper") {
+                command shouldContain "it'\\''s-a-prompt.txt"
             }
 
-            it("THEN the command is a valid bash -c wrapper with proper start and end quotes") {
+            it("THEN the command is a valid bash -c wrapper") {
                 command.startsWith("bash -c '") shouldBe true
                 command.endsWith("'") shouldBe true
-            }
-
-            it("THEN the prompt is still double-quoted within the inner command") {
-                // The double quotes around the prompt text must survive the single-quote escaping
-                command shouldContain "--system-prompt \""
             }
         }
     }
@@ -134,7 +122,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/home/user/it's-a-project",
             model = "sonnet",
             allowedTools = listOf("Read"),
-            systemPrompt = null,
+            systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
@@ -153,7 +141,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             workingDir = "/tmp/test",
             model = "sonnet",
             allowedTools = emptyList(),
-            systemPrompt = null,
+            systemPromptFilePath = null,
             appendSystemPrompt = false,
             dangerouslySkipPermissions = true,
         )
