@@ -29,6 +29,10 @@ import kotlinx.coroutines.runBlocking
 object SharedContextIntegFactory {
     internal val testOutManager: TestOutManager = TestOutManager.standard()
 
+    /** Shared chainsaw context.
+     *
+     *  Meant to be shared between the integration tests to keep the wire up of tests faster.
+     *  */
     internal val chainsawContext: ChainsawContext = runBlocking {
         Initializer.standard().initialize(
             outFactory = testOutManager.outFactory,
