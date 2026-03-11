@@ -5,7 +5,7 @@ status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-11T00:10:10Z
-status_updated_iso: 2026-03-11T00:11:12Z
+status_updated_iso: 2026-03-11T00:11:47Z
 type: feature
 priority: 2
 assignee: nickolaykondratyev
