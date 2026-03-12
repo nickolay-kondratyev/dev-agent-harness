@@ -70,7 +70,7 @@ in whether runtime fields are present:
 | File | Runtime fields | Source |
 |------|---------------|--------|
 | `plan.json` | **Absent** — no `status`, no `iteration.current`, no `sessionIds` | Planner output |
-| `current_state.json` | **Present** — `status` on every sub-part, `iteration.current` on reviewers, `sessionIds` as sessions are created | Harness-managed |
+| `current_state.json` | **Present** — `status` on every sub-part, `iteration.current` on reviewers, `sessionIds` as sessions are created | Harness-managed (see [Persistence Timing](#currentstatejson-persistence-timing)) |
 
 For straightforward workflows, the harness generates `current_state.json` directly from the
 static workflow JSON (no `plan.json` involved).
@@ -313,3 +313,25 @@ One TMUX session per sub-part — kept alive across iterations (see Hard Constra
 each iteration — history tracked via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 See [ai-out-directory.md](ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for
 PUBLIC.md vs SHARED_CONTEXT.md semantics.
+
+---
+
+## current_state.json Persistence Timing
+
+The harness writes `current_state.json` to disk **after every state transition and session
+record addition**. This provides maximum durability and enables V2 resume
+(ref.ap.LX1GCIjv6LgmM7AJFas20.E) to lose minimal state on crash.
+
+**Write triggers:**
+
+| Event | What changes | Written by |
+|-------|-------------|------------|
+| Agent spawned | `status` → `IN_PROGRESS`, new entry in `sessionIds` | `PartExecutor` (after spawn + session ID resolution) |
+| Agent signals `done` (any result) | `status` → `COMPLETED` (doer/reviewer pass) or stays `IN_PROGRESS` (needs_iteration), `iteration.current` incremented | `PartExecutor` (after processing `AgentSignal.Done`) |
+| Agent signals `fail-workflow` | `status` → `FAILED` | `PartExecutor` (after processing `AgentSignal.FailWorkflow`) |
+| Agent crash detected | `status` → `FAILED` | `PartExecutor` (after health-aware await loop returns `Crashed`) |
+| Plan conversion | Full `current_state.json` created from `plan.json` | `convertPlanToExecutionParts()` |
+| Straightforward workflow init | Full `current_state.json` created from workflow JSON | `TicketShepherdCreator` |
+
+Each write is a **full file rewrite** (atomic write to temp file + rename). No partial
+updates, no append. Simple and corruption-resistant.

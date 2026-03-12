@@ -175,6 +175,19 @@ Side-channel callbacks (`user-question`, `ping-ack`, `validate-plan`) update
 `lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the
 deferred — executor stays suspended.
 
+### Idempotent Signal Callbacks
+
+If the server receives a `/done` or `/fail-workflow` callback for a deferred that is
+**already completed** (e.g., agent calls `/done` twice, or `/done` after `/fail-workflow`),
+`CompletableDeferred.complete()` returns `false`. The server:
+
+1. Returns **200** (fire-and-forget principle — agent must not retry on non-200)
+2. Logs a **WARN** with the HandshakeGuid, received signal, and the fact that the deferred
+   was already completed
+
+All WARN and above log messages are output to the **console** (via `OutFactory` `outConsumers`)
+in addition to structured logs, so operators see duplicate callbacks immediately.
+
 ---
 
 ## Plan Validation Endpoint

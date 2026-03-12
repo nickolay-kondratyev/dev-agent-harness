@@ -49,9 +49,11 @@ not in TicketShepherd.
 
 ## AgentSignal / ap.UsyJHSAzLm5ChDLd0H6PK.E
 
-Sealed class representing what flows from the server (or health monitor) to the executor
-via `CompletableDeferred<AgentSignal>`. This is the **callback bridge** — the mechanism by
-which an HTTP callback wakes the suspended executor coroutine.
+Sealed class representing what flows through the `CompletableDeferred<AgentSignal>` to
+the executor. `Done` and `FailWorkflow` are completed by the server; `Crashed` is produced
+by the executor's own health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E). This is the
+**callback bridge** — the mechanism by which an HTTP callback wakes the suspended executor
+coroutine.
 
 ```kotlin
 sealed class AgentSignal {
@@ -61,7 +63,7 @@ sealed class AgentSignal {
     /** Agent called /callback-shepherd/fail-workflow */
     data class FailWorkflow(val reason: String) : AgentSignal()
 
-    /** Health monitor determined the agent has crashed */
+    /** Executor's health-aware await loop determined the agent has crashed */
     data class Crashed(val details: String) : AgentSignal()
 }
 ```
@@ -81,12 +83,12 @@ enum class DoneResult {
 | Callback | Why not | Handler |
 |----------|---------|---------|
 | `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
-| `/callback-shepherd/ping-ack` | Side-channel — resets health timer only | Health monitor resets its timer |
+| `/callback-shepherd/ping-ack` | Side-channel — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
 
 All side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`
-(ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the health monitor knows the agent is alive.
-`/callback-shepherd/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also a side-channel
-— planning-phase only, returns validation result in response body.
+(ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the executor's health-aware await loop knows the agent
+is alive. `/callback-shepherd/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also a
+side-channel — planning-phase only, returns validation result in response body.
 
 ### How the Bridge Works
 
@@ -108,6 +110,73 @@ Executor                          SessionsState                    Server
    ◄─ resumes from await() ────────────┤                              │
    │  reads AgentSignal                │                              │
 ```
+
+---
+
+## Health-Aware Await Loop / ap.QCjutDexa2UBDaKB3jTcF.E
+
+The executor does **not** simply call `signalDeferred.await()`. Instead, it runs a
+health-aware await loop that incorporates timeout checks using Kotlin's `withTimeoutOrNull`
+/ `select`. This makes the executor the **single owner** of both the signal await and the
+health monitoring — no separate background coroutine, no race conditions on the deferred.
+
+Full health monitoring spec: ref.ap.6HIM68gd4kb8D2WmvQDUK.E (HealthMonitoring.md).
+
+### Loop Structure (Pseudocode)
+
+```
+while (true) {
+    signal = awaitSignalWithTimeout(healthCheckInterval)
+
+    if (signal != null) {
+        // Agent sent Done / FailWorkflow via server → deferred completed
+        return signal
+    }
+
+    // Timeout fired — check if agent is still alive
+    elapsed = now() - sessionEntry.lastActivityTimestamp
+
+    if (elapsed < noActivityTimeout) {
+        continue  // Activity happened recently, keep waiting
+    }
+
+    // No activity within timeout — ping the agent
+    NoStatusCallbackTimeOutUseCase.execute(sessionEntry)  // sends ping via TMUX
+
+    // Wait for ping timeout, then re-check activity
+    signal = awaitSignalWithTimeout(pingTimeout)
+
+    if (signal != null) {
+        return signal  // Agent responded with Done/FailWorkflow during ping window
+    }
+
+    if (sessionEntry.lastActivityTimestamp updated during ping window) {
+        continue  // Any callback arrived → agent is alive (proof of life)
+    }
+
+    // No activity at all during ping window → agent is dead
+    NoReplyToPingUseCase.execute(sessionEntry)  // kills TMUX session
+    return AgentSignal.Crashed(details)
+}
+```
+
+### Key Properties
+
+- **Single writer for Crashed**: Only the executor completes the deferred with
+  `AgentSignal.Crashed`. The server only completes it with `Done` or `FailWorkflow`.
+  No two components race to complete the same deferred.
+- **Proof of life, not ping-ack**: After pinging, the executor checks `lastActivityTimestamp`
+  for **any** callback, not specifically `/ping-ack`. If the agent sent a `user-question` or
+  `validate-plan` during the ping window, it's alive. `/ping-ack` is the fallback for idle
+  agents with no other callbacks to send.
+- **Scoped to executor lifetime**: The loop runs inside `execute()`. When the executor returns,
+  monitoring stops. No orphaned watchers.
+
+### Dependencies (Health Monitoring)
+
+- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — sends ping via TMUX
+- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kills TMUX, provides crash details
+- `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback
 
 ---
 
@@ -148,11 +217,11 @@ Handles parts with two sub-parts (doer + reviewer). Implements the full iteratio
 
 ### Flow
 
-1. **Spawn doer** → create `CompletableDeferred` → register `SessionEntry` → send instructions → suspend on deferred
-2. **On doer COMPLETED** → spawn reviewer → create deferred → register → send instructions → suspend
+1. **Spawn doer** → create `CompletableDeferred` → register `SessionEntry` → send instructions → enter health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+2. **On doer COMPLETED** → spawn reviewer → create deferred → register → send instructions → enter health-aware await loop
 3. **On reviewer PASS** → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** → check budget → create fresh deferred for doer →
-   send new instructions to **existing** doer TMUX session → loop to step 1 (doer suspend).
+   send new instructions to **existing** doer TMUX session → loop to step 1 (doer await).
    On budget exceeded → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user decides continue or abort.
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
 
@@ -177,13 +246,17 @@ mechanism by which V1's `CommitPerSubPart` strategy produces one commit per sub-
 - `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) — assemble instructions
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `FailedToConvergeUseCase` — when iteration budget exceeded
+- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — ping agent on activity timeout
+- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kill TMUX + crash details on ping timeout
 
 ---
 
 ## SingleDoerPartExecutor
 
-Spawn doer → register → send instructions → suspend on deferred → map `AgentSignal` to
-`PartResult`. No reviewer, no iteration. Trivial subset of `DoerReviewerPartExecutor`.
+Spawn doer → register → send instructions → enter health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) → map `AgentSignal` to `PartResult`. No reviewer, no
+iteration. Uses the same health-aware await loop as `DoerReviewerPartExecutor` — a single
+doer can crash/hang just like a doer-reviewer pair.
 
 ---
 
@@ -194,4 +267,5 @@ Spawn doer → register → send instructions → suspend on deferred → map `A
 - **Run by**: `TicketShepherd` — always controls which executor is active
 - **Lifecycle**: one executor per part, created just before execution, discarded after `execute()` returns
 - `TicketShepherd` holds an `activeExecutor` reference — the currently running `PartExecutor`.
-  This gives health monitoring and cancellation a single reference point.
+  This gives cancellation a single reference point. Health monitoring is internal to each
+  executor via its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).

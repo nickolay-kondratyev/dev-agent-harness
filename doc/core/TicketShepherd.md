@@ -35,7 +35,7 @@ creates executors for each part, runs them in sequence, and handles the results.
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `activeExecutor` | `PartExecutor?` | The currently running executor. Single reference point for health monitoring and cancellation. `null` between parts. |
+| `activeExecutor` | `PartExecutor?` | The currently running executor. Single reference point for cancellation. `null` between parts. Health monitoring is internal to each executor (ref.ap.QCjutDexa2UBDaKB3jTcF.E). |
 
 ## Responsibilities
 
@@ -48,12 +48,9 @@ creates executors for each part, runs them in sequence, and handles the results.
   owns the spawn → wait → iterate cycle internally.
 - **Manages part lifecycle** — creates executors, kills TMUX sessions when a part completes
   (`removeAllForPart`), triggers `GitCommitStrategy` hooks (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
-- **Monitors agent health** — triggers `NoStatusCallbackTimeOutUseCase` and
-  `NoReplyToPingUseCase` when agents go silent. The `activeExecutor` reference tells the
-  health monitor which executor's deferred to complete with `AgentSignal.Crashed`
-  (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E).
 - **Controls which executor is active** — always holds a single `activeExecutor` reference,
-  giving health monitoring and cancellation one place to look.
+  giving cancellation one place to look. Health monitoring is owned by each executor
+  internally via its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 ## What TicketShepherd Does NOT Do
 

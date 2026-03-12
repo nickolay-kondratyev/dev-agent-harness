@@ -93,6 +93,14 @@ $HOME/.shepherd_agent_harness/
 
 See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for protocol details on port discovery and temp file delivery.
 
+## Initial Creation
+
+`TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) creates the full `.ai_out/${branch}/`
+directory structure as part of ticket setup, including an **empty `SHARED_CONTEXT.md`** file.
+This ensures the file exists before the first agent runs — `ContextForAgentProvider`
+(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) can always include it in instruction assembly without
+checking for existence. Agents modify it in place.
+
 ## Codified In
 
 To be rebuilt: `AiOutputStructure` class for path resolution + `ensureStructure()` for directory creation.

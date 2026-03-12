@@ -2,7 +2,8 @@
 
 Timeout + ping mechanism to detect crashed/hung agents. Each distinct failure scenario
 is encapsulated in its own UseCase class — simple, stateless, single-responsibility operations
-that `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) delegates to.
+that the `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) invokes from its health-aware
+await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 ---
 
@@ -10,8 +11,57 @@ that `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) delegates to.
 
 1. **No activity timeout** (default: 30 min): If no callback of any kind (`/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/user-question`, `/callback-shepherd/validate-plan`, or `/callback-shepherd/ping-ack`) within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Uses `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — any callback resets the timer.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.ping-ack.sh`
-3. **Ping timeout** (default: 3 min): If no `/callback-shepherd/ping-ack` reply → triggers `NoReplyToPingUseCase`
+3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If **no** activity at all → triggers `NoReplyToPingUseCase`.
 4. **Crash handling (V1)**: `NoReplyToPingUseCase` kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+
+---
+
+## Monitoring Loop — Executor-Owned / ap.6HIM68gd4kb8D2WmvQDUK.E
+
+The health monitoring loop is **owned by the executor**, not a separate background component.
+This eliminates race conditions between the monitor and the server competing to complete the
+same `CompletableDeferred<AgentSignal>`. See executor health-aware await loop at
+ref.ap.QCjutDexa2UBDaKB3jTcF.E.
+
+### Why Executor-Owned
+
+- **Single control flow**: The executor creates the deferred, registers it, and awaits it.
+  Making the executor also responsible for health checks keeps a single owner for the deferred
+  lifecycle. No separate coroutine competing to `complete()` the deferred.
+- **Structured concurrency**: The health check is naturally scoped to the executor's lifetime.
+  When the executor finishes (signal received or crash detected), the monitoring stops. No
+  cleanup of orphaned background coroutines.
+- **Timer reset via shared state**: The server updates `SessionEntry.lastActivityTimestamp`
+  (ref.ap.igClEuLMC0bn7mDrK41jQ.E) on every callback. The executor reads this timestamp on
+  each health check tick. No direct communication channel needed between server and monitor.
+
+### Proof-of-Life Principle
+
+After sending a ping, the executor does **not** require a specific `/ping-ack` response.
+Instead, it re-checks `lastActivityTimestamp` after the ping timeout window. If **any**
+callback arrived during that window (`user-question`, `validate-plan`, `done`, `ping-ack`,
+etc.), the agent is demonstrably alive. `/ping-ack` exists as a fallback for agents that are
+alive but idle (no other callbacks to send) — which is exactly the scenario health monitoring
+aims to detect.
+
+### Configuration
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
+| `noActivityTimeout` | 30 min | Elapsed time since `lastActivityTimestamp` before triggering a ping |
+| `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any activity resets) |
+
+### What Runs Where
+
+| Concern | Owner | Mechanism |
+|---------|-------|-----------|
+| Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback |
+| Check staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) |
+| Send ping message via TMUX | `NoStatusCallbackTimeOutUseCase` | Called by executor when activity is stale |
+| Declare crash, kill TMUX | `NoReplyToPingUseCase` | Called by executor when ping window expires with no activity |
+| Complete deferred with `Crashed` | `PartExecutor` | After `NoReplyToPingUseCase` executes |
+| Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback |
 
 ---
 
@@ -20,7 +70,7 @@ that `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) delegates to.
 | UseCase | Trigger | Action |
 |---|---|---|
 | `NoStatusCallbackTimeOutUseCase` | No activity (any callback) after X min — based on `lastActivityTimestamp` | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX session, complete `signalDeferred` with `AgentSignal.Crashed`. Executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+| `NoReplyToPingUseCase` | No activity of any kind (proof-of-life check on `lastActivityTimestamp`) after ping timeout | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See `doc_v2/FailedToExecutePlanUseCaseV2.md` for V2 automated cleanup. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM (ref.ap.hnbdrLkRtNSDFArDFd9I2.E), present to user, user decides whether to grant more iterations |
 
