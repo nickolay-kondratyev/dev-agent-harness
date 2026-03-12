@@ -7,7 +7,8 @@ import com.glassthought.ticketShepherd.core.initializer.Infra
 /**
  * Encapsulates all application-level dependencies created during initialization.
  *
- * Dependencies are organized into logical groups.
+ * Dependencies are organized into logical groups. As we get more groups such as useCases
+ * they will go under this class as well.
  *
  * Implements [com.asgard.core.lifecycle.AsgardCloseable] to ensure proper cleanup of all held resources.
  * .close() should be called at the end of main function when we are shutting down.
