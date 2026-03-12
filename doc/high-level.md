@@ -50,7 +50,8 @@ coordinator that drives the entire workflow. It:
 - Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
 
 The harness also runs a **local HTTP server** (Ktor CIO) — starts once, stays alive for
-the entire harness process. The server routes agent callbacks to `TicketShepherd`.
+the entire harness process. The server completes `CompletableDeferred<AgentSignal>`
+(ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on `SessionEntry` to wake suspended `PartExecutor` coroutines.
 
 ## CLI Entry Point
 
@@ -81,21 +82,18 @@ See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) f
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
 - Why TMUX: 1) to resume (CC --print is not resumable), 2) to observe live.
 
-- `CodeAgent` interface with `ClaudeCodeAgent` implementation
+- Agent implementation abstracted via `SpawnTmuxAgentSessionUseCase`; `ClaudeCodeAgent`-specific logic encapsulated there
 - Leverages subscription pricing; interface allows swapping agent implementations
-- **Strictly serial** execution for V1 (1 harness → 1 TMUX session at a time)
+- **Strictly serial** execution for V1 (1 harness → 1 active agent at a time; idle sessions kept alive per Hard Constraints)
 - **One TMUX session per sub-part** — kept alive across iteration loops (see Hard Constraints). New instructions delivered via `send-keys`.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
 
-### CodeAgent Abstraction
+### Agent Invocation
 
-```
-CodeAgent.run(
-    instructionFile: Path,       // Markdown file with full instructions
-    workingDir: Path,
-    publicOutputFile: Path,      // explicit PUBLIC.md path
-) -> AgentResult { exitCode, stdout }
-```
+Agents are spawned via [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
+(ref.ap.hZdTRho3gQwgIXxoUtTqy.E). The executor communicates results via
+`CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) — see
+[`PartExecutor`](core/PartExecutor.md) for the callback bridge design.
 
 - Instructions written to Markdown file (preserves formatting vs. prompt text)
 - V1: no tool restrictions (allow everything)
@@ -134,7 +132,7 @@ Timeout + ping mechanism to detect crashed/hung agents.
 1. **No callback timeout** (default: 30 min): If no `/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, or `/callback-shepherd/user-question` within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.ping-ack.sh`
 3. **Ping timeout** (default: 3 min): If no `/callback-shepherd/ping-ack` reply → triggers `NoReplyToPingUseCase`
-4. **Crash handling**: Kill TMUX session → attempt to RESUME agent session using last `sessionIds` entry
+4. **Crash handling**: Kill TMUX session → start a **new** agent session for the same sub-part (no `--resume` in V1; see [`doc_v2/resume.md`](../doc_v2/resume.md) ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 
 ### UseCase Classes
 
@@ -225,7 +223,7 @@ outside the `Initializer`.
 ## Workflow Definition, File Structure, and Iteration Semantics
 
 See:
-- [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) — `.ai_out/` directory tree, scoping rules, cross-agent visibility via ContextProvider
+- [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) — `.ai_out/` directory tree, scoping rules, cross-agent visibility via ContextForAgentProvider
 - [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) — unified parts/sub-parts schema, `plan.json` / `current_state.json` lifecycle, iteration semantics, session ID storage
 
 **Key points:**

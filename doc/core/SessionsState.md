@@ -106,7 +106,7 @@ shepherd orchestration are both coroutine contexts — blocking a thread with
 ## Ownership
 
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — empty on creation
-- **Owned by** `TicketShepherd` — the shepherd registers/removes sessions as it walks the workflow
+- **Owned by** `TicketShepherd` — the shepherd removes sessions on part completion; `PartExecutor` registers entries during spawn and iteration
 - **Shared with** `ShepherdServer` — the server holds a reference for `lookup` on incoming callbacks
 - Lifecycle: lives for the duration of one ticket's processing. Not persisted — `current_state.json`
   handles persistence. V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) will rebuild `SessionsState`

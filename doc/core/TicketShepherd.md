@@ -25,7 +25,7 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `Completed` → kill TMUX sessions for part, `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase` (prints red error to
         console, halts — waits for human intervention).
-      - `FailedToConverge` → delegate to `FailedToConvergeUseCase`
+      - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
       - `AgentCrashed` → attempt recovery or abort
 5. On all parts completed → workflow done
 

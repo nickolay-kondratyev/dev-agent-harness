@@ -183,11 +183,19 @@ On `needs_iteration`, no TMUX sessions are killed. The executor:
 
 Same pattern for resuming the reviewer after the doer completes the iteration.
 
+### Git Commits During Execution
+
+The executor receives `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) as a dependency
+and calls `onSubPartDone` after each `AgentSignal.Done` (any result: `COMPLETED`, `PASS`,
+`NEEDS_ITERATION`) — before the next sub-part starts or iteration resumes. This is the
+mechanism by which V1's `CommitPerSubPart` strategy produces one commit per sub-part signal.
+
 ### Dependencies
 
 - `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — register/lookup sessions
 - `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — spawn agent sessions
 - `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) — assemble instructions
+- `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 
 ---

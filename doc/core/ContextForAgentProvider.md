@@ -14,7 +14,7 @@ overloaded in this codebase (`ShepherdContext`, `SHARED_CONTEXT.md`, etc.).
 Agents run in isolated TMUX sessions with no shared memory. Their only input is the instruction
 file sent via `send-keys`. Getting the right content into that file — and keeping irrelevant
 content out — is critical for agent effectiveness. The provider centralizes this assembly so
-callers (TicketShepherd) don't need to know the concatenation rules.
+callers (`SubPartInstructionProvider` implementations) don't need to know the concatenation rules.
 
 ---
 
@@ -59,13 +59,14 @@ Concatenation order:
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
 | 2 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
 | 3 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | May be empty on first agent. Agent can modify it. |
-| 4 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
-| 5 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
-| 6 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part | What the reviewer found lacking |
-| 7 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
-| 8 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
-| 9 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
-| 10 | **Callback script usage** | Static help text, wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
+| 4 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — big picture context. Only present for `with-planning` workflows. |
+| 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
+| 6 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
+| 7 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part | What the reviewer found lacking |
+| 8 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
+| 9 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
+| 10 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
+| 11 | **Callback script usage** | Static help text, wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
 
 ### Planner
 
@@ -77,7 +78,9 @@ Concatenation order:
 | 4 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E |
 | 5 | **plan.json output path** | `harness_private/plan.json` | |
 | 6 | **PLAN.md output path** | `shared/plan/PLAN.md` | Human-readable plan |
-| 7 | **Callback script usage** | Same as execution agent | |
+| 7 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
+| 8 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 9 | **Callback script usage** | Same as execution agent | |
 
 ### Plan Reviewer
 
@@ -158,7 +161,7 @@ $HOME/.shepherd_agent_harness/tmp/agent_comm/<unique_name>.md
 Unique name format: `instruction_${partName}_${subPartName}_${timestamp}.md`
 
 The provider writes the file and returns its `Path`. The caller
-(`TicketShepherd`) sends the path to the agent via TMUX `send-keys`.
+(`PartExecutor` via `SubPartInstructionProvider`) sends the path to the agent via TMUX `send-keys`.
 
 ---
 
@@ -189,6 +192,7 @@ data class PlannerInstructionRequest(
     val roleCatalog: List<RoleDefinition>,
     val planJsonOutputPath: Path,
     val planMdOutputPath: Path,
+    val publicMdOutputPath: Path,
     val iterationNumber: Int,
     val reviewerFeedbackPublicMd: Path?,
 )
@@ -214,8 +218,8 @@ data class PublicMdReference(
 ## Ownership and Wiring
 
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
-- **Used by** `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) — calls the appropriate
-  method before each agent spawn
+- **Used by** `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) implementations —
+  called by `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) during instruction assembly
 - **Depends on**: `.ai_out/` directory schema (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for path resolution
 
 ---
@@ -223,6 +227,6 @@ data class PublicMdReference(
 ## What It Does NOT Do
 
 - **Does not decide which agent to spawn** — that's TicketShepherd walking the workflow
-- **Does not send the file to the agent** — that's TicketShepherd via TMUX `send-keys`
-- **Does not read agent output** — PUBLIC.md reading is TicketShepherd's concern
+- **Does not send the file to the agent** — that's the `PartExecutor` via TMUX `send-keys`
+- **Does not read agent output** — PUBLIC.md reading is the executor's/TicketShepherd's concern
 - **Does not manage SHARED_CONTEXT.md lifecycle** — agents modify it directly

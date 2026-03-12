@@ -162,7 +162,7 @@ This is strict validation — catches misconfigured agents immediately.
 |--------|-----|---------------|
 | `completed` | Doer | Move to reviewer sub-part (or complete part if no reviewer) |
 | `pass` | Reviewer | Part complete → move to next part |
-| `needs_iteration` | Reviewer | Check iteration counter: within budget → send new instructions to doer via TMUX `send-keys`, then send to reviewer. Exceeds `iteration.max` → `FailedToConvergeUseCase` |
+| `needs_iteration` | Reviewer | Check iteration counter: within budget → send new instructions to doer via TMUX `send-keys`, doer works, then on doer completion send new instructions to reviewer. Exceeds `iteration.max` → `FailedToConvergeUseCase` |
 
 ---
 

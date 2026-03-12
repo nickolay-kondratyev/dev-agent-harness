@@ -59,8 +59,7 @@ It tracks how many times the reviewer has looped back to the doer.
 | `N` | Reviewer has signaled `needs_iteration` N times |
 
 **Incremented when:** reviewer signals `needs_iteration` (before resuming the doer).
-**Checked against:** `iteration.max` — if `current >= max`, triggers `FailedToConvergeUseCase`
-(ref.ap.fFr7GUmCYQEV5SJi8p6AS.E).
+**Checked against:** `iteration.max` — if `current >= max`, triggers `FailedToConvergeUseCase`.
 
 ### plan.json / current_state.json Schema
 
@@ -169,12 +168,11 @@ static workflow JSON (no `plan.json` involved).
 
 In this example: `ui_design` doer is done, reviewer is on its second pass (`current: 1` means
 one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
-```
 
 ### plan.json → current_state.json Lifecycle
 
 1. **With-planning**: Planner writes `plan.json` to `harness_private/`. PLAN_REVIEWER sees it
-   via ContextProvider (not because it's in `shared/`). After planning converges, harness
+   via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) (not because it's in `shared/`). After planning converges, harness
    converts `plan.json` → `current_state.json` and deletes `plan.json`.
 2. **Straightforward**: No `plan.json`. Harness generates `current_state.json` directly from
    `config/workflows/straightforward.json`.
@@ -246,16 +244,17 @@ This keeps part execution trivially simple — no multi-reviewer skip logic need
 ### Execution Flow Within a Part
 
 ```
-Run doer (result: completed) → Run reviewer
-  reviewer result: needs_iteration → Run doer → Run reviewer (counter: 2)
-  reviewer result: needs_iteration → Run doer → Run reviewer (counter: 3)
+Run doer (result: completed) → Run reviewer (counter: 0)
+  reviewer result: needs_iteration → counter becomes 1 → Run doer → Run reviewer (counter: 1)
+  reviewer result: needs_iteration → counter becomes 2 → Run doer → Run reviewer (counter: 2)
   reviewer result: pass → Part complete
-  counter > iteration.max → FailedToConvergeUseCase (user decides whether to grant more)
+  counter >= iteration.max → FailedToConvergeUseCase (user decides whether to grant more)
 ```
 
 The reviewer's `iteration.max` is an iteration **budget** (not a hard limit — user can override
 via `FailedToConvergeUseCase`). On each `needs_iteration` the harness sends new instructions to the
-doer's TMUX session via `send-keys`, then sends to the reviewer's session. The reviewer's verdict is
+doer's TMUX session via `send-keys`; after the doer completes, the harness sends new instructions
+to the reviewer's session. The reviewer's verdict is
 authoritative — no LLM evaluation in this path.
 
 ### Session IDs in current_state.json
