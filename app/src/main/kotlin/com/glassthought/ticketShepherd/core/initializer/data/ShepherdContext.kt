@@ -23,7 +23,7 @@ class ShepherdContext(
   override suspend fun close() {
 
     // Infra should be the last to be closed as it contains the out factory which is used
-    // for logging and we may want to log while we are shutting down.
+    // for logging, and we may want to log while we are shutting down.
     infra.close()
   }
 }
