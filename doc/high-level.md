@@ -123,56 +123,13 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 
 ---
 
-## Agent Health Monitoring — UseCase Pattern
+## Agent Health Monitoring
 
-Timeout + ping mechanism to detect crashed/hung agents.
-
-### Flow
-
-1. **No activity timeout** (default: 30 min): If no callback of any kind (`/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/user-question`, or `/callback-shepherd/ping-ack`) within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Uses `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — any callback resets the timer.
-2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.ping-ack.sh`
-3. **Ping timeout** (default: 3 min): If no `/callback-shepherd/ping-ack` reply → triggers `NoReplyToPingUseCase`
-4. **Crash handling**: `NoReplyToPingUseCase` kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` creates a new executor for the same part (no `--resume` in V1; see [`doc_v2/resume.md`](../doc_v2/resume.md) ref.ap.LX1GCIjv6LgmM7AJFas20.E)
-
-### UseCase Classes
-
-Each distinct state/scenario is encapsulated in its own `UseCase` class:
-
-| UseCase | Trigger | Action |
-|---|---|---|
-| `NoStatusCallbackTimeOutUseCase` | No activity (any callback) after X min — based on `lastActivityTimestamp` | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX session, complete `signalDeferred` with `AgentSignal.Crashed`. Executor returns `PartResult.AgentCrashed` → `TicketShepherd` handles recovery (new executor for same part) or abort. |
-| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md) for V2 automated cleanup. |
-| `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM, present to user, user decides whether to grant more iterations |
-
-- **Simple encapsulated objects** — NOT a state machine pattern
-- Each UseCase handles one well-defined scenario
-- **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class. UseCases are stateless, single-responsibility operations that the shepherd delegates to. If you can name it as a UseCase, it should be one.
-
-### FailedToExecutePlanUseCase Detail
-
-When plan execution hits blocking issues (agent calls `/callback-shepherd/fail-workflow`):
-
-1. **Print the failure reason in red** to the console
-2. **Halt** the harness process
-3. Wait for human intervention
-
-No automated cleanup, no agent spawning, no git rollback. The human reviews the state and
-decides what to do.
-
-V2 will add automated cleanup — see
-[`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md).
-
-### FailedToConvergeUseCase Detail
-
-When the reviewer sends `needs_iteration` but the iteration counter exceeds `iteration.max`:
-1. Harness uses **BudgetHigh DirectLLM** to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md + SHARED_CONTEXT.md)
-2. Presents summary to user with the iteration history
-3. User decides:
-   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (sends new instructions via TMUX `send-keys`).
-   - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
-
-Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
+Timeout + ping mechanism to detect crashed/hung agents. Four UseCase classes handle distinct
+failure scenarios (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`,
+`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). See
+[Health Monitoring](use-case/HealthMonitoring.md) (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the
+full spec — flow, triggers, actions, and UseCase naming principle.
 
 ---
 
@@ -185,38 +142,10 @@ on HandshakeGuid, AgentSessionIdResolver, and session schema.
 
 ## DirectLLM — Tier-Scoped Interfaces
 
-For harness-internal tasks (compress ticket title, suggest feature name, summarize convergence failure state).
-
-### Design: Interface-per-Tier
-
-Each budget tier gets its own interface. The `Initializer` wires a concrete `DirectLLM` implementation
-to each tier interface — callers depend on the tier interface, never on a specific model.
-
-```kotlin
-// Shared contract — all tiers implement this
-interface DirectLLM {
-    suspend fun call(request: ChatRequest): ChatResponse
-}
-
-// Tier interfaces — callers depend on these
-interface DirectQuickCheapLLM : DirectLLM    // fast, low-cost tasks (title compression, slugification)
-interface DirectMediumLLM : DirectLLM        // mid-tier tasks
-interface DirectBudgetHighLLM : DirectLLM    // expensive tasks (convergence failure summarization)
-```
-
-### V1 Model Assignments
-
-| Tier Interface | V1 Model | Provider | Typical Use |
-|---|---|---|---|
-| `DirectQuickCheapLLM` | **GLM-4.7-Flash** | Z.AI (GLM) | Title compression, feature name suggestion |
-| `DirectMediumLLM` | TBD | — | Reserved for mid-tier tasks |
-| `DirectBudgetHighLLM` | **GLM-5** | Z.AI (GLM) | `FailedToConvergeUseCase` state summarization |
-
-Model assignments are configuration — changing the model behind a tier requires no code changes
-outside the `Initializer`.
-
-- **Not used for iteration decisions** — the reviewer's `result` field is authoritative
-- Used by `FailedToConvergeUseCase` (via `DirectBudgetHighLLM`) to summarize state for user decision
+Interface-per-tier design (`DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM`).
+Not used for iteration decisions — the reviewer's verdict is authoritative. See
+[DirectLLM](core/DirectLLM.md) (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) for tier assignments and
+contract.
 
 ---
 
@@ -260,53 +189,16 @@ interface is responsible for assembling instruction files for agents:
 
 ---
 
-## Git Branch / Feature Naming
-<!-- ap.THL21SyZzJhzInG2m4zl2.E -->
+## Git — Branch Naming, Commits
 
-Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
-
-- `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
-- `slugified_title`: the ticket `title` slugified (lowercase, hyphens); compressed via `DirectQuickCheapLLM` if too long
-- `try-{N}`: starts at 1, incremented on each manual retry (V1: human creates a new run after failure)
-- Delimiter between components: `__` (double underscore)
-
-### Branch Creation
-
-- **Ticket must be `in_progress`** — validated by `TicketShepherdCreator` before any git
-  operations. Caller is responsible for marking the ticket and pushing to remote before
-  invoking `shepherd run`.
-- Branch created from **current HEAD** at time of `shepherd run`.
-- **Every `shepherd run` = new try** (V1). No resume-on-restart
-  (ref.ap.LX1GCIjv6LgmM7AJFas20.E — V2).
-- **Owner**: `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — validates ticket
-  status, resolves try-N, creates the branch, then sets up `.ai_out/`.
-
-### Try-N Resolution
-
-Try-N is determined by checking **both** local branches and `.ai_out/` directories. N is the
-first value where **neither** exists:
-
-1. Build candidate branch name via `BranchNameBuilder.build(ticket, candidateN)`
-2. Check: does a local branch with that name exist? (`git branch --list '{candidate}'`)
-3. Check: does `.ai_out/{candidate}/` directory exist?
-4. If **either** exists → increment candidateN, repeat
-5. If **neither** exists → use candidateN
-
-Dual check prevents collisions when a branch was deleted but `.ai_out/` artifacts remain,
-or `.ai_out/` was cleaned up but the branch still exists. Failed try branches and their
-`.ai_out/` directories are left in place — the next run naturally skips past them.
-
-## Git Commit Strategy
-
-Harness owns all git commits — agents never commit. Commit timing, message format, and author
-attribution are fully specified in [`doc/core/git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+Branch naming (format, try-N resolution), commit strategy (timing, message format, author
+attribution), and all env var requirements are fully specified in
+[`doc/core/git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 
 **Key points:**
-- Pluggable `GitCommitStrategy` interface with hooks: `onSubPartDone`, `onPartDone`
-- V1 default: `CommitPerSubPart` (maximum iteration history granularity)
-- Commits the entire working tree (`git add -A`)
-- Commit author encodes agent type, model, version, and host user (e.g., `CC_sonnet-v4.6_WITH-nickolaykondratyev`)
-- Requires `HOST_USERNAME` and `MODEL_VERSION_DIR` env vars — validated at initialization (fail hard)
+- Branch format: `{TICKET_ID}__{slugified_title}__try-{N}` — owned by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
+- Harness owns all git commits — agents never commit. Pluggable `GitCommitStrategy` interface.
+- V1 default: `CommitPerSubPart` — commits the entire working tree (`git add -A`)
 
 ## Harness-Level Resume — V2
 
@@ -333,7 +225,7 @@ for in-progress sub-part).
 | Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
-| Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
+| Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
@@ -348,13 +240,16 @@ for in-progress sub-part).
 | Doc | Content |
 |-----|---------|
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
-| [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, iteration semantics, session IDs, plan lifecycle |
-| [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Full agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, user-question flow, callback scripts |
+| [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, plan lifecycle, session ID storage |
+| [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type |
 | [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
-| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge, concurrency model, relationship to current_state.json |
+| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
-| [`doc/core/git.md`](core/git.md) | Git commit strategy — timing, message format, author attribution, model version resolution, env var requirements |
-| [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, callback contract, session schema, callback script spec |
+| [`doc/core/git.md`](core/git.md) | Git — branch naming, try-N resolution, commit strategy, author attribution, env var requirements |
+| [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM tier-scoped interfaces, V1 model assignments |
+| [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
+| [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
+| [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — timeout, ping, crash, convergence failure |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

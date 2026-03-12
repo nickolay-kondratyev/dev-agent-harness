@@ -1,11 +1,42 @@
-# Git Commit Strategy / ap.BvNCIzjdHS2iAP4gAQZQf.E
+# Git — Branch Naming & Commit Strategy / ap.BvNCIzjdHS2iAP4gAQZQf.E
 
-The harness owns all git operations. Agents never commit — they make code changes, signal done, and
-the harness commits on their behalf. This gives the harness full control over commit timing, message
-format, and author attribution.
+The harness owns all git operations. Agents never commit — they make code changes, signal done,
+and the harness commits on their behalf. This gives the harness full control over branch naming,
+commit timing, message format, and author attribution.
 
-For branch naming see [Git Branch / Feature Naming](../high-level.md#git-branch--feature-naming)
-(ref.ap.THL21SyZzJhzInG2m4zl2.E).
+---
+
+## Branch Naming
+<!-- ap.THL21SyZzJhzInG2m4zl2.E -->
+
+Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
+
+- `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
+- `slugified_title`: the ticket `title` slugified (lowercase, hyphens); compressed via `DirectQuickCheapLLM` (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) if too long
+- `try-{N}`: starts at 1, incremented on each manual retry (V1: human creates a new run after failure)
+- Delimiter between components: `__` (double underscore)
+
+### Branch Creation
+
+- **Ticket must be `in_progress`** — validated by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) before any git operations. Caller is responsible for marking the ticket and pushing to remote before invoking `shepherd run`.
+- Branch created from **current HEAD** at time of `shepherd run`.
+- **Every `shepherd run` = new try** (V1). No resume-on-restart (V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+- **Owner**: `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — validates ticket status, resolves try-N, creates the branch, then sets up `.ai_out/`.
+
+### Try-N Resolution
+
+Try-N is determined by checking **both** local branches and `.ai_out/` directories. N is the
+first value where **neither** exists:
+
+1. Build candidate branch name via `BranchNameBuilder.build(ticket, candidateN)`
+2. Check: does a local branch with that name exist? (`git branch --list '{candidate}'`)
+3. Check: does `.ai_out/{candidate}/` directory exist?
+4. If **either** exists → increment candidateN, repeat
+5. If **neither** exists → use candidateN
+
+Dual check prevents collisions when a branch was deleted but `.ai_out/` artifacts remain,
+or `.ai_out/` was cleaned up but the branch still exists. Failed try branches and their
+`.ai_out/` directories are left in place — the next run naturally skips past them.
 
 ---
 
@@ -143,6 +174,6 @@ The harness performs these git operations during a workflow:
 
 | When | Operation |
 |---|---|
-| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](../high-level.md#try-n-resolution) (ref.ap.THL21SyZzJhzInG2m4zl2.E). |
+| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
 | `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"` |
 | Workflow failure (`FailedToExecutePlanUseCase`) | V1: no git operations on failure — harness prints red error and halts. V2 will add automated cleanup (see `doc_v2/FailedToExecutePlanUseCaseV2.md`). |

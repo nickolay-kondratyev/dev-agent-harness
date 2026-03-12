@@ -7,14 +7,8 @@ and resolving the agent's session ID.
 
 ---
 
-## Vocabulary
-
-| Term                            | Definition                                                                                                                                                                                               |
-|---------------------------------|----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process.                                                                         |
-| **Agent**                       | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously.                                                               |
-| **HandshakeGuid**               | A harness-generated identifier (`handshake.${UUID}`) for agent identity. See [protocol doc](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E). |
-| **AgentSessionIdResolver**      | Interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.                                                                                     |
+> Vocabulary: see [high-level.md Vocabulary](../high-level.md#vocabulary).
+> Additional: **AgentSessionIdResolver** — interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.
 
 ---
 

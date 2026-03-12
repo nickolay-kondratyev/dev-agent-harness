@@ -4,13 +4,7 @@ Defines the full communication protocol between agents running in TMUX sessions 
 
 ---
 
-## Vocabulary
-
-| Term | Definition |
-|------|------------|
-| **ShepherdServer** (aka Server) | The long-lived HTTP server instance that starts at harness launch and handles all requests from agents. One per harness process. |
-| **Agent** | An instance of a code agent (e.g., Claude Code, PI) running in a TMUX session. In the future, multiple agents may be alive simultaneously. |
-| **HandshakeGuid** | A harness-generated identifier (`handshake.${UUID}`) assigned to each agent session. Used in all agent↔server communication. The agent receives it as an env var; the server uses it to route callbacks. |
+> Vocabulary: see [high-level.md Vocabulary](../high-level.md#vocabulary).
 
 ---
 
