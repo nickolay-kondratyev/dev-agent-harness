@@ -233,29 +233,9 @@ A workflow is either **straightforward** (has `parts`) or **with-planning** (has
 
 ## Iteration Semantics
 
-### At Most 2 Sub-Parts Per Part
-
-Each part has at most 2 sub-parts: a **doer** (first) and an optional **reviewer** (second).
-This keeps part execution trivially simple — no multi-reviewer skip logic needed.
-
-- **1 sub-part**: Doer sends `result: "completed"`. Part complete.
-- **2 sub-parts**: Doer sends `result: "completed"`, then reviewer runs. On `result: "needs_iteration"`, loop back to doer.
-
-### Execution Flow Within a Part
-
-```
-Run doer (result: completed) → Run reviewer (counter: 0)
-  reviewer result: needs_iteration → counter becomes 1 → Run doer → Run reviewer (counter: 1)
-  reviewer result: needs_iteration → counter becomes 2 → Run doer → Run reviewer (counter: 2)
-  reviewer result: pass → Part complete
-  counter >= iteration.max → FailedToConvergeUseCase (user decides whether to grant more)
-```
-
-The reviewer's `iteration.max` is an iteration **budget** (not a hard limit — user can override
-via `FailedToConvergeUseCase`). On each `needs_iteration` the harness sends new instructions to the
-doer's TMUX session via `send-keys`; after the doer completes, the harness sends new instructions
-to the reviewer's session. The reviewer's verdict is
-authoritative — no LLM evaluation in this path.
+See `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the full iteration loop.
+The schema fields that support iteration (`iteration.max`, `iteration.current`,
+`SubPartStatus` transitions) are defined in [SubPart Fields](#subpart-fields) above.
 
 ### Session IDs in current_state.json
 
@@ -315,21 +295,10 @@ from this entry for `--resume` invocation.
 Sub-parts that lack an `iteration` field execute exactly **once**. These are typically
 implementors or one-shot tasks.
 
-### Agent Session Lifecycle
+### Agent Session & PUBLIC.md Lifecycle
 
-**One TMUX session per sub-part.** The harness spawns a TMUX session on a sub-part's first run
-and keeps it alive across iteration loops. New instructions are delivered via TMUX `send-keys` —
-no kill/respawn between iterations. The session is killed only when the **part** completes.
-
-- The agent retains its full conversation history across iterations of the same sub-part.
-- The `sessionIds` array on each sub-part tracks session records. The last element is the
-  current session.
-
-### PUBLIC.md Lifecycle
-
-- **Single `PUBLIC.md` per sub-part**, overwritten each iteration. The agent is responsible for
-  including relevant context in its output.
-- **Trackability via git**: The harness commits via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E),
-  so the full history of `PUBLIC.md` changes is preserved in git — no need for versioned files.
-- The TMUX session stays alive — the agent receives updated instructions via `send-keys` and
-  retains its full conversation history across iterations of the same sub-part.
+One TMUX session per sub-part — kept alive across iterations (see Hard Constraints in
+[high-level.md](../high-level.md)). PUBLIC.md is a single file per sub-part, overwritten
+each iteration — history tracked via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+See [ai-out-directory.md](ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for
+PUBLIC.md vs SHARED_CONTEXT.md semantics.

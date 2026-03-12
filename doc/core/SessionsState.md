@@ -22,7 +22,7 @@ The server does **not** route `/callback-shepherd/done` or `/callback-shepherd/f
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
 `/callback-shepherd/user-question` is still handled as a side-channel — server delegates to
-`UserQuestionHandler` (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E), delivers answer via TMUX `send-keys`.
+`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys`.
 The executor stays suspended.
 
 ---
@@ -69,37 +69,10 @@ send `pass` or `needs_iteration`.
 
 ---
 
-## Concurrency Model
+## Concurrency
 
-### Access Pattern
-
-- **Server** (Ktor coroutine dispatcher): calls `lookup`, then completes `signalDeferred` and updates `lastActivityTimestamp`
-- **PartExecutor** (orchestration coroutine): calls `register` (on spawn and on each iteration)
-- **TicketShepherd** (orchestration coroutine): calls `removeAllForPart` — **read-write**
-- V1: strictly serial execution (one agent at a time), but server callbacks arrive on Ktor's
-  dispatcher concurrently with the executor's orchestration coroutine.
-
-### Decision: `MutableSynchronizedMap` Is Sufficient
-
-`com.asgard.core.threading.collections.MutableSynchronizedMap<HandshakeGuid, SessionEntry>`
-provides per-operation mutex synchronization. This is sufficient because:
-
-1. **`register`** is a single `put` — atomic by itself.
-2. **`lookup`** is a single `get` — atomic by itself.
-3. **`removeAllForPart`** is multi-step (find entries for part, then remove them) but does
-   NOT require atomicity across the steps. Only `TicketShepherd` mutates, and it runs
-   serially. The server only reads. A read during removal sees either the old or new state
-   — both are valid (the server would get a 400 for an unknown GUID, which is correct
-   for a session being torn down).
-
-**No custom mutex needed.** If V2 introduces parallel agents within a part or concurrent
-mutations, revisit this decision.
-
-### Why Not a Plain ConcurrentHashMap
-
-`MutableSynchronizedMap` uses coroutine `Mutex` (suspend-friendly). Server callbacks and
-shepherd orchestration are both coroutine contexts — blocking a thread with
-`ConcurrentHashMap` is unnecessary when a suspend-compatible alternative exists.
+Backed by coroutine-safe `MutableSynchronizedMap` (suspend-friendly `Mutex`). V1's serial
+execution makes per-operation synchronization sufficient. Revisit for V2 parallel agents.
 
 ---
 
@@ -108,19 +81,13 @@ shepherd orchestration are both coroutine contexts — blocking a thread with
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — empty on creation
 - **Owned by** `TicketShepherd` — the shepherd removes sessions on part completion; `PartExecutor` registers entries during spawn and iteration
 - **Shared with** `ShepherdServer` — the server holds a reference for `lookup` on incoming callbacks
-- Lifecycle: lives for the duration of one ticket's processing. Not persisted — `current_state.json`
-  handles persistence. V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) will rebuild `SessionsState`
-  from `current_state.json` on harness restart.
+- Lifecycle: lives for the duration of one ticket's processing. Not persisted (V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
 ## Relationship to current_state.json
 
-`SessionsState` is **runtime-only** (in-memory). `current_state.json` (ref.ap.56azZbk7lAMll0D4Ot2G0.E)
-is the persistent record.
-
-V1: The two are independent — `TicketShepherd` writes to `current_state.json` at checkpoints for
-progress tracking, while `SessionsState` reflects live sessions only. No cross-run rebuild.
-
-V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) will read `current_state.json` on harness restart,
-respawn sessions for in-progress sub-parts, and register them into a fresh `SessionsState`.
+`SessionsState` is **runtime-only** (in-memory). `current_state.json`
+(ref.ap.56azZbk7lAMll0D4Ot2G0.E) is the persistent record. V1: the two are independent —
+`SessionsState` reflects live sessions only. No cross-run rebuild
+(V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).

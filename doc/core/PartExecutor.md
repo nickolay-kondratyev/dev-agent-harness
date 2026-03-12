@@ -79,7 +79,7 @@ enum class DoneResult {
 
 | Callback | Why not | Handler |
 |----------|---------|---------|
-| `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E), delivers answer via TMUX `send-keys` |
+| `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
 | `/callback-shepherd/ping-ack` | Side-channel — resets health timer only | Health monitor resets its timer |
 
 Both side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`
@@ -145,48 +145,20 @@ Handles parts with two sub-parts (doer + reviewer). Implements the full iteratio
 
 ### Flow
 
-```
-1. Spawn doer TMUX session (via SpawnTmuxAgentSessionUseCase)
-2. Create CompletableDeferred<AgentSignal> for doer
-3. Register SessionEntry in SessionsState (includes deferred)
-4. Assemble doer instructions (via SubPartInstructionProvider, iteration=1, no feedback)
-5. Send instructions via TMUX send-keys
-6. Suspend on deferred.await()
-7. On Done(COMPLETED):
-   a. Spawn reviewer TMUX session
-   b. Create CompletableDeferred<AgentSignal> for reviewer
-   c. Register SessionEntry for reviewer
-   d. Assemble reviewer instructions (via SubPartInstructionProvider)
-   e. Send instructions via TMUX send-keys
-   f. Suspend on reviewer deferred.await()
-8. On reviewer Done(PASS) → return PartResult.Completed
-9. On reviewer Done(NEEDS_ITERATION):
-   a. Check iteration counter vs iteration.max
-   b. If within budget:
-      - Increment iteration counter
-      - Create FRESH CompletableDeferred for doer
-      - Re-register SessionEntry (same GUID, new deferred)
-      - Assemble new doer instructions (with reviewer feedback path)
-      - Send via TMUX send-keys to EXISTING doer session
-      - Suspend on doer deferred → on Done(COMPLETED) → resume reviewer (same pattern)
-   c. If exceeds budget:
-      - Delegate to FailedToConvergeUseCase (summarizes state via BudgetHigh DirectLLM, asks user)
-      - If user grants more iterations → bump iteration.max by granted amount, go to 9b (continue loop)
-      - If user aborts → return PartResult.FailedToConverge
-10. On FailWorkflow → return PartResult.FailedWorkflow
-11. On Crashed → return PartResult.AgentCrashed
-```
+1. **Spawn doer** → create `CompletableDeferred` → register `SessionEntry` → send instructions → suspend on deferred
+2. **On doer COMPLETED** → spawn reviewer → create deferred → register → send instructions → suspend
+3. **On reviewer PASS** → return `PartResult.Completed`
+4. **On reviewer NEEDS_ITERATION** → check budget → create fresh deferred for doer →
+   send new instructions to **existing** doer TMUX session → loop to step 1 (doer suspend).
+   On budget exceeded → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user decides continue or abort.
+5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
 
 ### Key: TMUX Sessions Stay Alive Across Iterations
 
-On `needs_iteration`, no TMUX sessions are killed. The executor:
-1. Creates a **fresh** `CompletableDeferred` for the doer
-2. Re-registers the `SessionEntry` in `SessionsState` (same HandshakeGuid, new deferred)
-3. Assembles new doer instructions (with reviewer feedback) via `SubPartInstructionProvider`
-4. Sends instructions via TMUX `send-keys` to the **existing** doer session
-5. Suspends on the new deferred
-
-Same pattern for resuming the reviewer after the doer completes the iteration.
+On `needs_iteration`, no TMUX sessions are killed. The executor creates a **fresh**
+`CompletableDeferred`, re-registers the `SessionEntry` (same HandshakeGuid, new deferred),
+assembles new instructions via `SubPartInstructionProvider`, and sends via TMUX `send-keys`
+to the **existing** session. Same pattern for resuming the reviewer.
 
 ### Git Commits During Execution
 
@@ -207,24 +179,8 @@ mechanism by which V1's `CommitPerSubPart` strategy produces one commit per sub-
 
 ## SingleDoerPartExecutor
 
-Handles parts with a single sub-part (doer only). Trivial — no iteration loop.
-
-### Flow
-
-```
-1. Spawn doer TMUX session
-2. Create CompletableDeferred<AgentSignal>
-3. Register SessionEntry in SessionsState
-4. Assemble doer instructions (via SubPartInstructionProvider, iteration=1, no feedback)
-5. Send instructions via TMUX send-keys
-6. Suspend on deferred.await()
-7. On Done(COMPLETED) → return PartResult.Completed
-8. On FailWorkflow → return PartResult.FailedWorkflow
-9. On Crashed → return PartResult.AgentCrashed
-```
-
-No reviewer, no iteration. If the single sub-part is a doer, `COMPLETED` is the only valid
-`Done` result.
+Spawn doer → register → send instructions → suspend on deferred → map `AgentSignal` to
+`PartResult`. No reviewer, no iteration. Trivial subset of `DoerReviewerPartExecutor`.
 
 ---
 

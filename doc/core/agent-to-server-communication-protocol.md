@@ -162,28 +162,14 @@ This is strict validation — catches misconfigured agents immediately.
 
 ## Server-Side Routing
 
-A `SessionsState` class (owned by `TicketShepherd` — ref.ap.P3po8Obvcjw4IXsSUSU91.E) tracks
-live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E) instances, keyed by HandshakeGuid.
-When a callback arrives:
+On callback arrival, server looks up HandshakeGuid in `SessionsState`
+(ref.ap.7V6upjt21tOoCFXA7nqNh.E), validates result against sub-part role, and completes
+the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
+[SessionsState](SessionsState.md) for the full bridge design.
 
-1. Server looks up the HandshakeGuid in `SessionsState`
-2. Finds the associated `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — includes sub-part context and `signalDeferred`
-3. Updates `lastActivityTimestamp` on the entry (for health monitoring)
-4. On `/callback-shepherd/done`: validates the `result` field against the sub-part's role,
-   then completes `entry.signalDeferred` with `AgentSignal.Done(result)`
-   (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
-5. On `/callback-shepherd/fail-workflow`: completes `entry.signalDeferred` with
-   `AgentSignal.FailWorkflow(reason)`
-6. On `/callback-shepherd/user-question`: side-channel — presents to human, delivers answer
-   via TMUX `send-keys`. Does **not** complete the deferred (executor stays suspended).
-7. On `/callback-shepherd/ping-ack`: side-channel — resets health timer only.
-
-The server does **not** route to `TicketShepherd` directly for done/fail-workflow. It
-completes the `CompletableDeferred` on the `SessionEntry`, which wakes the suspended
-`PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E).
-
-This design naturally supports multiple concurrent agents — each has its own GUID, its
-own `TmuxAgentSession`, and its own `CompletableDeferred` in `SessionsState`.
+Side-channel callbacks (`user-question`, `ping-ack`) update `lastActivityTimestamp`
+(ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the deferred — executor stays
+suspended.
 
 ---
 
@@ -197,91 +183,13 @@ All structured/formatted content sent to agents goes through temp files:
 
 ---
 
-## User-Question Flow — UserQuestionHandler Strategy
+## User-Question — Handled via Strategy
+<!-- ap.DvfGxWtvI1p6pDRXdHI2W.E — alias retained for backward refs -->
 
-### Flow
-
-1. Agent calls `callback_shepherd.user-question.sh "How should I handle X?"`
-2. Script POSTs to `/callback-shepherd/user-question` with `handshakeGuid` + question text
-3. Server returns **200 immediately** — no blocking
-4. Server updates `SessionEntry.lastActivityTimestamp` (resets health timer)
-5. **Agent waits** for the answer to arrive via TMUX (does not proceed)
-6. Server looks up `SessionEntry` for context, then delegates to
-   `UserQuestionHandler` (ref.ap.DvfGxWtvI1p6pDRXdHI2W.E) — a strategy interface
-7. Handler obtains the answer (V1: stdin prompt; future: expensive LLM, Slack, etc.)
-8. Harness writes answer to temp file (`$HOME/.shepherd_agent_harness/tmp/agent_comm/`)
-9. Harness sends file path to agent via TMUX `send-keys`
-10. Agent reads temp file, continues
-
-**No long-lived HTTP connections.** The answer is delivered via TMUX, not via the HTTP response.
-This follows the core principle: HTTP = agent→harness signaling, TMUX = harness→agent delivery.
-
-### UserQuestionHandler / ap.DvfGxWtvI1p6pDRXdHI2W.E
-
-Strategy interface for handling user questions from agents. Decouples the question-answering
-mechanism from the server and protocol — the server calls the handler, the handler returns
-the answer.
-
-```kotlin
-interface UserQuestionHandler {
-    /**
-     * Handle a question from an agent. Returns the answer text.
-     * May suspend indefinitely (e.g., waiting for human input).
-     */
-    suspend fun handleQuestion(context: UserQuestionContext): String
-}
-
-data class UserQuestionContext(
-    val question: String,
-    val partName: String,
-    val subPartName: String,
-    val subPartRole: SubPartRole,
-    val handshakeGuid: HandshakeGuid,
-)
-```
-
-### V1: StdinUserQuestionHandler
-
-The V1 implementation uses **stdin/stdout** — prints context + question to stdout, reads
-answer from stdin. Blocks the coroutine until the human provides input (no timeout, no
-autonomous fallback).
-
-**What the human sees** (stdout):
-
-```
-═══════════════════════════════════════════════════════════════
-  AGENT QUESTION
-  Part: ui_design | Sub-part: impl (DOER)
-  HandshakeGuid: handshake.a1b2c3d4-...
-═══════════════════════════════════════════════════════════════
-
-How should I handle the responsive layout for mobile devices?
-
-───────────────────────────────────────────────────────────────
-  Your answer (press Enter twice to submit):
-```
-
-**UX details:**
-
-| Aspect | V1 Behavior |
-|--------|-------------|
-| Input mechanism | `stdin` — `readLine()` in a suspend-friendly wrapper |
-| Submission | Two consecutive newlines (empty line) terminates input. Supports multi-line answers. |
-| Timeout | None — blocks indefinitely until human responds |
-| Context shown | Part name, sub-part name, sub-part role, HandshakeGuid |
-| If human is away | Blocks forever. Acceptable for V1 (attended-only). |
-
-### Future Strategies (V2+)
-
-The `UserQuestionHandler` interface enables swapping in alternative strategies without
-changing the server or protocol:
-
-| Strategy | Description |
-|----------|-------------|
-| `StdinUserQuestionHandler` | V1 — human at terminal |
-| `LlmUserQuestionHandler` | Route to expensive model (e.g., `DirectBudgetHighLLM`) for autonomous answers |
-| `SlackUserQuestionHandler` | Post to Slack channel, wait for reply |
-| `TimeoutWithFallbackHandler` | Wait N minutes for human, fall back to LLM |
+Agent calls `callback_shepherd.user-question.sh`. Server delegates to
+`UserQuestionHandler` — see [UserQuestionHandler](UserQuestionHandler.md)
+(ref.ap.NE4puAzULta4xlOLh5kfD.E) for the strategy interface, V1 stdin behavior, and flow.
+Answer delivered via TMUX `send-keys`, not via HTTP response.
 
 ---
 
