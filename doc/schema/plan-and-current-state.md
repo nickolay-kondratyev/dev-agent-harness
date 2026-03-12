@@ -17,6 +17,7 @@ parts/sub-parts schema. One parser handles everything.
 | `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
 | `agentType` | yes | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). Assigned by the planner (with-planning workflows) or specified in static workflow JSON (straightforward workflows). Never from role definitions — see ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E. |
 | `model` | yes | Actual model name (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Same assignment source as `agentType`. Must be the **actual model name**, never a tier name like `"BudgetHigh"` — required for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
+| `loadsPlan` | no | Boolean. When `true`, the harness includes `PLAN.md` in this sub-part's instruction assembly. The planner must set this on at least one implementor sub-part. Validated by `validate-plan` endpoint. Default: `false`. |
 | `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can override via `FailedToConvergeUseCase`. |
@@ -41,6 +42,7 @@ NOT_STARTED → IN_PROGRESS    (harness spawns agent for this sub-part)
 IN_PROGRESS → COMPLETED      (doer: "completed", reviewer: "pass")
 IN_PROGRESS → FAILED         (fail-workflow, agent crash, or failed-to-converge)
 IN_PROGRESS → IN_PROGRESS    (reviewer: "needs_iteration" — counter increments, status stays)
+COMPLETED   → IN_PROGRESS    (doer on re-iteration: reviewer signaled "needs_iteration", doer resumes work)
 ```
 
 **Part-level status is derived** — no explicit part status field:
@@ -84,7 +86,7 @@ static workflow JSON (no `plan.json` involved).
       "name": "ui_design",
       "description": "Design the dashboard UI",
       "subParts": [
-        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet" },
+        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet", "loadsPlan": true },
         { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 3 } }
       ]
@@ -93,7 +95,7 @@ static workflow JSON (no `plan.json` involved).
       "name": "backend_impl",
       "description": "Implement API endpoints",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTOR", "agentType": "ClaudeCode", "model": "opus" },
+        { "name": "impl", "role": "IMPLEMENTOR", "agentType": "ClaudeCode", "model": "opus", "loadsPlan": true },
         { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]
@@ -309,8 +311,10 @@ implementors or one-shot tasks.
 ### Agent Session & PUBLIC.md Lifecycle
 
 One TMUX session per sub-part — kept alive across iterations (see Hard Constraints in
-[high-level.md](../high-level.md)). PUBLIC.md is a single file per sub-part, overwritten
-each iteration — history tracked via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+[high-level.md](../high-level.md)). PUBLIC.md is a single file per sub-part, **overwritten**
+each iteration — the reviewer always sees the **current** version, not previous iterations.
+History is tracked via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — prior versions
+are recoverable from git log.
 See [ai-out-directory.md](ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for
 PUBLIC.md vs SHARED_CONTEXT.md semantics.
 

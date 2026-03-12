@@ -24,11 +24,15 @@ creates executors for each part, runs them in sequence, and handles the results.
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
       - `Completed` → kill TMUX sessions for part, `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
-      - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase` (prints red error to
+      - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention).
-      - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
-      - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase` (prints red error to
+      - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase(partResult)` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
+      - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention). V1: no automatic recovery.
+
+`FailedToExecutePlanUseCase` receives the full `PartResult` sealed class (not just a reason
+string). This allows formatting different error messages per failure type and gives V2 the
+type information needed for different cleanup strategies.
 5. On all parts completed → workflow done
 
 ## Fields
@@ -68,6 +72,29 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in cod
 `ShepherdContext.kt`) for shared infrastructure (tmux, LLM, use cases) plus ticket-scoped
 state (`SessionsState`, parsed workflow, ticket metadata) wired by
 `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
+
+## Interrupt Protocol (Ctrl+C)
+
+When the user presses Ctrl+C, the harness intercepts the signal via a JVM shutdown hook and
+enters a **two-layer confirmation flow** instead of killing immediately:
+
+### Layer 1: Interrupt Agents
+
+1. Harness prints: `"Ctrl+C received. Type 'int' + Enter to send interrupt to all agent sessions, or wait 10s to resume."`
+2. If user types `int` + Enter → harness sends SIGINT to all active TMUX agent sessions (agents stop, sessions stay alive). Prints status: `"Interrupt sent to N agent session(s). Sessions are still alive."`
+3. If user types anything else or 10 seconds elapse → harness prints `"Resuming..."` and continues execution as if nothing happened.
+
+### Layer 2: Kill Sessions
+
+After Layer 1 interrupt is sent:
+
+1. Harness prints: `"Type 'kill' + Enter to destroy all TMUX sessions and exit, or wait 10s to resume."`
+2. If user types `kill` + Enter → harness kills all TMUX sessions, writes `current_state.json` with `FAILED` status on active sub-parts, and exits.
+3. If user types anything else or 10 seconds elapse → harness prints `"Resuming..."` and continues execution.
+
+This prevents accidental workflow termination from a stray Ctrl+C.
+
+---
 
 ## Not a Use Case
 

@@ -133,7 +133,7 @@ GUID-to-sub-part registry.
 { "handshakeGuid": "handshake.a1b2c3d4-...", "reason": "Cannot compile after multiple approaches" }
 
 // POST /callback-shepherd/validate-plan
-{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "harness_private/plan.json" }
+{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "/abs/path/to/.ai_out/branch/harness_private/plan.json" }
 
 // POST /callback-shepherd/ping-ack
 { "handshakeGuid": "handshake.a1b2c3d4-..." }
@@ -170,6 +170,13 @@ On callback arrival, server looks up HandshakeGuid in `SessionsState`
 (ref.ap.7V6upjt21tOoCFXA7nqNh.E), validates result against sub-part role, and completes
 the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 [SessionsState](SessionsState.md) for the full bridge design.
+
+### Unknown HandshakeGuid
+
+If `SessionsState.lookup(guid)` returns `null` (GUID not registered — stale, misconfigured,
+or from a different harness instance), the server returns **404** and logs a **WARN** with
+the unknown GUID. This is distinct from the "already completed" idempotent case (which
+returns 200).
 
 Side-channel callbacks (`user-question`, `ping-ack`, `validate-plan`) update
 `lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the
@@ -208,10 +215,19 @@ Always returns HTTP 200. The response body carries the validation result:
 { "valid": false, "errors": ["subParts[0] missing required field: agentType", "..."] }
 ```
 
-The server reads the file at the path provided (resolved relative to `.ai_out/${branch}/`),
-parses it against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E), and returns
-structured validation results. Both the **planner** and **plan reviewer** are instructed to
-call this before signaling `done` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
+The server reads the file at the **absolute path** provided by the agent (the agent sends
+the full filesystem path). Parses it against the parts/sub-parts schema
+(ref.ap.56azZbk7lAMll0D4Ot2G0.E) and returns structured validation results.
+
+**Validation rules** (for `with-planning` workflows):
+1. Valid JSON conforming to the parts/sub-parts schema
+2. At least one execution part exists
+3. At least one sub-part has `loadsPlan: true`
+4. Every `agentType` value is a supported type (V1: `ClaudeCode`)
+5. Every `model` value is valid for the given `agentType`
+
+Both the **planner** and **plan reviewer** are instructed to call this before signaling
+`done` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
 
 ---
 
@@ -256,7 +272,7 @@ the sole mechanism agents use to communicate back to the harness.
 callback_shepherd.done.sh <result>             # required: completed | pass | needs_iteration
 callback_shepherd.user-question.sh "<text>"    # required: question text
 callback_shepherd.fail-workflow.sh "<reason>"  # required: failure reason (aborts entire workflow)
-callback_shepherd.validate-plan.sh <path>      # required: path to plan.json — prints validation result to stdout
+callback_shepherd.validate-plan.sh <abs-path>   # required: absolute path to plan.json — prints validation result to stdout
 callback_shepherd.ping-ack.sh                  # no args — acknowledges health ping
 ```
 

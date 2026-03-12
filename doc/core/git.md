@@ -70,6 +70,10 @@ Each `GitCommitStrategy` implementation decides **which hooks to commit at**. Ex
 **V1 default: `CommitPerSubPart`** — preserves full iteration history in git, which is the primary
 reason for harness-owned commits.
 
+**Empty commit handling:** If `git diff --cached` is empty after `git add -A` (no changes
+since last commit), the commit is **skipped**. This avoids noise from `needs_iteration`
+commits where the reviewer flagged issues but the doer hasn't changed code yet.
+
 ### Hook Context
 
 Both hooks receive sufficient context to build the commit message and author:
@@ -93,6 +97,8 @@ so the commit message focuses on **what just happened** within the workflow:
 
 Examples:
 ```
+[shepherd] planning/plan — completed
+[shepherd] planning/plan_review — pass (iteration 1/3)
 [shepherd] ui_design/impl — completed (iteration 1/3)
 [shepherd] ui_design/review — needs_iteration (iteration 1/3)
 [shepherd] ui_design/impl — completed (iteration 2/3)
@@ -104,6 +110,7 @@ Rules:
 - `[shepherd]` prefix — identifies harness-generated commits in git log
 - Iteration info included only when the part has a reviewer (iteration semantics apply)
 - Single sub-part parts (no reviewer) omit the iteration suffix
+- **Planning phase** uses synthetic part name `planning` (e.g., `[shepherd] planning/plan — completed`)
 
 ---
 

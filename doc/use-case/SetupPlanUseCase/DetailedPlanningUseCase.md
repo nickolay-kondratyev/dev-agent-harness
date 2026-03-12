@@ -53,7 +53,12 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
 
 ```
 1. Read plan.json from harness_private/plan.json
-2. Validate plan.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E)
+2. Validate plan.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E):
+   a. Valid JSON conforming to schema (required fields, types)
+   b. At least one execution part exists
+   c. At least one sub-part has loadsPlan: true
+   d. Every agentType is a supported type (V1: ClaudeCode)
+   e. Every model is valid for the given agentType
 3. Convert plan.json → current_state.json (write to harness_private/)
 4. Delete plan.json (current_state.json is now the single source of truth)
 5. Return List<Part> — the execution parts extracted from current_state.json

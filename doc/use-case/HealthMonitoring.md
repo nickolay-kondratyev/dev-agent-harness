@@ -103,3 +103,25 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
    - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
+
+---
+
+## Edge Case Clarifications
+
+### FailedToConvergeUseCase and Health Loop
+When the executor presents the convergence failure to the user and waits for input (inside
+`FailedToConvergeUseCase`), the health-aware await loop is **not running**. The executor is
+in a synchronous decision path, not in the await loop. No spurious pings or crash declarations
+can occur during this user interaction.
+
+### Post-Convergence Doer Session Check
+After the user grants more iterations, the doer's TMUX session may have been idle for a long
+time. Before sending new instructions, the executor **pings the doer session first** to confirm
+it is still alive. If the doer responds (any callback including ping-ack), the executor proceeds
+with new instructions. If the doer is dead, the executor triggers crash handling.
+
+### Health Ping During User-Question
+When an agent sends a `/user-question` and the human is thinking, `lastActivityTimestamp` was
+reset when the question callback arrived. If the human takes longer than `noActivityTimeout`
+to respond, the health loop will send a ping. This is **harmless** — the agent can respond
+with `ping-ack` while waiting for the Q&A answer delivery via TMUX `send-keys`.

@@ -88,8 +88,14 @@ $HOME/.shepherd_agent_harness/
 ├── server/
 │   └── port.txt                        # Harness HTTP server port (written on startup, deleted on shutdown)
 └── tmp/
-    └── agent_comm/                     # Temp instruction/answer files sent to agents via TMUX send-keys
+    └── agent_comm/
+        └── ${git_branch}/              # Branch-scoped temp files — isolates concurrent instances
 ```
+
+Temp files (instruction files, Q&A answers) are scoped by branch name under `agent_comm/`.
+This ensures that if multiple harness instances run on the same machine (V2), they do not
+interfere with each other's temp files. **Cleaned up on harness shutdown** for the current
+branch — other branches' temp files are untouched.
 
 See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for protocol details on port discovery and temp file delivery.
 

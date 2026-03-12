@@ -60,7 +60,7 @@ ap.mmcagXtg6ulznKYYNKlNP.E
 **picocli** for CLI parsing. V1 has a single subcommand:
 
 ```
-shepherd run --workflow <name> --ticket <path>
+shepherd run --workflow <name> --ticket <path> --iteration-max <N>
 ```
 
 - `--ticket` **(required)**: path to a ticket markdown file. Shepherd always operates on a ticket.
@@ -68,6 +68,7 @@ shepherd run --workflow <name> --ticket <path>
   - `status` must be `in_progress` — fail hard otherwise (see Hard Constraints).
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
+- `--iteration-max` **(required)**: default iteration budget for reviewer sub-parts. The planner uses this value when generating `plan.json`. For `straightforward` workflows, this overrides `iteration.max` in the static workflow JSON. The user can further override at runtime via `FailedToConvergeUseCase`.
 
 ### Startup — Initializer
 
@@ -85,6 +86,15 @@ that owns the full startup sequence:
    → returns a ready-to-go `TicketShepherd`.
 4. **`TicketShepherd.run()`** — drives the workflow.
 5. **Cleanup** — `ShepherdContext.close()` for resource teardown.
+
+**Initialization failure cleanup:** If any step fails (e.g., server fails to bind, ticket
+parsing fails), the Initializer cleans up in **reverse order** — closing resources from
+the latest successful step back to step 1. `ShepherdContext` implements `AsgardCloseable`,
+so `close()` handles teardown of all resources it owns.
+
+**Single-instance constraint (V1):** Only one harness instance may run at a time per machine.
+On startup, the harness checks if `port.txt` exists and the port is responding — if so, fails
+with a clear error message directing the user to stop the other instance first.
 
 V1 does not support resume-on-restart — if the harness dies, you start over.
 `current_state.json` is written for progress tracking but not consumed on restart.

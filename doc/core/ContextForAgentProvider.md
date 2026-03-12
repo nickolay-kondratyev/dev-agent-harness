@@ -75,15 +75,16 @@ Concatenation order:
 |---|---------|--------|-------|
 | 1 | **Role definition** | PLANNER role file from `$TICKET_SHEPHERD_AGENTS_DIR` | |
 | 2 | **Ticket** | The ticket markdown file | |
-| 3 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
-| 4 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
-| 5 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E |
-| 6 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
-| 7 | **plan.json output path** | `harness_private/plan.json` | |
-| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` | Human-readable plan |
-| 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
-| 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 11 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 3 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | Always included (may be empty on first iteration). Planner can read and modify it. |
+| 4 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
+| 5 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
+| 6 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
+| 7 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
+| 8 | **plan.json output path** | `harness_private/plan.json` (absolute path) | |
+| 9 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
+| 10 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
+| 11 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 12 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
 ### Plan Reviewer
 
@@ -93,11 +94,12 @@ Concatenation order:
 | 2 | **Ticket** | The ticket markdown file | |
 | 3 | **plan.json content** | Read from `harness_private/plan.json` | Injected by provider — not in `shared/` |
 | 4 | **PLAN.md content** | Read from `shared/plan/PLAN.md` | |
-| 5 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale |
-| 6 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
-| 7 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/PUBLIC.md` — tells the reviewer where to write its output |
-| 8 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 9 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 5 | **Available agent types & models** | Same as planner receives | Reference for validating planner's `agentType` + `model` assignments |
+| 6 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale |
+| 7 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
+| 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/PUBLIC.md` — tells the reviewer where to write its output |
+| 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 10 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
 ---
 
@@ -158,7 +160,7 @@ so the agent doesn't have to figure out which values apply to it.
 
 ```markdown
 ### Validate plan before signaling done:
-`callback_shepherd.validate-plan.sh harness_private/plan.json`
+`callback_shepherd.validate-plan.sh /absolute/path/to/harness_private/plan.json`
 Prints validation result to stdout. Fix any errors before calling done.
 ```
 
@@ -172,10 +174,12 @@ approving) validate the plan schema, catching structural errors before
 
 Instruction files are written to:
 ```
-$HOME/.shepherd_agent_harness/tmp/agent_comm/<unique_name>.md
+$HOME/.shepherd_agent_harness/tmp/agent_comm/${git_branch}/<unique_name>.md
 ```
 
 Unique name format: `instruction_${partName}_${subPartName}_${timestamp}.md`
+
+Branch-scoped temp directory ensures isolation across concurrent harness instances.
 
 The provider writes the file and returns its `Path`. The caller
 (`PartExecutor` via `SubPartInstructionProvider`) sends the path to the agent via TMUX `send-keys`.

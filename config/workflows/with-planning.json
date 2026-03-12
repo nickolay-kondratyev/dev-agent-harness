@@ -1,9 +1,9 @@
 {
   "name": "with-planning",
   "planningSubParts": [
-    { "name": "1_plan", "role": "PLANNER" },
-    { "name": "2_plan_review", "role": "PLAN_REVIEWER",
-      "iteration": { "max": 3, "loopsBackTo": "1_plan" } }
+    { "name": "plan", "role": "PLANNER", "agentType": "ClaudeCode", "model": "opus" },
+    { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "ClaudeCode", "model": "opus",
+      "iteration": { "max": 3 } }
   ],
   "executionPhasesFrom": "plan.json"
 }

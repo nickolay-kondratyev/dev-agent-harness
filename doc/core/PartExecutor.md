@@ -258,6 +258,18 @@ Spawn doer → register → send instructions → enter health-aware await loop
 iteration. Uses the same health-aware await loop as `DoerReviewerPartExecutor` — a single
 doer can crash/hang just like a doer-reviewer pair.
 
+### Signal-to-PartResult Mapping
+
+| `AgentSignal` | `PartResult` |
+|---------------|-------------|
+| `Done(COMPLETED)` | `PartResult.Completed` |
+| `FailWorkflow(reason)` | `PartResult.FailedWorkflow(reason)` |
+| `Crashed(details)` | `PartResult.AgentCrashed(details)` |
+
+`Done(PASS)` and `Done(NEEDS_ITERATION)` **cannot** reach `SingleDoerPartExecutor` —
+the server validates that doers can only send `completed` (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
+If they somehow leak through, treat as a bug — fail with `IllegalStateException`.
+
 ---
 
 ## Ownership and Lifecycle

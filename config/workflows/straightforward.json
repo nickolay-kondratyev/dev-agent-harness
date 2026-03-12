@@ -5,9 +5,9 @@
       "name": "main",
       "description": "Implement and review",
       "subParts": [
-        { "name": "1_impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
-        { "name": "2_review", "role": "IMPLEMENTATION_REVIEWER",
-          "iteration": { "max": 4, "loopsBackTo": "1_impl" } }
+        { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
+          "iteration": { "max": 4 } }
       ]
     }
   ]

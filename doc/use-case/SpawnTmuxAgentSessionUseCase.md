@@ -84,6 +84,28 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 ---
 
+## TmuxAgentSession / ap.DAwDPidjM0HMClPDSldXt.E
+
+The live session handle stored in `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E).
+
+### Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `sessionName` | `String` | TMUX session name. Format: `shepherd_${partName}_${subPartName}`. Used for `tmux send-keys` and `tmux kill-session`. |
+| `handshakeGuid` | `HandshakeGuid` | The GUID assigned to this session (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). |
+| `paneTarget` | `String` | TMUX pane target (e.g., `shepherd_main_impl:0.0`). Used for `send-keys` commands. |
+
+### Kill Semantics
+
+"Kill a TMUX session" means `tmux kill-session -t ${sessionName}`. This destroys the session
+and all its windows/panes. Used by:
+- `removeAllForPart` (on part completion)
+- `NoReplyToPingUseCase` (on crash detection)
+- Interrupt protocol Layer 2 (on user `kill` confirmation)
+
+---
+
 ## Open Questions
 
 - **Agent startup delay**: Currently a fixed duration (`agentStartupDelay`, default 5s).
