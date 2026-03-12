@@ -3,7 +3,7 @@ package com.glassthought.ticketShepherd.integtest
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
-import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
+import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
 
 /**
  * Wraps [AsgardDescribeSpecConfig] with defaults pulled from [SharedContextIntegFactory].

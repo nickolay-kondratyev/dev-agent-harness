@@ -1,7 +1,7 @@
 package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
+import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
 import com.glassthought.ticketShepherd.core.initializer.Initializer
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking

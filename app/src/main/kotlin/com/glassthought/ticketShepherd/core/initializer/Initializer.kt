@@ -1,7 +1,6 @@
 package com.glassthought.ticketShepherd.core.initializer
 
 import com.asgard.core.annotation.AnchorPoint
-import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
 import com.glassthought.ticketShepherd.core.Constants
@@ -14,6 +13,7 @@ import com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.ticketShepherd.core.agent.tmux.util.TmuxCommandRunner
 import com.glassthought.ticketShepherd.core.agent.sessionresolver.impl.ClaudeCodeAgentSessionIdResolver
+import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
@@ -29,7 +29,7 @@ data class TmuxInfra(
 /**
  * Groups direct LLM API dependencies.
  *
- * [httpClient] is `internal` because it is only needed for resource cleanup in [ShepherdContext.close].
+ * [httpClient] is `internal` because it is only needed for resource cleanup in [com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext.close].
  * External consumers should use [quickCheap] or [budgetHigh] for API calls.
  */
 data class DirectLlmInfra(
@@ -56,35 +56,13 @@ data class Infra(
 )
 
 /**
- * Encapsulates all application-level dependencies created during initialization.
- *
- * Dependencies are organized into logical groups:
- * - [infra] — shared services and IO adapters (tmux, LLM, logging)
- *
- * Implements [AsgardCloseable] to ensure proper cleanup of all held resources.
- * Use via `.use{}` at the call site to guarantee shutdown even on exceptions.
- */
-@AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
-class ShepherdContext(
-    val infra: Infra,
-) : AsgardCloseable {
-
-    override suspend fun close() {
-        // Shut down OkHttpClient connection and thread pools to prevent resource leaks
-        // in long-running server usage. Order matters: dispatcher first, then connections.
-        infra.directLlm.httpClient.dispatcher.executorService.shutdown()
-        infra.directLlm.httpClient.connectionPool.evictAll()
-        infra.outFactory.close()
-    }
-}
-
-/**
  * Root of all dependency wiring.
  *
  * Single public method [initialize] creates and connects all application-level
  * dependencies. AppMain.kt delegates to this interface rather than constructing
  * dependencies directly.
  */
+@AnchorPoint("ap.9zump9YISPSIcdnxEXZZX.E")
 interface Initializer {
     /**
      * @param outFactory Structured logging factory.

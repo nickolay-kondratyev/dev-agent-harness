@@ -2,7 +2,7 @@ package com.glassthought.ticketShepherd.integtest
 
 import com.asgard.core.out.impl.for_tests.testout.TestOutManager
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
-import com.glassthought.ticketShepherd.core.initializer.ShepherdContext
+import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
 import com.glassthought.ticketShepherd.core.initializer.Initializer
 import kotlinx.coroutines.runBlocking
 
