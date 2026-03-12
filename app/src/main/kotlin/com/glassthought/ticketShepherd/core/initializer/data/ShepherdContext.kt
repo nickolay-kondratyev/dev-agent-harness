@@ -14,7 +14,7 @@ import com.glassthought.ticketShepherd.core.initializer.Infra
  * .close() should be called at the end of main function when we are shutting down.
  *
  * ### Relationships
- * - Created by [com.glassthought.ticketShepherd.core.initializer.Initializer]/ref.ap.9zump9YISPSIcdnxEXZZX.E
+ * - Created by [com.glassthought.ticketShepherd.core.initializer.ContextInitializer]/ref.ap.9zump9YISPSIcdnxEXZZX.E
  */
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
 class ShepherdContext(

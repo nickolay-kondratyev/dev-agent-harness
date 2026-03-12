@@ -10,8 +10,10 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 
 ## Inputs
 
-- `ShepherdContext` — shared infrastructure (tmux, LLM, logging, use cases). Already
-  initialized by `Initializer` before the creator runs.
+- `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in code at
+  `ShepherdContext.kt`) — shared infrastructure (tmux, LLM, logging, use cases). Already
+  initialized by `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
+  `ContextInitializer.kt`) before the creator runs.
 - Ticket path — the markdown file to process
 - Workflow name — which workflow JSON to load
 

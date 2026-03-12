@@ -8,9 +8,9 @@ authoritative.
 
 ## Design: Interface-per-Tier
 
-Each budget tier gets its own interface. The `Initializer` wires a concrete `DirectLLM`
-implementation to each tier interface — callers depend on the tier interface, never on a
-specific model.
+Each budget tier gets its own interface. The `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E)
+wires a concrete `DirectLLM` implementation to each tier interface — callers depend on the
+tier interface, never on a specific model.
 
 ```kotlin
 // Shared contract — all tiers implement this
@@ -36,4 +36,4 @@ add a new interface, no changes to existing callers).
 | `DirectBudgetHighLLM` | **GLM-5** | Z.AI (GLM) | `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) state summarization |
 
 Model assignments are configuration — changing the model behind a tier requires no code changes
-outside the `Initializer`.
+outside the `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E).

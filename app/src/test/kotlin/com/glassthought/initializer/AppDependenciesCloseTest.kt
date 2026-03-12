@@ -2,7 +2,7 @@ package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
-import com.glassthought.ticketShepherd.core.initializer.Initializer
+import com.glassthought.ticketShepherd.core.initializer.ContextInitializer
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient
@@ -18,7 +18,7 @@ class AppDependenciesCloseTest : AsgardDescribeSpec({
             it("THEN OkHttpClient dispatcher executor service is shut down") {
                 val httpClient = OkHttpClient.Builder().build()
                 val deps = runBlocking {
-                    Initializer.standard().initialize(
+                    ContextInitializer.standard().initialize(
                         outFactory = outFactory,
                         httpClient = httpClient,
                     )

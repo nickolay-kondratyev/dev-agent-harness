@@ -56,11 +56,11 @@ via `Constants.Z_AI_API.API_TOKEN_ENV_VAR`).
 ### Token Availability
 
 `Z_AI_GLM_API_TOKEN` MUST already be set in the environment for integration tests to run (it is
-required by `Initializer` for the harness's own direct LLM calls). No additional secrets setup is
+required by `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E) for the harness's own direct LLM calls). No additional secrets setup is
 needed — this same token is reused for agent spawning.
 
 ### NOT Yet Implemented
 
 As of 2026-03-11, GLM injection for tmux-spawned agents is **not yet implemented**. The deep memory
-above documents the intended approach. See `TODO(ap.ifrXkqXjkvAajrA4QCy7V.E)` in `Initializer.kt`
+above documents the intended approach. See `TODO(ap.ifrXkqXjkvAajrA4QCy7V.E)` in `ContextInitializer.kt`
 which is a placeholder for swapping external services in test mode.

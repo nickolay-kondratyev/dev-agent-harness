@@ -3,7 +3,7 @@ package com.glassthought.ticketShepherd.integtest
 import com.asgard.core.out.impl.for_tests.testout.TestOutManager
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
 import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
-import com.glassthought.ticketShepherd.core.initializer.Initializer
+import com.glassthought.ticketShepherd.core.initializer.ContextInitializer
 import kotlinx.coroutines.runBlocking
 
 /**
@@ -33,7 +33,7 @@ object SharedContextIntegFactory {
      *  Meant to be shared between the integration tests to keep the wire up of tests faster.
      *  */
     internal val shepherdContext: ShepherdContext = runBlocking {
-        Initializer.standard().initialize(
+        ContextInitializer.standard().initialize(
             outFactory = testOutManager.outFactory,
         )
     }

@@ -3,7 +3,7 @@ package com.glassthought.ticketShepherd.core.initializer.data
 /**
  * Describes the runtime environment in which the application is running.
  *
- * Allows dependency wiring (e.g. [com.glassthought.ticketShepherd.core.initializer.Initializer])
+ * Allows dependency wiring (e.g. [com.glassthought.ticketShepherd.core.initializer.ContextInitializer])
  * to make environment-aware decisions — for example, substituting real external services
  * with test doubles when [isTest] is `true`.
  *

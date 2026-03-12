@@ -2,10 +2,10 @@ package com.glassthought.ticketShepherd.cli.sandbox
 
 import com.asgard.core.out.impl.console.SimpleConsoleOutFactory
 import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatRequest
-import com.glassthought.ticketShepherd.core.initializer.Initializer
+import com.glassthought.ticketShepherd.core.initializer.ContextInitializer
 
 suspend fun main(args: Array<String>) {
-  val llm = Initializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.budgetHigh
+  val llm = ContextInitializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.budgetHigh
 
 
   llm.call(ChatRequest("Say hello in Russian")).also { response ->

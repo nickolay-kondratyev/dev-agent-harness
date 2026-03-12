@@ -36,7 +36,7 @@ server-side validation and shepherd-side decision making.
 
 | Field | Type | Purpose |
 |-------|------|---------|
-| `tmuxAgentSession` | `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E) | Live session handle (TMUX + resumable session ID with HandshakeGuid) |
+| `tmuxAgentSession` | `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E — defined in code at `TmuxAgentSession.kt`) | Live session handle (TMUX + resumable session ID with HandshakeGuid) |
 | `partName` | `String` | Which part this session belongs to (e.g., `"ui_design"`, `"main"`) |
 | `subPartName` | `String` | Sub-part name (e.g., `"impl"`, `"review"`) |
 | `subPartRole` | `SubPartRole` | `DOER` or `REVIEWER` — derived from position in sub-parts array (first = DOER, second = REVIEWER) |

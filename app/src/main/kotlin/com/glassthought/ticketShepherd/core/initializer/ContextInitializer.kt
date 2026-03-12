@@ -71,14 +71,17 @@ data class Infra(
 }
 
 /**
- * Root of all dependency wiring.
+ * Wires shared infrastructure dependencies (tmux, LLM, logging) into a [ShepherdContext].
  *
- * Single public method [initialize] creates and connects all application-level
- * dependencies. AppMain.kt delegates to this interface rather than constructing
- * dependencies directly.
+ * This is the **context-only** initializer — it builds the infrastructure layer that
+ * outlives any single ticket. The top-level `Initializer` (not yet implemented) will
+ * orchestrate this alongside server startup and ticket-scoped wiring.
+ *
+ * Single public method [initialize] creates and connects all infrastructure-level
+ * dependencies.
  */
 @AnchorPoint("ap.9zump9YISPSIcdnxEXZZX.E")
-interface Initializer {
+interface ContextInitializer {
   /**
    * @param outFactory Structured logging factory.
    * @param httpClient Custom [OkHttpClient] to use for LLM API calls, or null to create a default one.
@@ -90,21 +93,21 @@ interface Initializer {
   ): ShepherdContext
 
   companion object {
-    fun standard(): Initializer = InitializerImpl()
+    fun standard(): ContextInitializer = ContextInitializerImpl()
   }
 }
 
-class InitializerImpl : Initializer {
+class ContextInitializerImpl : ContextInitializer {
 
   override suspend fun initialize(
     outFactory: OutFactory,
     httpClient: OkHttpClient?,
   ): ShepherdContext {
-    val out = outFactory.getOutForClass(InitializerImpl::class)
+    val out = outFactory.getOutForClass(ContextInitializerImpl::class)
 
     return out.time(
       { initializeImpl(outFactory, httpClient) },
-      "initializer.initialize",
+      "context_initializer.initialize",
     )
   }
 

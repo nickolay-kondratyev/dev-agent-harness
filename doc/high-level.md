@@ -69,8 +69,23 @@ shepherd run --workflow <name> --ticket <path>
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
 
-On startup, the CLI uses [`TicketShepherdCreator`](core/TicketShepherdCreator.md)
-(ref.ap.cJbeC4udcM3J8UFoWXfGh.E) to wire all dependencies and create a `TicketShepherd`.
+### Startup — Initializer
+
+ap.HRlQHC1bgrTRyRknP3WNX.E
+
+On startup, the CLI delegates to the **`Initializer`** — the true top-level orchestrator
+that owns the full startup sequence:
+
+1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
+   `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
+   shared infrastructure (tmux, LLM, logging) that outlives any single ticket.
+2. **`ShepherdServer`** startup — Ktor CIO HTTP server on OS-assigned port.
+3. **`TicketShepherdCreator`** (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — ticket-scoped wiring
+   (workflow resolution, branch creation, `SessionsState`, `ContextForAgentProvider`)
+   → returns a ready-to-go `TicketShepherd`.
+4. **`TicketShepherd.run()`** — drives the workflow.
+5. **Cleanup** — `ShepherdContext.close()` for resource teardown.
+
 V1 does not support resume-on-restart — if the harness dies, you start over.
 `current_state.json` is written for progress tracking but not consumed on restart.
 See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 resume design.

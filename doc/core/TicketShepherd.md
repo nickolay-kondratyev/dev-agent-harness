@@ -67,9 +67,10 @@ creates executors for each part, runs them in sequence, and handles the results.
 
 ## Dependencies
 
-Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) for shared infrastructure
-(tmux, LLM, use cases) plus ticket-scoped state (`SessionsState`, parsed workflow, ticket
-metadata) wired by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
+Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in code at
+`ShepherdContext.kt`) for shared infrastructure (tmux, LLM, use cases) plus ticket-scoped
+state (`SessionsState`, parsed workflow, ticket metadata) wired by
+`TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
 
 ## Not a Use Case
 
