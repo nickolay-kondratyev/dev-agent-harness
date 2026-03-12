@@ -1,8 +1,8 @@
 package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
+import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
 import io.kotest.matchers.types.shouldBeInstanceOf
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit

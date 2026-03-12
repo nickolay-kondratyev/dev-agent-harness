@@ -1,7 +1,7 @@
 package com.glassthought.bucket
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.agent.tmux.util.TmuxCommandRunner
+import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
 import io.kotest.matchers.shouldNotBe
 
 /**

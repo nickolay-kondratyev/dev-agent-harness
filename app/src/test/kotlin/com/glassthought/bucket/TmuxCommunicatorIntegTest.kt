@@ -1,8 +1,8 @@
 package com.glassthought.bucket
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
-import com.glassthought.ticketShepherd.core.agent.tmux.TmuxSession
-import com.glassthought.ticketShepherd.integtest.SharedContextDescribeSpec
+import com.glassthought.shepherd.core.agent.tmux.TmuxSession
+import com.glassthought.shepherd.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
 import java.io.File
@@ -10,7 +10,7 @@ import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
 /**
- * Tests for [com.glassthought.ticketShepherd.core.agent.tmux.TmuxCommunicatorImpl].
+ * Tests for [com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl].
  *
  * Requires tmux to be installed on the system. Uses bash sessions to verify
  * that keystrokes are delivered correctly.
