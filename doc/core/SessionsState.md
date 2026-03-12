@@ -41,7 +41,7 @@ server-side validation and shepherd-side decision making.
 | `subPartName` | `String` | Sub-part name (e.g., `"impl"`, `"review"`) |
 | `subPartRole` | `SubPartRole` | `DOER` or `REVIEWER` — derived from position in sub-parts array (first = DOER, second = REVIEWER) |
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/done` or `/fail-workflow`, or by health monitor on crash detection. The executor suspends on `.await()`. |
-| `lastActivityTimestamp` | `Instant` | Updated by the server on **every** callback (`done`, `fail-workflow`, `user-question`, `ping-ack`). Read by the health monitor to decide when to ping and when to declare crash. Resets the health timeout even during user-question side-channel interactions. |
+| `lastActivityTimestamp` | `Instant` | Updated by the server on **every** callback (`done`, `fail-workflow`, `user-question`, `validate-plan`, `ping-ack`). Read by the health monitor to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/done`
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers

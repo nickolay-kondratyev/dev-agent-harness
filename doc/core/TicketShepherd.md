@@ -27,7 +27,8 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase` (prints red error to
         console, halts — waits for human intervention).
       - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
-      - `AgentCrashed` → attempt recovery or abort
+      - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase` (prints red error to
+        console, halts — waits for human intervention). V1: no automatic recovery.
 5. On all parts completed → workflow done
 
 ## Fields

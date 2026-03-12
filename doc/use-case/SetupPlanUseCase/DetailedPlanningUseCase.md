@@ -41,7 +41,7 @@ A planning-specific implementation of `SubPartInstructionProvider`
 
 | Method | Delegates to | Content |
 |--------|-------------|---------|
-| `assembleDoerInstructions()` | `ContextForAgentProvider` planner assembly | Ticket + role catalog + plan format instructions + reviewer feedback (on iteration) |
+| `assembleDoerInstructions()` | `ContextForAgentProvider` planner assembly | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
 | `assembleReviewerInstructions()` | `ContextForAgentProvider` plan-reviewer assembly | Ticket + `plan.json` from `harness_private/` + review criteria |
 
 ---
@@ -59,8 +59,11 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
 5. Return List<Part> — the execution parts extracted from current_state.json
 ```
 
-If `plan.json` is malformed or fails schema validation, this function throws — the caller
-(`TicketShepherd`) handles the error.
+If `plan.json` is malformed or fails schema validation, `TicketShepherd` delegates to
+`FailedToExecutePlanUseCase` — prints red error, halts. This should not happen in practice:
+both the planner and plan reviewer are instructed to validate `plan.json` via
+`callback_shepherd.validate-plan.sh` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) before signaling
+`done`/`pass`. A validation failure here indicates a bug in the planning agents.
 
 ---
 

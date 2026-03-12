@@ -66,6 +66,8 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | `.ai_out/` directory schema | ref.ap.BXQlLDTec7cVVOrzXWfR7.E |
 | SetupPlanUseCase (routing) | ref.ap.VLjh11HdzC8ZOhNCDOr2g.E |
 | DetailedPlanningUseCase | ref.ap.cJhuVZTkwfrWUzTmaMbR3.E |
+| Agent type & model assignment | ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E |
+| Agent roles directory structure | ref.ap.Q7kR9vXm3pNwLfYtJ8dZs.E |
 | Resume-on-restart (V2) | ref.ap.LX1GCIjv6LgmM7AJFas20.E |
 
 ### Dependencies

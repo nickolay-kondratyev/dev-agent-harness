@@ -155,13 +155,14 @@ If the file does not exist → fail hard with a clear error naming the missing f
 
 ## Required Environment Variables
 
-Both must be present at **harness initialization** (not deferred to first commit). Fail hard
-immediately with a clear error message if either is missing.
+All must be present at **harness initialization** (not deferred to first use). Fail hard
+immediately with a clear error message if any is missing.
 
 | Env var | Purpose | Validated at |
 |---|---|---|
 | `HOST_USERNAME` | Identifies the human operator in commit author attribution | Initialization |
 | `MODEL_VERSION_DIR` | Directory containing model version files for commit author attribution | Initialization |
+| `TICKET_SHEPHERD_AGENTS_DIR` | Directory containing agent role definition `.md` files (ref.ap.Q7kR9vXm3pNwLfYtJ8dZs.E). Must point to `_config/agents/_generated/`. | Initialization |
 
 This follows the same fail-hard pattern as `Z_AI_API_TOKEN` — flush configuration bugs at startup,
 not mid-workflow.

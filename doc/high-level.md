@@ -142,7 +142,7 @@ on HandshakeGuid, AgentSessionIdResolver, and session schema.
 
 ## DirectLLM — Tier-Scoped Interfaces
 
-Interface-per-tier design (`DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM`).
+Interface-per-tier design (`DirectQuickCheapLLM`, `DirectBudgetHighLLM`). V1: two tiers.
 Not used for iteration decisions — the reviewer's verdict is authoritative. See
 [DirectLLM](core/DirectLLM.md) (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) for tier assignments and
 contract.
@@ -179,7 +179,58 @@ interface is responsible for assembling instruction files for agents:
 
 - Every Markdown file in `$TICKET_SHEPHERD_AGENTS_DIR` is an eligible role
 - Extract `description` (required) and `description_long` (optional) from YAML frontmatter
+- **Roles do NOT specify `agentType` or `model`** — those are workflow-level decisions
+  assigned by the planner (for `with-planning` workflows) or by the static workflow JSON
+  (for `straightforward` workflows). See [Agent Type & Model Assignment](#agent-type--model-assignment).
 - **Fail-fast on startup** if a role referenced in the workflow is missing
+
+#### Agent Roles Directory Structure
+<!-- ap.Q7kR9vXm3pNwLfYtJ8dZs.E -->
+
+Agent role definitions live in `_config/agents/`:
+
+```
+_config/agents/
+├── input/              # Editable source files — make role edits here
+│   ├── IMPLEMENTATION.md
+│   ├── IMPLEMENTATION_REVIEWER.md
+│   └── ...
+├── generate.sh         # Generates ready-to-use files from input/
+└── _generated/         # Generated output — $TICKET_SHEPHERD_AGENTS_DIR points here
+    ├── IMPLEMENTATION.md
+    ├── IMPLEMENTATION_REVIEWER.md
+    └── ...
+```
+
+- **`input/`** — the authoritative source for role definitions. All editing happens here.
+- **`_generated/`** — output of `generate.sh`. This is what `$TICKET_SHEPHERD_AGENTS_DIR`
+  points to at runtime. Do not edit directly.
+- **`$TICKET_SHEPHERD_AGENTS_DIR`** (required env var) — must point to the `_generated/`
+  directory. Validated at harness initialization (see [Required Environment Variables](core/git.md#required-environment-variables)).
+
+### Agent Type & Model Assignment
+<!-- ap.Xt9bKmV2wR7pLfNhJ3cQy.E -->
+
+**Roles define behavior, not infrastructure.** Which agent implementation (`agentType`) and
+which model (`model`) to use are **workflow-level decisions**, not role-level properties.
+
+| Workflow type | Who assigns `agentType` + `model`? | Where it lives |
+|---|---|---|
+| `with-planning` | **Planner agent** — assigns per sub-part in `plan.json` | `plan.json` → `current_state.json` |
+| `straightforward` | **Static workflow JSON** — specified per sub-part | `config/workflows/*.json` → `current_state.json` |
+
+This design supports varying agents across sub-parts (e.g., ClaudeCode-opus for planning,
+PI-glm-5 for implementation) without touching role definitions. The planner receives
+available agent types and model options as part of its instructions
+(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) and makes assignment decisions per sub-part.
+
+**V1 constraint:** Only `ClaudeCode` agent type is supported. Model options within
+ClaudeCode: `opus` (high), `sonnet` (budget-high).
+
+**Session records store actual model names** (e.g., `"sonnet"`, `"opus"`, `"glm-5"`), never
+tier names like `"BudgetHigh"`. This is critical for V2 resume
+(ref.ap.LX1GCIjv6LgmM7AJFas20.E) — by the time we resume, a tier's backing model may
+have changed, and we need the exact model to match the session.
 
 ### Plan Mutability During Execution
 
@@ -222,7 +273,8 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
-| Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter |
+| Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter; roles define behavior only — no `agentType`/`model` |
+| Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation |

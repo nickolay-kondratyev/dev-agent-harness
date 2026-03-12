@@ -15,7 +15,8 @@ parts/sub-parts schema. One parser handles everything.
 |-------|----------|-------------|
 | `name` | yes | Directory name and identifier (e.g., `"impl"`, `"review"`). Execution order is determined by array position. |
 | `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
-| `agentType` | no | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). If absent, resolved from role catalog frontmatter. |
+| `agentType` | yes | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). Assigned by the planner (with-planning workflows) or specified in static workflow JSON (straightforward workflows). Never from role definitions — see ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E. |
+| `model` | yes | Actual model name (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Same assignment source as `agentType`. Must be the **actual model name**, never a tier name like `"BudgetHigh"` — required for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can override via `FailedToConvergeUseCase`. |
@@ -83,8 +84,8 @@ static workflow JSON (no `plan.json` involved).
       "name": "ui_design",
       "description": "Design the dashboard UI",
       "subParts": [
-        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode" },
-        { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode",
+        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet" },
+        { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 3 } }
       ]
     },
@@ -92,8 +93,8 @@ static workflow JSON (no `plan.json` involved).
       "name": "backend_impl",
       "description": "Implement API endpoints",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTOR" },
-        { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
+        { "name": "impl", "role": "IMPLEMENTOR", "agentType": "ClaudeCode", "model": "opus" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]
     }
@@ -114,6 +115,7 @@ static workflow JSON (no `plan.json` involved).
           "name": "impl",
           "role": "UI_DESIGNER",
           "agentType": "ClaudeCode",
+          "model": "sonnet",
           "status": "COMPLETED",
           "sessionIds": [
             {
@@ -130,6 +132,7 @@ static workflow JSON (no `plan.json` involved).
           "name": "review",
           "role": "UI_REVIEWER",
           "agentType": "ClaudeCode",
+          "model": "sonnet",
           "status": "IN_PROGRESS",
           "iteration": { "max": 3, "current": 1 },
           "sessionIds": [
@@ -152,11 +155,15 @@ static workflow JSON (no `plan.json` involved).
         {
           "name": "impl",
           "role": "IMPLEMENTOR",
+          "agentType": "ClaudeCode",
+          "model": "opus",
           "status": "NOT_STARTED"
         },
         {
           "name": "review",
           "role": "IMPLEMENTATION_REVIEWER",
+          "agentType": "ClaudeCode",
+          "model": "sonnet",
           "status": "NOT_STARTED",
           "iteration": { "max": 4, "current": 0 }
         }
@@ -196,8 +203,8 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
       "name": "main",
       "description": "Implement and review",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN" },
-        { "name": "review", "role": "IMPLEMENTATION_REVIEWER",
+        { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]
     }
@@ -211,13 +218,17 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
 {
   "name": "with-planning",
   "planningSubParts": [
-    { "name": "plan", "role": "PLANNER" },
-    { "name": "plan_review", "role": "PLAN_REVIEWER",
+    { "name": "plan", "role": "PLANNER", "agentType": "ClaudeCode", "model": "opus" },
+    { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "ClaudeCode", "model": "opus",
       "iteration": { "max": 3 } }
   ],
   "executionPhasesFrom": "plan.json"
 }
 ```
+
+Note: `agentType` and `model` on `planningSubParts` are specified in the static workflow JSON —
+the planner cannot assign its own agent type. The planner assigns `agentType` and `model` only
+for the **execution parts** it generates in `plan.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E).
 
 ### WorkflowDefinition — Two Modes
 
@@ -248,6 +259,8 @@ created. The last element is the current session. Each entry follows the
 {
   "name": "impl",
   "role": "IMPLEMENTOR",
+  "agentType": "ClaudeCode",
+  "model": "opus",
   "status": "IN_PROGRESS",
   "sessionIds": [
     {
@@ -282,7 +295,7 @@ Each entry in the `sessionIds` array has the following structure:
 | `agentSessionId` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Null when `agentSessionPath` is used instead. Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `agentSessionPath` | no | Alternative to `agentSessionId` for agents that use paths (e.g., PI). Null when not applicable. |
 | `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
-| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). |
+| `model` | yes | The **actual model name** used for this session (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Must match the sub-part's `model` field. Never a tier name like `"BudgetHigh"` — critical for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `timestamp` | yes | ISO-8601 timestamp of session creation. |
 
 **Exactly one** of `agentSessionId` or `agentSessionPath` must be non-null.

@@ -36,7 +36,7 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 ## Spawn Flow — New Session
 
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
-2. Harness chooses agent type (from sub-part config or role catalog)
+2. Harness reads `agentType` and `model` from sub-part config in `current_state.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
 3. Harness builds the TMUX start command:
    `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude [flags]`
 4. Harness creates TMUX session running the command
@@ -70,9 +70,11 @@ the TMUX message.
 
 ## Agent Crash Recovery (V1)
 
-When `NoReplyToPingUseCase` detects an agent crash, the harness starts a **new** agent session
-for the same sub-part (full spawn flow above). No `--resume` attempt in V1
-(V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+**V1: no automatic recovery.** When `NoReplyToPingUseCase` detects an agent crash, the TMUX
+session is killed, `signalDeferred` is completed with `AgentSignal.Crashed`, and
+`TicketShepherd` delegates to `FailedToExecutePlanUseCase` — prints red error, halts, waits
+for human intervention. V2 may add automatic retry with `--resume`
+(ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 

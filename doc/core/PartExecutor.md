@@ -34,13 +34,14 @@ sealed class PartResult {
     /** Reviewer sent needs_iteration beyond iteration.max and user chose to abort */
     data class FailedToConverge(val summary: String) : PartResult()
 
-    /** Agent crashed and could not be recovered */
+    /** Agent crashed — V1: hard stop (no automatic recovery) */
     data class AgentCrashed(val details: String) : PartResult()
 }
 ```
 
-`TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly
-(`FailedToExecutePlanUseCase` for workflow/convergence failures, recovery for crashes).
+`TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly.
+All failure variants (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) delegate to
+`FailedToExecutePlanUseCase` — prints red error, halts. V1 has no automatic crash recovery.
 Note: `FailedToConvergeUseCase` runs inside the executor (see DoerReviewerPartExecutor step 9c),
 not in TicketShepherd.
 
@@ -82,8 +83,10 @@ enum class DoneResult {
 | `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
 | `/callback-shepherd/ping-ack` | Side-channel — resets health timer only | Health monitor resets its timer |
 
-Both side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`
+All side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`
 (ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the health monitor knows the agent is alive.
+`/callback-shepherd/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also a side-channel
+— planning-phase only, returns validation result in response body.
 
 ### How the Bridge Works
 

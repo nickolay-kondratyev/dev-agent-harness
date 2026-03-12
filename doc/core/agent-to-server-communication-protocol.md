@@ -103,6 +103,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 | `POST /callback-shepherd/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
 | `POST /callback-shepherd/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
 | `POST /callback-shepherd/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
+| `POST /callback-shepherd/validate-plan` | Validates a `plan.json` file against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E). Always returns 200 — validation result is in the response body. Planning-phase only. |
 | `POST /callback-shepherd/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
 
 ---
@@ -130,6 +131,9 @@ GUID-to-sub-part registry.
 
 // POST /callback-shepherd/fail-workflow
 { "handshakeGuid": "handshake.a1b2c3d4-...", "reason": "Cannot compile after multiple approaches" }
+
+// POST /callback-shepherd/validate-plan
+{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "harness_private/plan.json" }
 
 // POST /callback-shepherd/ping-ack
 { "handshakeGuid": "handshake.a1b2c3d4-..." }
@@ -167,9 +171,34 @@ On callback arrival, server looks up HandshakeGuid in `SessionsState`
 the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 [SessionsState](SessionsState.md) for the full bridge design.
 
-Side-channel callbacks (`user-question`, `ping-ack`) update `lastActivityTimestamp`
-(ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the deferred — executor stays
-suspended.
+Side-channel callbacks (`user-question`, `ping-ack`, `validate-plan`) update
+`lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the
+deferred — executor stays suspended.
+
+---
+
+## Plan Validation Endpoint
+<!-- ap.R8mNvKx3wQ5pLfYtJ7dZe.E -->
+
+**Unlike all other callbacks, `/callback-shepherd/validate-plan` returns meaningful content
+in the HTTP response body.** The agent reads the response to determine whether the plan is
+valid. This is a **synchronous utility call**, not a lifecycle signal — it does not flow
+through `AgentSignal` or `CompletableDeferred`.
+
+Always returns HTTP 200. The response body carries the validation result:
+
+```json
+// Validation passed
+{ "valid": true }
+
+// Validation failed — errors describe what's wrong
+{ "valid": false, "errors": ["subParts[0] missing required field: agentType", "..."] }
+```
+
+The server reads the file at the path provided (resolved relative to `.ai_out/${branch}/`),
+parses it against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E), and returns
+structured validation results. Both the **planner** and **plan reviewer** are instructed to
+call this before signaling `done` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
 
 ---
 
@@ -195,7 +224,7 @@ Answer delivered via TMUX `send-keys`, not via HTTP response.
 
 ## Callback Scripts
 
-Four focused bash scripts, one per endpoint. Each script wraps a single curl call and is
+Five focused bash scripts, one per endpoint. Each script wraps a single curl call and is
 the sole mechanism agents use to communicate back to the harness.
 
 **Shared behavior across all scripts:**
@@ -214,6 +243,7 @@ the sole mechanism agents use to communicate back to the harness.
 callback_shepherd.done.sh <result>             # required: completed | pass | needs_iteration
 callback_shepherd.user-question.sh "<text>"    # required: question text
 callback_shepherd.fail-workflow.sh "<reason>"  # required: failure reason (aborts entire workflow)
+callback_shepherd.validate-plan.sh <path>      # required: path to plan.json — prints validation result to stdout
 callback_shepherd.ping-ack.sh                  # no args — acknowledges health ping
 ```
 
