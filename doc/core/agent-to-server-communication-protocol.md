@@ -225,6 +225,10 @@ the full filesystem path). Parses it against the parts/sub-parts schema
 3. At least one sub-part has `loadsPlan: true`
 4. Every `agentType` value is a supported type (V1: `ClaudeCode`)
 5. Every `model` value is valid for the given `agentType`
+6. Every `role` value matches an existing `.md` file in `$TICKET_SHEPHERD_AGENTS_DIR`
+   (ticket: `nid_m5e0q3oslsihsxsz1h6no6nwr_E` — role catalog design). Catches non-existent
+   role assignments at plan validation time rather than failing late during execution when
+   `ContextForAgentProvider` tries to load the role definition.
 
 Both the **planner** and **plan reviewer** are instructed to call this before signaling
 `done` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).

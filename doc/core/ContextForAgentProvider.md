@@ -63,7 +63,7 @@ Concatenation order:
 | 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — big picture context. Only present for `with-planning` workflows. |
 | 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
 | 7 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
-| 8 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part | What the reviewer found lacking |
+| 8 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback). |
 | 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
 | 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
@@ -123,6 +123,62 @@ This is deterministic from the workflow position. No heuristics, no "relevance" 
 - Planner on iteration sees plan reviewer's `PUBLIC.md`
 - Execution agents do **not** see planning phase `PUBLIC.md` files — the plan itself
   (`PLAN.md` in `shared/plan/`) is sufficient context
+
+---
+
+## Doer Pushback Guidance — Iteration Feedback
+
+When a doer receives reviewer feedback on iteration > 1, the instruction file includes
+**pushback guidance** as static text alongside the reviewer's `PUBLIC.md`. This guidance
+is critical because the doer↔reviewer loop is a dialogue where the doer may legitimately
+disagree with the reviewer's feedback.
+
+### Why This Matters
+
+A typical multi-part workflow looks like:
+
+```
+part_1 (main implementation and review loop) {
+  implementor       ← doer
+  reviewer           ← reviewer
+}
+part_2 (single sub-part) {
+  reviewer_with_self_fixing  ← final pass
+}
+```
+
+The part 2 reviewer (or any future agent reading the code) will not have access to the
+iteration dialogue between the implementor and reviewer in part 1. If the implementor
+silently accepts bad reviewer feedback, the code degrades. If the implementor silently
+rejects good feedback, later reviewers will flag the same issues again.
+
+**The solution**: when the doer disagrees with reviewer feedback, it must **defend the
+decision in the code itself** — via comments explaining WHY the reviewer's suggestion was
+considered and rejected. This creates a durable record that survives beyond the iteration
+loop and prevents future reviewers from re-raising the same points.
+
+### Guidance Text (included in doer instructions on iteration > 1)
+
+```markdown
+## Handling Reviewer Feedback
+
+You have received feedback from the reviewer. Address each point:
+
+- **If you agree**: implement the requested changes.
+- **If you disagree**: you are empowered to push back, but you MUST defend your decision
+  **in the code**. Add a concise comment explaining WHY you rejected the feedback — what
+  trade-off you considered, what constraint the reviewer may not have seen. This comment
+  is NOT for the reviewer — it is for any future reader of this code who might have the
+  same question.
+- **Do NOT push back for the sake of pushing back.** Only reject feedback when you
+  genuinely believe the reviewer is incorrect or missing context.
+- **Document your reasoning in PUBLIC.md**: for each reviewer point, state whether you
+  accepted or rejected it and why. This helps the reviewer on the next pass understand
+  your decisions without re-reviewing unchanged code.
+```
+
+This guidance is wrapped in `<critical_to_keep_through_compaction>` tags alongside the
+callback script usage to survive context compaction.
 
 ---
 

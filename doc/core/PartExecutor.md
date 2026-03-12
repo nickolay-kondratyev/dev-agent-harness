@@ -214,23 +214,76 @@ interface SubPartInstructionProvider {
 ## DoerReviewerPartExecutor / ap.mxIc5IOj6qYI7vgLcpQn5.E
 
 Handles parts with two sub-parts (doer + reviewer). Implements the full iteration loop.
+The executor coordinates the two agents — at any point during iteration, **only one agent
+is actively working** while the other is alive but idle in its TMUX session, waiting for
+the executor to send it new instructions.
 
 ### Flow
 
-1. **Spawn doer** → create `CompletableDeferred` → register `SessionEntry` → send instructions → enter health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
-2. **On doer COMPLETED** → spawn reviewer → create deferred → register → send instructions → enter health-aware await loop
+1. **Start doer**:
+   a. First iteration: **spawn** doer TMUX session → create `CompletableDeferred` → register
+      `SessionEntry` → send instructions → enter health-aware await loop
+      (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+   b. Subsequent iterations (re-entry from step 4): doer session **already alive** → create
+      fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
+      deferred) → assemble new instructions (includes reviewer feedback) → send via TMUX
+      `send-keys` to **existing** session → enter health-aware await loop
+2. **On doer COMPLETED** — start reviewer:
+   a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
+      register `SessionEntry` → send instructions (includes doer's `PUBLIC.md`) → enter
+      health-aware await loop
+   b. Subsequent iterations (re-entry from step 1b→2): reviewer session **already alive** →
+      create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
+      new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
+      send via TMUX `send-keys` to **existing** session → enter health-aware await loop
 3. **On reviewer PASS** → return `PartResult.Completed`
-4. **On reviewer NEEDS_ITERATION** → check budget → create fresh deferred for doer →
-   send new instructions to **existing** doer TMUX session → loop to step 1 (doer await).
-   On budget exceeded → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user decides continue or abort.
+4. **On reviewer NEEDS_ITERATION** → check budget:
+   - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
+     go to step 1b (doer re-instruction)
+   - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user
+     decides continue or abort
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
 
-### Key: TMUX Sessions Stay Alive Across Iterations
+### Key: Both Sessions Alive, One Active
 
-On `needs_iteration`, no TMUX sessions are killed. The executor creates a **fresh**
-`CompletableDeferred`, re-registers the `SessionEntry` (same HandshakeGuid, new deferred),
-assembles new instructions via `SubPartInstructionProvider`, and sends via TMUX `send-keys`
-to the **existing** session. Same pattern for resuming the reviewer.
+**Both TMUX sessions stay alive for the entire part lifecycle.** When the doer is working,
+the reviewer's TMUX session is alive but idle — waiting for the executor to send new
+instructions after the doer completes. When the reviewer is working, the doer's session is
+alive but idle — waiting in case the reviewer signals `needs_iteration`.
+
+The executor is the **sole coordinator**: it waits for `done` from the active agent, then
+sends instructions to the other agent. No direct agent-to-agent communication. The flow is
+always: executor → doer → executor → reviewer → executor → (loop or complete).
+
+Sessions are killed only when the **part** completes (`removeAllForPart`), not between
+iterations or between doer↔reviewer transitions. This matches the Hard Constraint: one
+TMUX session per sub-part, kept alive across iterations.
+
+### Re-Instruction Pattern
+
+On iteration > 1, both agents already have live TMUX sessions. The executor does NOT
+kill/respawn — it:
+1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
+2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
+3. Assembles new instructions via `SubPartInstructionProvider`
+4. Sends instruction file path via TMUX `send-keys` to the existing session
+
+This pattern is identical for both doer and reviewer re-instruction.
+
+### Idle Session Death — send-keys Failure
+
+When the executor sends instructions to an idle session via TMUX `send-keys`, the session
+may have died while idle (e.g., TMUX killed externally, OOM, terminal crash). This is not
+expected in normal operation but must be handled.
+
+**V1 behavior**: If `send-keys` fails (after retry — transient TMUX errors are retried),
+the executor logs an **ERROR** with the session name, HandshakeGuid, and the `send-keys`
+failure details, then returns `PartResult.AgentCrashed` with a message indicating which
+sub-part's idle session died. `TicketShepherd` delegates to `FailedToExecutePlanUseCase`
+(red error, halt — waits for human intervention).
+
+No automatic respawn in V1. See `doc_v2/idle-session-recovery.md` for V2 design
+(automatic respawn of the dead idle session with `--resume`).
 
 ### Git Commits During Execution
 

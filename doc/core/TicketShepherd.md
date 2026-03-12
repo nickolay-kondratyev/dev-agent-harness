@@ -13,9 +13,16 @@ creates executors for each part, runs them in sequence, and handles the results.
 3. If `SetupPlanResult.NeedsPlanning`:
    a. `activeExecutor` = planning executor (a `DoerReviewerPartExecutor`
       ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER)
-   b. `planningExecutor.execute()` — runs the planning iteration loop
-   c. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
-   d. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
+   b. `planningExecutor.execute()` → `PartResult`
+   c. Handle `PartResult` — **same logic as execution parts** (step 4d):
+      - `Completed` → proceed to 3d
+      - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
+        delegate to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
+        Planning failures are rare (plan validated via `/callback-shepherd/validate-plan`
+        ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E before agents signal done). When they happen,
+        the human is the right handler — no special recovery logic.
+   d. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
+   e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
 4. For each execution Part:
    a. Create `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
       - 2 sub-parts → `DoerReviewerPartExecutor`
@@ -33,7 +40,23 @@ creates executors for each part, runs them in sequence, and handles the results.
 `FailedToExecutePlanUseCase` receives the full `PartResult` sealed class (not just a reason
 string). This allows formatting different error messages per failure type and gives V2 the
 type information needed for different cleanup strategies.
-5. On all parts completed → workflow done
+5. On all parts completed — **workflow success**:
+   a. **Final commit** — `GitCommitStrategy.onSubPartDone` was already called for the last
+      sub-part, but the shepherd performs one final `git add -A && git commit` to capture
+      any remaining state (e.g., final `current_state.json` updates). Skipped if working
+      tree is clean (no changes since last commit).
+   b. **Update ticket status** — set ticket `status` to `done` in the ticket file's YAML
+      frontmatter.
+   c. **Kill all TMUX sessions** — defensive cleanup. All parts already called
+      `removeAllForPart`, so normally none remain. This catches any leaked sessions.
+   d. **Clean up temp files** — delete `$HOME/.shepherd_agent_harness/tmp/agent_comm/${git_branch}/`
+      (instruction files sent to agents). In-repo `.ai_out/` files are permanent and
+      git-tracked — not cleaned up.
+   e. **Print success message in green** — e.g., `"Workflow completed successfully for
+      ticket {TICKET_ID}."`
+   f. **Exit code 0**
+   g. **Does NOT push the branch** — pushing is the caller's responsibility, same as
+      marking the ticket `in_progress` before `shepherd run`.
 
 ## Fields
 

@@ -82,11 +82,21 @@ a state machine pattern.
 
 ## FailedToExecutePlanUseCase Detail
 
-When plan execution hits blocking issues (agent calls `/callback-shepherd/fail-workflow`):
+When plan execution hits a blocking failure (`FailedWorkflow`, `AgentCrashed`, or
+`FailedToConverge` where the user chose to abort):
 
-1. **Print the failure reason in red** to the console
-2. **Halt** the harness process
-3. Wait for human intervention
+1. **Print the failure reason in red** to the console — formatted per `PartResult` variant
+   (the use case receives the full sealed class, not just a string)
+2. **Leave all TMUX sessions alive** — for human inspection. The human can `tmux attach`
+   to review agent state, conversation history, or partially completed work.
+3. **Block on stdin** — the harness prints a message like
+   `"Workflow halted. Press Enter to shut down, or Ctrl+C to use the interrupt protocol."`
+   and blocks reading stdin. This keeps the process alive (TMUX sessions stay alive as
+   children of the process) without consuming resources.
+4. **On Enter** → harness kills all TMUX sessions, exits with **non-zero exit code**
+5. **Ctrl+C interrupt protocol still applies** — the two-layer flow
+   (ref.ap.P3po8Obvcjw4IXsSUSU91.E) works during the stdin block, giving the human the
+   option to interrupt agents or kill sessions selectively before the full shutdown.
 
 No automated cleanup, no agent spawning, no git rollback. The human reviews the state and
 decides what to do. V2 will add automated cleanup — see `doc_v2/FailedToExecutePlanUseCaseV2.md`.
