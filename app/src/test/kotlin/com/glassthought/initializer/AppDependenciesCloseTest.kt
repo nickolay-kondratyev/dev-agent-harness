@@ -1,8 +1,8 @@
 package com.glassthought.initializer
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.initializer.data.ShepherdContext
-import com.glassthought.ticketShepherd.core.initializer.ContextInitializer
+import com.glassthought.shepherd.core.initializer.data.ShepherdContext
+import com.glassthought.shepherd.core.initializer.ContextInitializer
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.runBlocking
 import okhttp3.OkHttpClient

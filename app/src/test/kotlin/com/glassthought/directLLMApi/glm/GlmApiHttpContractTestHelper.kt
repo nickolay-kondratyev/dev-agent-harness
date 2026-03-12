@@ -2,8 +2,8 @@ package com.glassthought.directLLMApi.glm
 
 import com.asgard.core.out.OutFactory
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.ChatRequest
-import com.glassthought.ticketShepherd.core.supporting.directLLMApi.DirectLLM
+import com.glassthought.shepherd.core.supporting.directLLMApi.ChatRequest
+import com.glassthought.shepherd.core.supporting.directLLMApi.DirectLLM
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
