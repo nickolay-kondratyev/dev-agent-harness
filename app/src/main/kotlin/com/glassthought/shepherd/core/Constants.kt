@@ -7,9 +7,6 @@ object Constants {
      *  Used by [ClaudeCodeAgentSessionIdResolver] to scan for HandshakeGuid matches. */
     fun defaultProjectsDir(): java.nio.file.Path =
       java.nio.file.Path.of(System.getProperty("user.home"), ".claude", "projects")
-
-    /** Default Claude Code model used for agent spawning and session ID resolution. */
-    const val DEFAULT_MODEL = "sonnet"
   }
 
   /** Model identifiers as sent to the provider's API (wire format). */

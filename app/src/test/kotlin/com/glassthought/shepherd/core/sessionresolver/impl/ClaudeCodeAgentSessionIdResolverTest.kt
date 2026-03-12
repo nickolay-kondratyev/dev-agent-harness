@@ -33,10 +33,9 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                         )
 
-                        val result = resolver.resolveSessionId(guid)
+                        val result = resolver.resolveSessionId(guid, TEST_MODEL)
 
                         result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
@@ -56,12 +55,11 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            resolver.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid, TEST_MODEL)
                         }
                     }
                 }
@@ -75,12 +73,11 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
-                            resolver.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid, TEST_MODEL)
                         }
                         exception.message shouldContain guid.value
                     }
@@ -102,11 +99,10 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            resolver.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid, TEST_MODEL)
                         }
                     }
                 }
@@ -123,11 +119,10 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
-                            resolver.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid, TEST_MODEL)
                         }
                         exception.message shouldContain "Ambiguous"
                     }
@@ -150,10 +145,9 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                         )
 
-                        val result = resolver.resolveSessionId(guid)
+                        val result = resolver.resolveSessionId(guid, TEST_MODEL)
 
                         result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, sessionId, TEST_MODEL)
                     }
@@ -175,12 +169,11 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                         val resolver = ClaudeCodeAgentSessionIdResolver(
                           claudeProjectsDir = tempDir,
                           outFactory = outFactory,
-                          model = TEST_MODEL,
                           resolveTimeoutMs = 600L,
                         )
 
                         shouldThrow<IllegalStateException> {
-                            resolver.resolveSessionId(guid)
+                            resolver.resolveSessionId(guid, TEST_MODEL)
                         }
                     }
                 }
@@ -203,11 +196,10 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
-                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
-                    val result = resolver.resolveSessionId(guid)
+                    val result = resolver.resolveSessionId(guid, TEST_MODEL)
 
                     result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, "abc-session-id-123", TEST_MODEL)
                 }
@@ -221,11 +213,10 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
-                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
-                    resolver.resolveSessionId(guid)
+                    resolver.resolveSessionId(guid, TEST_MODEL)
 
                     fakeScanner.callCount shouldBe 2
                 }
@@ -243,11 +234,10 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
-                      model = TEST_MODEL,
                       pollIntervalMs = 1L,
                     )
 
-                    resolver.resolveSessionId(guid)
+                    resolver.resolveSessionId(guid, TEST_MODEL)
 
                     fakeScanner.callCount shouldBe 4
                 }
@@ -265,13 +255,12 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
-                      model = TEST_MODEL,
                       resolveTimeoutMs = 100L,
                       pollIntervalMs = 10L,
                     )
 
                     shouldThrow<IllegalStateException> {
-                        resolver.resolveSessionId(guid)
+                        resolver.resolveSessionId(guid, TEST_MODEL)
                     }
                 }
 
@@ -284,13 +273,12 @@ class ClaudeCodeAgentSessionIdResolverTest : AsgardDescribeSpec({
                     val resolver = ClaudeCodeAgentSessionIdResolver(
                       guidScanner = fakeScanner,
                       outFactory = outFactory,
-                      model = TEST_MODEL,
                       resolveTimeoutMs = 100L,
                       pollIntervalMs = 10L,
                     )
 
                     val exception = shouldThrow<IllegalStateException> {
-                        resolver.resolveSessionId(guid)
+                        resolver.resolveSessionId(guid, TEST_MODEL)
                     }
                     exception.message shouldContain guid.value
                 }

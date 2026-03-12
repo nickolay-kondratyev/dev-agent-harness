@@ -25,8 +25,5 @@ interface DirectLLM {
 /** Fast, low-cost tasks (title compression, branch name slugification). V1: GLM-4.7-Flash. */
 interface DirectQuickCheapLLM : DirectLLM
 
-/** Mid-tier tasks. Reserved — no V1 callers yet. */
-interface DirectMediumLLM : DirectLLM
-
 /** Expensive tasks (FailedToConvergeUseCase state summarization). V1: GLM-5. */
 interface DirectBudgetHighLLM : DirectLLM

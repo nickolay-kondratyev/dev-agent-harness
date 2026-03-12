@@ -1,5 +1,6 @@
 package com.glassthought.bucket
 
+import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
@@ -33,7 +34,7 @@ class TmuxSessionManagerIntegTest : SharedContextDescribeSpec({
         describe("WHEN session is created") {
             it("THEN exists() returns true") {
                 val sessionName = "test-exists-${System.currentTimeMillis()}"
-                val session = sessionManager.createSession(sessionName, "bash")
+                val session = sessionManager.createSession(sessionName, TmuxStartCommand("bash"))
                 createdSessions.add(session)
 
                 session.exists() shouldBe true
@@ -44,7 +45,7 @@ class TmuxSessionManagerIntegTest : SharedContextDescribeSpec({
             it("THEN exists() returns false") {
                 val sessionName = "test-kill-${System.currentTimeMillis()}"
                 // Do NOT add to createdSessions since we kill it explicitly.
-                val session = sessionManager.createSession(sessionName, "bash")
+                val session = sessionManager.createSession(sessionName, TmuxStartCommand("bash"))
                 sessionManager.killSession(session)
 
                 session.exists() shouldBe false

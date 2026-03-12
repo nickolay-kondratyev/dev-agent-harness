@@ -139,7 +139,6 @@ class ContextInitializerImpl : ContextInitializer {
       sessionIdResolver = ClaudeCodeAgentSessionIdResolver(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
-        model = Constants.CLAUDE_CODE.DEFAULT_MODEL,
       ),
     )
 

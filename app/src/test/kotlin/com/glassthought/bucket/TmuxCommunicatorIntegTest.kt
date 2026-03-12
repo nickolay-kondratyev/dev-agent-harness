@@ -1,6 +1,7 @@
 package com.glassthought.bucket
 
 import com.asgard.testTools.awaitility.AsgardAwaitility
+import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.integtest.SharedContextDescribeSpec
 import io.kotest.common.ExperimentalKotest
@@ -43,7 +44,7 @@ class TmuxCommunicatorIntegTest : SharedContextDescribeSpec({
                 outputFile.parentFile.mkdirs()
                 createdFiles.add(outputFile)
 
-                val session = sessionManager.createSession(sessionName, "bash")
+                val session = sessionManager.createSession(sessionName, TmuxStartCommand("bash"))
                 createdSessions.add(session)
 
                 session.sendKeys("echo hello > ${outputFile.absolutePath}")

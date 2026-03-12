@@ -63,8 +63,6 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
  *
  * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
  * @param outFactory Factory for structured logging.
- * @param model The model string used when spawning the agent (e.g. "sonnet"). Stored in
- *   [ResumableAgentSessionId] so the resume command can pass `--model <model>`.
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
  *
@@ -73,7 +71,6 @@ private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidS
 class ClaudeCodeAgentSessionIdResolver(
     claudeProjectsDir: Path,
     outFactory: OutFactory,
-    private val model: String,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
 ) : AgentSessionIdResolver {
@@ -82,13 +79,11 @@ class ClaudeCodeAgentSessionIdResolver(
     constructor(
         guidScanner: GuidScanner,
         outFactory: OutFactory,
-        model: String,
         resolveTimeoutMs: Long = 45_000L,
         pollIntervalMs: Long = 500L,
     ) : this(
         claudeProjectsDir = PLACEHOLDER_PATH,
         outFactory = outFactory,
-        model = model,
         resolveTimeoutMs = resolveTimeoutMs,
         pollIntervalMs = pollIntervalMs,
     ) {
@@ -100,7 +95,7 @@ class ClaudeCodeAgentSessionIdResolver(
     // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
     private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir)
 
-    override suspend fun resolveSessionId(guid: HandshakeGuid): ResumableAgentSessionId {
+    override suspend fun resolveSessionId(guid: HandshakeGuid, model: String): ResumableAgentSessionId {
         out.info(
             "resolving_session_id_with_polling",
             Val(guid.value, ValType.STRING_USER_AGNOSTIC),

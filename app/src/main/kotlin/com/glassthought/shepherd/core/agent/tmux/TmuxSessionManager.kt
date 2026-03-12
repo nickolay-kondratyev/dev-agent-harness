@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.agent.tmux
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
 
@@ -23,21 +24,21 @@ class TmuxSessionManager(
      * Creates a new detached tmux session running the specified command.
      *
      * @param sessionName Unique name for the tmux session.
-     * @param command The command to run inside the tmux session.
+     * @param startCommand The typed command to run inside the tmux session.
      * @return A [TmuxSession] representing the created session.
      * @throws IllegalStateException if tmux fails to create the session.
      */
-    suspend fun createSession(sessionName: String, command: String): TmuxSession {
+    suspend fun createSession(sessionName: String, startCommand: TmuxStartCommand): TmuxSession {
         out.info(
             "creating_tmux_session",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
-            Val(command, ValType.SHELL_COMMAND),
+            Val(startCommand.command, ValType.SHELL_COMMAND),
         )
 
-        val exitCode = commandRunner.run("new-session", "-d", "-s", sessionName, command)
+        val exitCode = commandRunner.run("new-session", "-d", "-s", sessionName, startCommand.command)
         if (exitCode != 0) {
             throw IllegalStateException(
-                "Failed to create tmux session [${sessionName}] with command [${command}]. Exit code: [${exitCode}]"
+                "Failed to create tmux session [${sessionName}] with command [${startCommand.command}]. Exit code: [${exitCode}]"
             )
         }
 
