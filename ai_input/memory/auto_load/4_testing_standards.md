@@ -1,7 +1,8 @@
 ## Testing Standards
 - **MAINLY LEAN ON UNIT TESTS**
-  - Have select little integration, especially be careful with integration tests that invoke real coding agents.
-
+  - Have select integration tests, especially be careful with integration tests that invoke real coding agents.
+  - When you develop with new real dependencies make sure to create **TEMPORARY** integration temporary tests to run the real dependencies to **UNDERSTAND** how they work, and be able to create mocks and fakes for them. 
+    - Look for opportunities to create re-usable **FAKES** for real dependencies that can be used in unit tests to keep tests running **FAST**
 
 ### Framework & Style
 - **BDD with GIVEN/WHEN/THEN** using Kotest `DescribeSpec`.
