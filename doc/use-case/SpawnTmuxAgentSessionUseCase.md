@@ -32,7 +32,7 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 ## Session Schema in current_state.json
 
-Session records follow the [Session Record Schema](../schema/plan-and-current-state.md#session-record-schema--apmwzgc1hykvwu3ijqbtew4e) (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E) — the canonical definition for `sessionIds` entries including `handshake_guid`, `agent_session_id`, `agentType`, `model`, and `timestamp`.
+Session records follow the [Session Record Schema](../schema/plan-and-current-state.md#session-record-schema--apmwzgc1hykvwu3ijqbtew4e) (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E) — the canonical definition for `sessionIds` entries including `handshakeGuid`, `agentSessionId`, `agentType`, `model`, and `timestamp`.
 
 The last element in the `sessionIds` array is the current session. Session history is tracked
 for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).

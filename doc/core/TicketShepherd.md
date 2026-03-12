@@ -14,7 +14,8 @@ creates executors for each part, runs them in sequence, and handles the results.
    a. `activeExecutor` = planning executor (a `DoerReviewerPartExecutor`
       ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER)
    b. `planningExecutor.execute()` — runs the planning iteration loop
-   c. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
+   c. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
+   d. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
 4. For each execution Part:
    a. Create `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
       - 2 sub-parts → `DoerReviewerPartExecutor`

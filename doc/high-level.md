@@ -170,7 +170,7 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
 2. Presents summary to user with the iteration history
 3. User decides:
    - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (sends new instructions via TMUX `send-keys`).
-   - **Abort**: triggers `FailedToExecutePlanUseCase` (prints red error, halts)
+   - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
 

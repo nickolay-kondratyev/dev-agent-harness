@@ -117,9 +117,9 @@ static workflow JSON (no `plan.json` involved).
           "status": "COMPLETED",
           "sessionIds": [
             {
-              "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-              "agent_session_id": "77d5b7ea-cf04-453b-8867-162404763e18",
-              "agent_session_path": null,
+              "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+              "agentSessionId": "77d5b7ea-cf04-453b-8867-162404763e18",
+              "agentSessionPath": null,
               "agentType": "ClaudeCode",
               "model": "sonnet",
               "timestamp": "2026-03-10T15:30:00Z"
@@ -134,9 +134,9 @@ static workflow JSON (no `plan.json` involved).
           "iteration": { "max": 3, "current": 1 },
           "sessionIds": [
             {
-              "handshake_guid": "handshake.b2c3d4e5-f6a7-8901-bcde-f12345678901",
-              "agent_session_id": "88e6c8fb-df15-564c-9978-273515874f29",
-              "agent_session_path": null,
+              "handshakeGuid": "handshake.b2c3d4e5-f6a7-8901-bcde-f12345678901",
+              "agentSessionId": "88e6c8fb-df15-564c-9978-273515874f29",
+              "agentSessionPath": null,
               "agentType": "ClaudeCode",
               "model": "sonnet",
               "timestamp": "2026-03-10T15:45:00Z"
@@ -271,17 +271,17 @@ created. The last element is the current session. Each entry follows the
   "status": "IN_PROGRESS",
   "sessionIds": [
     {
-      "handshake_guid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "agent_session_id": "77d5b7ea-cf04-453b-8867-162404763e18",
-      "agent_session_path": null,
+      "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agentSessionId": "77d5b7ea-cf04-453b-8867-162404763e18",
+      "agentSessionPath": null,
       "agentType": "ClaudeCode",
       "model": "sonnet",
       "timestamp": "2026-03-10T15:30:00Z"
     },
     {
-      "handshake_guid": "handshake.f9e8d7c6-b5a4-3210-fedc-ba9876543210",
-      "agent_session_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "agent_session_path": null,
+      "handshakeGuid": "handshake.f9e8d7c6-b5a4-3210-fedc-ba9876543210",
+      "agentSessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "agentSessionPath": null,
       "agentType": "ClaudeCode",
       "model": "sonnet",
       "timestamp": "2026-03-10T16:45:00Z"
@@ -298,16 +298,16 @@ Each entry in the `sessionIds` array has the following structure:
 
 | Field | Required | Description |
 |-------|----------|-------------|
-| `handshake_guid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
-| `agent_session_id` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). Null when `agent_session_path` is used instead. |
-| `agent_session_path` | no | Alternative to `agent_session_id` for agents that use paths (e.g., PI). Null when not applicable. |
+| `handshakeGuid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
+| `agentSessionId` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). Null when `agentSessionPath` is used instead. |
+| `agentSessionPath` | no | Alternative to `agentSessionId` for agents that use paths (e.g., PI). Null when not applicable. |
 | `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
 | `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). Required for V2 resume — cannot resume a session started with one model using a different model (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `timestamp` | yes | ISO-8601 timestamp of session creation. |
 
-**Exactly one** of `agent_session_id` or `agent_session_path` must be non-null.
+**Exactly one** of `agentSessionId` or `agentSessionPath` must be non-null.
 The last element in the `sessionIds` array is the current session. V2 resume
-(ref.ap.LX1GCIjv6LgmM7AJFas20.E) uses `agent_session_id` (or `agent_session_path`) plus `model`
+(ref.ap.LX1GCIjv6LgmM7AJFas20.E) uses `agentSessionId` (or `agentSessionPath`) plus `model`
 from this entry for `--resume` invocation.
 
 ### Sub-Parts Without Iteration

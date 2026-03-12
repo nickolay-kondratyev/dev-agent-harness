@@ -76,11 +76,12 @@ Concatenation order:
 | 2 | **Ticket** | The ticket markdown file | |
 | 3 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
 | 4 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E |
-| 5 | **plan.json output path** | `harness_private/plan.json` | |
-| 6 | **PLAN.md output path** | `shared/plan/PLAN.md` | Human-readable plan |
-| 7 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
-| 8 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 9 | **Callback script usage** | Same as execution agent | |
+| 5 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
+| 6 | **plan.json output path** | `harness_private/plan.json` | |
+| 7 | **PLAN.md output path** | `shared/plan/PLAN.md` | Human-readable plan |
+| 8 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
+| 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 10 | **Callback script usage** | Same as execution agent | |
 
 ### Plan Reviewer
 

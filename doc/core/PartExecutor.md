@@ -167,7 +167,10 @@ Handles parts with two sub-parts (doer + reviewer). Implements the full iteratio
       - Assemble new doer instructions (with reviewer feedback path)
       - Send via TMUX send-keys to EXISTING doer session
       - Suspend on doer deferred → on Done(COMPLETED) → resume reviewer (same pattern)
-   c. If exceeds budget → delegate to FailedToConvergeUseCase → return PartResult.FailedToConverge
+   c. If exceeds budget:
+      - Delegate to FailedToConvergeUseCase (summarizes state via BudgetHigh DirectLLM, asks user)
+      - If user grants more iterations → bump iteration.max by granted amount, go to 9b (continue loop)
+      - If user aborts → return PartResult.FailedToConverge
 10. On FailWorkflow → return PartResult.FailedWorkflow
 11. On Crashed → return PartResult.AgentCrashed
 ```

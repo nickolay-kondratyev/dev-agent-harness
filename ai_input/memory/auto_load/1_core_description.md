@@ -51,7 +51,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 - `callback_shepherd.fail-workflow.sh "<reason>"`
 - `callback_shepherd.ping-ack.sh`
 
-**CodeAgent abstraction**: `CodeAgent.run(instructionFile, workingDir, publicOutputFile) -> AgentResult`. Instructions are Markdown files. `ClaudeCodeAgent` is the V1 implementation.
+**Agent spawning**: `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) orchestrates agent spawning in TMUX sessions, HandshakeGuid identity, and session ID resolution. `ClaudeCodeAgent`-specific logic encapsulated there. Instructions are Markdown files sent via TMUX `send-keys`.
 
 **Context assembly**: `ContextForAgentProvider` interface (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) assembles context packages — agent instruction files (role definition + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage), planner instructions (ticket + role catalog).
 
@@ -65,7 +65,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Progress tracking**: `current_state.json` tracks workflow progress. Resume-on-restart is V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
-**File structure**: `.ai_out/${git_branch}/` with `harness_private/`, `shared/`, `planning/`, `phases/` subdirectories.
+**File structure**: `.ai_out/${git_branch}/` with `harness_private/`, `shared/`, `planning/`, `execution/` subdirectories.
 
 **Git branching**: Derived from ticket. `{TICKET_ID}__{slugified_title}__try-{N}` (`__` delimiter). try-N resolved by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — dual check: scans both local branches and `.ai_out/` directories, picks first N where neither exists.
 
