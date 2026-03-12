@@ -39,8 +39,10 @@ sealed class PartResult {
 }
 ```
 
-`TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and delegates to
-the appropriate use case (`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`, etc.).
+`TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly
+(`FailedToExecutePlanUseCase` for workflow/convergence failures, recovery for crashes).
+Note: `FailedToConvergeUseCase` runs inside the executor (see DoerReviewerPartExecutor step 9c),
+not in TicketShepherd.
 
 ---
 

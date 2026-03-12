@@ -129,10 +129,10 @@ Timeout + ping mechanism to detect crashed/hung agents.
 
 ### Flow
 
-1. **No callback timeout** (default: 30 min): If no `/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, or `/callback-shepherd/user-question` within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`
+1. **No activity timeout** (default: 30 min): If no callback of any kind (`/callback-shepherd/done`, `/callback-shepherd/fail-workflow`, `/callback-shepherd/user-question`, or `/callback-shepherd/ping-ack`) within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Uses `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — any callback resets the timer.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.ping-ack.sh`
 3. **Ping timeout** (default: 3 min): If no `/callback-shepherd/ping-ack` reply → triggers `NoReplyToPingUseCase`
-4. **Crash handling**: Kill TMUX session → start a **new** agent session for the same sub-part (no `--resume` in V1; see [`doc_v2/resume.md`](../doc_v2/resume.md) ref.ap.LX1GCIjv6LgmM7AJFas20.E)
+4. **Crash handling**: `NoReplyToPingUseCase` kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` creates a new executor for the same part (no `--resume` in V1; see [`doc_v2/resume.md`](../doc_v2/resume.md) ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 
 ### UseCase Classes
 
@@ -140,8 +140,8 @@ Each distinct state/scenario is encapsulated in its own `UseCase` class:
 
 | UseCase | Trigger | Action |
 |---|---|---|
-| `NoStatusCallbackTimeOutUseCase` | No callback after X min | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX, start new agent session for the sub-part |
+| `NoStatusCallbackTimeOutUseCase` | No activity (any callback) after X min — based on `lastActivityTimestamp` | Ping agent via TMUX send-keys |
+| `NoReplyToPingUseCase` | No `/callback-shepherd/ping-ack` reply after Y min | Mark as CRASHED, kill TMUX session, complete `signalDeferred` with `AgentSignal.Crashed`. Executor returns `PartResult.AgentCrashed` → `TicketShepherd` handles recovery (new executor for same part) or abort. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md) for V2 automated cleanup. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM, present to user, user decides whether to grant more iterations |
 

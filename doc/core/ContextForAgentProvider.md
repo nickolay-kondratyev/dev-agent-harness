@@ -93,7 +93,9 @@ Concatenation order:
 | 4 | **PLAN.md content** | Read from `shared/plan/PLAN.md` | |
 | 5 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale |
 | 6 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
-| 7 | **Callback script usage** | Same as execution agent | |
+| 7 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/PUBLIC.md` — tells the reviewer where to write its output |
+| 8 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 9 | **Callback script usage** | Same as execution agent | |
 
 ---
 
