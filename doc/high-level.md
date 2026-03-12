@@ -202,13 +202,9 @@ attribution), and all env var requirements are fully specified in
 
 ## Harness-Level Resume — V2
 
-`current_state.json` tracks which part/sub-part the workflow is currently in, plus session IDs.
-V1 writes this file for progress tracking but does **not** consume it on restart — if the harness
-dies, you start over.
-
-See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for the V2 layered
-resume design (Layer 1: agent session resume with handshake verification, Layer 2: new agent session
-for in-progress sub-part).
+V1 does **not** support resume-on-restart — if the harness dies, you start over.
+`current_state.json` is written for progress tracking but not consumed on restart.
+V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 

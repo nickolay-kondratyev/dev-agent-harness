@@ -279,16 +279,14 @@ Each entry in the `sessionIds` array has the following structure:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `handshakeGuid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
-| `agentSessionId` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). Null when `agentSessionPath` is used instead. |
+| `agentSessionId` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Null when `agentSessionPath` is used instead. Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `agentSessionPath` | no | Alternative to `agentSessionId` for agents that use paths (e.g., PI). Null when not applicable. |
 | `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
-| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). Required for V2 resume — cannot resume a session started with one model using a different model (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
+| `model` | yes | The model used for this session (e.g., `"sonnet"`, `"glm-4.7-flash"`). |
 | `timestamp` | yes | ISO-8601 timestamp of session creation. |
 
 **Exactly one** of `agentSessionId` or `agentSessionPath` must be non-null.
-The last element in the `sessionIds` array is the current session. V2 resume
-(ref.ap.LX1GCIjv6LgmM7AJFas20.E) uses `agentSessionId` (or `agentSessionPath`) plus `model`
-from this entry for `--resume` invocation.
+The last element in the `sessionIds` array is the current session.
 
 ### Sub-Parts Without Iteration
 

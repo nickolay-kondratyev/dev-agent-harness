@@ -71,10 +71,8 @@ the TMUX message.
 ## Agent Crash Recovery (V1)
 
 When `NoReplyToPingUseCase` detects an agent crash, the harness starts a **new** agent session
-for the same sub-part (full spawn flow above). No `--resume` attempt in V1.
-
-See [`doc_v2/resume.md`](../../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 layered
-resume with agent session `--resume` and handshake verification.
+for the same sub-part (full spawn flow above). No `--resume` attempt in V1
+(V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
