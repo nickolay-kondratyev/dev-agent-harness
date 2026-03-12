@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-12T23:16:18Z
 id: nid_g3z2de5zpq5dz608l9c651tam_E
 title: "Fix resource leak in CallGLMApiSandboxMain - AppDependencies not closed"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T14:49:30Z
-status_updated_iso: 2026-03-11T14:49:30Z
+status_updated_iso: 2026-03-12T23:16:18Z
 type: chore
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev

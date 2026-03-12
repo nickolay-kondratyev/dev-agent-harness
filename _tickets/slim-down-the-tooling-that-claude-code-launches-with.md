@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-12T23:16:18Z
 id: nid_q4zk8eitl71hvou4svsud51dr_E
 title: "Slim down the tooling that claude code launches with"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-09T18:00:42Z
-status_updated_iso: 2026-03-09T18:00:42Z
+status_updated_iso: 2026-03-12T23:16:18Z
 type: task
 priority: 3
 assignee: nickolaykondratyev

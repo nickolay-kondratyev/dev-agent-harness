@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-12T23:16:18Z
 id: nid_q9l4ynk99ifr89sejxeagp36l_E
 title: "Update WorkflowParser to align with new parts/sub-parts schema"
-status: open
+status: closed
 deps: [nid_0vxob9hefy36mx7ughy93qw8i_E]
 links: []
 created_iso: 2026-03-11T01:39:19Z
-status_updated_iso: 2026-03-11T01:39:19Z
+status_updated_iso: 2026-03-12T23:16:18Z
 type: task
 priority: 2
 assignee: nickolaykondratyev

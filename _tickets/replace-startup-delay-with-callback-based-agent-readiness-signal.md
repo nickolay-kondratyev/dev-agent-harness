@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-12T23:16:18Z
 id: nid_827accci9acm2e320fvtddk13_E
 title: "Replace startup delay with callback-based agent readiness signal"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-11T01:26:52Z
-status_updated_iso: 2026-03-11T01:26:52Z
+status_updated_iso: 2026-03-12T23:16:18Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev

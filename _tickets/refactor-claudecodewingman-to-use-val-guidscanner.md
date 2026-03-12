@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-12T23:16:18Z
 id: nid_zt03ntko0lyz93yhhtob9sa0p_E
 title: "Refactor ClaudeCodeWingman to use val guidScanner"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-10T23:30:12Z
-status_updated_iso: 2026-03-10T23:30:12Z
+status_updated_iso: 2026-03-12T23:16:18Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
