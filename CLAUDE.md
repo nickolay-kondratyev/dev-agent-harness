@@ -70,7 +70,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Session tracking**: `AgentSessionIdResolver` interface (`ClaudeCodeAgentSessionIdResolver` impl) — GUID handshake to discover Claude Code session IDs.
 
-**DirectLLM — tier-scoped interfaces**: `DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM` — all extend `DirectLLM`. Callers depend on the tier interface; `Initializer` wires concrete implementations. V1: `DirectQuickCheapLLM` → GLM-4.7-Flash, `DirectBudgetHighLLM` → GLM-5 (both Z.AI/GLM). **Not used for iteration decisions** — the reviewer's verdict is authoritative.
+**DirectLLM — tier-scoped interfaces** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E): `DirectQuickCheapLLM`, `DirectMediumLLM`, `DirectBudgetHighLLM` — all extend `DirectLLM`. Callers depend on the tier interface; `Initializer` wires concrete implementations. V1: `DirectQuickCheapLLM` → GLM-4.7-Flash, `DirectBudgetHighLLM` → GLM-5 (both Z.AI/GLM). **Not used for iteration decisions** — the reviewer's verdict is authoritative.
 
 **Server endpoints (V1)** (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E):
 - `POST /callback-shepherd/done` — task complete with required `result` field (`completed` for doers, `pass`/`needs_iteration` for reviewers). Server validates result against sub-part role.
@@ -93,7 +93,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **Agent lifecycle**: TMUX session created → agent started → AgentSessionIdResolver GUID handshake → instruction file sent via `send-keys` → agent works (may call user-question) → agent calls `callback_shepherd.done.sh <result>` → harness reads result, proceeds accordingly.
 
-**Health monitoring**: Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class — stateless, single-responsibility operations that the shepherd delegates to.
+**Health monitoring** (ref.ap.RJWVLgUGjO5zAwupNLhA0.E): Timeout → ping via TMUX → crash detection. UseCase pattern (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context), encapsulate it in a dedicated UseCase class — stateless, single-responsibility operations that the shepherd delegates to.
 
 **Plan mutability**: Frozen during execution. Minor adjustments within a part OK. Major deviations → agent calls `callback_shepherd.fail-workflow.sh` → `FailedToExecutePlanUseCase` prints red error to console and halts — waits for human intervention. V2 will add automated cleanup (see `doc_v2/FailedToExecutePlanUseCaseV2.md`).
 
@@ -101,7 +101,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 
 **File structure**: `.ai_out/${git_branch}/` with `harness_private/`, `shared/`, `planning/`, `execution/` subdirectories.
 
-**Git branching**: Derived from ticket. `{TICKET_ID}__{slugified_title}__try-{N}` (`__` delimiter). try-N resolved by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — dual check: scans both local branches and `.ai_out/` directories, picks first N where neither exists.
+**Git branching** (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E): Derived from ticket. `{TICKET_ID}__{slugified_title}__try-{N}` (`__` delimiter). try-N resolved by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — dual check: scans both local branches and `.ai_out/` directories, picks first N where neither exists.
 
 ### Dependencies
 - Will take dependencies on well established third-party libraries.
