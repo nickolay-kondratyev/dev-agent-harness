@@ -142,15 +142,39 @@ file controlled by the harness operator.
 
 ---
 
-### AgentSessionIdResolver
+### AgentSessionIdResolver — Interface, Not Implementation
 
-**Problem:** Claude Code doesn't expose its session ID to the agent itself.
+**Problem:** Claude Code does **not** expose its session ID to the agent from within its own
+context. There is no API, env var, or CLI flag that an agent running inside Claude Code can
+call to learn its own session ID. **This has been validated empirically** — it is a confirmed
+limitation, not a guess.
 
-**Solution:** `AgentSessionIdResolver` interface (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
-+ `ClaudeCodeAgentSessionIdResolver` implementation (ref.ap.gCgRdmWd9eTGXPbHJvyxI.E).
+Yet the harness needs the session ID for:
+- Persisting session records in `current_state.json` (inspectable, git-tracked)
+- V2 resume via `--resume <session_id>` (ref.ap.LX1GCIjv6LgmM7AJFas20.E)
+- Correlating TMUX sessions with agent artifacts for debugging
 
-The resolver polls `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
-string. The matching filename (minus `.jsonl` extension) is the session ID.
+**Solution:** `AgentSessionIdResolver` **interface** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
++ `ClaudeCodeAgentSessionIdResolver` **implementation** (ref.ap.gCgRdmWd9eTGXPbHJvyxI.E).
+
+#### Why an Interface
+
+`AgentSessionIdResolver` is an **interface by design** — not fragile coupling:
+
+1. **Different agent types have different session ID discovery mechanisms.** Claude Code uses
+   JSONL files; a future PI agent or other agent implementation will have entirely different
+   artifacts. The interface allows each `AgentType` to provide its own resolver without
+   modifying existing code (OCP).
+2. **Testability.** Unit tests inject a fake resolver — no filesystem scanning, no real
+   Claude Code sessions. The interface boundary is what makes `SpawnTmuxAgentSessionUseCase`
+   independently testable.
+3. **The resolver is NOT internal coupling** — it's the harness extracting externally observable
+   artifacts (JSONL files that Claude Code writes). The agent is unaware of the resolver.
+
+#### Resolution Mechanism (ClaudeCode)
+
+The `ClaudeCodeAgentSessionIdResolver` polls `$HOME/.claude/projects/.../*.jsonl` for files
+containing the GUID string. The matching filename (minus `.jsonl` extension) is the session ID.
 
 **Sequencing:** Resolution runs **after `/callback-shepherd/signal/started` is received** (step 6a
 in the spawn flow). At this point, the agent has already processed the bootstrap message
@@ -160,6 +184,26 @@ the race condition that existed when polling concurrently with agent startup.
 - Exactly one match required; zero (timeout) or multiple matches → `IllegalStateException`
 - Default timeout: 45 seconds, poll interval: 500ms (generous — resolution is typically
   instant since the GUID is already written by the time we poll)
+
+#### Integration Testing — ClaudeCodeAgentSessionIdResolver
+
+`ClaudeCodeAgentSessionIdResolver` **must** be validated by integration tests against a real
+Claude Code session. This confirms:
+
+- The JSONL file format assumption still holds (Claude Code could change it across versions)
+- GUID matching works end-to-end (env var → bootstrap message → JSONL write → scan → resolve)
+
+**Resource efficiency:** Session ID resolution testing should be part of a **broader
+integration test that spawns a single real agent session** and validates multiple concerns
+from that one session (e.g., bootstrap handshake, session ID resolution, callback protocol).
+Spawning a separate agent session just for resolver testing would be wasteful.
+
+#### Value of Session Recording
+
+Session IDs are recorded in `current_state.json` even in V1 (which does not support resume).
+This is intentional — recorded sessions are valuable for **post-hoc inspection**: debugging
+agent behavior, auditing what happened in a run, and correlating TMUX session output with
+agent artifacts. Resume is an additional (V2) benefit, not the only reason to record.
 ---
 
 ## Agent Crash Recovery (V1)

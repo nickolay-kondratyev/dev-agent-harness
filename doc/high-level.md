@@ -188,8 +188,16 @@ naming principle.
 
 ## Session ID Tracking — AgentSessionIdResolver
 
+Claude Code does **not** expose its session ID to the agent from within its own context
+(validated). The `AgentSessionIdResolver` **interface** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
+abstracts session ID discovery so each agent type can provide its own resolver
+(`ClaudeCodeAgentSessionIdResolver` scans JSONL files; future agent types will differ).
+Session IDs are recorded in `current_state.json` for **inspection and debugging** (V1)
+and **resume** (V2).
+
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for full details
-on HandshakeGuid, AgentSessionIdResolver, and session schema.
+on HandshakeGuid, AgentSessionIdResolver (interface rationale, integration testing guidance),
+and session schema.
 
 ---
 
@@ -324,7 +332,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
-| Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
+| Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
