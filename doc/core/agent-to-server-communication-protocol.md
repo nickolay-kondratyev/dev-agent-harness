@@ -224,21 +224,58 @@ returns 200). Applies to both signal and query endpoints.
 
 ### Idempotent Signal Callbacks
 
-If the server receives a `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`
-callback for a deferred that is **already completed** (e.g., agent calls `done` twice, or
-`done` after `fail-workflow`), `CompletableDeferred.complete()` returns `false`. The server:
+When the server receives a lifecycle signal (`done` or `fail-workflow`) for a deferred that is
+**already completed**, the behavior depends on **what signal arrives** — not just whether the
+deferred is completed.
+
+#### True Duplicates (same signal repeated, or `done` after `fail-workflow`)
+
+If the server receives a `/callback-shepherd/signal/done` for a deferred already completed
+with `Done`, or a `/callback-shepherd/signal/fail-workflow` for a deferred already completed
+with `FailWorkflow`, or a `/callback-shepherd/signal/done` for a deferred already completed
+with `FailWorkflow` — these are true duplicates or harmless late arrivals. The server:
 
 1. Returns **200** (fire-and-forget principle)
 2. Logs a **WARN** with the HandshakeGuid, received signal, and the fact that the deferred
    was already completed
 
-All WARN and above log messages are output to the **console** (via `OutFactory` `outConsumers`)
-in addition to structured logs, so operators see duplicate callbacks immediately.
-
 **This server-side idempotency enables safe client-side retry** — callback scripts can retry
 on transient failures (ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) without risk of double-completing a
 deferred or corrupting state. If the server processed the first request but the response was
 lost (causing a retry), the duplicate request simply returns 200 and logs a warning.
+
+#### Late `fail-workflow` After `done` — Emergency Halt / ap.Bm7kXwVn3pRtLfYdJ9cQz.E
+
+If the server receives `/callback-shepherd/signal/fail-workflow` for a deferred already
+completed with `Done`, this is **NOT a duplicate** — it is a **retraction**. The agent
+discovered a critical error after signaling completion. The workflow **MUST halt**.
+
+The server:
+
+1. Returns **200** (fire-and-forget — the agent has done its part by signaling)
+2. Logs an **ERROR** (not WARN) with the HandshakeGuid, the late `fail-workflow` reason,
+   and the fact that the deferred was previously completed with `Done`
+3. Records the late `fail-workflow` on `SessionsState` via `recordLateFailWorkflow(guid, reason)`
+   (ref.ap.7V6upjt21tOoCFXA7nqNh.E). This sets the `lateFailWorkflow` field on the
+   `SessionEntry`, which is checked by the executor and `TicketShepherd` at safe checkpoints.
+
+**Why this is different from a true duplicate:** A `done` followed by `fail-workflow` means the
+agent initially believed work was complete but then discovered it was not — the output may be
+corrupt, tests may be broken, or a critical invariant was violated. Silently proceeding with
+the `done` result would propagate the corruption through the rest of the workflow.
+
+**Halt propagation path:**
+1. Server records `lateFailWorkflow` on `SessionEntry`
+2. `PartExecutor` checks `lateFailWorkflow` at checkpoints
+   (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E — between doer→reviewer transition, between iterations)
+3. `TicketShepherd` checks `lateFailWorkflow` between parts
+   (ref.ap.P3po8Obvcjw4IXsSUSU91.E)
+4. On detection → `PartResult.FailedWorkflow(reason)` → `FailedToExecutePlanUseCase`
+   (red error, halt)
+
+All WARN and above log messages are output to the **console** (via `OutFactory` `outConsumers`)
+in addition to structured logs, so operators see duplicate callbacks and late fail-workflow
+signals immediately.
 
 ---
 

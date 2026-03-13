@@ -253,7 +253,9 @@ the executor to send it new instructions.
       fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
       deferred) → assemble new instructions (includes reviewer feedback) → send via TMUX
       `send-keys` to **existing** session → enter health-aware await loop
-2. **On doer COMPLETED** — start reviewer:
+2. **On doer COMPLETED** — **late fail-workflow checkpoint** (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E):
+   check `SessionsState.checkLateFailWorkflow(partName)`. If set → return
+   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → start reviewer:
    a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
       register `SessionEntry` → send instructions (includes doer's `PUBLIC.md`) → enter
       health-aware await loop
@@ -261,13 +263,30 @@ the executor to send it new instructions.
       create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
       new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
       send via TMUX `send-keys` to **existing** session → enter health-aware await loop
-3. **On reviewer PASS** → return `PartResult.Completed`
-4. **On reviewer NEEDS_ITERATION** → check budget:
+3. **On reviewer PASS** → **late fail-workflow checkpoint**: check
+   `SessionsState.checkLateFailWorkflow(partName)`. If set → return
+   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → return `PartResult.Completed`
+4. **On reviewer NEEDS_ITERATION** → **late fail-workflow checkpoint**: check
+   `SessionsState.checkLateFailWorkflow(partName)`. If set → return
+   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → check budget:
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
      go to step 1b (doer re-instruction)
    - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user
      decides continue or abort
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
+
+### Late Fail-Workflow Checkpoints
+
+The executor checks `SessionsState.checkLateFailWorkflow(partName)` at every transition
+point — after the doer completes, after the reviewer completes, and before each iteration
+restart. This catches the scenario where an agent signals `done` but then discovers a
+critical error and signals `fail-workflow` (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E). The server
+records the late `fail-workflow` on the `SessionEntry` because the `CompletableDeferred` is
+already completed with `Done`. The executor detects it at the next checkpoint and returns
+`PartResult.FailedWorkflow(reason)` — halting the workflow.
+
+Without these checkpoints, a late `fail-workflow` would be silently swallowed and the
+workflow would proceed with potentially corrupt output.
 
 ### Key: Both Sessions Alive, One Active
 

@@ -36,7 +36,11 @@ creates executors for each part, runs them in sequence, and handles the results.
    b. `activeExecutor` = executor
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
-      - `Completed` → kill TMUX sessions for part, `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
+      - `Completed` → **late fail-workflow checkpoint** (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E):
+        check `SessionsState.checkLateFailWorkflow(partName)` before proceeding. If set →
+        treat as `FailedWorkflow(lateFailWorkflow.reason)` and delegate to
+        `FailedToExecutePlanUseCase`. Otherwise → kill TMUX sessions for part,
+        `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention).
       - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase(partResult)` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
