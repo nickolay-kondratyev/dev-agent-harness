@@ -274,6 +274,32 @@ agent behavior, auditing what happened in a run, and correlating TMUX session ou
 agent artifacts. Resume is an additional (V2) benefit, not the only reason to record.
 ---
 
+## TMUX Session Creation Failure — Hard Fail
+
+If `tmux new-session` returns a non-zero exit code (e.g., tmux server limit reached, session
+name collision, permissions error), the harness treats this as an **immediate crash** —
+`AgentSignal.Crashed` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E), no health monitoring loop needed:
+
+1. Log the tmux error output (stderr) via structured logging.
+2. Print **red error** to console with the tmux error output so the user sees it instantly.
+3. Complete `signalDeferred` with `AgentSignal.Crashed` — flows through the existing
+   crash handling path → `FailedToExecutePlanUseCase` → red error, halt.
+4. No recovery agent is spawned — this is an infrastructure prerequisite failure, not a
+   recoverable mid-workflow issue.
+5. No health monitoring loop is entered — there is no session to monitor.
+
+**Rationale:** tmux availability is validated at startup by `EnvironmentValidator`
+(ref.ap.A8WqG9oplNTpsW7YqoIyX.E), so a session creation failure mid-workflow indicates
+an unexpected environmental problem (e.g., server resource exhaustion) that an agent
+cannot meaningfully fix. Using `AgentSignal.Crashed` reuses the existing crash→halt path
+rather than introducing a new failure flow.
+
+> **Note:** tmux binary presence is checked at **startup** (`EnvironmentValidator`). Session
+> creation failures at **spawn time** are a separate concern — the binary exists but `new-session`
+> failed for an operational reason.
+
+---
+
 ## Agent Crash Recovery (V1)
 
 **V1: no automatic recovery.** When `NoReplyToPingUseCase` detects an agent crash, the TMUX

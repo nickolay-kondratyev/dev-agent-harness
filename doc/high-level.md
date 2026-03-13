@@ -105,6 +105,9 @@ that owns the full startup sequence:
    - **Docker**: process is running inside a Docker container (`/.dockerenv` must exist).
      Hard fail if not — agents are spawned with `--dangerously-skip-permissions` which is
      only safe inside a container.
+   - **tmux**: `tmux` binary must be on `$PATH` and executable (`which tmux` succeeds).
+     Hard fail with red console error if not — tmux is a non-negotiable prerequisite for
+     agent session management. There is no fallback; without tmux, the harness cannot function.
    - **Required env vars**: all `Constants.REQUIRED_ENV_VARS.ALL` are present and non-blank.
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):

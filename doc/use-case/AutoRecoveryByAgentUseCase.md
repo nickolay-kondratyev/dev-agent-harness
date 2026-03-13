@@ -141,9 +141,14 @@ decision and execution belong to the caller.
 The `AutoRecoveryByAgentUseCase` pattern is designed for extension (OCP). Future infrastructure
 failure scenarios can create new domain-specific use cases that delegate to this:
 
-- **TMUX session creation failure** — agent could diagnose TMUX server issues
 - **Disk space issues** — agent could identify and clean up temporary files
 - **Network-related failures** — agent could diagnose connectivity issues
 
 Each new consumer creates its own use case class, packages domain-specific context, and
 delegates to `AutoRecoveryByAgentUseCase`.
+
+> **Not a candidate:** TMUX session creation failure is a **hard fail** (see
+> [SpawnTmuxAgentSessionUseCase — TMUX Session Creation Failure](SpawnTmuxAgentSessionUseCase.md#tmux-session-creation-failure--hard-fail)).
+> Infrastructure prerequisite failures (tmux binary missing, session creation non-zero exit)
+> halt immediately with a red console error — no recovery agent is spawned. Recovery agents
+> are for mid-workflow operational failures (e.g., git conflicts), not missing prerequisites.
