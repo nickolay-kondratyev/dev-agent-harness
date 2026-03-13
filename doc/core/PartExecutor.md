@@ -325,6 +325,19 @@ doer can crash/hang just like a doer-reviewer pair.
 the server validates that doers can only send `completed` (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
 If they somehow leak through, treat as a bug — fail with `IllegalStateException`.
 
+### Git Commits
+
+Same as `DoerReviewerPartExecutor` — calls `GitCommitStrategy.onSubPartDone`
+(ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) after the doer signals completion.
+
+### Dependencies
+
+- `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — register/lookup sessions
+- `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — spawn agent sessions
+- `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after doer completes
+- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — ping agent on activity timeout
+- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kill TMUX + crash details on ping timeout
+
 ---
 
 ## Ownership and Lifecycle
