@@ -9,7 +9,7 @@ callbacks identified by GUID) with `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.
 
 ## Why It Exists
 
-When the server receives `/callback-shepherd/done` with a `handshakeGuid`, it needs to:
+When the server receives `/callback-shepherd/signal/done` with a `handshakeGuid`, it needs to:
 
 1. Find the live `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E)
 2. Know the sub-part's **role** (doer vs. reviewer) to validate the `result` field
@@ -18,10 +18,10 @@ When the server receives `/callback-shepherd/done` with a `handshakeGuid`, it ne
 `SessionsState` is this lookup table. It is the **single place** where GUID → session
 + sub-part context is resolved.
 
-The server does **not** route `/callback-shepherd/done` or `/callback-shepherd/fail-workflow`
+The server does **not** route `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
-`/callback-shepherd/user-question` is still handled as a side-channel — server delegates to
+`/callback-shepherd/signal/user-question` is still handled as a side-channel — server delegates to
 `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys`.
 The executor stays suspended.
 
@@ -40,10 +40,10 @@ server-side validation and shepherd-side decision making.
 | `partName` | `String` | Which part this session belongs to (e.g., `"ui_design"`, `"main"`) |
 | `subPartName` | `String` | Sub-part name (e.g., `"impl"`, `"review"`) |
 | `subPartRole` | `SubPartRole` | `DOER` or `REVIEWER` — derived from position in sub-parts array (first = DOER, second = REVIEWER) |
-| `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/done` or `/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
-| `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (`done`, `fail-workflow`, `user-question`, `validate-plan`, `ping-ack`). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
+| `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
+| `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (signal or query). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 
-`SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/done`
+`SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/signal/done`
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers
 send `pass` or `needs_iteration`.
 
@@ -51,7 +51,7 @@ send `pass` or `needs_iteration`.
 
 1. **Created by** the `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) before spawning the agent
 2. **Registered** on the `SessionEntry` in `SessionsState`
-3. **Completed by** the server (on `/callback-shepherd/done` or `/callback-shepherd/fail-workflow`)
+3. **Completed by** the server (on `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`)
    or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection
 4. **Awaited by** the executor — `deferred.await()` suspends the executor coroutine until completion
 5. **Replaced** on iteration: when the reviewer signals `needs_iteration`, the executor creates a

@@ -6,7 +6,7 @@
 
 ## Motivation
 
-When plan execution hits blocking issues (agent calls `/callback-shepherd/fail-workflow`), V1
+When plan execution hits blocking issues (agent calls `/callback-shepherd/signal/fail-workflow`), V1
 requires the human to manually clean up. V2 automates this with a CLEANUP_AGENT that rolls back
 the codebase and re-opens the ticket for retry.
 
@@ -26,12 +26,12 @@ When plan execution fails:
 6. Checks out the merge-base commit to restore the codebase to pre-branching state
 7. Re-opens the ticket by setting `status: open` in the ticket's YAML frontmatter directly
    (does NOT use `tk` CLI)
-8. Calls `callback_shepherd.done.sh completed` when finished
+8. Calls `callback_shepherd.signal.sh done completed` when finished
 
 ### Terminal Failure — Cleanup Agent Calls `fail-workflow`
 
 If the cleanup agent itself encounters an unrecoverable error and calls
-`callback_shepherd.fail-workflow.sh`, the harness **prints a red error message to the console
+`callback_shepherd.signal.sh fail-workflow`, the harness **prints a red error message to the console
 and halts** — same as V1 behavior. No recursive cleanup. This is a terminal state.
 
 ## Default Branch Resolution

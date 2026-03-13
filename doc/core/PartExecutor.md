@@ -28,7 +28,7 @@ sealed class PartResult {
     /** All sub-parts completed successfully */
     object Completed : PartResult()
 
-    /** Agent called /callback-shepherd/fail-workflow */
+    /** Agent called /callback-shepherd/signal/fail-workflow */
     data class FailedWorkflow(val reason: String) : PartResult()
 
     /** Reviewer sent needs_iteration beyond iteration.max and user chose to abort */
@@ -57,10 +57,10 @@ coroutine.
 
 ```kotlin
 sealed class AgentSignal {
-    /** Agent called /callback-shepherd/done with a valid result */
+    /** Agent called /callback-shepherd/signal/done with a valid result */
     data class Done(val result: DoneResult) : AgentSignal()
 
-    /** Agent called /callback-shepherd/fail-workflow */
+    /** Agent called /callback-shepherd/signal/fail-workflow */
     data class FailWorkflow(val reason: String) : AgentSignal()
 
     /** Executor's health-aware await loop determined the agent has crashed */
@@ -82,14 +82,15 @@ enum class DoneResult {
 
 | Callback | Why not | Handler |
 |----------|---------|---------|
-| `/callback-shepherd/started` | Side-channel — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
-| `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
-| `/callback-shepherd/ping-ack` | Side-channel — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
+| `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
+| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
+| `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
 
-All side-channel callbacks **do** update `SessionEntry.lastActivityTimestamp`
+All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
 (ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the executor's health-aware await loop knows the agent
-is alive. `/callback-shepherd/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also a
-side-channel — planning-phase only, returns validation result in response body.
+is alive. `/callback-shepherd/query/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also
+a non-lifecycle endpoint (Tier 2 query) — planning-phase only, returns validation result in
+response body. It also updates `lastActivityTimestamp`.
 
 ### How the Bridge Works
 

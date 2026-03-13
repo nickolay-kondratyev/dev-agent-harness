@@ -68,7 +68,7 @@ sealed class RecoveryResult {
    - Current workflow state (which part, which sub-part, iteration)
    - The specific recovery goal
    - Constraints (what the agent must NOT do)
-   - The agent should signal completion via `/callback-shepherd/done` with `result: completed`
+   - The agent should signal completion via `/callback-shepherd/signal/done` with `result: completed`
 
 2. **Spawn recovery agent** — spawn a new TMUX session via `SpawnTmuxAgentSessionUseCase`
    (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) with:

@@ -32,8 +32,8 @@ data class UserQuestionContext(
 
 ## Flow
 
-1. Agent calls `callback_shepherd.user-question.sh "How should I handle X?"`
-2. Script POSTs to `/callback-shepherd/user-question` with `handshakeGuid` + question text
+1. Agent calls `callback_shepherd.signal.sh user-question "How should I handle X?"`
+2. Script POSTs to `/callback-shepherd/signal/user-question` with `handshakeGuid` + question text
 3. Server returns **200 immediately** — no blocking
 4. Server updates `SessionEntry.lastActivityTimestamp` (resets health timer)
 5. **Agent waits** for the answer to arrive via TMUX (does not proceed)

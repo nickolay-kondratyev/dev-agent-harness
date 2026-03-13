@@ -22,7 +22,7 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `Completed` → proceed to 3d
       - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
         delegate to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
-        Planning failures are rare (plan validated via `/callback-shepherd/validate-plan`
+        Planning failures are rare (plan validated via `/callback-shepherd/query/validate-plan`
         ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E before agents signal done). When they happen,
         the human is the right handler — no special recovery logic.
    d. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
@@ -87,7 +87,7 @@ information needed for different cleanup strategies.
 
 ## What TicketShepherd Does NOT Do
 
-- Does **not** interpret `/callback-shepherd/done` results directly — the server completes
+- Does **not** interpret `/callback-shepherd/signal/done` results directly — the server completes
   the `signalDeferred` on `SessionEntry`, and the executor reads the `AgentSignal`.
 - Does **not** assemble agent instructions — delegates to `SubPartInstructionProvider`
   (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) via the executor.

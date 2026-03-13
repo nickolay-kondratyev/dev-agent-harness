@@ -24,7 +24,7 @@ Resume has two layers, tried in order. Layer 1 is preferred; layer 2 is the fall
 3. Spawns TMUX session with:
    `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude --resume <agent_session_id>`
 4. **Handshake verification**: Harness sends a health ping via TMUX `send-keys`, asking the agent
-   to call `callback_shepherd.ping-ack.sh` with a `resumed` status confirming it came back up
+   to call `callback_shepherd.signal.sh ping-ack` with a `resumed` status confirming it came back up
    successfully
 5. If ping-ack with `resumed` status received within timeout → **Layer 1 success**. Agent continues
    where it left off with full conversation history intact.

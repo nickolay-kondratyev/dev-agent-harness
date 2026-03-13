@@ -87,7 +87,7 @@ at two hook points during workflow execution:
 
 | Hook | When it fires |
 |------|---------------|
-| `onSubPartDone` | After a sub-part signals `result` via `/callback-shepherd/done` (before the next sub-part starts or iteration resumes) |
+| `onSubPartDone` | After a sub-part signals `result` via `/callback-shepherd/signal/done` (before the next sub-part starts or iteration resumes) |
 | `onPartDone` | After a part completes (all sub-parts finished, TMUX sessions killed) |
 
 Each `GitCommitStrategy` implementation decides **which hooks to commit at**. Examples:

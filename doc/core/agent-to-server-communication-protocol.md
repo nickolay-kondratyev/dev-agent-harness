@@ -11,29 +11,41 @@ Defines the full communication protocol between agents running in TMUX sessions 
 ## Architecture
 
 ```
-┌────────────┐  HTTP POST (curl)   ┌──────────────────┐
-│  Agent      │ ──────────────→    │  Harness Server   │
-│  (in TMUX)  │  callback_shepherd │  (Ktor CIO)       │
-│             │  *.sh scripts      │                    │
-│             │ ←──────────────    │                    │
-│             │   TMUX send-keys   │                    │
-└────────────┘                     └──────────────────┘
+┌────────────┐  HTTP POST (curl)      ┌──────────────────┐
+│  Agent      │ ──────────────────→   │  Harness Server   │
+│  (in TMUX)  │  callback_shepherd.   │  (Ktor CIO)       │
+│             │  {signal|query}.sh    │                    │
+│             │ ←──────────────────   │                    │
+│             │   TMUX send-keys      │                    │
+└────────────┘                        └──────────────────┘
 ```
 
 Communication is **bidirectional** through two distinct channels:
 
-- **Agent → Harness**: HTTP POST via `callback_shepherd.*.sh` scripts (wrap curl). Each script handles port discovery and GUID injection transparently.
+- **Agent → Harness**: HTTP POST via two callback scripts (`callback_shepherd.signal.sh` and `callback_shepherd.query.sh`). Each script handles port discovery and GUID injection transparently.
 - **Harness → Agent**: TMUX `send-keys` is the only channel from harness to agent. Used for delivering instructions, Q&A answers, and health pings.
 
 ---
 
-## Core Principle: All HTTP Callbacks Are Non-Blocking
+## Two-Tier Endpoint Design
 
-**Every `callback_shepherd.*.sh` call is fire-and-forget.** The script POSTs to the server, expects a `200` response, and returns immediately. The server **never** holds an HTTP connection open for a long-running operation.
+Agent-to-harness HTTP endpoints are split into **two explicit tiers** based on their response contract. This makes the communication pattern self-documenting — the tier name tells the agent (and the developer) whether to read the HTTP response.
 
-When the harness needs to deliver content back to the agent (Q&A answers, iteration feedback, pings), it uses **TMUX `send-keys`** — the only harness→agent channel. Agents that need a response (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
+### Tier 1 — Signals (`/callback-shepherd/signal/*`)
 
-This eliminates fragile long-lived HTTP connections and keeps the protocol simple: HTTP is always agent→harness signaling; TMUX is always harness→agent delivery.
+**Fire-and-forget.** The agent POSTs, gets a bare `200 OK`, and moves on. If the harness needs to deliver content back (Q&A answers, iteration feedback, pings), it uses TMUX `send-keys`. Agents that need a response after a signal (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
+
+Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ping-ack`).
+
+### Tier 2 — Queries (`/callback-shepherd/query/*`)
+
+**Synchronous request/response.** The agent POSTs, reads the meaningful HTTP response body, and acts on it immediately. No TMUX involved, no deferred completion. Queries are utility calls — they do not affect agent lifecycle or flow through `AgentSignal`.
+
+### Why Two Tiers
+
+- **Agent authors can't accidentally block on a signal** or ignore a query response — the tier name in the URL and script makes the contract obvious
+- **New endpoints have a clear home** — "does the agent need the response?" → query; otherwise → signal
+- **Server implementation is cleanly separated** — signal handlers complete deferreds / update timestamps; query handlers return data. No mixed concerns
 
 ---
 
@@ -41,8 +53,8 @@ This eliminates fragile long-lived HTTP connections and keeps the protocol simpl
 
 ### Problem
 
-The server needs to know **which agent** is calling on every callback (`/callback-shepherd/done`,
-`/callback-shepherd/user-question`, etc.). In a single-agent world this is trivial, but the design must
+The server needs to know **which agent** is calling on every callback (`/callback-shepherd/signal/done`,
+`/callback-shepherd/signal/user-question`, etc.). In a single-agent world this is trivial, but the design must
 be multi-agent ready — multiple agents alive at the same time (e.g., implementor and
 reviewer talking to each other).
 
@@ -98,14 +110,21 @@ The server starts once at harness startup and stays alive across all sub-parts.
 
 ## V1 Server Endpoints
 
+### Signal Endpoints (fire-and-forget — bare `200 OK`)
+
 | Endpoint | Purpose |
 |---|---|
-| `POST /callback-shepherd/started` | Bootstrap handshake — agent acknowledges it is alive and can reach the server. Harness sends full instructions only after receiving this. See ref.ap.xVsVi2TgoOJ2eubmoABIC.E. |
-| `POST /callback-shepherd/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
-| `POST /callback-shepherd/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
-| `POST /callback-shepherd/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
-| `POST /callback-shepherd/validate-plan` | Validates a `plan.json` file against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E). Always returns 200 — validation result is in the response body. Planning-phase only. |
-| `POST /callback-shepherd/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
+| `POST /callback-shepherd/signal/started` | Bootstrap handshake — agent acknowledges it is alive and can reach the server. Harness sends full instructions only after receiving this. See ref.ap.xVsVi2TgoOJ2eubmoABIC.E. |
+| `POST /callback-shepherd/signal/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
+| `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
+| `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
+| `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
+
+### Query Endpoints (synchronous — meaningful response body)
+
+| Endpoint | Purpose |
+|---|---|
+| `POST /callback-shepherd/query/validate-plan` | Validates a `plan.json` file against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E). Returns validation result in the response body. Planning-phase only. |
 
 ---
 
@@ -115,37 +134,41 @@ All agent-to-server HTTP requests include `handshakeGuid` as the identity field.
 No `branch` field — the server derives branch and sub-part context from its internal
 GUID-to-sub-part registry.
 
-### Request Payloads
+### Signal Request Payloads
 
 ```json
-// POST /callback-shepherd/started — bootstrap handshake (agent alive, env correct, server reachable)
+// POST /callback-shepherd/signal/started — bootstrap handshake (agent alive, env correct, server reachable)
 { "handshakeGuid": "handshake.a1b2c3d4-..." }
 
-// POST /callback-shepherd/done — doer completing work
+// POST /callback-shepherd/signal/done — doer completing work
 { "handshakeGuid": "handshake.a1b2c3d4-...", "result": "completed" }
 
-// POST /callback-shepherd/done — reviewer: work passes review
+// POST /callback-shepherd/signal/done — reviewer: work passes review
 { "handshakeGuid": "handshake.a1b2c3d4-...", "result": "pass" }
 
-// POST /callback-shepherd/done — reviewer: work needs iteration
+// POST /callback-shepherd/signal/done — reviewer: work needs iteration
 { "handshakeGuid": "handshake.a1b2c3d4-...", "result": "needs_iteration" }
 
-// POST /callback-shepherd/user-question
+// POST /callback-shepherd/signal/user-question
 { "handshakeGuid": "handshake.a1b2c3d4-...", "question": "How should I handle X?" }
 
-// POST /callback-shepherd/fail-workflow
+// POST /callback-shepherd/signal/fail-workflow
 { "handshakeGuid": "handshake.a1b2c3d4-...", "reason": "Cannot compile after multiple approaches" }
 
-// POST /callback-shepherd/validate-plan
-{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "/abs/path/to/.ai_out/branch/harness_private/plan.json" }
-
-// POST /callback-shepherd/ping-ack
+// POST /callback-shepherd/signal/ping-ack
 { "handshakeGuid": "handshake.a1b2c3d4-..." }
 ```
 
-### Result Validation on `/callback-shepherd/done`
+### Query Request Payloads
 
-The `result` field is **required** on every `/callback-shepherd/done` request. The server
+```json
+// POST /callback-shepherd/query/validate-plan — returns validation result in response body
+{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "/abs/path/to/.ai_out/branch/harness_private/plan.json" }
+```
+
+### Result Validation on `/callback-shepherd/signal/done`
+
+The `result` field is **required** on every `/callback-shepherd/signal/done` request. The server
 looks up the sub-part role via HandshakeGuid → `SessionsState` and validates the value:
 
 | Sub-Part Role | Valid `result` Values | Invalid → 400 |
@@ -175,22 +198,28 @@ On callback arrival, server looks up HandshakeGuid in `SessionsState`
 the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 [SessionsState](SessionsState.md) for the full bridge design.
 
+### Routing by Tier
+
+- **Signal endpoints** (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
+  `lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
+  `signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`) do **not**
+  complete the deferred — executor stays suspended.
+- **Query endpoints** (`/callback-shepherd/query/*`): Look up `SessionEntry`, update
+  `lastActivityTimestamp`, process the request, return meaningful response body. Do **not**
+  complete `signalDeferred` — queries are utility calls, not lifecycle events.
+
 ### Unknown HandshakeGuid
 
 If `SessionsState.lookup(guid)` returns `null` (GUID not registered — stale, misconfigured,
 or from a different harness instance), the server returns **404** and logs a **WARN** with
 the unknown GUID. This is distinct from the "already completed" idempotent case (which
-returns 200).
-
-Side-channel callbacks (`started`, `user-question`, `ping-ack`, `validate-plan`) update
-`lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the
-deferred — executor stays suspended.
+returns 200). Applies to both signal and query endpoints.
 
 ### Idempotent Signal Callbacks
 
-If the server receives a `/done` or `/fail-workflow` callback for a deferred that is
-**already completed** (e.g., agent calls `/done` twice, or `/done` after `/fail-workflow`),
-`CompletableDeferred.complete()` returns `false`. The server:
+If the server receives a `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`
+callback for a deferred that is **already completed** (e.g., agent calls `done` twice, or
+`done` after `fail-workflow`), `CompletableDeferred.complete()` returns `false`. The server:
 
 1. Returns **200** (fire-and-forget principle — agent must not retry on non-200)
 2. Logs a **WARN** with the HandshakeGuid, received signal, and the fact that the deferred
@@ -201,13 +230,13 @@ in addition to structured logs, so operators see duplicate callbacks immediately
 
 ---
 
-## Plan Validation Endpoint
+## Plan Validation Query
 <!-- ap.R8mNvKx3wQ5pLfYtJ7dZe.E -->
 
-**Unlike all other callbacks, `/callback-shepherd/validate-plan` returns meaningful content
-in the HTTP response body.** The agent reads the response to determine whether the plan is
-valid. This is a **synchronous utility call**, not a lifecycle signal — it does not flow
-through `AgentSignal` or `CompletableDeferred`.
+`/callback-shepherd/query/validate-plan` is a **Tier 2 (Query)** endpoint — it returns
+meaningful content in the HTTP response body. The agent reads the response to determine
+whether the plan is valid. This is a **synchronous utility call**, not a lifecycle signal —
+it does not flow through `AgentSignal` or `CompletableDeferred`.
 
 Always returns HTTP 200. The response body carries the validation result:
 
@@ -242,15 +271,15 @@ Both the **planner** and **plan reviewer** are instructed to call this before si
 ## Agent Startup Acknowledgment / ap.xVsVi2TgoOJ2eubmoABIC.E
 
 **Problem:** There is a large observability gap between agent spawn and the first
-`/callback-shepherd/done` call. If the agent fails to start (bad env, agent binary crash,
+`/callback-shepherd/signal/done` call. If the agent fails to start (bad env, agent binary crash,
 TMUX session issue, malformed instructions), the harness won't know until `noActivityTimeout`
 fires — 30 minutes later.
 
-**Solution:** `/callback-shepherd/started` — a lightweight acknowledgment endpoint that is
+**Solution:** `/callback-shepherd/signal/started` — a lightweight signal endpoint that is
 part of the **bootstrap handshake**. The agent receives a minimal bootstrap message as its
 initial prompt (included in the TMUX start command) containing its HandshakeGuid and a single
-instruction to call `callback_shepherd.started.sh`. Full work instructions are only sent
-**after** the harness receives `/started`.
+instruction to call `callback_shepherd.signal.sh started`. Full work instructions are only sent
+**after** the harness receives `/signal/started`.
 
 ### Contract
 
@@ -259,14 +288,14 @@ instruction to call `callback_shepherd.started.sh`. Full work instructions are o
 - **Same handshake for new agents and resumed agents** — the only difference is the CLI
   command (`claude -p "..."` vs `claude --resume <id> -p "..."`). This makes the protocol
   universal and robust.
-- Agent calls `callback_shepherd.started.sh` as its **first and only action** from the
+- Agent calls `callback_shepherd.signal.sh started` as its **first and only action** from the
   bootstrap message
 - Payload: `{ "handshakeGuid": "handshake.xxx" }`
 - Server: updates `lastActivityTimestamp` on the `SessionEntry` (same as any side-channel
-  callback — no new machinery). Returns 200.
-- **Does NOT flow through `AgentSignal`** — this is a side-channel callback, same as
+  signal — no new machinery). Returns 200.
+- **Does NOT flow through `AgentSignal`** — this is a side-channel signal, same as
   `ping-ack` and `user-question`.
-- **On `/started` received**: harness resolves agent session ID via `AgentSessionIdResolver`
+- **On `/signal/started` received**: harness resolves agent session ID via `AgentSessionIdResolver`
   (GUID is now guaranteed in JSONL), then sends full instructions via TMUX `send-keys`
 
 ### Two-Phase Flow
@@ -274,12 +303,12 @@ instruction to call `callback_shepherd.started.sh`. Full work instructions are o
 ```
 Phase 1: Bootstrap Handshake (CLI args — inline, no file)
   Harness ──[TMUX start: claude [-p | --resume <id> -p] "<bootstrap>"]──► Agent
-  Agent   ──[POST /started]─────────────────────────────────────────────► Server
+  Agent   ──[POST /signal/started]──────────────────────────────────────► Server
   Harness ──[AgentSessionIdResolver: polls JSONL (GUID guaranteed)]
 
-Phase 2: Work (TMUX send-keys — file pointer, only after /started)
+Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
   Harness ──[send-keys: "Read instructions at <path>"]──► Agent
-  Agent   ──[works, calls /done]──────────────────────► Server
+  Agent   ──[works, calls /signal/done]─────────────────► Server
 ```
 
 Full spawn flow: see [SpawnTmuxAgentSessionUseCase](../use-case/SpawnTmuxAgentSessionUseCase.md)
@@ -333,7 +362,7 @@ See [`.ai_out/` directory schema](../schema/ai-out-directory.md) (ref.ap.BXQlLDT
 ## User-Question — Handled via Strategy
 <!-- ap.DvfGxWtvI1p6pDRXdHI2W.E — alias retained for backward refs -->
 
-Agent calls `callback_shepherd.user-question.sh`. Server delegates to
+Agent calls `callback_shepherd.signal.sh user-question`. Server delegates to
 `UserQuestionHandler` — see [UserQuestionHandler](UserQuestionHandler.md)
 (ref.ap.NE4puAzULta4xlOLh5kfD.E) for the strategy interface, V1 stdin behavior, and flow.
 Answer delivered via TMUX `send-keys`, not via HTTP response.
@@ -342,10 +371,11 @@ Answer delivered via TMUX `send-keys`, not via HTTP response.
 
 ## Callback Scripts
 
-Six focused bash scripts, one per endpoint. Each script wraps a single curl call and is
-the sole mechanism agents use to communicate back to the harness.
+Two scripts — one per tier — are the sole mechanism agents use to communicate back to the
+harness. The tier split mirrors the endpoint design: signals are fire-and-forget, queries
+return meaningful responses.
 
-**Shared behavior across all scripts:**
+**Shared behavior across both scripts:**
 
 - Lives on `$PATH` of the started agent
 - Reads port from `$TICKET_SHEPHERD_SERVER_PORT` environment variable
@@ -355,20 +385,34 @@ the sole mechanism agents use to communicate back to the harness.
 - Agent receives usage instructions in its initial instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
 
-### Scripts
+### `callback_shepherd.signal.sh` — Fire-and-Forget
+
+Posts to `/callback-shepherd/signal/<action>`. The HTTP response body is ignored — the
+script only checks for 200 status. Any harness-to-agent content comes via TMUX `send-keys`.
 
 ```bash
-callback_shepherd.started.sh                   # no args — bootstrap handshake (agent alive, server reachable)
-callback_shepherd.done.sh <result>             # required: completed | pass | needs_iteration
-callback_shepherd.user-question.sh "<text>"    # required: question text
-callback_shepherd.fail-workflow.sh "<reason>"  # required: failure reason (aborts entire workflow)
-callback_shepherd.validate-plan.sh <abs-path>   # required: absolute path to plan.json — prints validation result to stdout
-callback_shepherd.ping-ack.sh                  # no args — acknowledges health ping
+callback_shepherd.signal.sh started                       # no extra args — bootstrap handshake
+callback_shepherd.signal.sh done <result>                 # required: completed | pass | needs_iteration
+callback_shepherd.signal.sh user-question "<text>"        # required: question text
+callback_shepherd.signal.sh fail-workflow "<reason>"      # required: failure reason (aborts entire workflow)
+callback_shepherd.signal.sh ping-ack                      # no extra args — acknowledges health ping
 ```
 
-**`callback_shepherd.done.sh` validates its argument** — rejects anything other than
-`completed`, `pass`, or `needs_iteration` with a clear error and non-zero exit.
-Server-side role validation is a second layer of defense.
+**Argument validation on `done`:** The script rejects anything other than `completed`,
+`pass`, or `needs_iteration` with a clear error and non-zero exit. Server-side role
+validation is a second layer of defense.
+
+### `callback_shepherd.query.sh` — Synchronous Request/Response
+
+Posts to `/callback-shepherd/query/<action>`. The HTTP response body is **meaningful** —
+the script prints it to stdout for the agent to read and act on.
+
+```bash
+callback_shepherd.query.sh validate-plan <abs-path>       # required: absolute path to plan.json — prints validation result to stdout
+```
+
+**Contract:** Agents calling `callback_shepherd.query.sh` must read stdout. The response
+is the whole point — unlike signals, the HTTP body carries the result.
 
 ---
 
@@ -377,10 +421,10 @@ Server-side role validation is a second layer of defense.
 TMUX is the **only** harness-to-agent communication channel, through two mechanisms:
 
 - **CLI args** (bootstrap): delivers the bootstrap message containing HandshakeGuid and
-  `callback_shepherd.started.sh` instruction. Passed inline as `-p "..."` at agent start
+  `callback_shepherd.signal.sh started` instruction. Passed inline as `-p "..."` at agent start
   (both new and `--resume`). Lightweight, self-contained string — no instruction file.
 - **`send-keys`** (work phase): used for all communication **after** the bootstrap handshake
-  (`/started` received):
+  (`/signal/started` received):
   - Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
   - Send user-question answer file paths (`comm/in/` in `.ai_out/`)
   - Send health pings

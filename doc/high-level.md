@@ -152,11 +152,14 @@ Agents are spawned via [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentS
 <!-- ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
 Communication between agents and the harness is bidirectional through two distinct channels:
-**Agent → Harness** via HTTP POST (`callback_shepherd.*.sh` scripts wrapping curl), and
-**Harness → Agent** via TMUX `send-keys` (the only way to push content to a running agent).
+**Agent → Harness** via HTTP POST (two callback scripts: `callback_shepherd.signal.sh` for
+fire-and-forget signals, `callback_shepherd.query.sh` for synchronous request/response queries),
+and **Harness → Agent** via TMUX `send-keys` (the only way to push content to a running agent).
 The harness runs a Ktor CIO server (on the port from `TICKET_SHEPHERD_SERVER_PORT` env var) that stays alive for the entire run.
 
-**All HTTP callbacks are non-blocking** — every callback script expects 200 and returns immediately.
+**Two-tier endpoint design**: Signal endpoints (`/callback-shepherd/signal/*`) are fire-and-forget —
+every signal script call expects bare 200 and returns immediately. Query endpoints
+(`/callback-shepherd/query/*`) return meaningful response bodies for the agent to act on.
 When the harness needs to deliver content back to the agent (Q&A answers, iteration instructions),
 it uses TMUX `send-keys`. No long-lived HTTP connections.
 
@@ -175,7 +178,7 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 
 Timeout + ping mechanism to detect crashed/hung agents. Five UseCase classes handle distinct
 failure scenarios (`NoStartupAckUseCase`, `NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`,
-`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). Agents call `callback_shepherd.started.sh`
+`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). Agents call `callback_shepherd.signal.sh started`
 immediately after reading instructions — a 3-minute startup timeout catches spawn failures fast
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
@@ -285,7 +288,7 @@ have changed, and we need the exact model to match the session.
 ### Plan Mutability During Execution
 
 - **Minor adjustments OK**: Implementor can adjust approach within a part
-- **Major deviations → fail explicitly**: Agent calls `callback_shepherd.fail-workflow.sh` → `FailedToExecutePlanUseCase`
+- **Major deviations → fail explicitly**: Agent calls `callback_shepherd.signal.sh fail-workflow` → `FailedToExecutePlanUseCase`
 - Do NOT attempt to patch the plan mid-execution
 
 ---
@@ -328,11 +331,11 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter; roles define behavior only — no `agentType`/`model` |
 | Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
-| Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
+| Callback protocol | **Two-tier: signals (fire-and-forget) + queries (synchronous response)** | Signal endpoints return bare 200; query endpoints return meaningful response body; harness-to-agent delivery via TMUX send-keys |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration` requires structured feedback (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) |
 | Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
-| Startup acknowledgment | **`/callback-shepherd/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Agent calls immediately after reading instructions. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel — updates `lastActivityTimestamp`, no AgentSignal. |
-| Callback scripts | **One script per endpoint** | `callback_shepherd.*.sh` — focused, self-documenting, no flag parsing |
+| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Agent calls immediately after reading instructions. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
+| Callback scripts | **One script per tier** | `callback_shepherd.signal.sh` (fire-and-forget) + `callback_shepherd.query.sh` (synchronous response) — tier name makes contract obvious |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation** | On failure, append `## Previous Failed Attempts` section to the ticket with structured facts + LLM summary. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |

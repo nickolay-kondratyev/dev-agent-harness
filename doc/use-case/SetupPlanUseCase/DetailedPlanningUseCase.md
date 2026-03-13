@@ -68,7 +68,7 @@ If `plan.json` is malformed or fails schema validation, `convertPlanToExecutionP
 a `PlanConversionException` (extends `AsgardBaseException`). `TicketShepherd` catches
 `PlanConversionException` at the call site and delegates to `FailedToExecutePlanUseCase` —
 prints red error, halts. This should not happen in practice: both the planner and plan
-reviewer are instructed to validate `plan.json` via `callback_shepherd.validate-plan.sh`
+reviewer are instructed to validate `plan.json` via `callback_shepherd.query.sh validate-plan`
 (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) before signaling `done`/`pass`. A validation failure here
 indicates a bug in the planning agents.
 

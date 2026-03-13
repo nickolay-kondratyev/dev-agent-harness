@@ -48,7 +48,7 @@ TMUX `send-keys`. It is a lightweight, self-contained string — no instruction 
 Contents:
 - The `HandshakeGuid` (so it's recorded in agent session artifacts for
   `AgentSessionIdResolver`)
-- A single instruction: call `callback_shepherd.started.sh` to acknowledge startup
+- A single instruction: call `callback_shepherd.signal.sh started` to acknowledge startup
 
 ```bash
 # New agent:
@@ -77,16 +77,16 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
    — see [System Prompt File Resolution](#system-prompt-file-resolution) for `<resolved_path>`
 4. Harness creates TMUX session running the command — agent starts with the bootstrap
    message as its initial prompt via CLI args (no `send-keys` needed)
-5. Harness awaits `/callback-shepherd/started` within `noStartupAckTimeout`
+5. Harness awaits `/callback-shepherd/signal/started` within `noStartupAckTimeout`
    (default 3 min) — see ref.ap.xVsVi2TgoOJ2eubmoABIC.E
-6. On `/started` received:
+6. On `/signal/started` received:
    a. **`AgentSessionIdResolver`** polls for the GUID in agent session artifacts
       (e.g., Claude Code JSONL files) — by this point the GUID is guaranteed to be recorded,
       so resolution is fast and reliable
    b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
       in `current_state.json` under the sub-part's `sessionIds` array
    c. Agent is confirmed alive, env is correct, server is reachable → proceed to Phase 2
-7. On timeout (no `/started` within `noStartupAckTimeout`) → `NoStartupAckUseCase` →
+7. On timeout (no `/signal/started` within `noStartupAckTimeout`) → `NoStartupAckUseCase` →
    `PartResult.AgentCrashed`
 
 ### Phase 2: Work — Full Instructions
@@ -94,7 +94,7 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 8. Harness writes instruction file to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory
 9. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
 10. Agent works (may call callback scripts for questions)
-11. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result
+11. Agent calls `callback_shepherd.signal.sh done <result>` → server receives `/callback-shepherd/signal/done` with GUID + result
 12. Harness validates result against sub-part role, proceeds accordingly
 
 ## Resume Flow
@@ -152,7 +152,7 @@ file controlled by the harness operator.
 The resolver polls `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
 string. The matching filename (minus `.jsonl` extension) is the session ID.
 
-**Sequencing:** Resolution runs **after `/callback-shepherd/started` is received** (step 6a
+**Sequencing:** Resolution runs **after `/callback-shepherd/signal/started` is received** (step 6a
 in the spawn flow). At this point, the agent has already processed the bootstrap message
 containing the GUID, so the GUID is guaranteed to be in the JSONL file. This eliminates
 the race condition that existed when polling concurrently with agent startup.
@@ -174,7 +174,7 @@ for human intervention. V2 may add automatic retry with `--resume`
 
 ## Callback Scripts
 
-See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `callback_shepherd.*.sh` scripts specification.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `callback_shepherd.{signal|query}.sh` scripts specification.
 
 ---
 
@@ -204,9 +204,9 @@ and all its windows/panes. Used by:
 
 ~~Open question: replace fixed `agentStartupDelay` with callback-based readiness signal.~~
 
-**Resolved:** The bootstrap message (GUID + `callback_shepherd.started.sh` instruction) is
+**Resolved:** The bootstrap message (GUID + `callback_shepherd.signal.sh started` instruction) is
 passed as inline CLI args (`-p "..."`). The agent receives the bootstrap as its initial prompt
 the moment it starts — no `send-keys` needed, no fixed delay. The harness awaits
-`/callback-shepherd/started` within `noStartupAckTimeout` (default 3 min). Same handshake
+`/callback-shepherd/signal/started` within `noStartupAckTimeout` (default 3 min). Same handshake
 for new and resumed agents. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice)
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).

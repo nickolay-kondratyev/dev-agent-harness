@@ -71,7 +71,7 @@ Concatenation order:
 | 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
 | 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
-| 12 | **Callback script usage** | Static help text, wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
+| 12 | **Callback script usage** | Static help text (signal + query scripts), wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
 
 ### Planner
 
@@ -88,7 +88,7 @@ Concatenation order:
 | 9 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
 | 10 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 11 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 12 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 12 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
 ### Plan Reviewer
 
@@ -103,7 +103,7 @@ Concatenation order:
 | 7 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
 | 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/comm/out/PUBLIC.md` — tells the reviewer where to write its output |
 | 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 10 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 10 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
 ---
 
@@ -309,39 +309,43 @@ The callback script usage block is wrapped in `<critical_to_keep_through_compact
 <critical_to_keep_through_compaction>
 ## Communicating with the Harness
 
-Use these scripts to communicate back to the harness. They are on your $PATH.
+Two scripts on your $PATH — one for fire-and-forget signals, one for queries that return data.
 
-### When you complete your task:
-`callback_shepherd.done.sh completed`   (if you are a doer)
-`callback_shepherd.done.sh pass`        (if you are a reviewer and work passes)
-`callback_shepherd.done.sh needs_iteration` (if you are a reviewer and work needs changes)
+### Signals (fire-and-forget — ignore stdout):
 
-### If you have a question for the human:
-`callback_shepherd.user-question.sh "Your question here"`
+When you complete your task:
+`callback_shepherd.signal.sh done completed`        (if you are a doer)
+`callback_shepherd.signal.sh done pass`             (if you are a reviewer and work passes)
+`callback_shepherd.signal.sh done needs_iteration`  (if you are a reviewer and work needs changes)
+
+If you have a question for the human:
+`callback_shepherd.signal.sh user-question "Your question here"`
 Wait for the answer — it will arrive via your input.
 
-### If you hit an unrecoverable error:
-`callback_shepherd.fail-workflow.sh "Reason for failure"`
+If you hit an unrecoverable error:
+`callback_shepherd.signal.sh fail-workflow "Reason for failure"`
 
-### Health ping acknowledgment (when asked):
-`callback_shepherd.ping-ack.sh`
+Health ping acknowledgment (when asked):
+`callback_shepherd.signal.sh ping-ack`
+
+### Queries (read the response from stdout):
+
+Validate plan before signaling done:
+`callback_shepherd.query.sh validate-plan /absolute/path/to/plan.json`
 </critical_to_keep_through_compaction>
 ```
 
 The provider inserts the **correct result value** for the agent's role (doer vs. reviewer)
 so the agent doesn't have to figure out which values apply to it.
 
-**Planning-phase agents** (PLANNER and PLAN_REVIEWER) additionally receive:
-
-```markdown
-### Validate plan before signaling done:
-`callback_shepherd.validate-plan.sh /absolute/path/to/harness_private/plan.json`
-Prints validation result to stdout. Fix any errors before calling done.
-```
-
-This ensures both the planner (after writing `plan.json`) and the plan reviewer (before
-approving) validate the plan schema, catching structural errors before
+**Planning-phase agents** (PLANNER and PLAN_REVIEWER) receive the full compaction-survival
+block above, which includes the `callback_shepherd.query.sh validate-plan` instruction in the
+Queries section. This ensures both the planner (after writing `plan.json`) and the plan
+reviewer (before approving) validate the plan schema, catching structural errors before
 `convertPlanToExecutionParts` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) runs.
+
+**Execution-phase agents** receive the same block but the provider **omits the Queries
+section** — execution agents have no query endpoints to call.
 
 ---
 
