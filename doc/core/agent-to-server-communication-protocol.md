@@ -65,7 +65,7 @@ Every agent session gets a **HandshakeGuid** — a harness-generated identifier 
 distinguishable from agent session IDs. This GUID:
 
 1. Is exported as `TICKET_SHEPHERD_HANDSHAKE_GUID` env var when the TMUX session is spawned
-2. Is included in the bootstrap message (passed as inline CLI args, e.g., `-p "..."`) so
+2. Is included in the bootstrap message (sent via TMUX `send-keys` after interactive start) so
    it's recorded in agent session artifacts for `AgentSessionIdResolver` resolution
 3. Is included by the callback scripts in **every** callback to the server
 4. Is stored in `current_state.json` alongside the agent's session ID
@@ -81,7 +81,9 @@ val guid = HandshakeGuid.generate()
 The TMUX session command exports the GUID before starting the agent:
 
 ```bash
-export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude
+export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && export TICKET_SHEPHERD_SERVER_PORT=8347 \
+  && claude --system-prompt-file <path> [flags]
+# Then bootstrap message sent via TMUX send-keys
 ```
 
 The callback scripts read `$TICKET_SHEPHERD_HANDSHAKE_GUID` from the environment and include
@@ -283,11 +285,12 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
 
 ### Contract
 
-- The bootstrap message is passed as **inline CLI arguments** (`-p "..."`), NOT via TMUX
-  `send-keys`. It is a lightweight, self-contained string — no instruction file needed.
-- **Same handshake for new agents and resumed agents** — the only difference is the CLI
-  command (`claude --system-prompt-file <path> -p "..."` vs `claude --resume <id> -p "..."`).
-  This makes the protocol universal and robust.
+- The agent is spawned in **interactive mode** (no `-p`/`--print` flags). The bootstrap
+  message is delivered via TMUX **`send-keys`** after the session is created. It is a
+  lightweight, self-contained string — no instruction file needed.
+- **Same handshake for new agents and resumed agents** — the only difference is the TMUX
+  start command (`claude --system-prompt-file <path> [flags]` vs `claude --resume <id>`).
+  Both receive the bootstrap via `send-keys`. This makes the protocol universal and robust.
 - Agent calls `callback_shepherd.signal.sh started` as its **first and only action** from the
   bootstrap message
 - Payload: `{ "handshakeGuid": "handshake.xxx" }`
@@ -301,8 +304,9 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
 ### Two-Phase Flow
 
 ```
-Phase 1: Bootstrap Handshake (CLI args — inline, no file)
-  Harness ──[TMUX start: AgentStarter.buildStartCommand() "<bootstrap>"]──► Agent
+Phase 1: Bootstrap Handshake (TMUX send-keys — interactive agent, no -p)
+  Harness ──[TMUX start: AgentStarter.buildStartCommand() (interactive)]──► Agent
+  Harness ──[send-keys: "<bootstrap_message>"]────────────────────────────► Agent
   Agent   ──[POST /signal/started]────────────────────────────────────────► Server
   Harness ──[AgentSessionIdResolver: resolves session ID (GUID guaranteed)]
 
@@ -313,10 +317,11 @@ Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
 
 **Claude Code example** (the actual command is built by the agent-specific `AgentStarter` implementation):
 ```bash
-# New agent:
-claude --system-prompt-file <path> -p "<bootstrap>"
-# Resumed agent:
-claude --resume <id> -p "<bootstrap>"
+# New agent — interactive start (no -p):
+claude --system-prompt-file <path> [flags]
+# Resumed agent — interactive resume (no -p):
+claude --resume <id>
+# Bootstrap sent via TMUX send-keys after session creation
 ```
 
 See [`AgentStarter` — Interface for Start Command](../use-case/SpawnTmuxAgentSessionUseCase.md#agentstarter--interface-for-start-command)
@@ -340,7 +345,7 @@ triggers `NoStartupAckUseCase` → logs a clear error identifying the spawn fail
   routing) before any real work begins
 - **No wasted work**: instruction assembly is deferred until agent is confirmed alive
 - **No fixed startup delay**: replaces the previous `agentStartupDelay` (5s) — the
-  bootstrap is passed as CLI args, and the harness waits for the callback, not a timer
+  bootstrap is sent via `send-keys`, and the harness waits for the callback, not a timer
 - **Simpler session ID resolution**: `AgentSessionIdResolver` runs after `/started`, when
   the GUID is guaranteed in the JSONL — no race condition, no polling timeout risk
 - **Universal**: same handshake for new and resumed agents — one protocol to test and debug
@@ -427,13 +432,16 @@ is the whole point — unlike signals, the HTTP body carries the result.
 
 ## Harness → Agent Communication
 
-TMUX is the **only** harness-to-agent communication channel, through two mechanisms:
+TMUX **`send-keys`** is the **only** harness-to-agent communication channel. Agents are
+spawned in **interactive mode** (no `-p`/`--print` flags) — the entire point of TMUX is to
+allow ongoing communication with a running agent. All messages, including the bootstrap, are
+delivered via `send-keys`:
 
-- **CLI args** (bootstrap): delivers the bootstrap message containing HandshakeGuid and
-  `callback_shepherd.signal.sh started` instruction. Passed inline as `-p "..."` at agent start
-  (both new and `--resume`). Lightweight, self-contained string — no instruction file.
-- **`send-keys`** (work phase): used for all communication **after** the bootstrap handshake
-  (`/signal/started` received):
+- **Bootstrap** (Phase 1): delivers the bootstrap message containing HandshakeGuid and
+  `callback_shepherd.signal.sh started` instruction. Sent via `send-keys` immediately after
+  TMUX session creation (both new and `--resume`). Lightweight, self-contained string — no
+  instruction file.
+- **Work** (Phase 2 — after `/signal/started` received):
   - Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
   - Send user-question answer file paths (`comm/in/` in `.ai_out/`)
   - Send health pings
