@@ -33,25 +33,93 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
+## Bootstrap Handshake — Universal Protocol
+
+The bootstrap handshake is the **same for both new agents and resumed agents**. It is the
+foundational step that establishes the communication channel is working before any real work
+begins. This makes the protocol robust — every agent session, whether fresh or resumed,
+goes through the same identity + liveness verification.
+
+### Bootstrap Message — Inline CLI Args
+
+The bootstrap message is passed as **inline CLI arguments** (e.g., `-p "..."`), NOT via
+TMUX `send-keys`. It is a lightweight, self-contained string — no instruction file needed.
+
+Contents:
+- The `HandshakeGuid` (so it's recorded in agent session artifacts for
+  `AgentSessionIdResolver`)
+- A single instruction: call `callback_shepherd.started.sh` to acknowledge startup
+
+```bash
+# New agent:
+claude --system-prompt-file <path> -p "<bootstrap_message>"
+
+# Resumed agent:
+claude --resume <session_id> -p "<bootstrap_message>"
+```
+
+**Heavy instructions come later** via TMUX `send-keys` as a **file pointer**
+(`"Read instructions at <path>"`) — only after the handshake succeeds.
+
+---
+
 ## Spawn Flow — New Session
+
+The spawn flow has two distinct phases: **bootstrap** (identity + liveness handshake) and
+**work** (full instructions). Full instructions are only sent after the handshake succeeds.
+
+### Phase 1: Bootstrap — Identity + Liveness Handshake
 
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
 2. Harness reads `agentType` and `model` from sub-part config in `current_state.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
-3. Harness builds the TMUX start command:
-   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --system-prompt-file <resolved_path> [flags]`
-   — see [System Prompt File Resolution](#system-prompt-file-resolution) for how `<resolved_path>` is determined
-4. Harness creates TMUX session running the command
-5. Harness waits for agent startup (agent CLI needs time to initialize)
-6. Harness sends GUID to agent via TMUX `send-keys` (plain text, directly)
-7. `AgentSessionIdResolver` polls for the GUID in agent session artifacts
-   (e.g., Claude Code JSONL files) and resolves the agent session ID
-8. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
-   in `current_state.json` under the sub-part's `sessionIds` array
-9. Harness writes instruction file to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory
-10. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
-11. Agent works (may call callback scripts for questions)
-12. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result
-13. Harness validates result against sub-part role, proceeds accordingly
+3. Harness builds the TMUX start command with **bootstrap as inline CLI args**:
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --system-prompt-file <resolved_path> [flags] -p "<bootstrap_message>"`
+   — see [System Prompt File Resolution](#system-prompt-file-resolution) for `<resolved_path>`
+4. Harness creates TMUX session running the command — agent starts with the bootstrap
+   message as its initial prompt via CLI args (no `send-keys` needed)
+5. Harness awaits `/callback-shepherd/started` within `noStartupAckTimeout`
+   (default 3 min) — see ref.ap.xVsVi2TgoOJ2eubmoABIC.E
+6. On `/started` received:
+   a. **`AgentSessionIdResolver`** polls for the GUID in agent session artifacts
+      (e.g., Claude Code JSONL files) — by this point the GUID is guaranteed to be recorded,
+      so resolution is fast and reliable
+   b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
+      in `current_state.json` under the sub-part's `sessionIds` array
+   c. Agent is confirmed alive, env is correct, server is reachable → proceed to Phase 2
+7. On timeout (no `/started` within `noStartupAckTimeout`) → `NoStartupAckUseCase` →
+   `PartResult.AgentCrashed`
+
+### Phase 2: Work — Full Instructions
+
+8. Harness writes instruction file to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory
+9. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
+10. Agent works (may call callback scripts for questions)
+11. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result
+12. Harness validates result against sub-part role, proceeds accordingly
+
+## Resume Flow
+
+Resuming an existing agent session uses the **same bootstrap handshake** — only the TMUX
+start command differs (uses `--resume` instead of a fresh start).
+
+1. Harness generates a **new** `HandshakeGuid` for this resumed session
+2. Harness builds the TMUX start command with resume + bootstrap as inline CLI args:
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --resume <session_id> -p "<bootstrap_message>"`
+3–12. **Identical to new session flow** (steps 4–12 above)
+
+The new HandshakeGuid ensures the server can distinguish this resumed session from the
+previous one. The agent gets a fresh callback identity while retaining its conversation
+history via `--resume`.
+
+### Why Two Phases
+
+- **No wasted work**: instruction assembly (which reads files, concatenates context) is
+  deferred until the agent is confirmed alive. If spawn fails, no instruction file was written.
+- **Clean separation**: the bootstrap validates the entire communication chain
+  (TMUX → agent → env vars → HTTP → server routing) before any real work begins.
+- **Universal**: same handshake for new and resumed agents — one protocol to test and debug.
+- **Simpler session ID resolution**: `AgentSessionIdResolver` runs after `/started`, when
+  the GUID is guaranteed to be in the JSONL — no race condition, no polling timeout risk.
 
 ### System Prompt File Resolution
 
@@ -82,12 +150,16 @@ file controlled by the harness operator.
 + `ClaudeCodeAgentSessionIdResolver` implementation (ref.ap.gCgRdmWd9eTGXPbHJvyxI.E).
 
 The resolver polls `$HOME/.claude/projects/.../*.jsonl` for files containing the GUID
-string. The matching filename (minus `.jsonl` extension) is the session ID. Polling is
-necessary because Claude Code writes the JSONL file asynchronously after receiving
-the TMUX message.
+string. The matching filename (minus `.jsonl` extension) is the session ID.
+
+**Sequencing:** Resolution runs **after `/callback-shepherd/started` is received** (step 6a
+in the spawn flow). At this point, the agent has already processed the bootstrap message
+containing the GUID, so the GUID is guaranteed to be in the JSONL file. This eliminates
+the race condition that existed when polling concurrently with agent startup.
 
 - Exactly one match required; zero (timeout) or multiple matches → `IllegalStateException`
-- Default timeout: 45 seconds, poll interval: 500ms
+- Default timeout: 45 seconds, poll interval: 500ms (generous — resolution is typically
+  instant since the GUID is already written by the time we poll)
 ---
 
 ## Agent Crash Recovery (V1)
@@ -128,7 +200,13 @@ and all its windows/panes. Used by:
 
 ---
 
-## Open Questions
+## Resolved: Agent Startup Delay
 
-- **Agent startup delay**: Currently a fixed duration (`agentStartupDelay`, default 5s).
-  Open ticket `nid_827accci9acm2e320fvtddk13_E` to replace with callback-based readiness signal.
+~~Open question: replace fixed `agentStartupDelay` with callback-based readiness signal.~~
+
+**Resolved:** The bootstrap message (GUID + `callback_shepherd.started.sh` instruction) is
+passed as inline CLI args (`-p "..."`). The agent receives the bootstrap as its initial prompt
+the moment it starts — no `send-keys` needed, no fixed delay. The harness awaits
+`/callback-shepherd/started` within `noStartupAckTimeout` (default 3 min). Same handshake
+for new and resumed agents. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice)
+(ref.ap.xVsVi2TgoOJ2eubmoABIC.E).

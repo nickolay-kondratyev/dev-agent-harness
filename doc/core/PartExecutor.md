@@ -82,6 +82,7 @@ enum class DoneResult {
 
 | Callback | Why not | Handler |
 |----------|---------|---------|
+| `/callback-shepherd/started` | Side-channel — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
 | `/callback-shepherd/user-question` | Side-channel — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
 | `/callback-shepherd/ping-ack` | Side-channel — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
 

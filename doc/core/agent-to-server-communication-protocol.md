@@ -53,7 +53,8 @@ Every agent session gets a **HandshakeGuid** — a harness-generated identifier 
 distinguishable from agent session IDs. This GUID:
 
 1. Is exported as `TICKET_SHEPHERD_HANDSHAKE_GUID` env var when the TMUX session is spawned
-2. Is sent to the agent as the first TMUX message (for AgentSessionIdResolver resolution)
+2. Is included in the bootstrap message (passed as inline CLI args, e.g., `-p "..."`) so
+   it's recorded in agent session artifacts for `AgentSessionIdResolver` resolution
 3. Is included by the callback scripts in **every** callback to the server
 4. Is stored in `current_state.json` alongside the agent's session ID
 
@@ -99,6 +100,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 
 | Endpoint | Purpose |
 |---|---|
+| `POST /callback-shepherd/started` | Bootstrap handshake — agent acknowledges it is alive and can reach the server. Harness sends full instructions only after receiving this. See ref.ap.xVsVi2TgoOJ2eubmoABIC.E. |
 | `POST /callback-shepherd/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
 | `POST /callback-shepherd/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
 | `POST /callback-shepherd/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
@@ -116,6 +118,9 @@ GUID-to-sub-part registry.
 ### Request Payloads
 
 ```json
+// POST /callback-shepherd/started — bootstrap handshake (agent alive, env correct, server reachable)
+{ "handshakeGuid": "handshake.a1b2c3d4-..." }
+
 // POST /callback-shepherd/done — doer completing work
 { "handshakeGuid": "handshake.a1b2c3d4-...", "result": "completed" }
 
@@ -177,7 +182,7 @@ or from a different harness instance), the server returns **404** and logs a **W
 the unknown GUID. This is distinct from the "already completed" idempotent case (which
 returns 200).
 
-Side-channel callbacks (`user-question`, `ping-ack`, `validate-plan`) update
+Side-channel callbacks (`started`, `user-question`, `ping-ack`, `validate-plan`) update
 `lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) but do **not** complete the
 deferred — executor stays suspended.
 
@@ -234,6 +239,81 @@ Both the **planner** and **plan reviewer** are instructed to call this before si
 
 ---
 
+## Agent Startup Acknowledgment / ap.xVsVi2TgoOJ2eubmoABIC.E
+
+**Problem:** There is a large observability gap between agent spawn and the first
+`/callback-shepherd/done` call. If the agent fails to start (bad env, agent binary crash,
+TMUX session issue, malformed instructions), the harness won't know until `noActivityTimeout`
+fires — 30 minutes later.
+
+**Solution:** `/callback-shepherd/started` — a lightweight acknowledgment endpoint that is
+part of the **bootstrap handshake**. The agent receives a minimal bootstrap message as its
+initial prompt (included in the TMUX start command) containing its HandshakeGuid and a single
+instruction to call `callback_shepherd.started.sh`. Full work instructions are only sent
+**after** the harness receives `/started`.
+
+### Contract
+
+- The bootstrap message is passed as **inline CLI arguments** (`-p "..."`), NOT via TMUX
+  `send-keys`. It is a lightweight, self-contained string — no instruction file needed.
+- **Same handshake for new agents and resumed agents** — the only difference is the CLI
+  command (`claude -p "..."` vs `claude --resume <id> -p "..."`). This makes the protocol
+  universal and robust.
+- Agent calls `callback_shepherd.started.sh` as its **first and only action** from the
+  bootstrap message
+- Payload: `{ "handshakeGuid": "handshake.xxx" }`
+- Server: updates `lastActivityTimestamp` on the `SessionEntry` (same as any side-channel
+  callback — no new machinery). Returns 200.
+- **Does NOT flow through `AgentSignal`** — this is a side-channel callback, same as
+  `ping-ack` and `user-question`.
+- **On `/started` received**: harness resolves agent session ID via `AgentSessionIdResolver`
+  (GUID is now guaranteed in JSONL), then sends full instructions via TMUX `send-keys`
+
+### Two-Phase Flow
+
+```
+Phase 1: Bootstrap Handshake (CLI args — inline, no file)
+  Harness ──[TMUX start: claude [-p | --resume <id> -p] "<bootstrap>"]──► Agent
+  Agent   ──[POST /started]─────────────────────────────────────────────► Server
+  Harness ──[AgentSessionIdResolver: polls JSONL (GUID guaranteed)]
+
+Phase 2: Work (TMUX send-keys — file pointer, only after /started)
+  Harness ──[send-keys: "Read instructions at <path>"]──► Agent
+  Agent   ──[works, calls /done]──────────────────────► Server
+```
+
+Full spawn flow: see [SpawnTmuxAgentSessionUseCase](../use-case/SpawnTmuxAgentSessionUseCase.md)
+(ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
+
+### Startup Timeout
+
+The executor uses a dedicated **`noStartupAckTimeout`** (default: **3 minutes**) for the
+window between spawn and first callback. This is significantly shorter than the general
+`noActivityTimeout` (30 min) because startup failures should be caught fast.
+
+If no callback of any kind arrives within `noStartupAckTimeout` after spawn, the executor
+triggers `NoStartupAckUseCase` → logs a clear error identifying the spawn failure → returns
+`PartResult.AgentCrashed`. See [Health Monitoring](../use-case/HealthMonitoring.md)
+(ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
+
+### Why This Works
+
+- Validates the **entire communication chain** (TMUX → agent → env vars → HTTP → server
+  routing) before any real work begins
+- **No wasted work**: instruction assembly is deferred until agent is confirmed alive
+- **No fixed startup delay**: replaces the previous `agentStartupDelay` (5s) — the
+  bootstrap is passed as CLI args, and the harness waits for the callback, not a timer
+- **Simpler session ID resolution**: `AgentSessionIdResolver` runs after `/started`, when
+  the GUID is guaranteed in the JSONL — no race condition, no polling timeout risk
+- **Universal**: same handshake for new and resumed agents — one protocol to test and debug
+- If env vars are misconfigured, the `/started` call either fails or never fires —
+  both caught by the 3-minute timeout
+
+After the first callback arrives, the executor switches to the normal `noActivityTimeout`
+(30 min) for the remainder of the agent's work.
+
+---
+
 ## Structured Text Delivery — Instruction Files in `.ai_out/`
 
 All structured/formatted content sent to agents is written to the sub-part's
@@ -262,7 +342,7 @@ Answer delivered via TMUX `send-keys`, not via HTTP response.
 
 ## Callback Scripts
 
-Five focused bash scripts, one per endpoint. Each script wraps a single curl call and is
+Six focused bash scripts, one per endpoint. Each script wraps a single curl call and is
 the sole mechanism agents use to communicate back to the harness.
 
 **Shared behavior across all scripts:**
@@ -278,6 +358,7 @@ the sole mechanism agents use to communicate back to the harness.
 ### Scripts
 
 ```bash
+callback_shepherd.started.sh                   # no args — bootstrap handshake (agent alive, server reachable)
 callback_shepherd.done.sh <result>             # required: completed | pass | needs_iteration
 callback_shepherd.user-question.sh "<text>"    # required: question text
 callback_shepherd.fail-workflow.sh "<reason>"  # required: failure reason (aborts entire workflow)
@@ -293,13 +374,17 @@ Server-side role validation is a second layer of defense.
 
 ## Harness → Agent Communication
 
-TMUX `send-keys` is the **only** harness-to-agent communication channel. The harness uses it to:
+TMUX is the **only** harness-to-agent communication channel, through two mechanisms:
 
-- Deliver the HandshakeGuid for session ID resolution
-- Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
-- Send user-question answer file paths (`comm/in/` in `.ai_out/`)
-- Send health pings
-- Send iteration feedback instructions (on `needs_iteration`)
+- **CLI args** (bootstrap): delivers the bootstrap message containing HandshakeGuid and
+  `callback_shepherd.started.sh` instruction. Passed inline as `-p "..."` at agent start
+  (both new and `--resume`). Lightweight, self-contained string — no instruction file.
+- **`send-keys`** (work phase): used for all communication **after** the bootstrap handshake
+  (`/started` received):
+  - Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
+  - Send user-question answer file paths (`comm/in/` in `.ai_out/`)
+  - Send health pings
+  - Send iteration feedback instructions (on `needs_iteration`)
 
 For the full agent lifecycle (spawn, session ID resolution), see
 [`SpawnTmuxAgentSessionUseCase`](../use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).

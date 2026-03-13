@@ -173,11 +173,13 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 
 ## Agent Health Monitoring
 
-Timeout + ping mechanism to detect crashed/hung agents. Four UseCase classes handle distinct
-failure scenarios (`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`,
-`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). See
-[Health Monitoring](use-case/HealthMonitoring.md) (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the
-full spec — flow, triggers, actions, and UseCase naming principle.
+Timeout + ping mechanism to detect crashed/hung agents. Five UseCase classes handle distinct
+failure scenarios (`NoStartupAckUseCase`, `NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`,
+`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). Agents call `callback_shepherd.started.sh`
+immediately after reading instructions — a 3-minute startup timeout catches spawn failures fast
+(ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
+(ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
+naming principle.
 
 ---
 
@@ -212,7 +214,7 @@ See:
 ### Sub-Part Transitions
 
 - **Automatic** for doer→reviewer transitions: doer sends `result: "completed"` → reviewer starts
-- **Reviewer-driven** for iteration decisions: reviewer sends `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). The reviewer's verdict is authoritative — no LLM evaluation in this path.
+- **Reviewer-driven** for iteration decisions: reviewer sends `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). The reviewer's verdict is authoritative — no LLM evaluation in this path. On `needs_iteration`, the reviewer must follow the [Structured Reviewer Feedback Contract](core/ContextForAgentProvider.md#structured-reviewer-feedback-contract--apeslyjmfqq8bbrfxczyw5pe) (ref.ap.EslyJMFQq8BBrFXCzYw5P.E).
 
 ### Context Assembly — ContextForAgentProvider
 
@@ -327,7 +329,9 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Non-blocking HTTP + TMUX delivery** | All callbacks return 200 immediately; responses delivered via TMUX send-keys |
-| Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation |
+| Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration` requires structured feedback (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) |
+| Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
+| Startup acknowledgment | **`/callback-shepherd/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Agent calls immediately after reading instructions. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel — updates `lastActivityTimestamp`, no AgentSignal. |
 | Callback scripts | **One script per endpoint** | `callback_shepherd.*.sh` — focused, self-documenting, no flag parsing |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation** | On failure, append `## Previous Failed Attempts` section to the ticket with structured facts + LLM summary. Ticket already feeds into agent context — no plumbing changes needed. |
@@ -342,7 +346,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, plan lifecycle, session ID storage |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
-| [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type |
+| [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type, structured reviewer feedback contract, WHY-NOT comments protocol |
 | [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
 | [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
@@ -351,7 +355,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM tier-scoped interfaces, V1 model assignments |
 | [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
-| [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — timeout, ping, crash, convergence failure |
+| [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — startup ack, timeout, ping, crash, convergence failure |
 | [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
 | [`doc/use-case/TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) | Records structured failure context + LLM summary into ticket on workflow failure — enables cross-try learning |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
