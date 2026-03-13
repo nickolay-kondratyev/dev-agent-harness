@@ -271,13 +271,31 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 The live session handle stored in `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E).
 
+Uses a **compositional design** that groups related concerns into nested types for better
+encapsulation and type safety.
+
 ### Fields
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `sessionName` | `String` | TMUX session name. Format: `shepherd_${partName}_${subPartName}`. Used for `tmux send-keys` and `tmux kill-session`. |
-| `handshakeGuid` | `HandshakeGuid` | The GUID assigned to this session (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). |
+| `tmuxSession` | `TmuxSession` | Live TMUX session handle for sending keys and checking existence. See [TmuxSession fields](#tmuxsession-fields) below. |
+| `resumableAgentSessionId` | `ResumableAgentSessionId` | Agent session identity for persistence and V2 resume. See [ResumableAgentSessionId fields](#resumableagentid-fields) below. |
+
+### TmuxSession Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `TmuxSessionName` | TMUX session name. Format: `shepherd_${partName}_${subPartName}`. Used for `tmux kill-session`. |
 | `paneTarget` | `String` | TMUX pane target (e.g., `shepherd_main_impl:0.0`). Used for `send-keys` commands. |
+
+### ResumableAgentSessionId Fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `handshakeGuid` | `HandshakeGuid` | The GUID assigned to this session (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). Used for server routing via `SessionsState`. |
+| `agentType` | `AgentType` | Which agent implementation (e.g., `ClaudeCode`, `PI`). Used for dispatching to the correct `AgentStarter` and `AgentSessionIdResolver`. |
+| `sessionId` | `String` | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume`. |
+| `model` | `String` | The actual model name used for this session (e.g., `sonnet`, `opus`). Must match the sub-part's `model` field. |
 
 ### Kill Semantics
 
