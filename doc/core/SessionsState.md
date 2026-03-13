@@ -65,7 +65,7 @@ send `pass` or `needs_iteration`.
 |-----------|--------|-------------|
 | `register(guid, entry)` | `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) (after spawn, and on each iteration with fresh deferred) | Adds or updates a session in the registry |
 | `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
-| `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part |
+| `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning phase, `partName = "planning"` (constant — see ref.ap.P3po8Obvcjw4IXsSUSU91.E). |
 
 ---
 

@@ -64,11 +64,13 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
 5. Return List<Part> — the execution parts extracted from current_state.json
 ```
 
-If `plan.json` is malformed or fails schema validation, `TicketShepherd` delegates to
-`FailedToExecutePlanUseCase` — prints red error, halts. This should not happen in practice:
-both the planner and plan reviewer are instructed to validate `plan.json` via
-`callback_shepherd.validate-plan.sh` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) before signaling
-`done`/`pass`. A validation failure here indicates a bug in the planning agents.
+If `plan.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws
+a `PlanConversionException` (extends `AsgardBaseException`). `TicketShepherd` catches
+`PlanConversionException` at the call site and delegates to `FailedToExecutePlanUseCase` —
+prints red error, halts. This should not happen in practice: both the planner and plan
+reviewer are instructed to validate `plan.json` via `callback_shepherd.validate-plan.sh`
+(ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) before signaling `done`/`pass`. A validation failure here
+indicates a bug in the planning agents.
 
 ---
 

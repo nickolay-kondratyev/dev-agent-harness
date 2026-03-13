@@ -12,7 +12,11 @@ creates executors for each part, runs them in sequence, and handles the results.
    (ref.ap.evYmpQfliHCHUTdK2QRgS.E)
 3. If `SetupPlanResult.NeedsPlanning`:
    a. `activeExecutor` = planning executor (a `DoerReviewerPartExecutor`
-      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER)
+      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER).
+      Planning sub-parts use the constant `partName = "planning"` for `SessionsState`
+      registration, `removeAllForPart` cleanup, and commit messages
+      (e.g., `[shepherd] planning/plan — completed`). This is a synthetic name — it does
+      not come from `plan.json` (which doesn't exist yet during planning).
    b. `planningExecutor.execute()` → `PartResult`
    c. Handle `PartResult` — **same logic as execution parts** (step 4d):
       - `Completed` → proceed to 3d
@@ -22,7 +26,9 @@ creates executors for each part, runs them in sequence, and handles the results.
         ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E before agents signal done). When they happen,
         the human is the right handler — no special recovery logic.
    d. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
-   e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`
+   e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`.
+      Throws `PlanConversionException` on malformed/invalid plan; `TicketShepherd` catches it
+      and delegates to `FailedToExecutePlanUseCase(planConversionException)`.
 4. For each execution Part:
    a. Create `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
       - 2 sub-parts → `DoerReviewerPartExecutor`
@@ -37,9 +43,10 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention). V1: no automatic recovery.
 
-`FailedToExecutePlanUseCase` receives the full `PartResult` sealed class (not just a reason
-string). This allows formatting different error messages per failure type and gives V2 the
-type information needed for different cleanup strategies.
+`FailedToExecutePlanUseCase` receives either a `PartResult` sealed class (for execution and
+planning executor failures) or a `PlanConversionException` (for plan conversion failures in
+step 3e). Both carry enough context for formatted error messages and give V2 the type
+information needed for different cleanup strategies.
 5. On all parts completed — **workflow success**:
    a. **Final commit** — `GitCommitStrategy.onSubPartDone` was already called for the last
       sub-part, but the shepherd performs one final `git add -A && git commit` to capture

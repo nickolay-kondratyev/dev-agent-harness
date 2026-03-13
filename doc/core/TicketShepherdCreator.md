@@ -20,7 +20,9 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 ## What It Does
 
 - Resolves workflow JSON from `config/workflows/<name>.json`
-- Parses the ticket (frontmatter `id`, `title`, `status`)
+- Parses the ticket (frontmatter `id`, `title`, `status`). **Fails hard** if any of these
+  required fields are missing or empty — prints a clear error naming the missing field(s)
+  and the ticket path.
 - **Validates ticket status** — `status` must be `in_progress`. Fail hard with clear error
   if not. Marking the ticket as `in_progress` and pushing to remote is the caller's
   responsibility — outside Shepherd scope.
