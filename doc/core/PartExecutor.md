@@ -85,6 +85,7 @@ enum class DoneResult {
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
 | `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
 | `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
+| `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; executor's ACK-await phase reads this |
 
 All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
 (ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the executor's health-aware await loop knows the agent
@@ -126,7 +127,29 @@ Full health monitoring spec: ref.ap.6HIM68gd4kb8D2WmvQDUK.E (HealthMonitoring.md
 
 ### Loop Structure (Pseudocode)
 
+The loop has two phases: **ACK-await** (confirms payload delivery) and **signal-await**
+(waits for agent to complete work). The ACK-await phase runs first after every `send-keys`
+delivery (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
+
 ```
+// Phase A: ACK-Await — confirm payload delivery
+// (skipped if no payload was sent, e.g., on initial spawn where bootstrap ACK is /signal/started)
+ackAttempt = 0
+while (sessionEntry.pendingPayloadAck != null) {
+    ackAttempt++
+    if (ackAttempt > 3) {
+        // All retries exhausted — agent alive but not processing input
+        kill TMUX session
+        return AgentSignal.Crashed("Payload delivery failed after 3 attempts")
+    }
+    if (ackAttempt > 1) {
+        // Retry: re-send the same wrapped payload via send-keys
+        resendPayloadViaSendKeys(wrappedPayload)
+    }
+    waitForAck(ackTimeout = 3 minutes, sessionEntry)
+}
+
+// Phase B: Signal-Await — health-aware wait for done/fail-workflow
 while (true) {
     signal = awaitSignalWithTimeout(healthCheckInterval)
 
@@ -268,7 +291,10 @@ kill/respawn — it:
 1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
 2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
 3. Assembles new instructions via `SubPartInstructionProvider`
-4. Sends instruction file path via TMUX `send-keys` to the existing session
+4. Wraps the instruction file path in the Payload Delivery ACK wrapper
+   (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E), sets `pendingPayloadAck` on `SessionEntry`
+5. Sends wrapped payload via TMUX `send-keys` to the existing session
+6. Enters ACK-await phase → on ACK received, proceeds to health-aware signal-await
 
 This pattern is identical for both doer and reviewer re-instruction.
 

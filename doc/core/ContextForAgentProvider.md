@@ -313,6 +313,13 @@ Two scripts on your $PATH — one for fire-and-forget signals, one for queries t
 
 ### Signals (fire-and-forget — ignore stdout):
 
+**Payload ACK — MUST do first when you receive a wrapped payload:**
+When you receive input wrapped in `<payload_from_shepherd_must_ack>` XML tags, you MUST
+call the command in the `MUST_ACK_BEFORE_PROCEEDING` attribute BEFORE processing the
+payload content:
+`callback_shepherd.signal.sh ack-payload <payload_id>`
+The `payload_id` and exact command are in the XML wrapper — copy it exactly.
+
 When you complete your task:
 `callback_shepherd.signal.sh done completed`        (if you are a doer)
 `callback_shepherd.signal.sh done pass`             (if you are a reviewer and work passes)

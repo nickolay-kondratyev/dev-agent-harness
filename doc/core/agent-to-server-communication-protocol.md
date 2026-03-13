@@ -35,7 +35,7 @@ Agent-to-harness HTTP endpoints are split into **two explicit tiers** based on t
 
 **Fire-and-forget.** The agent POSTs, gets a bare `200 OK`, and moves on. If the harness needs to deliver content back (Q&A answers, iteration feedback, pings), it uses TMUX `send-keys`. Agents that need a response after a signal (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
 
-Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ping-ack`).
+Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ping-ack`, `ack-payload`). The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ### Tier 2 — Queries (`/callback-shepherd/query/*`)
 
@@ -120,6 +120,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 | `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately; answer delivered asynchronously via TMUX `send-keys`. |
 | `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
 | `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
+| `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
 
 ### Query Endpoints (synchronous — meaningful response body)
 
@@ -158,6 +159,9 @@ GUID-to-sub-part registry.
 
 // POST /callback-shepherd/signal/ping-ack
 { "handshakeGuid": "handshake.a1b2c3d4-..." }
+
+// POST /callback-shepherd/signal/ack-payload — acknowledges receipt of a send-keys payload
+{ "handshakeGuid": "handshake.a1b2c3d4-...", "payloadId": "aB3xK9mR2pL7nQ4wY6jHt" }
 ```
 
 ### Query Request Payloads
@@ -203,8 +207,10 @@ the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 
 - **Signal endpoints** (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
   `lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
-  `signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`) do **not**
-  complete the deferred — executor stays suspended.
+  `signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`, `ack-payload`)
+  do **not** complete the deferred — executor stays suspended. `ack-payload` additionally
+  clears `pendingPayloadAck` on the `SessionEntry` when the PayloadId matches
+  (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 - **Query endpoints** (`/callback-shepherd/query/*`): Look up `SessionEntry`, update
   `lastActivityTimestamp`, process the request, return meaningful response body. Do **not**
   complete `signalDeferred` — queries are utility calls, not lifecycle events.
@@ -317,8 +323,9 @@ Phase 1: Bootstrap Handshake (initial prompt argument — interactive agent, no 
   Harness ──[AgentSessionIdResolver: resolves session ID (GUID guaranteed)]
 
 Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
-  Harness ──[send-keys: "Read instructions at <path>"]──► Agent
-  Agent   ──[works, calls /signal/done]─────────────────► Server
+  Harness ──[send-keys: wrapped payload with PayloadId (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)]──► Agent
+  Agent   ──[POST /signal/ack-payload {payloadId}]──────────────────────────────────────► Server
+  Agent   ──[works, calls /signal/done]─────────────────────────────────────────────────► Server
 ```
 
 **Claude Code example** (the actual command is built by the agent-specific `AgentStarter` implementation):
@@ -418,11 +425,15 @@ callback_shepherd.signal.sh done <result>                 # required: completed 
 callback_shepherd.signal.sh user-question "<text>"        # required: question text
 callback_shepherd.signal.sh fail-workflow "<reason>"      # required: failure reason (aborts entire workflow)
 callback_shepherd.signal.sh ping-ack                      # no extra args — acknowledges health ping
+callback_shepherd.signal.sh ack-payload <payload-id>      # required: 21-char PayloadId from the send-keys wrapper
 ```
 
 **Argument validation on `done`:** The script rejects anything other than `completed`,
 `pass`, or `needs_iteration` with a clear error and non-zero exit. Server-side role
 validation is a second layer of defense.
+
+**Argument validation on `ack-payload`:** The script requires exactly one argument (the
+PayloadId). Missing or empty PayloadId → error and non-zero exit.
 
 ### `callback_shepherd.query.sh` — Synchronous Request/Response
 
@@ -515,5 +526,170 @@ Harness-to-agent communication uses two channels depending on the phase:
   - Send health pings
   - Send iteration feedback instructions (on `needs_iteration`)
 
+**All `send-keys` payloads (except health pings) are wrapped with the Payload Delivery ACK
+Protocol** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK receipt before processing.
+Health pings are exempt because they have their own acknowledgment mechanism (`ping-ack`).
+
 For the full agent lifecycle (spawn, session ID resolution), see
 [`SpawnTmuxAgentSessionUseCase`](../use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
+
+---
+
+## Payload Delivery ACK Protocol / ap.r0us6iYsIRzrqHA5MVO0Q.E
+
+### Problem
+
+TMUX `send-keys` succeeds if the TMUX session exists — regardless of whether the agent
+actually processes the input. If the agent's context is compacting, or the agent is
+mid-tool-execution, or the pane buffer is full, the content may arrive but never be
+processed. Without delivery confirmation, the harness cannot distinguish "agent is working
+on the instruction" from "agent never received the instruction."
+
+This creates a specific failure mode: instruction delivered via `send-keys` → agent never
+processes it → agent stays idle → 30 min `noActivityTimeout` → health ping → agent responds
+with `ping-ack` (it IS alive, just never got the instruction) → timeout resets → repeat
+indefinitely. Health monitoring cannot break this loop because the agent is demonstrably
+alive.
+
+### Solution
+
+Every `send-keys` payload is wrapped in XML with a unique **PayloadId**
+(ref.ap.GWfkDyTJbMpWhPSPnQHlO.E). The agent must ACK the payload by calling
+`callback_shepherd.signal.sh ack-payload <PAYLOAD_ID>` **before** proceeding with the
+payload content. If no ACK arrives within the timeout window, the harness retries delivery.
+
+### PayloadId / ap.GWfkDyTJbMpWhPSPnQHlO.E
+
+Format: 21 characters of `[a-zA-Z0-9]` — generated by the harness. ~125 bits of entropy
+(comparable to UUID v4, more compact and greppable). Generated per payload, never reused.
+
+```kotlin
+// PayloadId value class — wraps the 21-char alphanumeric string
+val payloadId = PayloadId.generate()
+```
+
+### Wrapping Format
+
+```xml
+<payload_from_shepherd_must_ack payload_id="aB3xK9mR2pL7nQ4wY6jHt" MUST_ACK_BEFORE_PROCEEDING="callback_shepherd.signal.sh ack-payload aB3xK9mR2pL7nQ4wY6jHt">
+Read instructions at /path/to/comm/in/instructions.md
+</payload_from_shepherd_must_ack>
+```
+
+**Design choices:**
+- The XML tag name (`payload_from_shepherd_must_ack`) is deliberately verbose — it serves as
+  an inline instruction to the agent, readable even without prior context
+- The `MUST_ACK_BEFORE_PROCEEDING` attribute contains the **exact command** the agent must
+  run — the agent does not need to construct the command itself
+- The `payload_id` attribute is redundant with the command (for greppability and debugging)
+
+### Scope — What Gets Wrapped
+
+| Content type | Wrapped? | Rationale |
+|---|---|---|
+| Work instructions (Phase 2 file pointer) | **Yes** | Core delivery — must confirm receipt |
+| User-question answers | **Yes** | Agent is waiting for this; non-delivery blocks progress |
+| Iteration feedback instructions | **Yes** | Critical for doer re-instruction after `needs_iteration` |
+| Health pings | **No** | Pings have their own ACK mechanism (`ping-ack` — ref.ap.RJWVLgUGjO5zAwupNLhA0.E) |
+
+**Bootstrap messages are NOT wrapped** — they are delivered as initial prompt arguments
+(not `send-keys`), and the `/signal/started` callback serves as their ACK
+(ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
+
+### ACK Flow
+
+```
+Executor                                Agent (in TMUX)                    Server
+   │                                         │                               │
+   ├─ generate PayloadId                     │                               │
+   ├─ wrap payload in XML                    │                               │
+   ├─ send-keys (wrapped payload) ──────────►│                               │
+   ├─ start ACK-await (3 min timeout)        │                               │
+   │                                         ├─ reads XML wrapper            │
+   │                                         ├─ callback_shepherd.signal.sh  │
+   │                                         │  ack-payload <PayloadId> ────►│
+   │                                         │                               ├─ records ACK
+   │                                         │                               │  on SessionEntry
+   │  ◄── ACK confirmed (via SessionEntry) ──┤                               │
+   │                                         │                               │
+   ├─ proceed: enter health-aware            │                               │
+   │  await loop                             ├─ processes payload content    │
+   │                                         │  (reads instructions, works)  │
+```
+
+**On ACK received:** the executor knows the agent has received and is processing the
+payload. It proceeds to the normal health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) waiting for `done`/`fail-workflow`.
+
+**On ACK timeout (3 min):** the harness retries `send-keys` with the **same PayloadId**
+and the same wrapped content. The content is unchanged — the instruction file path hasn't
+moved. This is idempotent from the agent's perspective: if the agent somehow receives the
+payload twice, it reads the same instruction file.
+
+### Retry Policy
+
+| Attempt | Action | On no ACK |
+|---------|--------|-----------|
+| 1 (initial send) | Send wrapped payload via `send-keys` | Wait 3 minutes |
+| 2 (first retry) | Re-send same wrapped payload via `send-keys` | Wait 3 minutes |
+| 3 (second retry) | Re-send same wrapped payload via `send-keys` | All retries exhausted |
+
+**After all retries exhausted** (no ACK after 9 minutes total): the executor treats this as
+an agent that is alive but unable to process input — functionally equivalent to a crash.
+The executor kills the TMUX session, completes `signalDeferred` with `AgentSignal.Crashed`,
+and returns `PartResult.AgentCrashed`. `TicketShepherd` delegates to
+`FailedToExecutePlanUseCase` (red error, halt).
+
+### ACK Tracking on SessionEntry
+
+The `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) carries an optional
+`pendingPayloadAck: PayloadId?` field. The executor sets this before sending `send-keys`.
+The server sets it to `null` when the matching `/signal/ack-payload` arrives. The executor
+polls this field during the ACK-await phase.
+
+### Signal Endpoint
+
+`POST /callback-shepherd/signal/ack-payload`
+
+Side-channel signal — same tier as `started`, `ping-ack`, `user-question`:
+- Updates `lastActivityTimestamp`
+- Clears `pendingPayloadAck` on `SessionEntry` when `payloadId` matches
+- Does **NOT** complete `signalDeferred` — the executor is in the ACK-await phase, not the
+  signal-await phase
+- Returns bare `200 OK`
+
+**Mismatched PayloadId:** If the `payloadId` in the request does not match the
+`pendingPayloadAck` on the `SessionEntry` (stale ACK from a previous retry), the server
+returns `200` (fire-and-forget principle), logs a **WARN** with both IDs, and does **NOT**
+clear `pendingPayloadAck`. The timestamp is still updated.
+
+### Duplicate ACK Handling
+
+If `pendingPayloadAck` is already `null` when an `/ack-payload` arrives (agent ACKed
+twice, or callback script retry after the first attempt succeeded), the server returns
+`200` and logs a **WARN**. Same idempotency principle as duplicate `/signal/done`
+(see [Idempotent Signal Callbacks](#idempotent-signal-callbacks)).
+
+### Why Self-Describing Wrapper
+
+The wrapper contains the exact ACK command — the agent does not need prior knowledge of
+the ACK protocol. Even if the agent's context window has compacted and lost earlier
+instructions, the XML wrapper tells it exactly what to do: run
+`callback_shepherd.signal.sh ack-payload <ID>` before proceeding. This makes the protocol
+robust against context window pressure.
+
+The agent's initial instructions (in `<critical_to_keep_through_compaction>` tags) also
+explain the ACK protocol as background context. But the wrapper is the primary mechanism —
+the agent should be able to ACK correctly from the wrapper alone.
+
+### Relationship to Other Acknowledgment Mechanisms
+
+| Mechanism | Scope | Direction |
+|---|---|---|
+| `/signal/started` (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message (Phase 1) | Agent → Harness |
+| `/signal/ping-ack` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) | Health pings | Agent → Harness |
+| `/signal/ack-payload` (this section) | All `send-keys` payloads except pings (Phase 2) | Agent → Harness |
+
+These three mechanisms together ensure **every** message from harness to agent has a
+confirmation path. The bootstrap has `/started`. Pings have `/ping-ack`. Everything else
+has `/ack-payload`.

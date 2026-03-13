@@ -170,7 +170,9 @@ The harness runs a Ktor CIO server (on the port from `TICKET_SHEPHERD_SERVER_POR
 every signal script call expects bare 200 and returns immediately. Query endpoints
 (`/callback-shepherd/query/*`) return meaningful response bodies for the agent to act on.
 When the harness needs to deliver content back to the agent (Q&A answers, iteration instructions),
-it uses TMUX `send-keys`. No long-lived HTTP connections.
+it uses TMUX `send-keys` wrapped with the **Payload Delivery ACK Protocol**
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK receipt before processing, ensuring
+every instruction is confirmed delivered. No long-lived HTTP connections.
 
 See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the full protocol specification: endpoints, payloads, HandshakeGuid identity, port discovery, user-question flow, and callback scripts.
 
@@ -350,6 +352,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Two-tier: signals (fire-and-forget) + queries (synchronous response)** | Signal endpoints return bare 200; query endpoints return meaningful response body; harness-to-agent delivery via TMUX send-keys |
+| Payload delivery ACK | **ACK-before-proceed wrapper on all `send-keys` payloads** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Every `send-keys` payload (except pings) wrapped in XML with PayloadId (21-char `[a-zA-Z0-9]`). Agent must `ack-payload` before processing. 3 min ACK timeout, 2 retries. Prevents "alive but never got instruction" loop that health monitoring alone cannot break. |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration` requires structured feedback (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) |
 | Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
 | Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |

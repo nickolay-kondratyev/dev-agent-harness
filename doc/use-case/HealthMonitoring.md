@@ -10,6 +10,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 ## Flow
 
 0. **Startup acknowledgment** (default: 3 min): After spawn, the executor uses a shorter `noStartupAckTimeout` window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `NoStartupAckUseCase`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the normal `noActivityTimeout`. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
+0b. **Payload delivery ACK** (default: 3 min per attempt, 3 attempts max): After sending instructions via `send-keys`, the executor awaits `/signal/ack-payload` before entering the signal-await loop. If no ACK → retry `send-keys` (up to 2 retries). All retries exhausted → `AgentCrashed`. This catches the "alive but never received instruction" failure mode. See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 1. **No activity timeout** (default: 30 min): If no callback of any kind (signal or query) within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Uses `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — any callback resets the timer.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
 3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If **no** activity at all → triggers `NoReplyToPingUseCase`.
@@ -136,6 +137,34 @@ Without callback retry, a single transient HTTP failure on `/signal/done` create
 that health monitoring cannot resolve — the agent is alive (responds to pings), but the harness
 never received the done signal, and the agent has no reason to re-send it. Callback retry
 prevents this class of failure from ever reaching the health monitoring layer.
+
+---
+
+## Relationship to Payload Delivery ACK Protocol
+
+The Payload Delivery ACK Protocol (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) addresses a failure mode
+that health monitoring alone **cannot** resolve: the agent is alive and responsive to pings,
+but never received the harness's instruction. Without delivery confirmation, this creates an
+infinite loop:
+
+1. Harness sends instructions via `send-keys` → agent never processes them
+2. Agent stays idle → 30 min `noActivityTimeout` fires
+3. Harness pings → agent responds with `ping-ack` (it's alive)
+4. `lastActivityTimestamp` resets → back to step 2
+
+The ACK protocol breaks this loop by requiring the agent to confirm receipt of every
+`send-keys` payload **before** the executor enters the health-aware await loop. If no ACK
+arrives within 3 minutes, the harness retries delivery (up to 3 total attempts). This
+catches the "alive but never got the instruction" failure mode at the source — within 9
+minutes worst-case — rather than letting it loop indefinitely through health monitoring.
+
+**Three layers of delivery assurance (ordered by what they catch):**
+
+| Layer | What it catches | Mechanism |
+|-------|----------------|-----------|
+| 1. Callback script retry (ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) | Agent→Harness transient HTTP failures | Script retries the HTTP POST |
+| 2. Payload Delivery ACK (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Harness→Agent delivery failures (agent never processes `send-keys`) | Harness retries `send-keys` on missing ACK |
+| 3. Health monitoring (this doc) | Agent process crash, TMUX session death, truly hung agents | Ping + crash detection |
 
 ---
 
