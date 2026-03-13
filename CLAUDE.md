@@ -69,6 +69,9 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | Agent type & model assignment | ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E |
 | Agent roles directory structure | ref.ap.Q7kR9vXm3pNwLfYtJ8dZs.E |
 | Resume-on-restart (V2) | ref.ap.LX1GCIjv6LgmM7AJFas20.E |
+| Working tree validation (startup guard) | ref.ap.QL051Wl21jmmYqTQTLglf.E |
+| Git operation failure handling (GitOperationFailureUseCase) | ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E |
+| AutoRecoveryByAgentUseCase (generic) | ref.ap.q54vAxzZnmWHuumhIQQWt.E |
 
 ### Dependencies
 - Will take dependencies on well established third-party libraries.

@@ -24,8 +24,12 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 - **Validates ticket status** — `status` must be `in_progress`. Fail hard with clear error
   if not. Marking the ticket as `in_progress` and pushing to remote is the caller's
   responsibility — outside Shepherd scope.
+- **Validates working tree is clean** — `git status --porcelain` must be empty. Fail hard
+  with a clear error listing dirty files if not. This prevents pre-existing uncommitted
+  human work from being silently mixed into the first agent commit.
+  (ref.ap.QL051Wl21jmmYqTQTLglf.E — see [Working Tree Validation](git.md#working-tree-validation--startup-guard))
 - **Resolves try-N** — scans both local branches and `.ai_out/` directories to find the first
-  N where neither exists (see [Try-N Resolution](../high-level.md#try-n-resolution)
+  N where neither exists (see [Try-N Resolution](git.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)
 - **Creates feature branch** (`git checkout -b`) from current HEAD
 - Initializes `SessionsState`

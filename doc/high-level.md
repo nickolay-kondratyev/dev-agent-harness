@@ -295,9 +295,11 @@ attribution), and all env var requirements are fully specified in
 [`doc/core/git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 
 **Key points:**
+- **Clean working tree required** — `git status --porcelain` must be empty at startup. Fail hard if not. Prevents mixing human WIP with agent output. (ref.ap.QL051Wl21jmmYqTQTLglf.E)
 - Branch format: `{TICKET_ID}__{slugified_title}__try-{N}` — owned by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 - Harness owns all git commits — agents never commit. Pluggable `GitCommitStrategy` interface.
 - V1 default: `CommitPerSubPart` — commits the entire working tree (`git add -A`)
+- **Git operation failures** trigger `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E, ref.ap.q54vAxzZnmWHuumhIQQWt.E) — spawns a sonnet-model recovery agent to fix the environment, then retries once. Falls back to `FailedToExecutePlanUseCase` if recovery fails.
 
 ## Harness-Level Resume — V2
 
@@ -348,4 +350,5 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
 | [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — timeout, ping, crash, convergence failure |
+| [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

@@ -6,6 +6,36 @@ commit timing, message format, and author attribution.
 
 ---
 
+## Working Tree Validation — Startup Guard
+<!-- ap.QL051Wl21jmmYqTQTLglf.E -->
+
+Before any git operations (branch creation, commits), the **working tree must be clean**.
+This is validated at startup by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
+before branch creation.
+
+**Check**: `git status --porcelain` must produce empty output.
+
+**If dirty**: Fail hard with a clear error message listing the dirty files and instructing
+the user to commit or stash their changes before running `shepherd run`. Example:
+
+```
+ERROR: Working tree is not clean. Shepherd requires a clean working tree to avoid
+mixing pre-existing uncommitted work with agent output.
+
+Dirty files:
+  M  src/Main.kt
+  ?? newfile.txt
+
+Please commit or stash your changes before running 'shepherd run'.
+```
+
+**Why**: `git checkout -b` with uncommitted changes carries those changes to the new branch.
+The first `git add -A && git commit` by the harness would silently include pre-existing
+human WIP in the first agent's commit — mixing human work with agent output. Failing hard
+at startup prevents this.
+
+---
+
 ## Branch Naming
 <!-- ap.THL21SyZzJhzInG2m4zl2.E -->
 
@@ -176,12 +206,57 @@ not mid-workflow.
 
 ---
 
+## Git Operation Failure Handling — AutoRecoveryByAgentUseCase
+<!-- ap.AQ8cRaCyiwZWdK5TZiKgJ.E -->
+
+Git operations (especially `git commit`) can fail mid-workflow due to infrastructure issues
+(disk full, `.gitignore` conflict, index lock, etc.). Since commits happen after each sub-part
+signal, a failure here would otherwise be an unhandled exception that halts the workflow.
+
+**Instead of failing outright, the harness spawns a recovery agent** via
+`AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E — see
+[`doc/use-case/AutoRecoveryByAgentUseCase.md`](../use-case/AutoRecoveryByAgentUseCase.md)).
+
+### GitOperationFailureUseCase
+
+A git-specific use case that packages context and delegates to `AutoRecoveryByAgentUseCase`:
+
+1. **Captures failure context**:
+   - The git command that failed (e.g., `git add -A && git commit ...`)
+   - The error output (stderr)
+   - Current `git status` output
+   - Current `git diff` output (if relevant)
+   - Working directory path
+2. **Captures workflow context**:
+   - Where we are in the workflow (part name, sub-part name, iteration number)
+   - What we were trying to achieve (e.g., "commit agent changes after sub-part completion")
+   - The commit message that was intended
+3. **Delegates to `AutoRecoveryByAgentUseCase`** with the packaged context
+4. **On recovery success** → retries the original git operation **once**
+5. **On retry failure or recovery failure** → delegates to `FailedToExecutePlanUseCase`
+   (prints red error, halts — waits for human intervention)
+
+**Ownership**: The failure handling (catch → recovery → retry → fallback to
+`FailedToExecutePlanUseCase`) is encapsulated within the `GitCommitStrategy` implementation.
+The executor calls `onSubPartDone`/`onPartDone` and either gets a successful commit or a
+`FailedToExecutePlanUseCase` escalation — the executor does not orchestrate the recovery itself.
+
+### Failure Points Covered
+
+| Git Operation | Where It Happens | Recovery Via |
+|---|---|---|
+| `git add -A` | `GitCommitStrategy.onSubPartDone` / `onPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
+| `git commit` | `GitCommitStrategy.onSubPartDone` / `onPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
+| `git checkout -b` | `TicketShepherdCreator` (startup) | **Not covered** — startup failures fail hard (no recovery agent). The working tree is validated clean at this point, so `checkout -b` failures indicate a more fundamental issue. |
+
+---
+
 ## Git Operations Summary
 
 The harness performs these git operations during a workflow:
 
 | When | Operation |
 |---|---|
-| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
-| `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"` |
-| Workflow failure (`FailedToExecutePlanUseCase`) | V1: no git operations on failure — harness prints red error and halts. V2 will add automated cleanup (see `doc_v2/FailedToExecutePlanUseCaseV2.md`). |
+| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
+| `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
+| Workflow failure (`FailedToExecutePlanUseCase`) | No git operations on failure — harness prints red error and halts. |
