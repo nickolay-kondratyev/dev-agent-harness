@@ -74,6 +74,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | NonInteractiveAgentRunner (subprocess --print agents) | ref.ap.ad4vG4G2xMPiMHRreoYVr.E |
 | AutoRecoveryByAgentUseCase (generic) | ref.ap.q54vAxzZnmWHuumhIQQWt.E |
 | TicketFailureLearningUseCase (cross-try learning) | ref.ap.cI3odkAZACqDst82HtxKa.E |
+| PUBLIC.md validation after done signal | ref.ap.THDW9SHzs1x2JN9YP9OYU.E |
 
 ### Dependencies
 - Will take dependencies on well established third-party libraries.

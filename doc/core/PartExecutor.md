@@ -253,7 +253,10 @@ the executor to send it new instructions.
       fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
       deferred) → assemble new instructions (includes reviewer feedback) → send via TMUX
       `send-keys` to **existing** session → enter health-aware await loop
-2. **On doer COMPLETED** — **late fail-workflow checkpoint** (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E):
+2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
+   verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
+   re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
+   Then **late fail-workflow checkpoint** (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E):
    check `SessionsState.checkLateFailWorkflow(partName)`. If set → return
    `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → start reviewer:
    a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
@@ -263,10 +266,14 @@ the executor to send it new instructions.
       create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
       new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
       send via TMUX `send-keys` to **existing** session → enter health-aware await loop
-3. **On reviewer PASS** → **late fail-workflow checkpoint**: check
+3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
+   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
+   re-instruction. Then **late fail-workflow checkpoint**: check
    `SessionsState.checkLateFailWorkflow(partName)`. If set → return
    `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → return `PartResult.Completed`
-4. **On reviewer NEEDS_ITERATION** → **late fail-workflow checkpoint**: check
+4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
+   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
+   re-instruction. Then **late fail-workflow checkpoint**: check
    `SessionsState.checkLateFailWorkflow(partName)`. If set → return
    `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → check budget:
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
@@ -287,6 +294,58 @@ already completed with `Done`. The executor detects it at the next checkpoint an
 
 Without these checkpoints, a late `fail-workflow` would be silently swallowed and the
 workflow would proceed with potentially corrupt output.
+
+### PUBLIC.md Validation After Done / ap.THDW9SHzs1x2JN9YP9OYU.E
+
+After every `AgentSignal.Done` (any result: `COMPLETED`, `PASS`, `NEEDS_ITERATION`), the
+executor verifies that the signaling agent's `comm/out/PUBLIC.md` exists and is non-empty
+**before** proceeding to the next step (late fail-workflow checkpoint, reviewer start,
+iteration restart, or part completion).
+
+**Why this matters:** `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) assembles
+the next agent's instructions including prior `PUBLIC.md` files. If the doer signals `done`
+without writing `PUBLIC.md` (or writes it to the wrong path), the reviewer receives empty
+context — wasting an iteration or producing a meaningless review. Catching this immediately
+after `done` prevents downstream corruption.
+
+**Validation logic:**
+
+1. Resolve the expected path: `comm/out/PUBLIC.md` for the sub-part that just signaled `done`
+   (path resolved via the `.ai_out/` directory schema — ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
+2. Check: file exists AND file size > 0 bytes
+3. If **valid** → proceed to next step (late fail-workflow checkpoint, etc.)
+4. If **missing or empty** → re-instruction attempt (one retry):
+   a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
+   b. Create fresh `CompletableDeferred<AgentSignal>` → re-register `SessionEntry`
+      (same HandshakeGuid, new deferred)
+   c. Send a re-instruction message via TMUX `send-keys` (wrapped with Payload Delivery ACK
+      — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) telling the agent:
+      - Its `PUBLIC.md` at `<path>` is missing or empty
+      - It must write `PUBLIC.md` with its work log (decisions, rationale, what was done)
+      - It must re-signal `done` with the same result value
+   d. Enter health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) waiting for the
+      re-signal
+   e. On re-signal received → re-validate `PUBLIC.md`
+   f. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
+      message: `"Agent failed to produce PUBLIC.md after explicit re-instruction"`.
+      `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, halt).
+
+**One retry, not infinite:** If the agent cannot produce `PUBLIC.md` after being explicitly
+told it is missing, something is fundamentally wrong (misconfigured output path, agent
+context exhausted, agent confused). Retrying further would waste time.
+
+**Re-instruction message format** (sent as a direct `send-keys` message, not an instruction
+file — short enough for inline delivery):
+
+```
+Your PUBLIC.md at <path> is missing or empty. You MUST write your work log to this file
+before signaling done. Write PUBLIC.md now, then re-signal:
+callback_shepherd.signal.sh done <result>
+```
+
+**Applies to all executor types:** Both `DoerReviewerPartExecutor` and
+`SingleDoerPartExecutor` perform this validation. The check is identical — only the
+sub-part path differs.
 
 ### Key: Both Sessions Alive, One Active
 
@@ -336,8 +395,10 @@ No automatic respawn in V1. See `doc_v2/idle-session-recovery.md` for V2 design
 
 The executor receives `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) as a dependency
 and calls `onSubPartDone` after each `AgentSignal.Done` (any result: `COMPLETED`, `PASS`,
-`NEEDS_ITERATION`) — before the next sub-part starts or iteration resumes. This is the
-mechanism by which V1's `CommitPerSubPart` strategy produces one commit per sub-part signal.
+`NEEDS_ITERATION`) — after PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) succeeds
+but before the next sub-part starts or iteration resumes. This ordering ensures the commit
+captures a validated `PUBLIC.md`. This is the mechanism by which V1's `CommitPerSubPart`
+strategy produces one commit per sub-part signal.
 
 ### Dependencies
 
@@ -354,7 +415,8 @@ mechanism by which V1's `CommitPerSubPart` strategy produces one commit per sub-
 ## SingleDoerPartExecutor
 
 Spawn doer → register → send instructions → enter health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) → map `AgentSignal` to `PartResult`. No reviewer, no
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) → **PUBLIC.md validation**
+(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) → map `AgentSignal` to `PartResult`. No reviewer, no
 iteration. Uses the same health-aware await loop as `DoerReviewerPartExecutor` — a single
 doer can crash/hang just like a doer-reviewer pair.
 
@@ -362,7 +424,7 @@ doer can crash/hang just like a doer-reviewer pair.
 
 | `AgentSignal` | `PartResult` |
 |---------------|-------------|
-| `Done(COMPLETED)` | `PartResult.Completed` |
+| `Done(COMPLETED)` | After PUBLIC.md validation → `PartResult.Completed` |
 | `FailWorkflow(reason)` | `PartResult.FailedWorkflow(reason)` |
 | `Crashed(details)` | `PartResult.AgentCrashed(details)` |
 

@@ -109,6 +109,15 @@ Concatenation order:
 
 ## Visibility Rules
 
+### Upstream Guarantee: PUBLIC.md Validated Before Assembly
+
+`ContextForAgentProvider` assumes that all referenced `PUBLIC.md` files exist and are
+non-empty. This is guaranteed by the executor's PUBLIC.md validation step
+(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) — performed after every `done` signal, before the
+executor proceeds to assemble the next agent's instructions. The provider does **not**
+perform its own existence check — that would be redundant defense-in-depth that masks
+upstream bugs.
+
 ### Which Prior PUBLIC.md Files Does an Execution Agent See?
 
 **Rule: all completed prior parts' PUBLIC.md files, plus the current part's peer sub-part.**
@@ -387,5 +396,5 @@ The provider writes the file and returns its `Path`. The caller
 
 - **Does not decide which agent to spawn** — that's TicketShepherd walking the workflow
 - **Does not send the file to the agent** — that's the `PartExecutor` via TMUX `send-keys`
-- **Does not read agent output** — PUBLIC.md reading is the executor's/TicketShepherd's concern
+- **Does not validate PUBLIC.md existence** — guaranteed by executor's upstream validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E)
 - **Does not manage SHARED_CONTEXT.md lifecycle** — agents modify it directly
