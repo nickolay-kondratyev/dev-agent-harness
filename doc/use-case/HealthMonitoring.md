@@ -52,8 +52,29 @@ aims to detect.
 |-----------|---------|-------------|
 | `noStartupAckTimeout` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `noActivityTimeout`. |
 | `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
-| `noActivityTimeout` | 30 min | Elapsed time since `lastActivityTimestamp` before triggering a ping |
+| `noActivityTimeout` | 30 min | Elapsed time since `lastActivityTimestamp` before triggering a ping. **Configurable per sub-part** — see below. |
 | `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any activity resets) |
+
+### Per-Sub-Part noActivityTimeout Override
+
+The default 30-minute `noActivityTimeout` is appropriate for most agents, but some roles have
+different expected work durations:
+
+- A **planning agent** may legitimately work for 25+ minutes on complex codebases
+- A **reviewer** typically finishes much faster
+
+To avoid one-size-fits-all, `noActivityTimeout` can be **overridden per sub-part** via an
+optional `noActivityTimeoutMinutes` field in the sub-part config (plan.json / workflow JSON).
+When present, it replaces the global default for that sub-part's health monitoring.
+
+| Source | How set |
+|--------|---------|
+| `plan.json` (with-planning) | Planner assigns per sub-part based on expected work duration |
+| `config/workflows/*.json` (straightforward) | Operator specifies in the static workflow JSON |
+| Global default | 30 min — used when the field is absent |
+
+The `PartExecutor` reads this value from the sub-part config in `current_state.json` when
+initializing its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 ### What Runs Where
 

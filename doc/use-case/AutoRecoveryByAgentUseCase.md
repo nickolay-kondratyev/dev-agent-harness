@@ -77,13 +77,14 @@ sealed class RecoveryResult {
    (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with:
    - **Agent type**: `PI` — lightweight, fast, cost-effective for infrastructure fixes
    - **Model**: `$AI_MODEL__ZAI__FAST` (e.g., `glm-4.7-flash`)
-   - **Timeout**: 5 minutes — infrastructure fixes should be fast. If the agent cannot
-     fix it in 5 minutes, it's unlikely to fix it at all.
+   - **Timeout**: 20 minutes — non-interactive agents have no health monitoring (no ping,
+     no proof-of-life), so the process timeout is the only safeguard. Complex diagnostic
+     work (scanning logs, running git commands) may take time.
 
 3. **Interpret result**:
    - `NonInteractiveAgentResult.Success` → `RecoveryResult.Success`
    - `NonInteractiveAgentResult.Failed(exitCode, output)` → `RecoveryResult.Failed(output)`
-   - `NonInteractiveAgentResult.TimedOut(output)` → `RecoveryResult.Failed("Recovery timed out after 5 minutes: $output")`
+   - `NonInteractiveAgentResult.TimedOut(output)` → `RecoveryResult.Failed("Recovery timed out after 20 minutes: $output")`
 
 ---
 

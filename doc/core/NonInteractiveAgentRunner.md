@@ -131,8 +131,14 @@ that need lightweight agent invocation.
 
 | Consumer | Agent Type | Model | Timeout | Purpose |
 |---|---|---|---|---|
-| `AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E) | PI | `$AI_MODEL__ZAI__FAST` | 5 min | Fix infrastructure issues (git lock, disk cleanup) |
-| `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) | ClaudeCode | sonnet | 10 min | Read artifacts, summarize failure, update ticket, commit |
+| `AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E) | PI | `$AI_MODEL__ZAI__FAST` | 20 min | Fix infrastructure issues (git lock, disk cleanup) |
+| `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) | ClaudeCode | sonnet | 20 min | Read artifacts, summarize failure, update ticket, commit |
+
+> **Why 20 minutes:** Non-interactive agents have **no health monitoring** — no ping, no
+> `lastActivityTimestamp`, no proof-of-life mechanism. The process-level timeout is the **only**
+> safeguard. These agents may encounter complex diagnostic work (scanning logs, reading large
+> artifacts, running git commands), so a generous timeout prevents premature kills. 20 minutes
+> balances "give it time to finish" against "don't hang forever."
 
 ---
 
