@@ -93,13 +93,20 @@ When plan execution hits a blocking failure (`FailedWorkflow`, `AgentCrashed`, o
    `"Workflow halted. Press Enter to shut down, or Ctrl+C to use the interrupt protocol."`
    and blocks reading stdin. This keeps the process alive (TMUX sessions stay alive as
    children of the process) without consuming resources.
-4. **On Enter** → harness kills all TMUX sessions, exits with **non-zero exit code**
-5. **Ctrl+C interrupt protocol still applies** — the two-layer flow
+4. **On Enter** → harness kills all TMUX sessions
+5. **Record failure learning** — `TicketFailureLearningUseCase`
+   (ref.ap.cI3odkAZACqDst82HtxKa.E) records structured failure context + LLM summary into
+   the ticket's `## Previous Failed Attempts` section. **Non-fatal** — if this step fails
+   (LLM error, git error), it logs a warning and continues to exit. The learning is best-effort.
+6. **Exit with non-zero exit code**
+7. **Ctrl+C interrupt protocol still applies** — the two-layer flow
    (ref.ap.P3po8Obvcjw4IXsSUSU91.E) works during the stdin block, giving the human the
    option to interrupt agents or kill sessions selectively before the full shutdown.
 
-No automated cleanup, no agent spawning, no git rollback. The human reviews the state and
-decides what to do. V2 will add automated cleanup — see `doc_v2/FailedToExecutePlanUseCaseV2.md`.
+No automated cleanup, no agent spawning, no git rollback — except for the ticket-failure-learning
+step (step 5) which records what happened for the benefit of the next try. The human reviews
+the state and decides what to do. V2 will add automated cleanup — see
+`doc_v2/FailedToExecutePlanUseCaseV2.md`.
 
 ---
 

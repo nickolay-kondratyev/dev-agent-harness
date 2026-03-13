@@ -72,6 +72,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | Working tree validation (startup guard) | ref.ap.QL051Wl21jmmYqTQTLglf.E |
 | Git operation failure handling (GitOperationFailureUseCase) | ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E |
 | AutoRecoveryByAgentUseCase (generic) | ref.ap.q54vAxzZnmWHuumhIQQWt.E |
+| TicketFailureLearningUseCase (cross-try learning) | ref.ap.cI3odkAZACqDst82HtxKa.E |
 
 ### Dependencies
 - Will take dependencies on well established third-party libraries.

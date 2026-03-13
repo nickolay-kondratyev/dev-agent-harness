@@ -33,7 +33,7 @@ add a new interface, no changes to existing callers).
 | Tier Interface | V1 Model | Provider | Typical Use |
 |---|---|---|---|
 | `DirectQuickCheapLLM` | **GLM-4.7-Flash** | Z.AI (GLM) | Title compression, feature name suggestion |
-| `DirectBudgetHighLLM` | **GLM-5** | Z.AI (GLM) | `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) state summarization |
+| `DirectBudgetHighLLM` | **GLM-5** | Z.AI (GLM) | `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) state summarization, `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) failure summary generation |
 
 Model assignments are configuration — changing the model behind a tier requires no code changes
 outside the `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E).

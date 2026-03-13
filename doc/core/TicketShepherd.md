@@ -67,6 +67,8 @@ information needed for different cleanup strategies.
 | Field | Type | Purpose |
 |-------|------|---------|
 | `activeExecutor` | `PartExecutor?` | The currently running executor. Single reference point for cancellation. `null` between parts. Health monitoring is internal to each executor (ref.ap.QCjutDexa2UBDaKB3jTcF.E). |
+| `originatingBranch` | `String` | The branch from which the try branch was created. Recorded by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) before branch creation. Used by `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) for failure-learning propagation. |
+| `tryNumber` | `Int` | The try number for this run (e.g., 1 for try-1). Resolved by `TicketShepherdCreator`. Used by `TicketFailureLearningUseCase` for the `### TRY-{N}` section heading. |
 
 ## Responsibilities
 
@@ -99,6 +101,10 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in cod
 `ShepherdContext.kt`) for shared infrastructure (tmux, LLM, use cases) plus ticket-scoped
 state (`SessionsState`, parsed workflow, ticket metadata) wired by
 `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
+
+Additional dependencies:
+- `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) — records structured failure
+  context into the ticket on workflow failure, invoked by `FailedToExecutePlanUseCase` before halting.
 
 ## Interrupt Protocol (Ctrl+C)
 
