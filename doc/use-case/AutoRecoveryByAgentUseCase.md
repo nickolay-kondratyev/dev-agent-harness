@@ -1,7 +1,7 @@
 # AutoRecoveryByAgentUseCase / ap.q54vAxzZnmWHuumhIQQWt.E
 
-A general-purpose recovery mechanism that spawns a coding agent to attempt automated recovery
-from infrastructure failures that occur mid-workflow.
+A general-purpose recovery mechanism that runs a lightweight non-interactive agent to attempt
+automated recovery from infrastructure failures that occur mid-workflow.
 
 ---
 
@@ -18,10 +18,14 @@ for human intervention, the harness first attempts automated recovery via a dedi
 
 `AutoRecoveryByAgentUseCase` is a **generic recovery executor**. It does not know about git
 or any specific failure domain — it receives structured context describing what failed and
-what needs to happen, spawns a recovery agent, and reports success or failure.
+what needs to happen, runs a recovery agent, and reports success or failure.
 
 Domain-specific use cases (e.g., `GitOperationFailureUseCase` ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E)
 package the failure context and delegate to `AutoRecoveryByAgentUseCase`.
+
+**Uses `NonInteractiveAgentRunner`** (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — a subprocess-based
+agent invocation with no TMUX, no handshake, no health monitoring. Infrastructure recovery
+tasks are short-lived and don't need the full interactive session machinery.
 
 ---
 
@@ -63,37 +67,23 @@ sealed class RecoveryResult {
 ## Flow
 
 1. **Assemble recovery instructions** — combine `RecoveryRequest` fields into a focused
-   instruction document for the recovery agent. The instructions include:
+   instruction string for the agent. The instructions include:
    - What failed and the error output
    - Current workflow state (which part, which sub-part, iteration)
    - The specific recovery goal
    - Constraints (what the agent must NOT do)
-   - The agent should signal completion via `/callback-shepherd/signal/done` with `result: completed`
 
-2. **Spawn recovery agent** — spawn a new TMUX session via `SpawnTmuxAgentSessionUseCase`
-   (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) with:
-   - **Agent type**: `ClaudeCode` (V1 — only supported agent type)
-   - **Model**: `sonnet` (medium tier — cost-effective for infrastructure recovery tasks)
-   - A dedicated session name: `recovery__{context_hint}` (e.g., `recovery__git_commit`)
-   - The assembled recovery instructions
+2. **Run recovery agent** — invoke `NonInteractiveAgentRunner.run()`
+   (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with:
+   - **Agent type**: `PI` — lightweight, fast, cost-effective for infrastructure fixes
+   - **Model**: `$AI_MODEL__ZAI__FAST` (e.g., `glm-4.7-flash`)
+   - **Timeout**: 5 minutes — infrastructure fixes should be fast. If the agent cannot
+     fix it in 5 minutes, it's unlikely to fix it at all.
 
-3. **Await agent signal** — use the same `CompletableDeferred<AgentSignal>` +
-   health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) pattern as regular executors,
-   but with **shorter timeouts** (recovery should be fast):
-   - `noActivityTimeout`: 5 min (vs. 30 min default)
-   - `pingTimeout`: 1 min (vs. 3 min default)
-   - `maxRecoveryWallClock`: 10 min — overall wall-clock cap for the entire recovery attempt.
-     If the agent is still alive but has not completed within 10 minutes, recovery is considered
-     failed regardless of activity. Prevents indefinite recovery attempts from agents that keep
-     sending ping-acks but never complete.
-
-4. **Interpret result**:
-   - `AgentSignal.Done(COMPLETED)` → `RecoveryResult.Success`
-   - `AgentSignal.FailWorkflow(reason)` → `RecoveryResult.Failed(reason)`
-   - `AgentSignal.Crashed(details)` → `RecoveryResult.Failed(details)`
-
-5. **Kill recovery TMUX session** — always, regardless of outcome. Recovery sessions are
-   ephemeral — not kept alive like regular part sessions.
+3. **Interpret result**:
+   - `NonInteractiveAgentResult.Success` → `RecoveryResult.Success`
+   - `NonInteractiveAgentResult.Failed(exitCode, output)` → `RecoveryResult.Failed(output)`
+   - `NonInteractiveAgentResult.TimedOut(output)` → `RecoveryResult.Failed("Recovery timed out after 5 minutes: $output")`
 
 ---
 
@@ -134,16 +124,14 @@ See [Git Operation Failure Handling](../core/git.md#git-operation-failure-handli
 
 ## Dependencies
 
-- `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — spawn recovery agent
-- `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — register recovery session
-- Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — monitor recovery agent
+- `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — run recovery agent as subprocess
 
 ---
 
 ## Not a Retry Mechanism
 
 `AutoRecoveryByAgentUseCase` is NOT a generic retry mechanism. It does not re-run the failed
-operation — it spawns an agent to **fix the environment** so the caller can retry. The retry
+operation — it runs an agent to **fix the environment** so the caller can retry. The retry
 decision and execution belong to the caller.
 
 ---

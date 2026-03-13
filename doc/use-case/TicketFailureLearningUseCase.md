@@ -3,11 +3,28 @@
 When a `shepherd run` fails (try-N), the next try starts fresh with zero knowledge of what
 was attempted. The system is amnesiac across tries — agents repeat the same failed approaches.
 
-**Solution**: Update the ticket itself with a `## Previous Failed Attempts` section containing
-structured failure context + LLM summary per try. The ticket already feeds into all agents
-(Section 3 for execution agents, Section 2 for planner/plan reviewer in `ContextForAgentProvider`
-ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). No changes to `ContextForAgentProvider` needed. Non-shepherd
-consumers (humans, other tools) also benefit.
+**Solution**: Run a non-interactive ClaudeCode agent (`--print`, sonnet) that reads `.ai_out/`
+artifacts, generates a structured failure summary, and appends a `## Previous Failed Attempts`
+section to the ticket. The ticket already feeds into all agents
+(`ContextForAgentProvider` ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). Non-shepherd consumers
+(humans, other tools) also benefit.
+
+---
+
+## Design
+
+Delegates the **entire job** to `NonInteractiveAgentRunner`
+(ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with ClaudeCode in `--print` mode. The agent can:
+
+- **Read files directly** — browses `.ai_out/` artifacts for richer analysis than
+  prompt-stuffed LLM calls
+- **Generate structured summary** — approach, root cause, recommendations
+- **Update the ticket** — append `### TRY-{N}` section
+- **Handle git operations** — commit on try branch, attempt best-effort propagation to
+  originating branch
+
+This replaces the previous design of `DirectBudgetHighLLM` + harness-coded git operations.
+The agent handles the complexity naturally — including error recovery if git operations fail.
 
 ---
 
@@ -60,52 +77,79 @@ data class PartResultFailureContext(
 
 ## Flow
 
+1. **Assemble agent instructions** — build a focused instruction string from
+   `FailureLearningRequest` fields:
+   - Structured failure facts (try number, branch, failure type, where it failed, iteration)
+   - Path to `.ai_out/` directory — agent reads artifacts directly
+   - Path to ticket file — agent appends the `### TRY-{N}` section
+   - Originating branch name — for best-effort propagation
+   - Expected output format (see [TRY-N Format](#try-n-format))
+   - Git commit instructions (commit on try branch, attempt propagation)
+
+2. **Run agent** — invoke `NonInteractiveAgentRunner.run()`
+   (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with:
+   - **Agent type**: `ClaudeCode` — needs file reading capability for artifact analysis
+   - **Model**: `sonnet` — cost-effective but capable enough for analysis + git operations
+   - **Timeout**: 10 minutes — agent reads files, generates summary, performs git operations
+
+3. **Interpret result** — **non-fatal** regardless of outcome:
+   - `Success` → log INFO, continue
+   - `Failed` → log WARN with agent output, continue
+   - `TimedOut` → log WARN, continue
+   - The use case **never** fails the workflow — learning is best-effort
+
+---
+
+## Agent Instructions — What the Agent Does
+
+The agent receives instructions to:
+
 1. **Read agent artifacts** from `.ai_out/`:
    - `current_state.json` — workflow progress, session records
    - All `PUBLIC.md` files across sub-parts (agent outputs)
    - `SHARED_CONTEXT.md` if present
    - `PLAN.md` (from `harness_private/`) if present
 
-2. **Call `DirectBudgetHighLLM`** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) to generate a structured
-   summary. Prompt includes:
-   - The failure context (type, where it failed, iteration)
-   - All collected agent artifacts
-   - Instruction to produce: **Approach** (what was attempted), **Root Cause** (why it failed),
-     **Recommendations** (what the next try should do differently)
+2. **Generate a structured summary**:
+   - **Approach**: what was attempted
+   - **Root Cause**: why it failed
+   - **Recommendations**: what the next try should do differently
 
-3. **Build structured TRY-{N} markdown block** combining facts from `FailureLearningRequest`
-   with the LLM summary:
-   ```markdown
-   ### TRY-{N}
+3. **Append to ticket**: If `## Previous Failed Attempts` heading does not exist, add it.
+   Append the `### TRY-{N}` subsection under that heading.
 
-   - **Branch**: `{branchName}`
-   - **Workflow**: {workflowType}
-   - **Failure type**: {failureType}
-   - **Failed at**: {failedAt} (iteration {iteration})
-   - **Parts completed**: {partsCompleted, comma-separated}
-
-   #### Summary
-
-   **Approach**: {LLM-generated}
-   **Root Cause**: {LLM-generated}
-   **Recommendations**: {LLM-generated}
-   ```
-
-4. **Append to ticket**: Read the ticket file. If `## Previous Failed Attempts` heading does
-   not exist, append it. Append the `### TRY-{N}` subsection under that heading.
-
-5. **Commit on try branch**:
+4. **Commit on try branch**:
    ```
    git add {ticketPath} && git commit -m "[shepherd] ticket-failure-learning — TRY-{N}"
    ```
-   Uses the standard harness commit author (same as other `[shepherd]` commits).
 
-6. **Propagate to originating branch**: The learning must be available on the originating
-   branch so the next try (which branches from the originating branch) inherits it.
-   - `git checkout {originatingBranch}`
-   - `git checkout {tryBranch} -- {ticketPath}` — extract just the ticket file from the try branch
-   - `git commit -m "[shepherd] ticket-failure-learning — TRY-{N} (propagated)"`
-   - `git checkout {tryBranch}` — return to the try branch
+5. **Best-effort propagation to originating branch**: The agent attempts to propagate the
+   ticket update to the originating branch so the next try inherits it. If any git operation
+   fails, the agent skips propagation — the learning is preserved on the try branch.
+   ```
+   git checkout {originatingBranch}
+   git checkout {tryBranch} -- {ticketPath}
+   git commit -m "[shepherd] ticket-failure-learning — TRY-{N} (propagated)"
+   git checkout {tryBranch}
+   ```
+
+### TRY-N Format
+
+```markdown
+### TRY-{N}
+
+- **Branch**: `{branchName}`
+- **Workflow**: {workflowType}
+- **Failure type**: {failureType}
+- **Failed at**: {failedAt} (iteration {iteration})
+- **Parts completed**: {partsCompleted, comma-separated}
+
+#### Summary
+
+**Approach**: {agent-generated from artifact analysis}
+**Root Cause**: {agent-generated from artifact analysis}
+**Recommendations**: {agent-generated from artifact analysis}
+```
 
 ---
 
@@ -113,19 +157,19 @@ data class PartResultFailureContext(
 
 | Scenario | Behavior |
 |----------|----------|
-| **LLM failure** (timeout, API error) | Log WARN. Use static fallback text: `"LLM summary unavailable — review agent artifacts on branch {branchName} in .ai_out/"`. The structured facts (branch, failure type, etc.) are still recorded. |
-| **Originating branch deleted** | Log WARN, skip propagation. Learning is preserved on the try branch — the human can cherry-pick if needed. |
-| **Git propagation failure** (checkout fails, commit fails) | Log ERROR, skip propagation. Learning is preserved on the try branch. The use case does NOT delegate to `FailedToExecutePlanUseCase` — propagation failure is non-fatal. |
-| **Ticket already has `## Previous Failed Attempts` section** | Append new `### TRY-{N}` subsection under the existing heading. Do NOT create a duplicate heading. |
-| **No `.ai_out/` directory** | Log WARN, proceed with empty artifacts. The structured facts are still valuable without the LLM summary. |
-| **No `PUBLIC.md` files found** | Proceed normally — the LLM gets less context but can still summarize based on `current_state.json` and failure context. |
+| **Agent fails entirely** (crash, non-zero exit) | Log WARN. Learning is lost for this try — structured facts are not recorded. Non-fatal. |
+| **Agent times out** | Log WARN. Kill process. Same as agent failure. |
+| **No `.ai_out/` directory** | Agent handles gracefully — generates summary from structured facts only. |
+| **No `PUBLIC.md` files found** | Agent proceeds — less context but can still summarize from `current_state.json` and structured facts. |
+| **Ticket already has `## Previous Failed Attempts` section** | Agent appends new `### TRY-{N}` subsection under the existing heading. |
+| **Git propagation fails** | Agent logs the error and returns — learning is preserved on the try branch. |
+| **Originating branch deleted** | Agent skips propagation — learning is preserved on the try branch. |
 
 ---
 
 ## Dependencies
 
-- `DirectBudgetHighLLM` (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) — LLM summarization of failure context
-- `FailedToExecutePlanUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — the caller that invokes this use case before halting
+- `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — run ClaudeCode agent as subprocess
 
 ---
 
@@ -139,3 +183,5 @@ data class PartResultFailureContext(
   which handles the halt/exit flow.
 - Does **not** clean up `.ai_out/` or TMUX sessions — those are handled by
   `FailedToExecutePlanUseCase` before and after this use case runs.
+- Does **not** call `DirectBudgetHighLLM` — the ClaudeCode agent handles both file reading
+  and summary generation.

@@ -43,6 +43,7 @@ Tradeoff: if we later we squash the commits, we will lose the iteration history.
 ## Hard Constraints
 
 - **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
+- **Agents under TMUX are spawned in Interactive mode.** This is the entire point of using TMUX — to allow the harness to send further input to a running agent via `send-keys`. The `-p`/`--print` flags must **NOT** be used for TMUX-spawned agents, as they produce non-interactive (run-and-exit) sessions. The bootstrap message is delivered via TMUX `send-keys`, not CLI args. Non-interactive (`--print`) mode is reserved exclusively for utility use cases via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E).
 - **At most 2 sub-parts per part.** First sub-part is the doer (implementor/planner). Optional second sub-part is the reviewer. On review `needs_iteration`, the harness loops back to the doer. This keeps part execution trivially simple.
   - In V2 we may relax this but in V1 this is KISS constraint.
 - **Ticket must be `in_progress` on entry.** The ticket passed to `shepherd run` must have `status: in_progress` in its YAML frontmatter. Fail hard if not. Marking the ticket as `in_progress` (and pushing to remote) is the **caller's responsibility** — outside Shepherd's scope.
@@ -99,6 +100,12 @@ ap.HRlQHC1bgrTRyRknP3WNX.E
 On startup, the CLI delegates to the **`Initializer`** — the true top-level orchestrator
 that owns the full startup sequence:
 
+0. **`EnvironmentValidator.validate()`** (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) — runs **before**
+   any infrastructure is created. Validates:
+   - **Docker**: process is running inside a Docker container (`/.dockerenv` must exist).
+     Hard fail if not — agents are spawned with `--dangerously-skip-permissions` which is
+     only safe inside a container.
+   - **Required env vars**: all `Constants.REQUIRED_ENV_VARS.ALL` are present and non-blank.
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
    shared infrastructure (tmux, LLM, logging) that outlives any single ticket.
@@ -128,7 +135,7 @@ See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) f
 ## Sub-Agent Invocation — TMUX Only
 
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
-- Why TMUX: 1) to resume (CC --print is not resumable), 2) to observe live.
+- Why TMUX: 1) to send further input to a running agent (`send-keys`), 2) to resume (CC `--print` is not resumable), 3) to observe live.
 
 - **Agent-type abstracted via two interfaces** — each agent type (Claude Code, PI, future agents) provides its own implementations. `SpawnTmuxAgentSessionUseCase` dispatches to the correct pair based on `agentType` from the sub-part config:
   - **`AgentStarter`** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) — builds the shell command to start the agent in TMUX. V1: `ClaudeCodeAgentStarter`.
@@ -314,7 +321,7 @@ attribution), and all env var requirements are fully specified in
 - Branch format: `{TICKET_ID}__{slugified_title}__try-{N}` — owned by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 - Harness owns all git commits — agents never commit. Pluggable `GitCommitStrategy` interface.
 - V1 default: `CommitPerSubPart` — commits the entire working tree (`git add -A`)
-- **Git operation failures** trigger `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E, ref.ap.q54vAxzZnmWHuumhIQQWt.E) — spawns a sonnet-model recovery agent to fix the environment, then retries once. Falls back to `FailedToExecutePlanUseCase` if recovery fails.
+- **Git operation failures** trigger `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E, ref.ap.q54vAxzZnmWHuumhIQQWt.E) — runs a PI agent (`$AI_MODEL__ZAI__FAST`) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to fix the environment, then retries once. Falls back to `FailedToExecutePlanUseCase` if recovery fails.
 
 ## Harness-Level Resume — V2
 
@@ -334,7 +341,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
-| Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. |
+| Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. Agents are spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered via `send-keys`. |
 | Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
@@ -345,10 +352,10 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Callback protocol | **Two-tier: signals (fire-and-forget) + queries (synchronous response)** | Signal endpoints return bare 200; query endpoints return meaningful response body; harness-to-agent delivery via TMUX send-keys |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration` requires structured feedback (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) |
 | Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
-| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Agent calls immediately after reading instructions. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
+| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message sent via TMUX `send-keys` after interactive agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
 | Callback scripts | **One script per tier** | `callback_shepherd.signal.sh` (fire-and-forget) + `callback_shepherd.query.sh` (synchronous response) — tier name makes contract obvious |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
-| Cross-try learning | **Ticket mutation** | On failure, append `## Previous Failed Attempts` section to the ticket with structured facts + LLM summary. Ticket already feeds into agent context — no plumbing changes needed. |
+| Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
 
 ---
@@ -370,6 +377,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
 | [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — startup ack, timeout, ping, crash, convergence failure |
+| [`doc/core/NonInteractiveAgentRunner.md`](core/NonInteractiveAgentRunner.md) | Lightweight subprocess-based agent invocation (`--print` mode) for utility tasks — recovery, failure analysis |
 | [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
 | [`doc/use-case/TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) | Records structured failure context + LLM summary into ticket on workflow failure — enables cross-try learning |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

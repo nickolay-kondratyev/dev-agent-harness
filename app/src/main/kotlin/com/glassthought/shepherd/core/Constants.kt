@@ -52,6 +52,9 @@ object Constants {
    *
    * See doc/core/git.md (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) for specification.
    * All must be present at startup — fail hard immediately if any is missing.
+   *
+   * Validated by [com.glassthought.shepherd.core.initializer.EnvironmentValidator] at the
+   * very start of `main()`, before any infrastructure is created.
    */
   object REQUIRED_ENV_VARS {
     /** Identifies the human operator in commit author attribution.
@@ -66,6 +69,21 @@ object Constants {
     /** Directory containing agent role definition `.md` files.
      *  Must point to `_config/agents/_generated/`. See ref.ap.Q7kR9vXm3pNwLfYtJ8dZs.E. */
     const val TICKET_SHEPHERD_AGENTS_DIR = "TICKET_SHEPHERD_AGENTS_DIR"
+
+    /** Root directory for environment-specific configuration.
+     *  System prompt files resolved relative to this path.
+     *  See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution]. */
+    const val MY_ENV = "MY_ENV"
+
+    /** All required environment variables. Used by [com.glassthought.shepherd.core.initializer.EnvironmentValidator]
+     *  for startup validation. */
+    val ALL: List<String> = listOf(
+      HOST_USERNAME,
+      MODEL_VERSION_DIR,
+      TICKET_SHEPHERD_AGENTS_DIR,
+      MY_ENV,
+      Z_AI_API.API_TOKEN_ENV_VAR,
+    )
   }
 
   /** Returns the resolved max tokens value — from [Z_AI_API.MAX_TOKENS_ENV_VAR] env var if set, otherwise [Z_AI_API.DEFAULT_MAX_TOKENS]. */

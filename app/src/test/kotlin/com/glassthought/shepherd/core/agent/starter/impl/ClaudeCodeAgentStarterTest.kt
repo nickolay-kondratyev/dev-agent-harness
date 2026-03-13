@@ -19,7 +19,6 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = listOf("Read", "Write"),
             systemPromptFilePath = "/path/to/prompt.txt",
             appendSystemPrompt = false,
-            dangerouslySkipPermissions = true,
         )
 
         describe("WHEN buildStartCommand is called") {
@@ -29,7 +28,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
                 command shouldContain "--model sonnet"
             }
 
-            it("THEN command contains --allowedTools Read,Write") {
+            it("THEN command contains --tools Read,Write") {
                 command shouldContain "--tools Read,Write"
             }
 
@@ -37,7 +36,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
                 command shouldContain "--system-prompt-file /path/to/prompt.txt"
             }
 
-            it("THEN command contains --dangerously-skip-permissions") {
+            it("THEN command always contains --dangerously-skip-permissions (Docker invariant)") {
                 command shouldContain "--dangerously-skip-permissions"
             }
 
@@ -59,7 +58,6 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = listOf("Bash", "Edit", "Read"),
             systemPromptFilePath = "/path/to/append-prompt.txt",
             appendSystemPrompt = true,
-            dangerouslySkipPermissions = true,
         )
 
         describe("WHEN buildStartCommand is called") {
@@ -84,7 +82,6 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = listOf("Read"),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
-            dangerouslySkipPermissions = false,
         )
 
         describe("WHEN buildStartCommand is called") {
@@ -98,8 +95,8 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
                 command shouldNotContain "--append-system-prompt-file"
             }
 
-            it("THEN command does not contain --dangerously-skip-permissions") {
-                command shouldNotContain "--dangerously-skip-permissions"
+            it("THEN command still contains --dangerously-skip-permissions (Docker invariant)") {
+                command shouldContain "--dangerously-skip-permissions"
             }
         }
     }
@@ -112,7 +109,6 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = listOf("Read"),
             systemPromptFilePath = "/path/to/it's-a-prompt.txt",
             appendSystemPrompt = false,
-            dangerouslySkipPermissions = true,
         )
 
         describe("WHEN buildStartCommand is called") {
@@ -137,7 +133,6 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = listOf("Read"),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
-            dangerouslySkipPermissions = true,
         )
 
         describe("WHEN buildStartCommand is called") {
@@ -149,7 +144,7 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN ClaudeCodeAgentStarter with empty allowedTools") {
+    describe("GIVEN ClaudeCodeAgentStarter with empty tools") {
         val starter = ClaudeCodeAgentStarter(
             handshakeGuid = testGuid,
             workingDir = "/tmp/test",
@@ -157,13 +152,12 @@ class ClaudeCodeAgentStarterTest : AsgardDescribeSpec({
             tools = emptyList(),
             systemPromptFilePath = null,
             appendSystemPrompt = false,
-            dangerouslySkipPermissions = true,
         )
 
         describe("WHEN buildStartCommand is called") {
             val command = starter.buildStartCommand().command
 
-            it("THEN command does not contain --allowedTools") {
+            it("THEN command does not contain --tools") {
                 command shouldNotContain "--tools"
             }
         }
