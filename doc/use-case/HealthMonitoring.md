@@ -125,6 +125,20 @@ Note: `iteration.max` is a **budget**, not a hard limit. The user can override i
 
 ---
 
+## Relationship to Callback Script Retry
+
+Callback scripts retry on transient HTTP failures (ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) — this is
+the **first line of defense** against lost signals. Health monitoring is the **second line of
+defense**: it detects when retry was insufficient or the failure is not transient (e.g., agent
+process crash, TMUX session death).
+
+Without callback retry, a single transient HTTP failure on `/signal/done` creates a deadlock
+that health monitoring cannot resolve — the agent is alive (responds to pings), but the harness
+never received the done signal, and the agent has no reason to re-send it. Callback retry
+prevents this class of failure from ever reaching the health monitoring layer.
+
+---
+
 ## Edge Case Clarifications
 
 ### FailedToConvergeUseCase and Health Loop

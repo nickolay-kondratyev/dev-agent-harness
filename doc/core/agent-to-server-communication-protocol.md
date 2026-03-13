@@ -222,12 +222,17 @@ If the server receives a `/callback-shepherd/signal/done` or `/callback-shepherd
 callback for a deferred that is **already completed** (e.g., agent calls `done` twice, or
 `done` after `fail-workflow`), `CompletableDeferred.complete()` returns `false`. The server:
 
-1. Returns **200** (fire-and-forget principle — agent must not retry on non-200)
+1. Returns **200** (fire-and-forget principle)
 2. Logs a **WARN** with the HandshakeGuid, received signal, and the fact that the deferred
    was already completed
 
 All WARN and above log messages are output to the **console** (via `OutFactory` `outConsumers`)
 in addition to structured logs, so operators see duplicate callbacks immediately.
+
+**This server-side idempotency enables safe client-side retry** — callback scripts can retry
+on transient failures (ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) without risk of double-completing a
+deferred or corrupting state. If the server processed the first request but the response was
+lost (causing a retry), the duplicate request simply returns 200 and logs a warning.
 
 ---
 
@@ -398,7 +403,7 @@ return meaningful responses.
 - Reads port from `$TICKET_SHEPHERD_SERVER_PORT` environment variable
 - Reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from environment; includes it in every request
 - **Fail-fast:** hard-fail when `$TICKET_SHEPHERD_HANDSHAKE_GUID` or `$TICKET_SHEPHERD_SERVER_PORT` is not set
-- Expects 200 from server; exits non-zero on any other status code
+- Expects 200 from server; **retries on transient failures** before exiting non-zero (see [Retry on Transient Failures](#retry-on-transient-failures--apyzc3q5teh2eycn03j7zule) below)
 - Agent receives usage instructions in its initial instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
 
@@ -430,6 +435,65 @@ callback_shepherd.query.sh validate-plan <abs-path>       # required: absolute p
 
 **Contract:** Agents calling `callback_shepherd.query.sh` must read stdout. The response
 is the whole point — unlike signals, the HTTP body carries the result.
+
+### Retry on Transient Failures / ap.yzc3Q5TEh2EYCN03J7ZuL.E
+
+Both callback scripts (`callback_shepherd.signal.sh` and `callback_shepherd.query.sh`) **retry
+on transient failures** before exiting non-zero. This prevents the most common class of silent
+deadlock — a single server GC pause, momentary TCP reset, or connection blip causing a lost
+signal that the agent will never re-send.
+
+**Retry policy:**
+
+| Parameter | Value |
+|-----------|-------|
+| Max retries | 2 (3 total attempts) |
+| Backoff after 1st failure | 1 second |
+| Backoff after 2nd failure | 5 seconds |
+| After all retries exhausted | Exit non-zero (same as no-retry behavior) |
+
+**What is transient** (retry applies):
+
+| Failure | Cause |
+|---------|-------|
+| Connection refused | Server momentarily unreachable (startup race, restart) |
+| Connection reset / TCP error | Network-level interruption mid-request |
+| Timeout (curl timeout) | Server GC pause, slow response |
+| HTTP 5xx | Server-side error (temporary) |
+
+**What is NOT transient** (no retry — fail immediately):
+
+| Failure | Cause |
+|---------|-------|
+| HTTP 400 | Bad request — client error, retrying won't fix it |
+| HTTP 404 | Unknown HandshakeGuid — retrying won't fix it |
+| Missing env vars | Configuration error — fail-fast before any HTTP call |
+
+**Why retry is safe for all endpoints:**
+
+- **Signal endpoints** are inherently idempotent. Retry only fires when the prior attempt
+  failed (no 200 received), meaning the server likely never processed the request. Even if the
+  server did process it but the response was lost, the server handles duplicate signal callbacks
+  gracefully (see [Idempotent Signal Callbacks](#idempotent-signal-callbacks) — returns 200,
+  logs WARN).
+- **Query endpoints** are pure read operations (no state mutation) — safe to call multiple
+  times.
+
+**The deadlock this prevents:**
+
+Without retry, a lost `/signal/done` creates an unrecoverable deadlock:
+1. Agent calls `done` → transient HTTP failure → script exits non-zero
+2. Agent believes it signaled completion (or treats the failure as non-fatal)
+3. Harness never completes `signalDeferred` → waits indefinitely
+4. Health monitor pings (after 30 min) → agent responds with `ping-ack` (it IS alive)
+5. Loop repeats: harness pings → agent acks → harness waits → harness pings
+
+The agent has no reason to re-send `done` — it already did. With retry, the transient failure
+is resolved locally in the script before the agent ever sees an error.
+
+The same applies to `/signal/started` — without retry, a transient failure during the
+bootstrap handshake causes `NoStartupAckUseCase` to kill the agent after 3 minutes, wasting a
+healthy agent over a momentary HTTP blip.
 
 ---
 
