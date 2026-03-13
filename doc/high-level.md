@@ -36,6 +36,8 @@ completes, so `instructions.md` (input) and `PUBLIC.md` (output) appear in the *
 communication.** This keeps the file structure flat and simple while retaining full visibility
 into the iteration dialogue.
 
+Tradeoff: if we later we squash the commits, we will lose the iteration history. However, if we don't do this then we risk over-zealous agent reading older PUBLIC.md files and confusing itself. Hence, this is deemed worthy tradeoff. 
+
 ---
 
 ## Hard Constraints
