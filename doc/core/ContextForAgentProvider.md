@@ -141,13 +141,26 @@ This is deterministic from the workflow position. No heuristics, no "relevance" 
 
 ## Structured Reviewer Feedback Contract / ap.EslyJMFQq8BBrFXCzYw5P.E
 
-When a reviewer signals `needs_iteration`, its `PUBLIC.md` must follow a structured format.
+When a reviewer signals `needs_iteration`, its `PUBLIC.md` should follow a structured format.
 Free-form feedback wastes iteration budget — the doer may misinterpret vague critique or
 miss actionable items entirely. A structured contract ensures productive iterations.
 
+### Enforcement Boundary
+
+**Harness-enforced:** PUBLIC.md must exist and be non-empty after every `done` signal
+(including `needs_iteration`). This is validated by the executor
+(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) — missing or empty PUBLIC.md triggers re-instruction,
+then hard failure.
+
+**Guidance only (not harness-validated):** The structured format below (## Issues,
+## Acceptance Criteria, etc.) is delivered to the reviewer as instruction text. The harness
+does **not** parse or validate the markdown structure. This is a deliberate KISS choice —
+parsing markdown headings would be fragile and over-engineered for V1. The format is
+enforced socially: the doer's instructions reference it, creating a feedback loop.
+
 ### Required PUBLIC.md Format on `needs_iteration`
 
-The reviewer's `PUBLIC.md` must include these sections when the verdict is `needs_iteration`:
+The reviewer's `PUBLIC.md` should include these sections when the verdict is `needs_iteration`:
 
 ```markdown
 ## Verdict: needs_iteration

@@ -236,7 +236,7 @@ See:
 ### Sub-Part Transitions
 
 - **Automatic** for doer→reviewer transitions: doer sends `result: "completed"` → reviewer starts
-- **Reviewer-driven** for iteration decisions: reviewer sends `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). The reviewer's verdict is authoritative — no LLM evaluation in this path. On `needs_iteration`, the reviewer must follow the [Structured Reviewer Feedback Contract](core/ContextForAgentProvider.md#structured-reviewer-feedback-contract--apeslyjmfqq8bbrfxczyw5pe) (ref.ap.EslyJMFQq8BBrFXCzYw5P.E).
+- **Reviewer-driven** for iteration decisions: reviewer sends `result: "pass"` (proceed) or `result: "needs_iteration"` (loop back to doer). The reviewer's verdict is authoritative — no LLM evaluation in this path. On `needs_iteration`, the reviewer is instructed to follow the [Structured Reviewer Feedback Contract](core/ContextForAgentProvider.md#structured-reviewer-feedback-contract--apeslyjmfqq8bbrfxczyw5pe) (ref.ap.EslyJMFQq8BBrFXCzYw5P.E). The harness enforces that the reviewer's PUBLIC.md exists and is non-empty (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) but does not validate the markdown structure — the format is guidance, not a harness-enforced schema.
 
 ### Context Assembly — ContextForAgentProvider
 
@@ -353,7 +353,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
 | Callback protocol | **Two-tier: signals (fire-and-forget) + queries (synchronous response)** | Signal endpoints return bare 200; query endpoints return meaningful response body; harness-to-agent delivery via TMUX send-keys |
 | Payload delivery ACK | **ACK-before-proceed wrapper on all `send-keys` payloads** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Every `send-keys` payload (except pings) wrapped in XML with PayloadId (21-char `[a-zA-Z0-9]`). Agent must `ack-payload` before processing. 3 min ACK timeout, 2 retries. Prevents "alive but never got instruction" loop that health monitoring alone cannot break. |
-| Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration` requires structured feedback (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) |
+| Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration`: harness enforces PUBLIC.md exists + non-empty (ref.ap.THDW9SHzs1x2JN9YP9OYU.E); structured format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) is instruction guidance, not harness-validated |
 | Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
 | Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
 | Callback scripts | **One script per tier** | `callback_shepherd.signal.sh` (fire-and-forget) + `callback_shepherd.query.sh` (synchronous response) — tier name makes contract obvious |
