@@ -109,23 +109,16 @@ Additional dependencies:
 ## Interrupt Protocol (Ctrl+C)
 
 When the user presses Ctrl+C, the harness intercepts the signal via a JVM shutdown hook and
-enters a **two-layer confirmation flow** instead of killing immediately:
+enters a **confirmation flow** instead of killing immediately:
 
-### Layer 1: Interrupt Agents
+1. Harness prints: `"Ctrl+C received. Kill session and exit? [y/N]"`
+2. If user types `y` + Enter → harness kills all TMUX sessions, writes `current_state.json`
+   with `FAILED` status on active sub-parts, and exits with non-zero code.
+3. Any other input or 10s timeout → harness prints `"Resuming..."` and continues execution.
 
-1. Harness prints: `"Ctrl+C received. Type 'int' + Enter to send interrupt to all agent sessions, or wait 10s to resume."`
-2. If user types `int` + Enter → harness sends SIGINT to all active TMUX agent sessions (agents stop, sessions stay alive). Prints status: `"Interrupt sent to N agent session(s). Sessions are still alive."`
-3. If user types anything else or 10 seconds elapse → harness prints `"Resuming..."` and continues execution as if nothing happened.
-
-### Layer 2: Kill Sessions
-
-After Layer 1 interrupt is sent:
-
-1. Harness prints: `"Type 'kill' + Enter to destroy all TMUX sessions and exit, or wait 10s to resume."`
-2. If user types `kill` + Enter → harness kills all TMUX sessions, writes `current_state.json` with `FAILED` status on active sub-parts, and exits.
-3. If user types anything else or 10 seconds elapse → harness prints `"Resuming..."` and continues execution.
-
-This prevents accidental workflow termination from a stray Ctrl+C.
+This prevents accidental workflow termination from a stray Ctrl+C. V1 runs one agent at a
+time — a single confirmation layer is sufficient. V2 will introduce a multi-layer protocol
+when parallel agents require selective interrupt vs. kill.
 
 ---
 

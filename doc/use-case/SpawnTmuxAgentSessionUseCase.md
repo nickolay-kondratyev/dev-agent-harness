@@ -317,7 +317,7 @@ encapsulation and type safety.
 and all its windows/panes. Used by:
 - `removeAllForPart` (on part completion)
 - `NoReplyToPingUseCase` (on crash detection)
-- Interrupt protocol Layer 2 (on user `kill` confirmation)
+- Interrupt protocol (on user kill confirmation — ref.ap.P3po8Obvcjw4IXsSUSU91.E)
 
 ---
 
