@@ -130,7 +130,9 @@ See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) f
 All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager` + `TmuxCommunicator`.
 - Why TMUX: 1) to resume (CC --print is not resumable), 2) to observe live.
 
-- Agent implementation abstracted via `SpawnTmuxAgentSessionUseCase`; `ClaudeCodeAgent`-specific logic encapsulated there
+- **Agent-type abstracted via two interfaces** — each agent type (Claude Code, PI, future agents) provides its own implementations. `SpawnTmuxAgentSessionUseCase` dispatches to the correct pair based on `agentType` from the sub-part config:
+  - **`AgentStarter`** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) — builds the shell command to start the agent in TMUX. V1: `ClaudeCodeAgentStarter`.
+  - **`AgentSessionIdResolver`** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E) — resolves the agent's session ID from external artifacts. V1: `ClaudeCodeAgentSessionIdResolver`.
 - Leverages subscription pricing; interface allows swapping agent implementations
 - **Strictly serial** execution for V1 (1 harness → 1 active agent at a time; idle sessions kept alive per Hard Constraints)
 - **One TMUX session per sub-part** — kept alive across iteration loops (see Hard Constraints). New instructions delivered via `send-keys`.
@@ -332,6 +334,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
+| Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. |
 | Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |

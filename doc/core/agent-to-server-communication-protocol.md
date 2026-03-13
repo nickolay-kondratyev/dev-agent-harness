@@ -286,8 +286,8 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
 - The bootstrap message is passed as **inline CLI arguments** (`-p "..."`), NOT via TMUX
   `send-keys`. It is a lightweight, self-contained string — no instruction file needed.
 - **Same handshake for new agents and resumed agents** — the only difference is the CLI
-  command (`claude -p "..."` vs `claude --resume <id> -p "..."`). This makes the protocol
-  universal and robust.
+  command (`claude --system-prompt-file <path> -p "..."` vs `claude --resume <id> -p "..."`).
+  This makes the protocol universal and robust.
 - Agent calls `callback_shepherd.signal.sh started` as its **first and only action** from the
   bootstrap message
 - Payload: `{ "handshakeGuid": "handshake.xxx" }`
@@ -302,16 +302,25 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
 
 ```
 Phase 1: Bootstrap Handshake (CLI args — inline, no file)
-  Harness ──[TMUX start: claude [-p | --resume <id> -p] "<bootstrap>"]──► Agent
-  Agent   ──[POST /signal/started]──────────────────────────────────────► Server
-  Harness ──[AgentSessionIdResolver: polls JSONL (GUID guaranteed)]
+  Harness ──[TMUX start: AgentStarter.buildStartCommand() "<bootstrap>"]──► Agent
+  Agent   ──[POST /signal/started]────────────────────────────────────────► Server
+  Harness ──[AgentSessionIdResolver: resolves session ID (GUID guaranteed)]
 
 Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
   Harness ──[send-keys: "Read instructions at <path>"]──► Agent
   Agent   ──[works, calls /signal/done]─────────────────► Server
 ```
 
-Full spawn flow: see [SpawnTmuxAgentSessionUseCase](../use-case/SpawnTmuxAgentSessionUseCase.md)
+**Claude Code example** (the actual command is built by the agent-specific `AgentStarter` implementation):
+```bash
+# New agent:
+claude --system-prompt-file <path> -p "<bootstrap>"
+# Resumed agent:
+claude --resume <id> -p "<bootstrap>"
+```
+
+See [`AgentStarter` — Interface for Start Command](../use-case/SpawnTmuxAgentSessionUseCase.md#agentstarter--interface-for-start-command)
+for the abstraction design. Full spawn flow: see [SpawnTmuxAgentSessionUseCase](../use-case/SpawnTmuxAgentSessionUseCase.md)
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
 
 ### Startup Timeout

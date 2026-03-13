@@ -142,6 +142,51 @@ file controlled by the harness operator.
 
 ---
 
+### AgentStarter — Interface for Start Command
+<!-- ap.RK7bWx3vN8qLfYtJ5dZmQ.E -->
+
+**Problem:** Different agent types (Claude Code, PI, future agents) have entirely different
+CLI invocations — flags, env vars, nested-session workarounds, system prompt mechanisms.
+The spawn flow must not hard-code any agent-specific command construction.
+
+**Solution:** `AgentStarter` **interface** — each agent type provides its own implementation
+that knows how to build the shell command for TMUX session creation.
+
+```kotlin
+interface AgentStarter {
+    fun buildStartCommand(): TmuxStartCommand
+}
+```
+
+#### Why an Interface
+
+1. **Different agent types have different start commands.** Claude Code uses `claude --system-prompt-file <path> -p "..."`;
+   a PI agent will have an entirely different binary and flags. The interface allows each
+   `AgentType` to provide its own starter without modifying existing code (OCP).
+2. **Agent-specific concerns are encapsulated.** Claude Code needs `unset CLAUDECODE` to avoid
+   nested-session detection; other agents won't. These details belong in the implementation,
+   not in `SpawnTmuxAgentSessionUseCase`.
+3. **Testability.** Unit tests inject a fake starter — no real CLI invocations. The interface
+   boundary is what makes `SpawnTmuxAgentSessionUseCase` independently testable.
+
+#### V1 Implementation — ClaudeCodeAgentStarter
+
+Builds the `claude` CLI command with:
+- `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT` env var exports
+- `cd` to working directory
+- `unset CLAUDECODE` (nested-session detection workaround)
+- `--system-prompt-file <path>` — **required** (see [System Prompt File Resolution](#system-prompt-file-resolution))
+- Model, tools, dangerously-skip-permissions flags
+- `-p "<bootstrap_message>"` for new sessions; `--resume <session_id> -p "<bootstrap_message>"` for resumed sessions
+
+#### Dispatch
+
+`SpawnTmuxAgentSessionUseCase` reads `agentType` from the sub-part config in `current_state.json`
+and selects the matching `AgentStarter` implementation. The pair of `AgentStarter` +
+`AgentSessionIdResolver` per agent type forms the complete agent-type-specific contract.
+
+---
+
 ### AgentSessionIdResolver — Interface, Not Implementation
 
 **Problem:** Claude Code does **not** expose its session ID to the agent from within its own
