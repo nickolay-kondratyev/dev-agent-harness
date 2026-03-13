@@ -100,6 +100,12 @@ ap.HRlQHC1bgrTRyRknP3WNX.E
 On startup, the CLI delegates to the **`Initializer`** — the true top-level orchestrator
 that owns the full startup sequence:
 
+0. **`EnvironmentValidator.validate()`** (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) — runs **before**
+   any infrastructure is created. Validates:
+   - **Docker**: process is running inside a Docker container (`/.dockerenv` must exist).
+     Hard fail if not — agents are spawned with `--dangerously-skip-permissions` which is
+     only safe inside a container.
+   - **Required env vars**: all `Constants.REQUIRED_ENV_VARS.ALL` are present and non-blank.
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
    shared infrastructure (tmux, LLM, logging) that outlives any single ticket.

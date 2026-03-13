@@ -7,19 +7,19 @@ skipped: 0
 
 - GIVEN ClaudeCodeAgentStarter with all flags enabled
   - WHEN buildStartCommand is called
-    - [PASS] THEN command contains --allowedTools Read,Write
-    - [PASS] THEN command contains --dangerously-skip-permissions
+    - [PASS] THEN command always contains --dangerously-skip-permissions (Docker invariant)
     - [PASS] THEN command contains --model sonnet
     - [PASS] THEN command contains --system-prompt-file with the file path
+    - [PASS] THEN command contains --tools Read,Write
     - [PASS] THEN command exports TICKET_SHEPHERD_HANDSHAKE_GUID with the handshake guid value
     - [PASS] THEN command starts with bash -c and includes cd to working dir
 - GIVEN ClaudeCodeAgentStarter with appendSystemPrompt=true
   - WHEN buildStartCommand is called
     - [PASS] THEN command contains --append-system-prompt-file
     - [PASS] THEN command does NOT contain bare --system-prompt-file (without append prefix)
-- GIVEN ClaudeCodeAgentStarter with empty allowedTools
+- GIVEN ClaudeCodeAgentStarter with empty tools
   - WHEN buildStartCommand is called
-    - [PASS] THEN command does not contain --allowedTools
+    - [PASS] THEN command does not contain --tools
 - GIVEN ClaudeCodeAgentStarter with file path containing single quotes
   - WHEN buildStartCommand is called
     - [PASS] THEN single quotes in the file path are escaped for the bash -c wrapper
@@ -30,5 +30,5 @@ skipped: 0
 - GIVEN ClaudeCodeAgentStarter without system prompt file
   - WHEN buildStartCommand is called
     - [PASS] THEN command does not contain --append-system-prompt-file
-    - [PASS] THEN command does not contain --dangerously-skip-permissions
     - [PASS] THEN command does not contain --system-prompt-file
+    - [PASS] THEN command still contains --dangerously-skip-permissions (Docker invariant)
