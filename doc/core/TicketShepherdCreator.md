@@ -32,9 +32,9 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
   (ref.ap.QL051Wl21jmmYqTQTLglf.E — see [Working Tree Validation](git.md#working-tree-validation--startup-guard))
 - **Records originating branch** — calls `getCurrentBranch()` before `createAndCheckout` to
   capture the branch the try branch is created from. Stored on `TicketShepherd` as
-  `originatingBranch`, used by `TicketFailureLearningUseCase`
-  (ref.ap.cI3odkAZACqDst82HtxKa.E) for failure-learning propagation. `tryNumber` is also
-  passed through to `TicketShepherd`.
+  `originatingBranch`, passed to `TicketFailureLearningUseCase`
+  (ref.ap.cI3odkAZACqDst82HtxKa.E) as part of agent instructions for best-effort
+  propagation. `tryNumber` is also passed through to `TicketShepherd`.
 - **Resolves try-N** — scans both local branches and `.ai_out/` directories to find the first
   N where neither exists (see [Try-N Resolution](git.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)

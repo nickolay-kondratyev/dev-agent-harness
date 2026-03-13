@@ -214,9 +214,11 @@ Git operations (especially `git commit`) can fail mid-workflow due to infrastruc
 (disk full, `.gitignore` conflict, index lock, etc.). Since commits happen after each sub-part
 signal, a failure here would otherwise be an unhandled exception that halts the workflow.
 
-**Instead of failing outright, the harness spawns a recovery agent** via
+**Instead of failing outright, the harness runs a recovery agent** via
 `AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E — see
-[`doc/use-case/AutoRecoveryByAgentUseCase.md`](../use-case/AutoRecoveryByAgentUseCase.md)).
+[`doc/use-case/AutoRecoveryByAgentUseCase.md`](../use-case/AutoRecoveryByAgentUseCase.md)),
+which delegates to `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — a PI
+agent in `--print` mode with `$AI_MODEL__ZAI__FAST`.
 
 ### GitOperationFailureUseCase
 
@@ -260,4 +262,4 @@ The harness performs these git operations during a workflow:
 |---|---|
 | Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
 | `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
-| Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): commit ticket update on try branch (`git add {ticketPath} && git commit -m "[shepherd] ticket-failure-learning — TRY-{N}"`), then propagate to originating branch (`git checkout {originatingBranch}` → `git checkout {tryBranch} -- {ticketPath}` → `git commit -m "[shepherd] ticket-failure-learning — TRY-{N} (propagated)"` → `git checkout {tryBranch}`). Non-fatal — propagation failure is logged and skipped. |
+| Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): delegates to `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — ClaudeCode `--print` with sonnet. Agent reads `.ai_out/` artifacts, generates failure summary, appends to ticket, commits on try branch, and attempts best-effort propagation to originating branch. Non-fatal — agent failure is logged and skipped. |

@@ -37,6 +37,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | Resume-on-restart (V2) | ref.ap.LX1GCIjv6LgmM7AJFas20.E |
 | Working tree validation (startup guard) | ref.ap.QL051Wl21jmmYqTQTLglf.E |
 | Git operation failure handling (GitOperationFailureUseCase) | ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E |
+| NonInteractiveAgentRunner (subprocess --print agents) | ref.ap.ad4vG4G2xMPiMHRreoYVr.E |
 | AutoRecoveryByAgentUseCase (generic) | ref.ap.q54vAxzZnmWHuumhIQQWt.E |
 | TicketFailureLearningUseCase (cross-try learning) | ref.ap.cI3odkAZACqDst82HtxKa.E |
 
