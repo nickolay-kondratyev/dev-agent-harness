@@ -18,6 +18,26 @@ Codename: **TICKET_SHEPHERD**. Package: `com.glassthought.shepherd`.
 
 ---
 
+## Design Principles
+
+### Communication Visibility
+
+All communication between the harness and agents is persisted in `.ai_out/` under each
+sub-part's `comm/` directory — `comm/in/instructions.md` (harness→agent) and
+`comm/out/PUBLIC.md` (agent→harness). No temporary files outside the repo. This makes the
+full input/output loop for every agent interaction inspectable and git-trackable.
+
+### Simplicity in File Structure, History in Git
+
+Each sub-part's `comm/in/instructions.md` and `comm/out/PUBLIC.md` are **overwritten** on
+each iteration rather than creating versioned files. The harness commits after each agent
+completes, so `instructions.md` (input) and `PUBLIC.md` (output) appear in the **same commit**
+— giving a complete picture of each communication round. **Git history is the history of
+communication.** This keeps the file structure flat and simple while retaining full visibility
+into the iteration dialogue.
+
+---
+
 ## Hard Constraints
 
 - **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
@@ -45,7 +65,7 @@ coordinator that drives the entire workflow. It:
 - Creates a [`PartExecutor`](core/PartExecutor.md) (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) for each part and calls `execute()`
 - Delegates the agent spawn → wait → iterate cycle to the executor (no inline iteration loop)
 - Server callbacks wake executors via `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
-- Manages file-based context (PUBLIC.md / SHARED_CONTEXT.md)
+- Manages file-based communication (`comm/in/instructions.md`, `comm/out/PUBLIC.md`, `SHARED_CONTEXT.md`)
 - Handles git commits via pluggable `GitCommitStrategy` — see [Git Commit Strategy](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E)
 - Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
 
@@ -80,7 +100,7 @@ that owns the full startup sequence:
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
    shared infrastructure (tmux, LLM, logging) that outlives any single ticket.
-2. **`ShepherdServer`** startup — Ktor CIO HTTP server on OS-assigned port.
+2. **`ShepherdServer`** startup — Ktor CIO HTTP server on the port specified by `TICKET_SHEPHERD_SERVER_PORT` env var.
 3. **`TicketShepherdCreator`** (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — ticket-scoped wiring
    (workflow resolution, branch creation, `SessionsState`, `ContextForAgentProvider`)
    → returns a ready-to-go `TicketShepherd`.
@@ -93,8 +113,9 @@ the latest successful step back to step 1. `ShepherdContext` implements `AsgardC
 so `close()` handles teardown of all resources it owns.
 
 **Single-instance constraint (V1):** Only one harness instance may run at a time per machine.
-On startup, the harness checks if `port.txt` exists and the port is responding — if so, fails
-with a clear error message directing the user to stop the other instance first.
+On startup, the harness attempts to bind to `TICKET_SHEPHERD_SERVER_PORT`. If the port is
+already in use, the harness **fails hard** with a clear error message directing the user to
+stop the other instance first.
 
 V1 does not support resume-on-restart — if the harness dies, you start over.
 `current_state.json` is written for progress tracking but not consumed on restart.
@@ -120,7 +141,7 @@ Agents are spawned via [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentS
 `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) — see
 [`PartExecutor`](core/PartExecutor.md) for the callback bridge design.
 
-- Instructions written to Markdown file (preserves formatting vs. prompt text)
+- Instructions written to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory (preserves formatting, git-tracked)
 - V1: no tool restrictions (allow everything)
 
 ---
@@ -131,7 +152,7 @@ Agents are spawned via [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentS
 Communication between agents and the harness is bidirectional through two distinct channels:
 **Agent → Harness** via HTTP POST (`callback_shepherd.*.sh` scripts wrapping curl), and
 **Harness → Agent** via TMUX `send-keys` (the only way to push content to a running agent).
-The harness runs a Ktor CIO server (port 0, OS-assigned) that stays alive for the entire run.
+The harness runs a Ktor CIO server (on the port from `TICKET_SHEPHERD_SERVER_PORT` env var) that stays alive for the entire run.
 
 **All HTTP callbacks are non-blocking** — every callback script expects 200 and returns immediately.
 When the harness needs to deliver content back to the agent (Q&A answers, iteration instructions),
@@ -293,7 +314,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | JSON library | **Jackson + Kotlin module** | Battle-tested, runtime reflection |
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
-| Server port | **OS-assigned (port 0)** | Written to file; CLI reads file; no env var; no collisions |
+| Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
 | Session tracking | **AgentSessionIdResolver interface** | `ClaudeCodeAgentSessionIdResolver` impl; abstracted for future agent types |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |

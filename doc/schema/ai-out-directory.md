@@ -18,18 +18,27 @@ The git branches will include ticket ids which guarantees not clashing.
 │       └── PLAN.md                     # Human-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
 │   └── ${sub_part}/                    # e.g., plan, plan_review (order from array position in JSON)
-│       └── PUBLIC.md
+│       └── comm/
+│           ├── in/
+│           │   └── instructions.md     # Instructions sent to this agent by the harness
+│           └── out/
+│               └── PUBLIC.md           # Agent work log (decisions, rationale, verdicts)
 └── execution/                          # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
         └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
-            └── PUBLIC.md
+            └── comm/
+                ├── in/
+                │   └── instructions.md # Instructions sent to this agent by the harness
+                └── out/
+                    └── PUBLIC.md       # Agent work log (decisions, rationale, verdicts)
 ```
 
 ## Key Files
 
 | File | Scope | Purpose |
 |------|-------|---------|
-| `PUBLIC.md` | Per sub-part | **Agent work log** — decisions made + rationale, what was implemented/reviewed, review verdicts. Write-once per sub-part per iteration. |
+| `PUBLIC.md` | Per sub-part (`comm/out/`) | **Agent work log** — decisions made + rationale, what was implemented/reviewed, review verdicts. Overwritten each iteration; history preserved in git. |
+| `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
 | `SHARED_CONTEXT.md` | Branch-wide | **Shared knowledge base** about the codebase — discoveries, anchor points of interest, cross-cutting constraints, patterns/conventions observed. Mutable by all agents, accumulated across the workflow. |
 | `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
@@ -42,6 +51,16 @@ The git branches will include ticket ids which guarantees not clashing.
 Agents do not have private output files. An agent's private state lives in its conversation history
 (within its TMUX session). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
 writes is intended to be shared.
+
+### Communication Visibility via `comm/`
+
+Every sub-part has a `comm/` directory with `in/` (harness→agent) and `out/` (agent→harness).
+This makes the full communication loop visible: `instructions.md` captures what the harness
+told the agent, `PUBLIC.md` captures what the agent produced. Both are overwritten each
+iteration — **git history preserves the full communication timeline**. This means when looking
+at a commit, you see the instruction (input) and the agent's work (output) together,
+providing a complete picture of each communication round without maintaining separate history
+files.
 
 ### What Goes Where — PUBLIC.md vs SHARED_CONTEXT.md
 
@@ -72,7 +91,7 @@ I learn about the codebase that others need to know."
 
 - **Branch isolation**: Each git branch gets its own `.ai_out/${branch}/` tree. No cross-branch sharing.
 - **Part isolation**: Each part (`execution/${part_name}/`) is a self-contained iteration group.
-- **Sub-part isolation**: Each sub-part has its own directory for PUBLIC.md.
+- **Sub-part isolation**: Each sub-part has its own `comm/` directory for instructions and PUBLIC.md.
 
 ## Cross-Agent Visibility
 
@@ -81,23 +100,13 @@ Agents do **not** discover other agents' `PUBLIC.md` files themselves. The **ins
 to relevant `PUBLIC.md` files and including them in the agent's instruction file at assembly time.
 This avoids a stale index file and keeps the harness in control of what each agent sees.
 
-## External Paths (outside repo)
+## No External Paths
 
-```
-$HOME/.shepherd_agent_harness/
-├── server/
-│   └── port.txt                        # Harness HTTP server port (written on startup, deleted on shutdown)
-└── tmp/
-    └── agent_comm/
-        └── ${git_branch}/              # Branch-scoped temp files — isolates concurrent instances
-```
-
-Temp files (instruction files, Q&A answers) are scoped by branch name under `agent_comm/`.
-This ensures that if multiple harness instances run on the same machine (V2), they do not
-interfere with each other's temp files. **Cleaned up on harness shutdown** for the current
-branch — other branches' temp files are untouched.
-
-See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for protocol details on port discovery and temp file delivery.
+All agent communication artifacts (instructions, outputs) live inside `.ai_out/` under the
+`comm/` subdirectories. There are **no temporary files** outside the repo. The server port is
+configured via the `TICKET_SHEPHERD_SERVER_PORT` environment variable
+(see [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md)
+ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
 
 ## Initial Creation
 

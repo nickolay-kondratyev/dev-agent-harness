@@ -49,13 +49,10 @@ type information needed for different cleanup strategies.
       frontmatter.
    c. **Kill all TMUX sessions** — defensive cleanup. All parts already called
       `removeAllForPart`, so normally none remain. This catches any leaked sessions.
-   d. **Clean up temp files** — delete `$HOME/.shepherd_agent_harness/tmp/agent_comm/${git_branch}/`
-      (instruction files sent to agents). In-repo `.ai_out/` files are permanent and
-      git-tracked — not cleaned up.
-   e. **Print success message in green** — e.g., `"Workflow completed successfully for
+   d. **Print success message in green** — e.g., `"Workflow completed successfully for
       ticket {TICKET_ID}."`
-   f. **Exit code 0**
-   g. **Does NOT push the branch** — pushing is the caller's responsibility, same as
+   e. **Exit code 0**
+   f. **Does NOT push the branch** — pushing is the caller's responsibility, same as
       marking the ticket `in_progress` before `shepherd run`.
 
 ## Fields

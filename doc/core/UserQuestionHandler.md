@@ -39,9 +39,9 @@ data class UserQuestionContext(
 5. **Agent waits** for the answer to arrive via TMUX (does not proceed)
 6. Server looks up `SessionEntry` for context, then delegates to `UserQuestionHandler`
 7. Handler obtains the answer (V1: stdin prompt; future: expensive LLM, Slack, etc.)
-8. Harness writes answer to temp file (`$HOME/.shepherd_agent_harness/tmp/agent_comm/`)
+8. Harness writes answer to `comm/in/` in the sub-part's `.ai_out/` directory (e.g., `comm/in/qa_answer.md`)
 9. Harness sends file path to agent via TMUX `send-keys`
-10. Agent reads temp file, continues
+10. Agent reads the answer file, continues
 
 **No long-lived HTTP connections.** The answer is delivered via TMUX, not via the HTTP response.
 This follows the core principle: HTTP = agent→harness signaling, TMUX = harness→agent delivery.

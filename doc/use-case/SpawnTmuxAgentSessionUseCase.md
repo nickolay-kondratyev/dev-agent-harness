@@ -38,7 +38,7 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
 2. Harness reads `agentType` and `model` from sub-part config in `current_state.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
 3. Harness builds the TMUX start command:
-   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && claude [flags]`
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude [flags]`
 4. Harness creates TMUX session running the command
 5. Harness waits for agent startup (agent CLI needs time to initialize)
 6. Harness sends GUID to agent via TMUX `send-keys` (plain text, directly)
@@ -46,7 +46,7 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
    (e.g., Claude Code JSONL files) and resolves the agent session ID
 8. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
    in `current_state.json` under the sub-part's `sessionIds` array
-9. Harness writes instruction file to temp file
+9. Harness writes instruction file to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory
 10. Harness sends `"Read instructions at <path>"` via TMUX `send-keys`
 11. Agent works (may call callback scripts for questions)
 12. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result

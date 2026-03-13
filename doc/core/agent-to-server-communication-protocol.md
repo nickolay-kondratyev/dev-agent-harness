@@ -68,7 +68,7 @@ val guid = HandshakeGuid.generate()
 The TMUX session command exports the GUID before starting the agent:
 
 ```bash
-export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && claude
+export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.a1b2c3d4-... && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude
 ```
 
 The callback scripts read `$TICKET_SHEPHERD_HANDSHAKE_GUID` from the environment and include
@@ -80,17 +80,16 @@ set. This catches misconfigured spawns immediately.
 
 ---
 
-## Server Port Discovery
+## Server Port — Environment Variable
 
-The server binds to **port 0** (OS-assigned). On startup, it writes the assigned port to:
+The server port is configured via the **`TICKET_SHEPHERD_SERVER_PORT`** environment variable.
+The harness reads this on startup and binds the Ktor CIO server to the specified port. If the
+port is already in use, the harness **fails hard** with a clear error directing the user to
+stop the other instance.
 
-```
-$HOME/.shepherd_agent_harness/server/port.txt
-```
-
-- Callback scripts read this file to construct the server URL
-- On server shutdown, this file is **deleted**
-- **No env var needed** — eliminates port collision risk entirely
+- Callback scripts read `$TICKET_SHEPHERD_SERVER_PORT` from the environment to construct the server URL
+- The env var is exported in the TMUX session command alongside `TICKET_SHEPHERD_HANDSHAKE_GUID`
+- **No temporary files** for port discovery — simple, explicit, and eliminates cleanup concerns
 
 The server starts once at harness startup and stays alive across all sub-parts.
 
@@ -235,13 +234,19 @@ Both the **planner** and **plan reviewer** are instructed to call this before si
 
 ---
 
-## Structured Text Delivery — Temp File Pattern
+## Structured Text Delivery — Instruction Files in `.ai_out/`
 
-All structured/formatted content sent to agents goes through temp files:
+All structured/formatted content sent to agents is written to the sub-part's
+`comm/in/instructions.md` file inside `.ai_out/`:
 
-- Write content to `$HOME/.shepherd_agent_harness/tmp/agent_comm/<unique_name>.md`
+- Write content to `.ai_out/${branch}/.../${sub_part}/comm/in/instructions.md`
 - Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
+- Instructions are **overwritten** each iteration — git history preserves prior versions
 - **Exception**: Simple single-line messages (e.g., AgentSessionIdResolver GUID handshake) can be sent directly
+
+This replaces the previous temp file pattern. Instructions are now git-tracked alongside
+agent outputs (`comm/out/PUBLIC.md`), providing full communication visibility.
+See [`.ai_out/` directory schema](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E).
 
 ---
 
@@ -263,9 +268,9 @@ the sole mechanism agents use to communicate back to the harness.
 **Shared behavior across all scripts:**
 
 - Lives on `$PATH` of the started agent
-- Reads port from `$HOME/.shepherd_agent_harness/server/port.txt`
+- Reads port from `$TICKET_SHEPHERD_SERVER_PORT` environment variable
 - Reads `$TICKET_SHEPHERD_HANDSHAKE_GUID` from environment; includes it in every request
-- **Fail-fast:** hard-fail when `$TICKET_SHEPHERD_HANDSHAKE_GUID` is not set
+- **Fail-fast:** hard-fail when `$TICKET_SHEPHERD_HANDSHAKE_GUID` or `$TICKET_SHEPHERD_SERVER_PORT` is not set
 - Expects 200 from server; exits non-zero on any other status code
 - Agent receives usage instructions in its initial instructions, wrapped in
   `<critical_to_keep_through_compaction>` tags to survive context compaction
@@ -291,8 +296,8 @@ Server-side role validation is a second layer of defense.
 TMUX `send-keys` is the **only** harness-to-agent communication channel. The harness uses it to:
 
 - Deliver the HandshakeGuid for session ID resolution
-- Send instruction file paths
-- Send user-question answer file paths
+- Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
+- Send user-question answer file paths (`comm/in/` in `.ai_out/`)
 - Send health pings
 - Send iteration feedback instructions (on `needs_iteration`)
 

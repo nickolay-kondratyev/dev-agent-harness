@@ -25,19 +25,22 @@ interface ContextForAgentProvider {
 
     /**
      * Assembles instruction file for an execution agent (doer or reviewer).
-     * Returns the path to the written temp file.
+     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
+     * Returns the path to the written file.
      */
     suspend fun assembleExecutionAgentInstructions(request: ExecutionAgentInstructionRequest): Path
 
     /**
      * Assembles instruction file for the PLANNER agent.
-     * Returns the path to the written temp file.
+     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
+     * Returns the path to the written file.
      */
     suspend fun assemblePlannerInstructions(request: PlannerInstructionRequest): Path
 
     /**
      * Assembles instruction file for the PLAN_REVIEWER agent.
-     * Returns the path to the written temp file.
+     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
+     * Returns the path to the written file.
      */
     suspend fun assemblePlanReviewerInstructions(request: PlanReviewerInstructionRequest): Path
 }
@@ -82,7 +85,7 @@ Concatenation order:
 | 7 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
 | 8 | **plan.json output path** | `harness_private/plan.json` (absolute path) | |
 | 9 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
-| 10 | **PUBLIC.md output path** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
+| 10 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 11 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 12 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
@@ -95,9 +98,9 @@ Concatenation order:
 | 3 | **plan.json content** | Read from `harness_private/plan.json` | Injected by provider — not in `shared/` |
 | 4 | **PLAN.md content** | Read from `shared/plan/PLAN.md` | |
 | 5 | **Available agent types & models** | Same as planner receives | Reference for validating planner's `agentType` + `model` assignments |
-| 6 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/PUBLIC.md` | Planner's rationale |
+| 6 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale |
 | 7 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
-| 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/PUBLIC.md` — tells the reviewer where to write its output |
+| 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/comm/out/PUBLIC.md` — tells the reviewer where to write its output |
 | 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 10 | **Callback script usage** | Same as execution agent + `validate-plan` | Includes `callback_shepherd.validate-plan.sh` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
@@ -228,14 +231,16 @@ approving) validate the plan schema, catching structural errors before
 
 ## Output Location
 
-Instruction files are written to:
+Instruction files are written to the sub-part's `comm/in/instructions.md` inside `.ai_out/`:
+
 ```
-$HOME/.shepherd_agent_harness/tmp/agent_comm/${git_branch}/<unique_name>.md
+.ai_out/${git_branch}/execution/${part_name}/${sub_part}/comm/in/instructions.md
+.ai_out/${git_branch}/planning/${sub_part}/comm/in/instructions.md
 ```
 
-Unique name format: `instruction_${partName}_${subPartName}_${timestamp}.md`
-
-Branch-scoped temp directory ensures isolation across concurrent harness instances.
+Instructions are **overwritten** on each iteration — git history preserves prior versions.
+This means no cleanup is needed and the full communication is git-tracked alongside agent
+outputs (`comm/out/PUBLIC.md`).
 
 The provider writes the file and returns its `Path`. The caller
 (`PartExecutor` via `SubPartInstructionProvider`) sends the path to the agent via TMUX `send-keys`.
