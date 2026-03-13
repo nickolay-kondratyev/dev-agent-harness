@@ -40,11 +40,17 @@ data class UserQuestionContext(
 6. Server looks up `SessionEntry` for context, then delegates to `UserQuestionHandler`
 7. Handler obtains the answer (V1: stdin prompt; future: expensive LLM, Slack, etc.)
 8. Harness writes answer to `comm/in/` in the sub-part's `.ai_out/` directory (e.g., `comm/in/qa_answer.md`)
-9. Harness sends file path to agent via TMUX `send-keys`
-10. Agent reads the answer file, continues
+9. Harness delivers the answer file path to the agent via `AckedPayloadSender`
+   (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — the file path is wrapped in the Payload Delivery ACK
+   XML (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E), sent via TMUX `send-keys`, and the harness awaits
+   the agent's `ack-payload` callback before considering the answer delivered
+10. Agent reads the XML wrapper, ACKs the payload, then reads the answer file and continues
 
 **No long-lived HTTP connections.** The answer is delivered via TMUX, not via the HTTP response.
 This follows the core principle: HTTP = agent→harness signaling, TMUX = harness→agent delivery.
+Delivery confirmation follows the same protocol as all other `send-keys` payloads — see
+[Payload Delivery ACK Protocol](agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe)
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ---
 

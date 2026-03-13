@@ -83,7 +83,7 @@ enum class DoneResult {
 | Callback | Why not | Handler |
 |----------|---------|---------|
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
-| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys` |
+| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) |
 | `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
 | `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; executor's ACK-await phase reads this |
 
@@ -128,8 +128,9 @@ Full health monitoring spec: ref.ap.6HIM68gd4kb8D2WmvQDUK.E (HealthMonitoring.md
 ### Loop Structure (Pseudocode)
 
 The loop has two phases: **ACK-await** (confirms payload delivery) and **signal-await**
-(waits for agent to complete work). The ACK-await phase runs first after every `send-keys`
-delivery (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
+(waits for agent to complete work). The ACK-await phase is handled by `AckedPayloadSender`
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E) after every `send-keys` delivery
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). The pseudocode below shows the full flow for context:
 
 ```
 // Phase A: ACK-Await — confirm payload delivery
@@ -251,8 +252,9 @@ the executor to send it new instructions.
       (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
    b. Subsequent iterations (re-entry from step 4): doer session **already alive** → create
       fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
-      deferred) → assemble new instructions (includes reviewer feedback) → send via TMUX
-      `send-keys` to **existing** session → enter health-aware await loop
+      deferred) → assemble new instructions (includes reviewer feedback) → deliver via
+      `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing** session →
+      enter health-aware await loop
 2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
@@ -265,7 +267,8 @@ the executor to send it new instructions.
    b. Subsequent iterations (re-entry from step 1b→2): reviewer session **already alive** →
       create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
       new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
-      send via TMUX `send-keys` to **existing** session → enter health-aware await loop
+      deliver via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing**
+      session → enter health-aware await loop
 3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **late fail-workflow checkpoint**: check
@@ -318,8 +321,8 @@ after `done` prevents downstream corruption.
    a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
    b. Create fresh `CompletableDeferred<AgentSignal>` → re-register `SessionEntry`
       (same HandshakeGuid, new deferred)
-   c. Send a re-instruction message via TMUX `send-keys` (wrapped with Payload Delivery ACK
-      — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) telling the agent:
+   c. Deliver a re-instruction message via `AckedPayloadSender`
+      (ref.ap.tbtBcVN2iCl1xfHJthllP.E) telling the agent:
       - Its `PUBLIC.md` at `<path>` is missing or empty
       - It must write `PUBLIC.md` with its work log (decisions, rationale, what was done)
       - It must re-signal `done` with the same result value
@@ -369,10 +372,10 @@ kill/respawn — it:
 1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
 2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
 3. Assembles new instructions via `SubPartInstructionProvider`
-4. Wraps the instruction file path in the Payload Delivery ACK wrapper
-   (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E), sets `pendingPayloadAck` on `SessionEntry`
-5. Sends wrapped payload via TMUX `send-keys` to the existing session
-6. Enters ACK-await phase → on ACK received, proceeds to health-aware signal-await
+4. Delivers the instruction file path via `AckedPayloadSender`
+   (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to the existing TMUX session
+5. On ACK received, enters health-aware signal-await loop
+   (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
 
 This pattern is identical for both doer and reviewer re-instruction.
 

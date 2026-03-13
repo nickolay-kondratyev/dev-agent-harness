@@ -22,7 +22,7 @@ The server does **not** route `/callback-shepherd/signal/done` or `/callback-she
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
 `/callback-shepherd/signal/user-question` is still handled as a side-channel — server delegates to
-`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via TMUX `send-keys`.
+`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
 The executor stays suspended.
 
 ---

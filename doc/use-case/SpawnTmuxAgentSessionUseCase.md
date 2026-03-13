@@ -103,17 +103,15 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 ### Phase 2: Work — Full Instructions
 
 8. Harness writes instruction file to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory
-9. Harness wraps `"Read instructions at <path>"` in the Payload Delivery ACK wrapper
-   (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E), generates a `PayloadId`, sets `pendingPayloadAck`
-   on `SessionEntry`
-10. Harness sends wrapped payload via TMUX `send-keys`
-11. Agent reads XML wrapper, calls `callback_shepherd.signal.sh ack-payload <PayloadId>`,
-    then processes the instruction content
-12. Harness confirms ACK (clears `pendingPayloadAck`), enters health-aware signal-await loop.
-    If no ACK within 3 min → retries `send-keys` (up to 2 retries, 3 total attempts)
-13. Agent works (may call callback scripts for questions)
-14. Agent calls `callback_shepherd.signal.sh done <result>` → server receives `/callback-shepherd/signal/done` with GUID + result
-15. Harness validates result against sub-part role, proceeds accordingly
+9. Harness delivers `"Read instructions at <path>"` to the agent via `AckedPayloadSender`
+   (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wraps in Payload Delivery ACK XML, sends via TMUX
+   `send-keys`, awaits `ack-payload` with retry per the standard policy
+   (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
+10. Agent reads XML wrapper, ACKs, then processes the instruction content
+11. Harness enters health-aware signal-await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+12. Agent works (may call callback scripts for questions)
+13. Agent calls `callback_shepherd.signal.sh done <result>` → server receives `/callback-shepherd/signal/done` with GUID + result
+14. Harness validates result against sub-part role, proceeds accordingly
 
 ## Resume Flow
 
@@ -126,7 +124,7 @@ start command differs (uses `--resume` instead of a fresh start).
    `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --resume <session_id> "<bootstrap_message>"`
 3. Harness creates TMUX session running the command — agent resumes in **interactive mode**
    and immediately receives the bootstrap message as its first input
-4–12. **Identical to new session flow** (steps 5–12 above)
+4–11. **Identical to new session flow** (steps 5–11 above)
 
 The new HandshakeGuid ensures the server can distinguish this resumed session from the
 previous one. The agent gets a fresh callback identity while retaining its conversation

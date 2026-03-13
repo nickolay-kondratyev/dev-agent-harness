@@ -431,7 +431,8 @@ See [`.ai_out/` directory schema](../schema/ai-out-directory.md) (ref.ap.BXQlLDT
 Agent calls `callback_shepherd.signal.sh user-question`. Server delegates to
 `UserQuestionHandler` — see [UserQuestionHandler](UserQuestionHandler.md)
 (ref.ap.NE4puAzULta4xlOLh5kfD.E) for the strategy interface, V1 stdin behavior, and flow.
-Answer delivered via TMUX `send-keys`, not via HTTP response.
+Answer delivered via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in
+Payload Delivery ACK XML, not via HTTP response.
 
 ---
 
@@ -625,13 +626,56 @@ Read instructions at /path/to/comm/in/instructions.md
 | Content type | Wrapped? | Rationale |
 |---|---|---|
 | Work instructions (Phase 2 file pointer) | **Yes** | Core delivery — must confirm receipt |
-| User-question answers | **Yes** | Agent is waiting for this; non-delivery blocks progress |
+| User-question answers (ref.ap.NE4puAzULta4xlOLh5kfD.E) | **Yes** | Agent is waiting for this; non-delivery blocks progress |
 | Iteration feedback instructions | **Yes** | Critical for doer re-instruction after `needs_iteration` |
+| PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | **Yes** | Agent must produce PUBLIC.md before part can proceed |
 | Health pings | **No** | Pings have their own ACK mechanism (`ping-ack` — ref.ap.RJWVLgUGjO5zAwupNLhA0.E) |
 
 **Bootstrap messages are NOT wrapped** — they are delivered as initial prompt arguments
 (not `send-keys`), and the `/signal/started` callback serves as their ACK
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
+
+### Shared Abstraction — AckedPayloadSender / ap.tbtBcVN2iCl1xfHJthllP.E
+
+All callers that deliver payloads to agents via `send-keys` (every "Yes" row in the scope
+table above) **must** use a single shared abstraction: `AckedPayloadSender`. This is the
+sole gateway for harness→agent `send-keys` communication (except health pings, which use
+their own mechanism).
+
+```kotlin
+interface AckedPayloadSender {
+    /**
+     * Wrap [payloadContent] in the Payload Delivery ACK XML, send via TMUX send-keys,
+     * and await ACK. Retries per the retry policy (3 attempts, 3 min each).
+     *
+     * Returns on successful ACK. Throws on all-retries-exhausted (caller handles as crash).
+     */
+    suspend fun sendAndAwaitAck(
+        tmuxSession: TmuxAgentSession,
+        sessionEntry: SessionEntry,
+        payloadContent: String,
+    )
+}
+```
+
+**Why a shared abstraction:**
+
+- **DRY**: The wrap → send-keys → ACK-await → retry loop is identical across all use cases
+  (work instructions, Q&A answers, iteration feedback, PUBLIC.md re-instruction). Duplicating
+  this logic creates divergence risk.
+- **Single place for retry policy**: Timeout, retry count, and failure behavior are defined
+  once. Callers don't re-implement the retry loop.
+- **Testability**: Each caller tests its own orchestration; `AckedPayloadSender` tests the
+  delivery mechanism. Clear boundary.
+
+**Callers:**
+
+| Caller | When |
+|--------|------|
+| `PartExecutor` health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) | Phase 2 work instructions after bootstrap |
+| `PartExecutor` re-instruction pattern (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
+| `PartExecutor` PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | Missing PUBLIC.md after done signal |
+| `ShepherdServer` Q&A answer delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After `UserQuestionHandler` returns answer |
 
 ### ACK Flow
 

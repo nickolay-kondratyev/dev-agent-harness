@@ -119,7 +119,7 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
 1. Harness uses **BudgetHigh DirectLLM** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md + SHARED_CONTEXT.md)
 2. Presents summary to user with the iteration history
 3. User decides:
-   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (sends new instructions via TMUX `send-keys`).
+   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
    - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
@@ -143,28 +143,18 @@ prevents this class of failure from ever reaching the health monitoring layer.
 ## Relationship to Payload Delivery ACK Protocol
 
 The Payload Delivery ACK Protocol (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) addresses a failure mode
-that health monitoring alone **cannot** resolve: the agent is alive and responsive to pings,
-but never received the harness's instruction. Without delivery confirmation, this creates an
-infinite loop:
+that health monitoring alone **cannot** resolve: the "alive but never received instruction"
+loop. The ACK protocol catches this at the source (within 9 minutes worst-case) rather than
+letting it loop indefinitely through health monitoring. All `send-keys` payloads (except pings)
+go through the shared `AckedPayloadSender` abstraction (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
 
-1. Harness sends instructions via `send-keys` → agent never processes them
-2. Agent stays idle → 30 min `noActivityTimeout` fires
-3. Harness pings → agent responds with `ping-ack` (it's alive)
-4. `lastActivityTimestamp` resets → back to step 2
+See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe)
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) for the full specification: wrapping format, retry policy,
+ACK tracking, and scope table.
 
-The ACK protocol breaks this loop by requiring the agent to confirm receipt of every
-`send-keys` payload **before** the executor enters the health-aware await loop. If no ACK
-arrives within 3 minutes, the harness retries delivery (up to 3 total attempts). This
-catches the "alive but never got the instruction" failure mode at the source — within 9
-minutes worst-case — rather than letting it loop indefinitely through health monitoring.
-
-**Three layers of delivery assurance (ordered by what they catch):**
-
-| Layer | What it catches | Mechanism |
-|-------|----------------|-----------|
-| 1. Callback script retry (ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) | Agent→Harness transient HTTP failures | Script retries the HTTP POST |
-| 2. Payload Delivery ACK (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Harness→Agent delivery failures (agent never processes `send-keys`) | Harness retries `send-keys` on missing ACK |
-| 3. Health monitoring (this doc) | Agent process crash, TMUX session death, truly hung agents | Ping + crash detection |
+Health monitoring is the **third layer** of delivery assurance — after callback script retry
+(ref.ap.yzc3Q5TEh2EYCN03J7ZuL.E) and Payload Delivery ACK. It catches what the first two
+layers cannot: agent process crashes, TMUX session death, and truly hung agents.
 
 ---
 
