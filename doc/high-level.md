@@ -331,6 +331,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Callback scripts | **One script per endpoint** | `callback_shepherd.*.sh` — focused, self-documenting, no flag parsing |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation** | On failure, append `## Previous Failed Attempts` section to the ticket with structured facts + LLM summary. Ticket already feeds into agent context — no plumbing changes needed. |
+| System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
 
 ---
 

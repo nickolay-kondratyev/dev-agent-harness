@@ -38,7 +38,8 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
 2. Harness reads `agentType` and `model` from sub-part config in `current_state.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
 3. Harness builds the TMUX start command:
-   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude [flags]`
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --system-prompt-file <resolved_path> [flags]`
+   — see [System Prompt File Resolution](#system-prompt-file-resolution) for how `<resolved_path>` is determined
 4. Harness creates TMUX session running the command
 5. Harness waits for agent startup (agent CLI needs time to initialize)
 6. Harness sends GUID to agent via TMUX `send-keys` (plain text, directly)
@@ -51,6 +52,27 @@ for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 11. Agent works (may call callback scripts for questions)
 12. Agent calls `callback_shepherd.done.sh <result>` → server receives `/callback-shepherd/done` with GUID + result
 13. Harness validates result against sub-part role, proceeds accordingly
+
+### System Prompt File Resolution
+
+Every `claude` invocation **must** include `--system-prompt-file`. This is not optional — omitting
+it is a bug. The flag overrides Claude Code's built-in system prompt with a stage-specific prompt
+file controlled by the harness operator.
+
+**Resolution rules:**
+
+| Stage | System prompt file |
+|-------|-------------------|
+| Planning (PLANNER, PLAN_REVIEWER) | `${MY_ENV}/config/claude/ai_input/system_prompt/for_planning.md` |
+| Execution (all other agents) | `${MY_ENV}/config/claude/ai_input/system_prompt/default.md` |
+
+- `MY_ENV` is a required environment variable (see [Required Environment Variables](../core/git.md#required-environment-variables)).
+- Both system prompt files are validated at **harness initialization** — hard fail if either is missing.
+  This follows the same fail-at-startup pattern as other required env vars.
+- The caller (PartExecutor / TicketShepherd) knows the current stage and passes the resolved
+  absolute path to `SpawnTmuxAgentSessionUseCase`.
+
+---
 
 ### AgentSessionIdResolver
 
