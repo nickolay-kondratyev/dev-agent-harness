@@ -402,7 +402,7 @@ while (true) {
     }
 
     // --- Context window check (every iteration = every ~1 second) ---
-    contextState = agentInteraction.readContextWindowState(handle)
+    contextState = agentFacade.readContextWindowState(handle)
 
     // Stale context guard: don't trust remaining_percentage if the hook hasn't
     // updated recently — the agent may have died and the percentage is frozen.
@@ -479,11 +479,11 @@ next iteration, the executor detects no live handle and spawns a new session:
 // Updated re-instruction path (step 1b/2b):
 if (liveHandleExists(subPart)) {
     // Existing path: send instructions to live session
-    agentInteraction.sendPayloadWithAck(handle, instructions)
+    agentFacade.sendPayloadWithAck(handle, instructions)
 } else {
     // New path: session was killed (self-compaction or crash)
     // Spawn new session via AgentFacade
-    handle = agentInteraction.spawnAgent(config)
+    handle = agentFacade.spawnAgent(config)
 }
 ```
 
@@ -526,15 +526,15 @@ ref.ap.9h0KS4EOK5yumssRCJdbq.E):
    If missing after one retry → `PartResult.AgentCrashed`.
 2. **Git commit:** `GitCommitStrategy.onSubPartDone` — captures PRIVATE.md + any other
    changes the agent made before compaction.
-3. **Kill session:** `agentInteraction.killSession(handle)` — internally kills TMUX session
+3. **Kill session:** `agentFacade.killSession(handle)` — internally kills TMUX session
    and cleans up `SessionsState`.
-4. **Spawn new session:** `agentInteraction.spawnAgent(config)` — encapsulates the standard
+4. **Spawn new session:** `agentFacade.spawnAgent(config)` — encapsulates the standard
    spawn flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E): new `HandshakeGuid`, new TMUX session,
    bootstrap handshake, session ID resolution + context_window_slim.json validation, new
    entry in `sessionIds` array in `current_state.json`. Returns a fresh `SpawnedAgentHandle`.
 5. **Send instructions:** `ContextForAgentProvider` assembles instructions. `PRIVATE.md`
    exists → included in concatenation. Delivered via
-   `agentInteraction.sendPayloadWithAck(newHandle, instructions)`.
+   `agentFacade.sendPayloadWithAck(newHandle, instructions)`.
 6. **Enter health-aware await loop:** Normal monitoring resumes on the new handle's
    `signal` deferred.
 
@@ -683,9 +683,9 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Verifiable: unit test — instructions with/without PRIVATE.md present
 
 ### R10: Session Rotation
-- After self-compaction: `agentInteraction.killSession()` (internally kills TMUX, cleans
+- After self-compaction: `agentFacade.killSession()` (internally kills TMUX, cleans
   SessionsState), clear handle reference
-- Executor's re-instruction path detects no live handle → `agentInteraction.spawnAgent()`
+- Executor's re-instruction path detects no live handle → `agentFacade.spawnAgent()`
 - New HandshakeGuid, new session record in `sessionIds` array
 - PRIVATE.md picked up by ContextForAgentProvider in new instructions
 - Works for both planning and execution parts (DRY via shared PartExecutor)

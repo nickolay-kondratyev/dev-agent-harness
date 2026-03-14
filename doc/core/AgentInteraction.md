@@ -122,7 +122,7 @@ doesn't control `delay()` suspension. Together, they give full control over the 
 runTest {
     val clock = TestClock(startTime)
     val fake = FakeAgentFacade()
-    val executor = DoerReviewerPartExecutor(agentInteraction = fake, clock = clock, ...)
+    val executor = DoerReviewerPartExecutor(agentFacade = fake, clock = clock, ...)
 
     // Spawn doer — fake returns handle immediately
     launch { executor.execute() }
