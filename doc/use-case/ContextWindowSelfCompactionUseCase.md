@@ -9,6 +9,12 @@ with harness-controlled compaction at predictable boundaries.
 (doers and reviewers). The logic lives in `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E),
 which is shared across all part types. No sub-part is exempt.
 
+All agent operations in this use case (send compaction instructions, read context window state,
+kill sessions, spawn new sessions) flow through the `AgentInteraction` facade
+(ref.ap.9h0KS4EOK5yumssRCJdbq.E). `PartExecutor` never accesses `SessionsState`,
+`TmuxCommunicator`, or `TmuxSessionManager` directly. This enables unit testing of the full
+compaction state machine via `FakeAgentInteraction` + virtual time.
+
 ---
 
 ## Why This Exists
@@ -55,14 +61,11 @@ Agent signals done
     │   ├─ remaining_percentage > 65 → continue normal flow (reviewer, next iteration, etc.)
     │   └─ remaining_percentage ≤ 65 → self-compaction:
     │       │
-    │       ├─ Create fresh CompletableDeferred<AgentSignal>
-    │       ├─ Re-register SessionEntry (same HandshakeGuid, new deferred)
-    │       ├─ Send self-compaction instruction via AckedPayloadSender
-    │       │   (ref.ap.tbtBcVN2iCl1xfHJthllP.E)
+    │       ├─ Reset signal via AgentInteraction (fresh deferred)
+    │       ├─ Send self-compaction instruction via AgentInteraction.sendPayloadWithAck()
     │       ├─ Await AgentSignal.SelfCompacted (with timeout)
     │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill TMUX session
-    │       ├─ Remove session from SessionsState
+    │       ├─ Kill session via AgentInteraction.killSession()
     │       └─ Mark sub-part as needing respawn (no live session)
     │
     └─ Continue normal flow (GitCommitStrategy, next sub-part, iteration restart)
@@ -87,17 +90,15 @@ Health-aware await loop (polling every 1 second)
     │   ├─ remaining_percentage > 20 → continue await loop
     │   └─ remaining_percentage ≤ 20 → emergency compaction:
     │       │
-    │       ├─ Send Ctrl+C to TMUX session (interrupt agent mid-task)
+    │       ├─ Send Ctrl+C via AgentInteraction (interrupt agent mid-task)
     │       ├─ Brief pause (1-2 seconds) for interrupt to take effect
-    │       ├─ Create fresh CompletableDeferred<AgentSignal>
-    │       ├─ Re-register SessionEntry (same HandshakeGuid, new deferred)
-    │       ├─ Send self-compaction instruction via AckedPayloadSender
+    │       ├─ Reset signal via AgentInteraction (fresh deferred)
+    │       ├─ Send self-compaction instruction via AgentInteraction.sendPayloadWithAck()
     │       ├─ Await AgentSignal.SelfCompacted (with timeout)
     │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill TMUX session
-    │       ├─ Remove session from SessionsState
-    │       ├─ Spawn new TMUX session for this sub-part
-    │       │   (standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
+    │       ├─ Kill session via AgentInteraction.killSession()
+    │       ├─ Spawn new session via AgentInteraction.spawnAgent()
+    │       │   (encapsulates standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
     │       ├─ New session receives instructions including PRIVATE.md
     │       └─ Enter new health-aware await loop for the new session
     │
@@ -401,7 +402,7 @@ while (true) {
     }
 
     // --- Context window check (every iteration = every ~1 second) ---
-    contextState = contextWindowStateReader.read(agentSessionId)
+    contextState = agentInteraction.readContextWindowState(handle)
 
     // Stale context guard: don't trust remaining_percentage if the hook hasn't
     // updated recently — the agent may have died and the percentage is frozen.
@@ -467,26 +468,27 @@ is a single-line JSON on local filesystem.
 
 `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) distinguishes first run
 (step 1a/2a: spawn) from subsequent iterations (step 1b/2b: send-keys to existing session)
-by whether the TMUX session exists.
+by whether a live `SpawnedAgentHandle` exists for the sub-part.
 
 ### After Self-Compaction
 
-After session rotation, the TMUX session is killed. On the next iteration, the executor
-must detect that no session exists and fall through to the spawn path:
+After session rotation, the session is killed via `AgentInteraction.killSession()`. On the
+next iteration, the executor detects no live handle and spawns a new session:
 
 ```
 // Updated re-instruction path (step 1b/2b):
-if (tmuxSessionAlive(subPart)) {
-    // Existing path: send-keys to live session
-    deliverViaAckedPayloadSender(existingSession, instructions)
+if (liveHandleExists(subPart)) {
+    // Existing path: send instructions to live session
+    agentInteraction.sendPayloadWithAck(handle, instructions)
 } else {
     // New path: session was killed (self-compaction or crash)
-    // Spawn new session via standard spawn flow
-    spawnNewSession(subPart, instructions)
+    // Spawn new session via AgentInteraction
+    handle = agentInteraction.spawnAgent(config)
 }
 ```
 
-This naturally handles both self-compaction (intentional kill) and idle session death
+All agent operations go through `AgentInteraction` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This
+naturally handles both self-compaction (intentional kill) and idle session death
 (unintentional kill). The same code path serves both — DRY by design.
 
 **DRY between planning and execution:** The `PartExecutor` is already shared between
@@ -498,8 +500,9 @@ the executor, so it applies to both without duplication.
 ## context_window_slim.json Validation After Session ID Resolution
 
 After `AgentSessionIdResolver` resolves the session ID (step 6a in spawn flow —
-ref.ap.hZdTRho3gQwgIXxoUtTqy.E), the executor calls
-`contextWindowStateReader.validatePresence(agentSessionId)`.
+ref.ap.hZdTRho3gQwgIXxoUtTqy.E), `AgentInteractionImpl` calls
+`contextWindowStateReader.validatePresence(agentSessionId)` internally as part of
+`spawnAgent()`.
 
 **Timing:** This runs after `/signal/started` is received. At this point:
 - The agent is alive and has processed the bootstrap message
@@ -516,24 +519,24 @@ discovering it later when we need to read the context state.
 
 ## Session Rotation Detail
 
-After self-compaction completes:
+After self-compaction completes (all agent operations via `AgentInteraction`
+ref.ap.9h0KS4EOK5yumssRCJdbq.E):
 
 1. **Validate PRIVATE.md:** Check `${sub_part}/private/PRIVATE.md` exists and is non-empty.
    If missing after one retry → `PartResult.AgentCrashed`.
 2. **Git commit:** `GitCommitStrategy.onSubPartDone` — captures PRIVATE.md + any other
    changes the agent made before compaction.
-3. **Kill TMUX session:** `tmux kill-session -t ${sessionName}`.
-4. **Remove from SessionsState:** Clear the session entry for this sub-part.
-5. **Spawn new session:** Standard spawn flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E):
-   - New `HandshakeGuid`
-   - New TMUX session
-   - Bootstrap handshake
-   - Session ID resolution + context_window_slim.json validation
-   - New entry in `sessionIds` array in `current_state.json`
-6. **Send instructions:** `ContextForAgentProvider` assembles instructions. `PRIVATE.md`
-   exists → included in concatenation. Agent receives full context including the compressed
-   summary from the prior session.
-7. **Enter health-aware await loop:** Normal monitoring resumes.
+3. **Kill session:** `agentInteraction.killSession(handle)` — internally kills TMUX session
+   and cleans up `SessionsState`.
+4. **Spawn new session:** `agentInteraction.spawnAgent(config)` — encapsulates the standard
+   spawn flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E): new `HandshakeGuid`, new TMUX session,
+   bootstrap handshake, session ID resolution + context_window_slim.json validation, new
+   entry in `sessionIds` array in `current_state.json`. Returns a fresh `SpawnedAgentHandle`.
+5. **Send instructions:** `ContextForAgentProvider` assembles instructions. `PRIVATE.md`
+   exists → included in concatenation. Delivered via
+   `agentInteraction.sendPayloadWithAck(newHandle, instructions)`.
+6. **Enter health-aware await loop:** Normal monitoring resumes on the new handle's
+   `signal` deferred.
 
 **For Flow 1 (done boundary):** Steps 5–7 happen when the executor next needs this sub-part
 (lazy respawn). Not immediately after compaction.
@@ -680,12 +683,14 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Verifiable: unit test — instructions with/without PRIVATE.md present
 
 ### R10: Session Rotation
-- After self-compaction: kill TMUX, remove from SessionsState, clear session reference
-- Executor's re-instruction path detects no live session → spawns new one
+- After self-compaction: `agentInteraction.killSession()` (internally kills TMUX, cleans
+  SessionsState), clear handle reference
+- Executor's re-instruction path detects no live handle → `agentInteraction.spawnAgent()`
 - New HandshakeGuid, new session record in `sessionIds` array
 - PRIVATE.md picked up by ContextForAgentProvider in new instructions
 - Works for both planning and execution parts (DRY via shared PartExecutor)
-- Verifiable: unit test — full rotation sequence; integration test — real session rotation
+- Verifiable: unit test via `FakeAgentInteraction` — full rotation sequence;
+  integration test — real session rotation
 
 ### R11: Self-Compaction Instruction Message
 - Template includes: PRIVATE.md path, summarization guidelines, signal instruction
