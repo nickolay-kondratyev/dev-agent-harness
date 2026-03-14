@@ -50,10 +50,10 @@ not in TicketShepherd.
 ## AgentSignal / ap.UsyJHSAzLm5ChDLd0H6PK.E
 
 Sealed class representing what flows through the `CompletableDeferred<AgentSignal>` to
-the executor. `Done` and `FailWorkflow` are completed by the server; `Crashed` is produced
-by the executor's own health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E). This is the
-**callback bridge** — the mechanism by which an HTTP callback wakes the suspended executor
-coroutine.
+the executor. `Done`, `FailWorkflow`, and `SelfCompacted` are completed by the server;
+`Crashed` is produced by the executor's own health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E). This is the **callback bridge** — the mechanism by
+which an HTTP callback wakes the suspended executor coroutine.
 
 ```kotlin
 sealed class AgentSignal {
@@ -65,6 +65,9 @@ sealed class AgentSignal {
 
     /** Executor's health-aware await loop determined the agent has crashed */
     data class Crashed(val details: String) : AgentSignal()
+
+    /** Agent completed self-compaction (ref.ap.HU6KB4uRDmOObD54gdjYs.E) */
+    object SelfCompacted : AgentSignal()
 }
 ```
 
@@ -152,6 +155,11 @@ while (sessionEntry.pendingPayloadAck != null) {
 
 // Phase B: Signal-Await with Dual-Signal Liveness Monitoring
 // (ref.ap.dnc1m7qKXVw2zJP8yFRE.E — HealthMonitoring.md Dual-Signal Liveness Model)
+//
+// PRECONDITION: This phase runs AFTER the bootstrap handshake (/signal/started received)
+// and AFTER contextWindowStateReader.validatePresence() has confirmed
+// context_window_slim.json exists. The file is guaranteed present.
+//
 lastHealthCheck = now()
 while (true) {
     signal = awaitSignalWithTimeout(1.second)
@@ -167,34 +175,37 @@ while (true) {
     callbackAge = now() - sessionEntry.lastActivityTimestamp
 
     // --- Stale context guard: don't trust remaining_percentage if hook is stale ---
-    if (contextFileAge <= contextStateStalenessThreshold) {
+    if (contextFileAge <= contextFileStaleTimeout) {
         // Context state is fresh — safe to trust remaining_percentage
         if (contextState.remainingPercentage <= HARD_THRESHOLD) {
             if (signalDeferred.isCompleted) {
                 return signalDeferred.await()
             }
+            // Emergency compaction — see ContextWindowSelfCompactionUseCase
+            // (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
             return handleEmergencyCompaction(sessionEntry)
         }
     } else {
-        log.warn("context_window_slim.json stale — remaining_percentage unreliable",
+        log.warn("file_updated_timestamp_stale — remaining_percentage unreliable",
             Val(contextFileAge, CONTEXT_FILE_AGE),
-            Val(contextStateStalenessThreshold, STALENESS_THRESHOLD))
+            Val(contextFileStaleTimeout, STALENESS_THRESHOLD))
     }
 
     // --- Dual-signal early ping check ---
     // Both signals stale beyond contextFileStaleTimeout → suspected in-session death
+    shouldSendPing = false
+
     if (contextFileAge > contextFileStaleTimeout
         AND callbackAge > contextFileStaleTimeout) {
         log.warn("dual_signal_stale — triggering early ping",
             Val(contextFileAge, CONTEXT_FILE_AGE),
             Val(callbackAge, CALLBACK_AGE),
             Val(contextFileStaleTimeout, STALE_TIMEOUT))
-        // Fall through to ping logic below (skip waiting for noActivityTimeout)
-        goto SEND_PING
+        shouldSendPing = true
     }
 
-    // --- Regular health checks (at normal intervals) ---
-    if (now() - lastHealthCheck >= healthCheckInterval) {
+    // --- Regular health checks (at normal intervals, only if early ping not triggered) ---
+    if (!shouldSendPing AND now() - lastHealthCheck >= healthCheckInterval) {
         lastHealthCheck = now()
 
         // Effective last activity: the more recent of the two signals
@@ -204,27 +215,28 @@ while (true) {
         )
         elapsed = now() - effectiveLastActivity
 
-        if (elapsed < noActivityTimeout) {
-            if (contextFileAge <= contextStateStalenessThreshold) {
-                log.debug { "ping_suppressed — file_updated_timestamp proves life",
-                    Val(contextFileAge, CONTEXT_FILE_AGE) }
-            }
-            continue  // Activity happened recently in at least one signal
+        if (elapsed >= noActivityTimeout) {
+            log.warn("effective_last_activity_stale — triggering standard ping",
+                Val(elapsed, STALE_DURATION),
+                Val(noActivityTimeout, NO_ACTIVITY_TIMEOUT))
+            shouldSendPing = true
+        } else if (contextFileAge <= contextFileStaleTimeout) {
+            log.debug { "ping_suppressed — file_updated_timestamp proves life",
+                Val(contextFileAge, CONTEXT_FILE_AGE) }
         }
-
-        // effectiveLastActivity stale beyond noActivityTimeout
-        // Fall through to ping
-    } else {
-        continue  // Not time for health check yet
     }
 
-    SEND_PING:
-    // Record pre-ping state for post-ping comparison
+    if (!shouldSendPing) {
+        continue  // No ping needed — loop back
+    }
+
+    // --- Send ping and check for dual-signal proof of life ---
     prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
     prePingFileTimestamp = contextState.fileUpdatedTimestamp
 
     log.info("sending_health_ping",
-        Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
+        Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME),
+        Val(callbackAge, STALE_DURATION))
     NoStatusCallbackTimeOutUseCase.execute(sessionEntry)  // sends ping via TMUX
 
     // Wait for ping timeout, then re-check BOTH signals
@@ -247,7 +259,7 @@ while (true) {
     }
 
     // Neither signal advanced → agent is dead
-    log.error("crash_detected — no activity in either signal after ping",
+    log.error("crash_detected — no activity after ping",
         Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
     NoReplyToPingUseCase.execute(sessionEntry)  // kills TMUX session
     return AgentSignal.Crashed(details)

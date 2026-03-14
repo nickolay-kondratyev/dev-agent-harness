@@ -97,7 +97,7 @@ including the case where the TMUX session is alive but the agent process inside 
 
 #### Ping Suppression
 
-When `fileUpdatedTimestamp` is recent (within `contextStateStalenessThreshold` — default 5 min),
+When `fileUpdatedTimestamp` is recent (within `contextFileStaleTimeout` — default 5 min),
 the agent is **provably alive** even if `lastActivityTimestamp` is old. The executor skips
 the ping and resets the health timer. This prevents unnecessary interruptions to agents on
 long tasks that involve many API turns but no harness callbacks.
@@ -204,8 +204,8 @@ initializing its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 | UseCase | Trigger | Action |
 |---|---|---|
 | `NoStartupAckUseCase` | No callback of any kind within `noStartupAckTimeout` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Log clear error identifying spawn failure (includes session name, HandshakeGuid, env vars). Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `noActivityTimeout`. |
-| `NoStatusCallbackTimeOutUseCase` | No activity (any callback) after X min — based on `lastActivityTimestamp` | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No activity of any kind (proof-of-life check on `lastActivityTimestamp`) after ping timeout | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+| `NoStatusCallbackTimeOutUseCase` | `effectiveLastActivity` (`max(lastActivityTimestamp, fileUpdatedTimestamp)`) stale beyond `noActivityTimeout`, OR both signals stale beyond `contextFileStaleTimeout` (early ping — ref.ap.dnc1m7qKXVw2zJP8yFRE.E) | Ping agent via TMUX send-keys |
+| `NoReplyToPingUseCase` | No advancement in **either** signal (`lastActivityTimestamp` or `fileUpdatedTimestamp`) after ping timeout (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See `doc_v2/FailedToExecutePlanUseCaseV2.md` for V2 automated cleanup. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM (ref.ap.hnbdrLkRtNSDFArDFd9I2.E), present to user, user decides whether to grant more iterations |
 

@@ -405,9 +405,9 @@ while (true) {
 
     // Stale context guard: don't trust remaining_percentage if the hook hasn't
     // updated recently — the agent may have died and the percentage is frozen.
-    // See HealthMonitoring.md Dual-Signal Liveness Model (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
+    // See HealthMonitoring.md Dual-Signal Liveness Model (ref.ap.dnc1m7qKXVw2zJP8yFRE.E).
     contextFileAge = now() - contextState.fileUpdatedTimestamp
-    if (contextFileAge <= contextStateStalenessThreshold) {
+    if (contextFileAge <= contextFileStaleTimeout) {
         // Context state is fresh — safe to trust remaining_percentage
         if (contextState.remainingPercentage <= HARD_THRESHOLD) {
             // Check if done already arrived (race condition guard)
@@ -421,9 +421,9 @@ while (true) {
         // Context state is stale — remaining_percentage unreliable.
         // Log warning and skip compaction threshold checks.
         // The dual-signal liveness check (below) will handle detection.
-        log.warn("context_window_slim.json stale",
+        log.warn("file_updated_timestamp_stale — remaining_percentage unreliable",
             Val(contextFileAge, CONTEXT_FILE_AGE),
-            Val(contextStateStalenessThreshold, STALENESS_THRESHOLD))
+            Val(contextFileStaleTimeout, STALENESS_THRESHOLD))
     }
 
     // --- Regular health checks (at normal intervals) ---
@@ -581,7 +581,7 @@ strategies:
 | `SELF_COMPACTION_SOFT_THRESHOLD` | 65 | Compact at done boundary when `remaining_percentage ≤ 65` |
 | `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` |
 | `SELF_COMPACTION_TIMEOUT` | 5 min | Max time for agent to write PRIVATE.md and signal |
-| `contextStateStalenessThreshold` | 5 min | How old `file_updated_timestamp` can be before `remaining_percentage` is considered unreliable. When stale, compaction threshold checks are skipped and the dual-signal liveness model takes over (ref.ap.RJWVLgUGjO5zAwupNLhA0.E). |
+| `contextFileStaleTimeout` | 5 min | How old `file_updated_timestamp` can be before `remaining_percentage` is considered unreliable. When stale, compaction threshold checks are skipped and the dual-signal liveness model takes over. **Same parameter** as in HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — defined once, used for both stale context guard and dual-signal early ping trigger. |
 
 Configured via environment variables or harness config. Not per-sub-part in V1.
 
