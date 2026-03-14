@@ -42,7 +42,7 @@ Tradeoff: if we later we squash the commits, we will lose the iteration history.
 
 ## Hard Constraints
 
-- **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed only when the **part** completes. No kill/respawn between iterations.
+- **One TMUX session per sub-part at a time.** A sub-part gets exactly one TMUX session, spawned on first run and kept alive across iteration loops. The session is killed when the **part** completes, or when **self-compaction** triggers session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). After session rotation, a new session is spawned for the same sub-part. No two sessions are alive simultaneously for the same sub-part.
 - **Agents under TMUX are spawned in Interactive mode.** This is the entire point of using TMUX — to allow the harness to send further input to a running agent via `send-keys`. The `-p`/`--print` flags must **NOT** be used for TMUX-spawned agents, as they produce non-interactive (run-and-exit) sessions. The bootstrap message is delivered as an **initial prompt argument** in the CLI command (not via `send-keys`) — the agent receives it atomically on startup. All subsequent communication (instructions, pings, Q&A) uses `send-keys`. Non-interactive (`--print`) mode is reserved exclusively for utility use cases via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E).
 - **At most 2 sub-parts per part.** First sub-part is the doer (implementor/planner). Optional second sub-part is the reviewer. On review `needs_iteration`, the harness loops back to the doer. This keeps part execution trivially simple.
   - In V2 we may relax this but in V1 this is KISS constraint.
@@ -197,6 +197,28 @@ immediately after reading instructions — a 3-minute startup timeout catches sp
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
 naming principle.
+
+## Context Window Monitoring & Self-Compaction
+
+Detects context window exhaustion in TMUX-powered agents and performs controlled
+self-compaction — killing the old session and spawning a fresh one with a `PRIVATE.md`
+context summary. Claude Code's built-in auto-compaction is **disabled** (via
+`~/.claude.json` + `DISABLE_AUTO_COMPACT=true` env var); the harness is the sole
+controller of context management.
+
+Two thresholds:
+- **Soft (65% remaining)**: at `done` boundaries — proactive compaction while the agent has ample room to summarize
+- **Hard (20% remaining)**: continuous 1-second polling — emergency mid-task interrupt (Ctrl+C) + forced compaction
+
+After self-compaction, the agent's TMUX session is killed and a new one spawned. The new
+session receives `PRIVATE.md` (the compressed context summary) via `ContextForAgentProvider`
+(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). Context state is read from
+`${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json` — an
+external hook artifact. File not present → hard stop failure.
+
+See [`ContextWindowSelfCompactionUseCase`](use-case/ContextWindowSelfCompactionUseCase.md)
+(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — flows, thresholds, signal protocol,
+PRIVATE.md schema, and session rotation mechanics.
 
 ---
 
@@ -363,6 +385,9 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
+| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json`. File not present → hard stop. OCP: future agent types provide their own reader. |
+| Auto-compaction | **Disabled — harness-controlled self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code auto-compaction disabled via `~/.claude.json` (`autoCompactEnabled: false`) + `DISABLE_AUTO_COMPACT=true` env var. Harness performs controlled self-compaction at predictable thresholds (65% remaining at done boundary, 20% remaining emergency interrupt). |
+| Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | New lifecycle signal. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
 
 ---
 
@@ -386,4 +411,5 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/NonInteractiveAgentRunner.md`](core/NonInteractiveAgentRunner.md) | Lightweight subprocess-based agent invocation (`--print` mode) for utility tasks — recovery, failure analysis |
 | [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
 | [`doc/use-case/TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) | Records structured failure context + LLM summary into ticket on workflow failure — enables cross-try learning |
+| [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, self-compaction flow, PRIVATE.md, session rotation, auto-compaction disabled |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

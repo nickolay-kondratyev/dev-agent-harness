@@ -18,6 +18,8 @@ The git branches will include ticket ids which guarantees not clashing.
 │       └── PLAN.md                     # Human-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
 │   └── ${sub_part}/                    # e.g., plan, plan_review (order from array position in JSON)
+│       ├── private/
+│       │   └── PRIVATE.md             # Self-compaction context summary (only after session rotation)
 │       └── comm/
 │           ├── in/
 │           │   └── instructions.md     # Instructions sent to this agent by the harness
@@ -26,6 +28,8 @@ The git branches will include ticket ids which guarantees not clashing.
 └── execution/                          # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
         └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
+            ├── private/
+            │   └── PRIVATE.md         # Self-compaction context summary (only after session rotation)
             └── comm/
                 ├── in/
                 │   └── instructions.md # Instructions sent to this agent by the harness
@@ -38,6 +42,7 @@ The git branches will include ticket ids which guarantees not clashing.
 | File | Scope | Purpose |
 |------|-------|---------|
 | `PUBLIC.md` | Per sub-part (`comm/out/`) | **Agent work log** — decisions made + rationale, what was implemented/reviewed, review verdicts. Overwritten each iteration; history preserved in git. **Required**: the harness validates existence and non-emptiness after every `done` signal (ref.ap.THDW9SHzs1x2JN9YP9OYU.E). |
+| `PRIVATE.md` | Per sub-part (`private/`) | **Self-compaction context summary** — written by an agent during harness-controlled self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Contains compressed but context-rich summary of the agent's work, decisions, challenges, and codebase discoveries. Only present after a session rotation triggered by context window exhaustion. Overwritten on subsequent self-compactions; history preserved in git. Fed to the next session via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). |
 | `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
 | `SHARED_CONTEXT.md` | Branch-wide | **Shared knowledge base** about the codebase — discoveries, anchor points of interest, cross-cutting constraints, patterns/conventions observed. Mutable by all agents, accumulated across the workflow. |
 | `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
@@ -46,11 +51,20 @@ The git branches will include ticket ids which guarantees not clashing.
 
 ## Structure Decisions
 
-### No PRIVATE.md
+### PRIVATE.md — Self-Compaction Context
 
-Agents do not have private output files. An agent's private state lives in its conversation history
-(within its TMUX session). `PUBLIC.md` is the single output artifact per sub-part — everything an agent
-writes is intended to be shared.
+`PRIVATE.md` lives under `${sub_part}/private/` and is written **only** during
+harness-controlled self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E). It is NOT a
+general-purpose private output file — it exists specifically to bridge context across
+session rotations when the context window fills up.
+
+- **Not present by default.** Most sub-parts will never self-compact. `PRIVATE.md` only
+  appears after context window exhaustion triggers session rotation.
+- **Written by the agent, consumed by the harness.** The agent writes it during
+  self-compaction. `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) includes
+  it in the next session's instructions if present.
+- **Overwritten on subsequent compactions.** Git preserves history.
+- **Not visible to other sub-parts.** Only the same sub-part's next session reads it.
 
 ### Communication Visibility via `comm/`
 
@@ -72,7 +86,8 @@ files.
 | Part-specific trade-offs | Patterns/conventions observed in the codebase |
 
 **Principle**: PUBLIC.md answers "what did I do and why." SHARED_CONTEXT.md answers "what did
-I learn about the codebase that others need to know."
+I learn about the codebase that others need to know." PRIVATE.md answers "what do I need
+to remember to continue my work in a fresh session."
 
 - PUBLIC.md should NOT duplicate decisions already captured in the plan or SHARED_CONTEXT.md.
 - SHARED_CONTEXT.md is **mutable** — later agents refine what earlier agents wrote (e.g.,
@@ -111,10 +126,13 @@ ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
 ## Initial Creation
 
 `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) creates the full `.ai_out/${branch}/`
-directory structure as part of ticket setup, including an **empty `SHARED_CONTEXT.md`** file.
-This ensures the file exists before the first agent runs — `ContextForAgentProvider`
-(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) can always include it in instruction assembly without
-checking for existence. Agents modify it in place.
+directory structure as part of ticket setup, including an **empty `SHARED_CONTEXT.md`** file
+and the `private/` directory under each sub-part. This ensures the directory structure
+exists before the first agent runs — `ContextForAgentProvider`
+(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) can always check for `PRIVATE.md` without worrying
+about the parent directory. `PRIVATE.md` itself is **not** created at initialization — it
+is only written by agents during self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
+Agents modify `SHARED_CONTEXT.md` in place.
 
 ## Codified In
 
