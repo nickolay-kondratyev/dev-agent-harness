@@ -64,6 +64,9 @@ It tracks how many times the reviewer has looped back to the doer.
 
 **Incremented when:** reviewer signals `needs_iteration` (before resuming the doer).
 **Checked against:** `iteration.max` — if `current >= max`, triggers `FailedToConvergeUseCase`.
+**Not incremented by:** the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Processing
+individual feedback items within one iteration does NOT increment the counter — the counter
+tracks full reviewer→doer(all items)→reviewer cycles, not individual feedback items.
 
 ### plan.json / current_state.json Schema
 

@@ -545,6 +545,17 @@ interrupted mid-task and needs to resume work.
 
 ## Interaction with Other Use Cases
 
+### Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E)
+
+The inner feedback loop creates **frequent done boundaries** — one after each feedback item.
+Each done boundary is a natural soft-compaction checkpoint. This significantly reduces the
+need for emergency compaction (hard threshold): the doer processes one item, hits a done
+boundary, compacts if needed, then starts fresh on the next item. Without the inner loop,
+the doer processes ALL feedback in one go, making mid-task context exhaustion more likely.
+
+**The inner feedback loop makes self-compaction proactive rather than reactive.** See
+[`granular-feedback-loop.md`](../plan/granular-feedback-loop.md) for the full spec.
+
 ### FailedToConvergeUseCase (ref.ap.RJWVLgUGjO5zAwupNLhA0.E)
 
 If self-compaction is triggered at a done boundary and the iteration budget is also exceeded,

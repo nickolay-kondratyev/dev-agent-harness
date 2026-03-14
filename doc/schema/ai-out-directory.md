@@ -27,6 +27,19 @@ The git branches will include ticket ids which guarantees not clashing.
 │               └── PUBLIC.md           # Agent work log (decisions, rationale, verdicts)
 └── execution/                          # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
+        ├── __feedback/                 # Granular feedback items (ref.ap.3Hskx3JzhDlixTnvYxclk.E)
+        │   ├── unaddressed/            #   — see full spec: ref.ap.5Y5s8gqykzGN1TVK5MZdS.E
+        │   │   ├── critical/
+        │   │   ├── important/
+        │   │   └── optional/
+        │   ├── addressed/
+        │   │   ├── critical/
+        │   │   ├── important/
+        │   │   └── optional/
+        │   └── rejected/
+        │       ├── critical/
+        │       ├── important/
+        │       └── optional/
         └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
             ├── private/
             │   └── PRIVATE.md         # Self-compaction context summary (only after session rotation)
@@ -48,6 +61,21 @@ The git branches will include ticket ids which guarantees not clashing.
 | `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture. |
+
+### `__feedback/` — Granular Feedback Items
+
+Lives at the **part level** (not sub-part level). Shared between doer and reviewer within
+a part. Contains individual feedback items written by the reviewer as separate markdown
+files — one per actionable issue. The harness drives an inner loop that feeds items to the
+doer one at a time in severity order (critical → important → optional).
+
+Nine leaf directories (3 statuses × 3 severities) are created by `AiOutputStructure.ensureStructure()`
+at part setup — empty at creation. Not visible to agents in other parts.
+
+Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
+(ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Directory concept: ref.ap.3Hskx3JzhDlixTnvYxclk.E.
+
+---
 
 ## Structure Decisions
 

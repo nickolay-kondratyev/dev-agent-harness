@@ -363,14 +363,27 @@ the executor to send it new instructions.
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **late fail-workflow checkpoint**: check
    `SessionsState.checkLateFailWorkflow(partName)`. If set → return
-   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → return `PartResult.Completed`
+   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Then **feedback completion guard**
+   (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/unaddressed/critical/` and
+   `__feedback/unaddressed/important/` are empty. If not empty → re-instruct reviewer (one
+   retry, then `AgentCrashed`). `unaddressed/optional/` may contain files — does not block.
+   Otherwise → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **late fail-workflow checkpoint**: check
    `SessionsState.checkLateFailWorkflow(partName)`. If set → return
    `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → check budget:
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
-     go to step 1b (doer re-instruction)
+     **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E):
+     - **Feedback files presence guard**: validate reviewer wrote feedback files to
+       `__feedback/unaddressed/` (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Empty → re-instruct
+       reviewer (one retry, then `AgentCrashed`).
+     - **Inner feedback loop**: process feedback items one at a time — critical → important
+       → optional. Each item: self-compaction check → doer re-instruction with single item
+       → await done → validate file moved (critical/important enforced, optional skippable)
+       → git commit. Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
+     - After inner loop: validate `unaddressed/critical/` and `unaddressed/important/` are
+       empty → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
    - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user
      decides continue or abort
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
@@ -502,6 +515,7 @@ strategy produces one commit per sub-part signal.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — ping agent on activity timeout
 - `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kill TMUX + crash details on ping timeout
+- **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 
 ---
 
