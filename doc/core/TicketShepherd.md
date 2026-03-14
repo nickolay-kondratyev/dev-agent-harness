@@ -76,15 +76,18 @@ information needed for different cleanup strategies.
 
 ## Responsibilities
 
-- **Owns `SessionsState`** (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — tracks live `TmuxAgentSession`
-  (ref.ap.DAwDPidjM0HMClPDSldXt.E) instances, keyed by HandshakeGuid.
+- **Provides `AgentInteraction`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) to executors — the
+  testability facade through which all agent operations flow. `SessionsState`
+  (ref.ap.7V6upjt21tOoCFXA7nqNh.E) is internal to `AgentInteractionImpl`; the shepherd
+  passes the `AgentInteraction` interface to each `PartExecutor` it creates, not the raw
+  infra components.
 - **Orchestrates use cases** — calls use cases for discrete operations; the shepherd makes
   the decisions, use cases do the work.
 - **Delegates iteration to PartExecutor** — does NOT drive the doer↔reviewer loop directly.
   Creates an appropriate `PartExecutor` for each part and calls `execute()`. The executor
   owns the spawn → wait → iterate cycle internally.
 - **Manages part lifecycle** — creates executors, kills TMUX sessions when a part completes
-  (`removeAllForPart`), triggers `GitCommitStrategy` hooks (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+  (via `AgentInteraction`), triggers `GitCommitStrategy` hooks (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 - **Controls which executor is active** — always holds a single `activeExecutor` reference,
   giving cancellation one place to look. Health monitoring is owned by each executor
   internally via its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).

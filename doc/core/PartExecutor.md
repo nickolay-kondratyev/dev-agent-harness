@@ -99,23 +99,29 @@ response body. It also updates `lastActivityTimestamp`.
 ### How the Bridge Works
 
 ```
-Executor                          SessionsState                    Server
-   │                                   │                              │
-   ├─ create CompletableDeferred       │                              │
-   ├─ register SessionEntry ──────────►│                              │
-   │  (includes deferred)              │                              │
-   ├─ spawn agent, send instructions   │                              │
-   ├─ suspend on deferred.await() ─────┤                              │
-   │                                   │                              │
-   │                                   │  ◄── POST /callback-shepherd/done
-   │                                   │      lookup(guid) ──────────►│
-   │                                   │      validate result         │
-   │                                   │      entry.signalDeferred    │
-   │                                   │        .complete(Done(...))  │
-   │                                   │                              │
-   ◄─ resumes from await() ────────────┤                              │
-   │  reads AgentSignal                │                              │
+Executor                   AgentInteraction              SessionsState         Server
+   │                            │                              │                  │
+   ├─ spawnAgent(config) ──────►│                              │                  │
+   │                            ├─ create CompletableDeferred  │                  │
+   │                            ├─ register SessionEntry ─────►│                  │
+   │                            ├─ spawn TMUX, bootstrap       │                  │
+   │                            ├─ return SpawnedAgentHandle   │                  │
+   ◄─ handle (with Deferred) ──┤  (includes signal Deferred)  │                  │
+   │                            │                              │                  │
+   ├─ suspend on handle         │                              │                  │
+   │    .signal.await() ────────┤                              │                  │
+   │                            │                              │ ◄── POST /done   │
+   │                            │                              │  lookup(guid) ──►│
+   │                            │                              │  validate result │
+   │                            │                              │  entry.signal    │
+   │                            │                              │  .complete(Done) │
+   │                            │                              │                  │
+   ◄─ resumes from await() ────┤                              │                  │
+   │  reads AgentSignal         │                              │                  │
 ```
+
+In tests, `FakeAgentInteraction` replaces the middle three columns — the test directly
+controls when the deferred is completed and with what `AgentSignal`.
 
 ---
 
@@ -508,14 +514,26 @@ strategy produces one commit per sub-part signal.
 
 ### Dependencies
 
-- `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — register/lookup sessions
-- `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — spawn agent sessions
+- **`AgentInteraction`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
+  operations: spawn, send payload with ACK, health ping, read context window state, kill session.
+  Replaces direct dependencies on `SessionsState`, `SpawnTmuxAgentSessionUseCase`,
+  `TmuxCommunicator`, and `ContextWindowStateReader`. Signal delivery flows through
+  `SpawnedAgentHandle.signal` (a `Deferred<AgentSignal>`). See
+  [`AgentInteraction`](AgentInteraction.md) for the full interface spec.
 - `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) — assemble instructions
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
+- `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
+  in the health-aware await loop. Production: `SystemClock`. Tests: `TestClock` with virtual time.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
-- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — ping agent on activity timeout
-- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kill TMUX + crash details on ping timeout
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
+
+### Testability
+
+Both executor implementations are unit-tested via `FakeAgentInteraction` + virtual time
+(`TestClock` + `kotlinx-coroutines-test`). This enables deterministic testing of the full
+state machine — including timing-sensitive health monitoring, timeout/crash detection, and
+iteration edge cases — without real TMUX sessions or real agents. See
+[Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage) in high-level.md.
 
 ---
 
@@ -546,11 +564,10 @@ Same as `DoerReviewerPartExecutor` — calls `GitCommitStrategy.onSubPartDone`
 
 ### Dependencies
 
-- `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) — register/lookup sessions
-- `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — spawn agent sessions
-- `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after doer completes
-- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — ping agent on activity timeout
-- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kill TMUX + crash details on ping timeout
+Same as `DoerReviewerPartExecutor`: `AgentInteraction` (ref.ap.9h0KS4EOK5yumssRCJdbq.E),
+`GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), `Clock`
+(ref.ap.whDS8M5aD2iggmIjDIgV9.E). No `SubPartInstructionProvider` for reviewer, no
+`FailedToConvergeUseCase` (no iteration).
 
 ---
 

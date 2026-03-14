@@ -39,14 +39,16 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
   N where neither exists (see [Try-N Resolution](git.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)
 - **Creates feature branch** (`git checkout -b`) from current HEAD
-- Initializes `SessionsState`
+- Initializes `SessionsState` (internal to `AgentInteractionImpl`)
+- Constructs `AgentInteractionImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — wires `SessionsState`,
+  `AgentStarter`, `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`, and
+  `ContextWindowStateReader` into the facade. This is the single agent-facing dependency
+  passed to all `PartExecutor` instances.
 - Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
 - Sets up `.ai_out/` directory structure for the branch (depends on branch name from previous steps)
 - Creates `current_state.json` (V2 adds resume-from-existing — ref.ap.LX1GCIjv6LgmM7AJFas20.E)
-- Constructs health monitoring use cases (`NoStatusCallbackTimeOutUseCase`,
-  `NoReplyToPingUseCase`) — injected into `PartExecutor` instances as dependencies.
-  Configuration (healthCheckInterval, noActivityTimeout, pingTimeout) uses constructor
-  defaults; override via constructor injection in tests.
+- Constructs `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — production `SystemClock`; tests
+  inject `TestClock` for virtual time
 - Constructs `TicketShepherd` with `ShepherdContext` + ticket-scoped state
 
 ## Not the Shepherd

@@ -2,8 +2,15 @@
 
 The in-memory registry of live agent sessions, keyed by `HandshakeGuid`
 (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). Bridges the HTTP server (which receives
-callbacks identified by GUID) with `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E)
-(which is suspended on a `CompletableDeferred<AgentSignal>` waiting for the agent's signal).
+callbacks identified by GUID) with the `CompletableDeferred<AgentSignal>` that the executor
+is suspended on.
+
+> **Internal to `AgentInteractionImpl`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E).
+> `PartExecutor` does **not** access `SessionsState` directly — all agent operations flow
+> through the `AgentInteraction` facade. `SessionsState` is registered and queried by
+> `AgentInteractionImpl` (for spawn, signal delivery, ACK tracking) and `ShepherdServer`
+> (for callback routing). This indirection enables `FakeAgentInteraction` to replace the
+> entire agent infrastructure layer in unit tests.
 
 ---
 
@@ -52,13 +59,14 @@ send `pass` or `needs_iteration`.
 
 ### signalDeferred Lifecycle
 
-1. **Created by** the `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) before spawning the agent
+1. **Created by** `AgentInteractionImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) during `spawnAgent()`
 2. **Registered** on the `SessionEntry` in `SessionsState`
 3. **Completed by** the server (on `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`)
    or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection
-4. **Awaited by** the executor — `deferred.await()` suspends the executor coroutine until completion
-5. **Replaced** on iteration: when the reviewer signals `needs_iteration`, the executor creates a
-   fresh `CompletableDeferred` and re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
+4. **Exposed to** the executor via `SpawnedAgentHandle.signal` — a `Deferred<AgentSignal>` that
+   the executor suspends on
+5. **Replaced** on iteration: `AgentInteractionImpl` creates a fresh `CompletableDeferred` and
+   re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
 
 ---
 
@@ -66,7 +74,7 @@ send `pass` or `needs_iteration`.
 
 | Operation | Caller | Description |
 |-----------|--------|-------------|
-| `register(guid, entry)` | `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) (after spawn, and on each iteration with fresh deferred) | Adds or updates a session in the registry |
+| `register(guid, entry)` | `AgentInteractionImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) (during spawn, and on each signal reset for iteration) | Adds or updates a session in the registry |
 | `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
 | `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning phase, `partName = "planning"` (constant — see ref.ap.P3po8Obvcjw4IXsSUSU91.E). |
 | `recordLateFailWorkflow(guid, reason)` | `ShepherdServer` (when `/signal/fail-workflow` arrives for a deferred already completed with `Done` — ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E) | Sets `lateFailWorkflow` on the `SessionEntry`. Idempotent — if already set, keeps the first (earliest) reason. |
@@ -84,8 +92,11 @@ execution makes per-operation synchronization sufficient. Revisit for V2 paralle
 ## Ownership
 
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — empty on creation
-- **Owned by** `TicketShepherd` — the shepherd removes sessions on part completion; `PartExecutor` registers entries during spawn and iteration
+- **Owned by** `AgentInteractionImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — registers entries
+  during spawn and iteration, removes sessions on part completion
 - **Shared with** `ShepherdServer` — the server holds a reference for `lookup` on incoming callbacks
+- **Not accessed by** `PartExecutor` — the executor interacts with agents exclusively through
+  the `AgentInteraction` interface, which abstracts `SessionsState` away
 - Lifecycle: lives for the duration of one ticket's processing. Not persisted (V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---

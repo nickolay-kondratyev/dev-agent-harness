@@ -148,12 +148,31 @@ All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager`
 - **One TMUX session per sub-part** — kept alive across iteration loops (see Hard Constraints). New instructions delivered via `send-keys`.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
 
+### AgentInteraction — Testability Facade
+
+The orchestration layer (`PartExecutor`, `TicketShepherd`) accesses **all** agent operations
+through a single **`AgentInteraction`** interface (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This is
+the testability seam between orchestration logic and infrastructure. The real implementation
+(`AgentInteractionImpl`) delegates to the existing infra components (`AgentStarter`,
+`TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`, `ContextWindowStateReader`,
+`SessionsState`). None of these infra components are visible to the orchestration layer.
+
+The interface exposes high-level operations: spawn agent (returning a handle with a
+`Deferred<AgentSignal>`), send payload with ACK, send health ping, read context window state,
+and kill session. `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) is an **internal
+implementation detail** of `AgentInteractionImpl` — `PartExecutor` never touches it directly.
+
+See [`AgentInteraction`](core/AgentInteraction.md) (ref.ap.9h0KS4EOK5yumssRCJdbq.E) for the
+full spec — interface shape, decisions, signal delivery ownership, and spec impact.
+
 ### Agent Invocation
 
-Agents are spawned via [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
-(ref.ap.hZdTRho3gQwgIXxoUtTqy.E). The executor communicates results via
-`CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) — see
-[`PartExecutor`](core/PartExecutor.md) for the callback bridge design.
+Agents are spawned via [`AgentInteraction.spawnAgent()`](core/AgentInteraction.md)
+(ref.ap.9h0KS4EOK5yumssRCJdbq.E), which encapsulates the full
+[`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
+(ref.ap.hZdTRho3gQwgIXxoUtTqy.E) flow internally. The returned `SpawnedAgentHandle`
+includes a `Deferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) that the executor
+awaits — see [`PartExecutor`](core/PartExecutor.md) for the state machine design.
 
 - Instructions written to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory (preserves formatting, git-tracked)
 - V1: no tool restrictions (allow everything)
@@ -228,6 +247,84 @@ external hook artifact. File not present → hard stop failure.
 See [`ContextWindowSelfCompactionUseCase`](use-case/ContextWindowSelfCompactionUseCase.md)
 (ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — flows, thresholds, signal protocol,
 PRIVATE.md schema, and session rotation mechanics.
+
+---
+
+## Testing Strategy — Fake-Driven Unit Coverage
+
+### Architectural Principle
+
+The orchestration layer (`PartExecutor`, `TicketShepherd`) contains the most complex logic in
+the system: a state machine with spawn, timeout, health monitoring, iteration loops, crash
+detection, and context window exhaustion handling. Testing this with real agents and real TMUX
+sessions is slow (~minutes per test), flaky (real infrastructure), expensive (LLM API calls),
+and cannot cover edge cases like crash-after-timeout or dual-signal-stale scenarios.
+
+**Solution:** The `AgentInteraction` facade (ref.ap.9h0KS4EOK5yumssRCJdbq.E) is a testability
+seam. A `FakeAgentInteraction` replaces all agent infrastructure in unit tests, giving full
+programmatic control over agent behavior — when spawns complete, when signals arrive, what
+context window state looks like, whether ACKs succeed.
+
+### Testing Pyramid
+
+| Layer | What it tests | How | Speed |
+|-------|--------------|-----|-------|
+| **Unit tests (primary coverage)** | Orchestration state machine — PartExecutor happy path, iteration loops, timeout/crash detection, health monitoring decisions, ACK failures, context window exhaustion, late fail-workflow | `FakeAgentInteraction` + virtual time (`TestClock` + `kotlinx-coroutines-test`) | Milliseconds |
+| **Integration tests (sanity checks)** | Real infra works — TMUX sessions spawn, send-keys delivers, HTTP callbacks arrive, session ID resolves | Real `AgentInteractionImpl` + real agent (one or few sessions) | Minutes |
+
+**Unit tests are the primary coverage layer.** Every edge case in the health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E), every branch of the DoerReviewer iteration flow
+(ref.ap.mxIc5IOj6qYI7vgLcpQn5.E), every failure mode — tested with deterministic fakes and
+virtual time. No flakiness from real infrastructure.
+
+**Integration tests are sanity checks.** They verify that the real plumbing connects: real TMUX
+session → real agent → real HTTP callback → real deferred completion. A handful of integration
+tests covering the happy path and one failure scenario. Their purpose is to catch API contract
+changes, not to exercise edge cases.
+
+### Virtual Time — Full Control of the Time Axis
+
+The health-aware await loop has two kinds of timing dependencies, both must be controllable:
+
+| Dependency | Mechanism | Test control |
+|-----------|-----------|-------------|
+| Coroutine delays (`delay()`, `withTimeout()`) | 1-second tick polling, ACK timeouts, ping timeouts | `kotlinx-coroutines-test` `TestDispatcher` + `advanceTimeBy()` |
+| Wall-clock reads (`now()` for timestamp age comparisons) | `fileUpdatedTimestamp` age, `lastActivityTimestamp` age | `Clock` interface with `TestClock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) |
+
+Together these give **full deterministic control** over the time dimension. Tests advance
+virtual time, set fake timestamps, and verify that the orchestration layer makes the right
+decisions (ping, suppress ping, declare crash, trigger compaction) at the right moments.
+
+### FakeAgentInteraction — Programmable Agent Behavior
+
+The `FakeAgentInteraction` implements `AgentInteraction` with full programmatic control:
+
+- **Spawn behavior** — configure whether spawn succeeds, fails, or delays
+- **Signal delivery** — complete the `Deferred<AgentSignal>` at controlled times with any
+  variant (Done, FailWorkflow, Crashed, SelfCompacted)
+- **ACK behavior** — configure whether payload ACK succeeds, times out, or partially fails
+- **Context window state** — return programmable `ContextWindowState` (any remaining percentage,
+  any `fileUpdatedTimestamp`)
+- **Activity timestamps** — control `lastActivityTimestamp` advancement
+- **Interaction verification** — assert what was sent (payloads, pings, kill calls) and in
+  what order
+
+Each unit test is a clear statement: "given this agent behavior, expect this orchestration
+result." No coordinating 5 separate fakes. One fake, one scenario, one assertion.
+
+### What This Enables
+
+Scenarios that are impractical or impossible to test with real agents become trivial:
+
+- Agent crashes 31 minutes into work → verify ping sent, no reply, session killed
+- Agent dies mid-task but TMUX stays alive (in-session death) → verify dual-signal detection
+- ACK delivery fails 3 times → verify session crashed
+- Context window hits 20% during work → verify emergency compaction triggered
+- Reviewer sends needs_iteration 5 times at budget max → verify FailedToConverge path
+- Late fail-workflow arrives after done signal → verify checkpoint catches it
+- fileUpdatedTimestamp is fresh but lastActivityTimestamp is stale → verify ping suppressed
+
+All of these run in milliseconds with deterministic outcomes.
 
 ---
 
@@ -377,6 +474,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
+| Agent interaction facade | **`AgentInteraction` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentInteraction` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
 | Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. Agents are spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument** in the CLI command. |
 | Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
@@ -409,8 +507,9 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, plan lifecycle, session ID storage |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type, structured reviewer feedback contract, WHY-NOT comments protocol |
+| [`doc/core/AgentInteraction.md`](core/AgentInteraction.md) | AgentInteraction facade — testability seam, signal ownership, FakeAgentInteraction, virtual time strategy |
 | [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
-| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge |
+| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge (internal to `AgentInteractionImpl`) |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/core/git.md`](core/git.md) | Git — branch naming, try-N resolution, commit strategy, author attribution, env var requirements |

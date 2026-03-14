@@ -185,17 +185,32 @@ initializing its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 | Concern | Owner | Mechanism |
 |---------|-------|-----------|
 | Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback (including `/started`) |
-| Read `fileUpdatedTimestamp` | `PartExecutor` | Via `ContextWindowStateReader.read()` on every 1-second poll iteration (ref.ap.ufavF1Ztk6vm74dLAgANY.E) |
+| Read `fileUpdatedTimestamp` | `PartExecutor` | Via `AgentInteraction.readContextWindowState()` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) on every 1-second poll iteration |
 | Compute `effectiveLastActivity` | `PartExecutor` | `max(lastActivityTimestamp, fileUpdatedTimestamp)` — the true "last known alive" time |
 | Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `noStartupAckTimeout` until first callback arrives |
 | Check dual-signal staleness, trigger early ping | `PartExecutor` | Health-aware await loop — both signals stale > `contextFileStaleTimeout` → early ping (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) |
 | Check `effectiveLastActivity` staleness, trigger standard ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `effectiveLastActivity` stale > `noActivityTimeout` |
 | Suppress unnecessary ping | `PartExecutor` | If `fileUpdatedTimestamp` is fresh, skip ping even when `lastActivityTimestamp` is stale |
-| Send ping message via TMUX | `NoStatusCallbackTimeOutUseCase` | Called by executor when activity is stale |
+| Send ping message via TMUX | `PartExecutor` | Via `AgentInteraction.sendHealthPing()` — delegates internally to `NoStatusCallbackTimeOutUseCase` |
 | Post-ping dual check | `PartExecutor` | After ping timeout: check both `lastActivityTimestamp` and `fileUpdatedTimestamp` for advancement |
-| Declare crash, kill TMUX | `NoReplyToPingUseCase` | Called by executor when ping window expires with no activity in **either** signal |
-| Complete deferred with `Crashed` | `PartExecutor` | After `NoReplyToPingUseCase` executes |
-| Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback |
+| Declare crash, kill TMUX | `PartExecutor` | Via `AgentInteraction.killSession()` — delegates internally to `NoReplyToPingUseCase` |
+| Complete deferred with `Crashed` | `PartExecutor` | After kill session executes |
+| Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback (via `SessionsState` internal to `AgentInteractionImpl`) |
+
+### Testability
+
+The health monitoring logic is the most timing-sensitive code in the system. It is unit-tested
+via `FakeAgentInteraction` + virtual time (`TestClock` + `kotlinx-coroutines-test`):
+
+- `FakeAgentInteraction.readContextWindowState()` returns programmable `ContextWindowState`
+  (any `remaining_percentage`, any `fileUpdatedTimestamp`)
+- `TestClock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) controls `now()` for timestamp age comparisons
+- `advanceTimeBy()` controls coroutine delays (1-second ticks, timeout windows)
+- Tests verify every decision branch: ping suppression, early ping, standard ping, crash
+  declaration, proof-of-life acceptance
+
+See [Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage) in
+high-level.md for the full testing approach.
 
 ---
 
