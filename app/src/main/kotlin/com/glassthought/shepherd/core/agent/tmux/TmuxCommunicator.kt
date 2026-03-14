@@ -11,13 +11,40 @@ import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
  *
  * Accepts a [paneTarget] string — either a session name (e.g., `shepherd_main_impl`) or
  * a pane address (e.g., `shepherd_main_impl:0.0`). See [TmuxSession.paneTarget].
+ *
+ * ## Input Corruption Prevention (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
+ *
+ * TMUX `send-keys` interprets certain strings as key names (e.g., "Space", "Enter", "Escape",
+ * "C-c"). Without protection, payload content containing these words would be silently
+ * corrupted — the agent would receive garbled input instead of literal text.
+ *
+ * **This interface prevents corruption via a two-command strategy:**
+ * - [sendKeys]: uses `send-keys -l` (literal flag) for the text body, ensuring all content
+ *   is delivered as-is without key-name interpretation. Enter is sent as a separate non-literal
+ *   command. This is the primary delivery method for all harness→agent payloads
+ *   (instruction file pointers, ACK wrappers, Q&A answers).
+ * - [sendRawKeys]: sends keys WITHOUT the `-l` flag, allowing TMUX key-name interpretation.
+ *   Reserved for control sequences (e.g., "C-c" for Ctrl+C interrupt during emergency
+ *   compaction — ref.ap.8nwz2AHf503xwq8fKuLcl.E) and health pings.
+ *
+ * The Payload Delivery ACK Protocol (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) provides a second layer:
+ * if the agent cannot parse the received payload (garbled delivery), it won't ACK, triggering
+ * a retry. Together, literal-mode sending + ACK-based delivery confirmation eliminate the
+ * class of silent input corruption failures.
  */
+@AnchorPoint("ap.4cY9sc1jEQEseLgR7nDq0.E")
 interface TmuxCommunicator {
     /**
-     * Sends text followed by the Enter key to the given tmux pane target.
+     * Sends text literally followed by the Enter key to the given tmux pane target.
+     *
+     * Uses `send-keys -l` to prevent TMUX key-name interpretation — all text is delivered
+     * as-is. Enter is sent separately without `-l` (we want the actual key press).
+     *
+     * This is the method used by `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E)
+     * for all harness→agent content delivery.
      *
      * @param paneTarget TMUX pane address (e.g., `shepherd_main_impl:0.0`).
-     * @param text The text to type, followed by Enter.
+     * @param text The text to type literally, followed by Enter.
      * @throws IllegalStateException if the send-keys command fails.
      */
     suspend fun sendKeys(paneTarget: String, text: String)
@@ -25,10 +52,11 @@ interface TmuxCommunicator {
     /**
      * Sends raw keys to the given tmux pane target without appending Enter.
      *
-     * Useful for sending special keys (e.g., "C-c", "Escape") or partial text.
+     * Does NOT use `-l` — TMUX key-name interpretation is active. Use this only for
+     * control sequences (e.g., "C-c" for Ctrl+C) and health pings, never for content delivery.
      *
      * @param paneTarget TMUX pane address (e.g., `shepherd_main_impl:0.0`).
-     * @param keys The raw keys to send.
+     * @param keys The raw keys to send (interpreted by TMUX).
      * @throws IllegalStateException if the send-keys command fails.
      */
     suspend fun sendRawKeys(paneTarget: String, keys: String)

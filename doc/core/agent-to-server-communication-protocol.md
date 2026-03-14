@@ -568,6 +568,14 @@ Harness-to-agent communication uses two channels depending on the phase:
 Protocol** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK receipt before processing.
 Health pings are exempt because they have their own acknowledgment mechanism (`ping-ack`).
 
+**Input corruption prevention:** All content delivery uses `TmuxCommunicator.sendKeys()`
+(ref.ap.4cY9sc1jEQEseLgR7nDq0.E) which sends text via TMUX `send-keys -l` (literal flag) —
+preventing TMUX from interpreting payload content as key names (e.g., "Space", "Enter",
+"Escape"). Control sequences (Ctrl+C for emergency compaction) use `sendRawKeys()` which
+sends without `-l`. This two-method split ensures content is always delivered literally while
+preserving the ability to send control keys when needed. See `TmuxCommunicatorImpl`
+(ref.ap.3BCYPiR792a2B8I9ZONDwmvN.E) for the implementation.
+
 For the full agent lifecycle (spawn, session ID resolution), see
 [`SpawnTmuxAgentSessionUseCase`](../use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
 
