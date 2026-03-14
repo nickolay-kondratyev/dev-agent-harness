@@ -1,0 +1,320 @@
+package com.glassthought.shepherd.core.context
+
+import com.asgard.core.data.value.Val
+import com.asgard.core.data.value.ValType
+import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.io.path.readText
+
+/**
+ * Default implementation of [ContextForAgentProvider].
+ *
+ * Each `assemble*()` method uses `buildList` to show the concatenation order as a readable
+ * linear sequence. Each section is a private method call with a descriptive name. The
+ * `buildList` IS the documentation of the concatenation order — no abstraction hides it.
+ *
+ * See ContextForAgentProvider.md (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for the authoritative
+ * concatenation tables.
+ */
+class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvider {
+
+    private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
+
+    override suspend fun assembleExecutionAgentInstructions(
+        request: ExecutionAgentInstructionRequest,
+    ): Path {
+        out.debug("assembling_execution_agent_instructions") {
+            listOf(
+                Val(request.partName, ValType.STRING_USER_AGNOSTIC),
+                Val(if (request.isReviewer) "reviewer" else "doer", ValType.STRING_USER_AGNOSTIC),
+                Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
+            )
+        }
+
+        val sections = buildList {
+            // 1. Role definition
+            add(roleDefinitionSection(request.roleDefinition))
+            // 2. Part context
+            add(InstructionSections.partContext(request.partName, request.partDescription))
+            // 3. Ticket
+            add(ticketSection(request.ticketContent))
+            // 4. SHARED_CONTEXT.md
+            add(sharedContextSection(request.sharedContextPath))
+            // 5. PLAN.md (with-planning only)
+            request.planMdPath?.let { add(planSection(it)) }
+            // 6. Prior PUBLIC.md files
+            addAll(priorPublicMdSections(request.priorPublicMdPaths))
+
+            if (request.isReviewer) {
+                // 7. Reviewer iteration context: doer's PUBLIC.md + structured feedback format
+                request.peerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
+                add(InstructionSections.REVIEWER_FEEDBACK_FORMAT)
+                // 7a–7c. Feedback state (reviewer, iteration > 1)
+                if (request.iterationNumber > 1 && request.feedbackDir != null) {
+                    addAll(feedbackStateSections(request.feedbackDir))
+                }
+                // 7d. Feedback writing instructions
+                add(InstructionSections.FEEDBACK_WRITING_INSTRUCTIONS)
+            } else {
+                // 8. Doer iteration feedback (iteration > 1)
+                if (request.iterationNumber > 1 && request.peerPublicMdPath != null) {
+                    add(reviewerFeedbackForDoerSection(request.peerPublicMdPath))
+                    add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
+                }
+            }
+
+            // 8b. WHY-NOT reminder (doer, all iterations)
+            if (!request.isReviewer) {
+                add(InstructionSections.WHY_NOT_REMINDER)
+            }
+
+            // 9. Output paths
+            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+            add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
+            // 10. PUBLIC.md writing guidelines
+            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+            // 11. SHARED_CONTEXT.md writing guidelines
+            add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
+            // 12. Callback script usage
+            add(
+                InstructionSections.callbackScriptUsage(
+                    forReviewer = request.isReviewer,
+                    includePlanValidation = false,
+                )
+            )
+        }
+
+        return writeInstructionsFile(request.outputDir, sections)
+    }
+
+    override suspend fun assemblePlannerInstructions(
+        request: PlannerInstructionRequest,
+    ): Path {
+        out.debug("assembling_planner_instructions") {
+            listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+        }
+
+        val sections = buildList {
+            // 1. Role definition
+            add(roleDefinitionSection(request.roleDefinition))
+            // 2. Ticket
+            add(ticketSection(request.ticketContent))
+            // 3. SHARED_CONTEXT.md
+            add(sharedContextSection(request.sharedContextPath))
+            // 4. Role catalog
+            add(InstructionSections.roleCatalog(request.roleCatalogEntries))
+            // 5. Available agent types & models
+            add(InstructionSections.AGENT_TYPES_AND_MODELS)
+            // 6. Plan format instructions
+            add(InstructionSections.PLAN_FORMAT_INSTRUCTIONS)
+            // 7. Reviewer feedback (iteration > 1)
+            if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
+                add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
+            }
+            // 8. plan.json output path
+            add(planJsonOutputPathSection(request.planJsonOutputPath))
+            // 9. PLAN.md output path
+            add(planMdOutputPathSection(request.planMdOutputPath))
+            // 10. PUBLIC.md output path
+            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+            // 11. PUBLIC.md writing guidelines
+            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+            // 12. Callback script usage (includes validate-plan query)
+            add(
+                InstructionSections.callbackScriptUsage(
+                    forReviewer = false,
+                    includePlanValidation = true,
+                )
+            )
+        }
+
+        return writeInstructionsFile(request.outputDir, sections)
+    }
+
+    override suspend fun assemblePlanReviewerInstructions(
+        request: PlanReviewerInstructionRequest,
+    ): Path {
+        out.debug("assembling_plan_reviewer_instructions") {
+            listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+        }
+
+        val sections = buildList {
+            // 1. Role definition
+            add(roleDefinitionSection(request.roleDefinition))
+            // 2. Ticket
+            add(ticketSection(request.ticketContent))
+            // 3. plan.json content
+            add(planJsonContentSection(request.planJsonContent))
+            // 4. PLAN.md content
+            add(planMdContentSection(request.planMdContent))
+            // 5. Available agent types & models
+            add(InstructionSections.AGENT_TYPES_AND_MODELS)
+            // 6. Planner's PUBLIC.md
+            add(plannerPublicMdSection(request.plannerPublicMdPath))
+            // 7. Iteration feedback (iteration > 1)
+            if (request.iterationNumber > 1 && request.priorPlanReviewerPublicMdPath != null) {
+                add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))
+            }
+            // 8. PUBLIC.md output path
+            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+            // 9. PUBLIC.md writing guidelines
+            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+            // 10. Callback script usage (includes validate-plan query)
+            add(
+                InstructionSections.callbackScriptUsage(
+                    forReviewer = true,
+                    includePlanValidation = true,
+                )
+            )
+        }
+
+        return writeInstructionsFile(request.outputDir, sections)
+    }
+
+    // ── Per-section private methods ──────────────────────────────────────────
+    // Each reads a file or returns formatted text. Named to match the spec's section names.
+
+    private fun roleDefinitionSection(role: RoleDefinition): String =
+        "# Role: ${role.name}\n\n${role.filePath.readText()}"
+
+    private fun ticketSection(content: String): String =
+        "# Ticket\n\n$content"
+
+    private fun sharedContextSection(path: Path): String =
+        if (Files.exists(path)) {
+            "# SHARED_CONTEXT\n\n${path.readText()}"
+        } else {
+            "# SHARED_CONTEXT\n\n_No shared context yet._"
+        }
+
+    private fun planSection(planMdPath: Path): String =
+        "# Plan\n\n${planMdPath.readText()}"
+
+    private fun priorPublicMdSections(paths: List<Path>): List<String> =
+        if (paths.isEmpty()) {
+            emptyList()
+        } else {
+            listOf(
+                buildString {
+                    appendLine("# Prior Agent Outputs")
+                    appendLine()
+                    paths.forEachIndexed { index, path ->
+                        appendLine("## Prior Output ${index + 1}: ${path.parent.parent.fileName}")
+                        appendLine()
+                        appendLine(path.readText())
+                        appendLine()
+                    }
+                }
+            )
+        }
+
+    private fun doerOutputForReviewerSection(doerPublicMdPath: Path): String =
+        "# Doer Output (for review)\n\n${doerPublicMdPath.readText()}"
+
+    private fun reviewerFeedbackForDoerSection(reviewerPublicMdPath: Path): String =
+        "# Reviewer Feedback\n\n${reviewerPublicMdPath.readText()}"
+
+    private fun feedbackStateSections(feedbackDir: Path): List<String> = buildList {
+        // 7a. Addressed feedback
+        val addressed = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.ADDRESSED)
+        if (addressed.isNotEmpty()) {
+            add(InstructionSections.ADDRESSED_FEEDBACK_HEADER + "\n\n" + addressed)
+        }
+        // 7b. Rejected feedback
+        val rejected = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.REJECTED)
+        if (rejected.isNotEmpty()) {
+            add(InstructionSections.REJECTED_FEEDBACK_HEADER + "\n\n" + rejected)
+        }
+        // 7c. Skipped optional
+        val skippedOptional = collectFeedbackFilesInDir(
+            feedbackDir
+                .resolve(ProtocolVocabulary.FeedbackStatus.UNADDRESSED)
+                .resolve(ProtocolVocabulary.Severity.OPTIONAL)
+        )
+        if (skippedOptional.isNotEmpty()) {
+            add(InstructionSections.SKIPPED_OPTIONAL_HEADER + "\n\n" + skippedOptional)
+        }
+    }
+
+    /**
+     * Collects all feedback files under `feedbackDir/{status}/` across all severity levels.
+     */
+    private fun collectFeedbackFiles(feedbackDir: Path, status: String): String {
+        val severities = listOf(
+            ProtocolVocabulary.Severity.CRITICAL,
+            ProtocolVocabulary.Severity.IMPORTANT,
+            ProtocolVocabulary.Severity.OPTIONAL,
+        )
+        return severities
+            .map { severity -> feedbackDir.resolve(status).resolve(severity) }
+            .flatMap { dir -> collectMarkdownFilesInDir(dir) }
+            .joinToString("\n\n---\n\n")
+    }
+
+    /**
+     * Reads all `.md` files in a directory and returns their content concatenated.
+     */
+    private fun collectFeedbackFilesInDir(dir: Path): String =
+        collectMarkdownFilesInDir(dir).joinToString("\n\n---\n\n")
+
+    private fun collectMarkdownFilesInDir(dir: Path): List<String> =
+        if (Files.exists(dir) && Files.isDirectory(dir)) {
+            Files.list(dir).use { stream ->
+                stream
+                    .filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }
+                    .sorted()
+                    .map { "### ${it.fileName}\n\n${it.readText()}" }
+                    .toList()
+            }
+        } else {
+            emptyList()
+        }
+
+    // ── Planner-specific sections ────────────────────────────────────────────
+
+    private fun planJsonOutputPathSection(path: Path): String = """
+        ## plan.json Output Path
+
+        Write your plan.json to:
+        `$path`
+    """.trimIndent()
+
+    private fun planMdOutputPathSection(path: Path): String = """
+        ## PLAN.md Output Path
+
+        Write your human-readable plan to:
+        `$path`
+    """.trimIndent()
+
+    private fun planJsonContentSection(content: String): String =
+        "# plan.json\n\n```json\n$content\n```"
+
+    private fun planMdContentSection(content: String): String =
+        "# PLAN.md\n\n$content"
+
+    private fun plannerPublicMdSection(path: Path): String =
+        "# Planner's Rationale\n\n${path.readText()}"
+
+    private fun priorPlanReviewerFeedbackSection(path: Path): String =
+        "# Your Prior Feedback\n\n${path.readText()}"
+
+    // ── File writing ─────────────────────────────────────────────────────────
+
+    private suspend fun writeInstructionsFile(outputDir: Path, sections: List<String>): Path =
+        withContext(Dispatchers.IO) {
+            Files.createDirectories(outputDir)
+            val instructionsPath = outputDir.resolve("instructions.md")
+            instructionsPath.toFile().writeText(sections.joinToString("\n\n---\n\n"))
+
+            out.info(
+                "instructions_file_written",
+                Val(instructionsPath.toString(), ValType.FILE_PATH_STRING),
+            )
+
+            instructionsPath
+        }
+}
