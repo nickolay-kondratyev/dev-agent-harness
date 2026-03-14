@@ -3,10 +3,10 @@
 Orchestrates spawning an agent in a TMUX session, establishing identity via HandshakeGuid,
 and resolving the agent's session ID.
 
-> **Encapsulated by `AgentInteraction.spawnAgent()`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E).
-> This use case is invoked internally by `AgentInteractionImpl` — `PartExecutor` does not
+> **Encapsulated by `AgentFacade.spawnAgent()`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E).
+> This use case is invoked internally by `AgentFacadeImpl` — `PartExecutor` does not
 > call it directly. This spec remains the authoritative description of the spawn flow;
-> `AgentInteraction` is the interface through which orchestration accesses it.
+> `AgentFacade` is the interface through which orchestration accesses it.
 
 **Implemented in**: `SpawnTmuxAgentSessionUseCase` (ref.ap.M1jzg6RlJkYL4hi8aXr7LnQA.E)
 

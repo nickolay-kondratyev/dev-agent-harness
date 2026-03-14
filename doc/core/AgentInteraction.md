@@ -1,4 +1,4 @@
-# AgentInteraction — Testability Facade / ap.9h0KS4EOK5yumssRCJdbq.E
+# AgentFacade — Testability Facade / ap.9h0KS4EOK5yumssRCJdbq.E
 
 **Status: PLAN — awaiting alignment before implementation**
 
@@ -6,11 +6,11 @@
 
 ## Approach Summary
 
-Introduce `AgentInteraction` as a **single facade interface** that the orchestration layer
+Introduce `AgentFacade` as a **single facade interface** that the orchestration layer
 (`PartExecutor`, `TicketShepherd`) uses for **all** interactions with agents: spawn, communicate,
 monitor state, kill, and receive signals. The real implementation delegates to existing infra
 components (`AgentStarter`, `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`,
-`ContextWindowStateReader`, `SessionsState`). A `FakeAgentInteraction` enables comprehensive
+`ContextWindowStateReader`, `SessionsState`). A `FakeAgentFacade` enables comprehensive
 unit testing of the orchestration state machine with **virtual time**, keeping integration tests
 to sanity checks.
 
@@ -31,7 +31,7 @@ testability from day one, not retrofitted.
 
 ### D1: Interface granularity → Single facade
 
-**Chosen:** One `AgentInteraction` interface with high-level methods.
+**Chosen:** One `AgentFacade` interface with high-level methods.
 
 **Over:**
 - Grouped composites (AgentLifecycle + AgentCommunicator + AgentStateReader) — more ISP-pure but
@@ -51,14 +51,14 @@ The facade creates and manages the `CompletableDeferred` internally. In the real
 `SessionsState` is an internal detail — the HTTP server completes the deferred via SessionsState,
 but PartExecutor never touches SessionsState directly.
 
-**Over:** Signal path stays in SessionsState, PartExecutor uses both AgentInteraction (outbound)
+**Over:** Signal path stays in SessionsState, PartExecutor uses both AgentFacade (outbound)
 and SessionsState (inbound). This would split the agent abstraction and force tests to coordinate
 two components.
 
 **Impact on existing specs:** `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) becomes an
-**internal implementation detail** of `AgentInteractionImpl`, not a dependency of `PartExecutor`.
+**internal implementation detail** of `AgentFacadeImpl`, not a dependency of `PartExecutor`.
 The spec still describes the mechanics correctly, but the "Caller" column for `register` changes
-from "PartExecutor" to "AgentInteractionImpl." See [Spec Impact](#spec-impact) below.
+from "PartExecutor" to "AgentFacadeImpl." See [Spec Impact](#spec-impact) below.
 
 ---
 
@@ -82,7 +82,7 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
   by test in fake
 
 **The health-aware await loop stays in PartExecutor.** The executor owns the decision logic
-(when to ping, when to declare crash, when to trigger compaction). `AgentInteraction` provides
+(when to ping, when to declare crash, when to trigger compaction). `AgentFacade` provides
 the **operations** (ping, read state); the executor provides the **decisions**.
 
 ---
@@ -121,7 +121,7 @@ doesn't control `delay()` suspension. Together, they give full control over the 
 // Pseudocode — illustrates the pattern, not the API
 runTest {
     val clock = TestClock(startTime)
-    val fake = FakeAgentInteraction()
+    val fake = FakeAgentFacade()
     val executor = DoerReviewerPartExecutor(agentInteraction = fake, clock = clock, ...)
 
     // Spawn doer — fake returns handle immediately
@@ -147,7 +147,7 @@ runTest {
 
 ## Requirements
 
-### R1: `AgentInteraction` interface spec
+### R1: `AgentFacade` interface spec
 
 A spec document (this file, once promoted from PLAN) that defines:
 - The interface contract (methods, parameters, return types)
@@ -158,15 +158,15 @@ A spec document (this file, once promoted from PLAN) that defines:
 
 **Verifiable:** Interface compiles, KDoc describes contract, spec matches implementation.
 
-### R2: `AgentInteractionImpl` (real implementation)
+### R2: `AgentFacadeImpl` (real implementation)
 
 Delegates to existing infra components. No new behavior — wiring only.
 
 **Verifiable:**
-- Integration test spawns a real agent through `AgentInteractionImpl`, sends payload, receives ACK
+- Integration test spawns a real agent through `AgentFacadeImpl`, sends payload, receives ACK
 - Covers happy path only — edge cases tested via fake at the orchestration layer
 
-### R3: `FakeAgentInteraction` (test double)
+### R3: `FakeAgentFacade` (test double)
 
 Programmable fake that allows tests to:
 - Control spawn behavior (succeed, fail, delay)
@@ -177,7 +177,7 @@ Programmable fake that allows tests to:
 - Verify interactions (was ping sent? was session killed? what payloads were sent?)
 
 **Verifiable:**
-- Unit tests for FakeAgentInteraction itself (meta-tests that verify the fake behaves correctly)
+- Unit tests for FakeAgentFacade itself (meta-tests that verify the fake behaves correctly)
 - Used by PartExecutor unit tests — if PartExecutor tests pass, the fake is verified implicitly
 
 ### R4: `Clock` interface + `TestClock`
@@ -197,7 +197,7 @@ Added to `gradle/libs.versions.toml` and `app/build.gradle.kts` as `testImplemen
 
 ### R6: PartExecutor no longer depends on SessionsState directly
 
-PartExecutor takes `AgentInteraction` as its agent-facing dependency. `SessionsState` is not
+PartExecutor takes `AgentFacade` as its agent-facing dependency. `SessionsState` is not
 in PartExecutor's constructor.
 
 **Verifiable:** PartExecutor constructor signature; PartExecutor unit tests construct without
@@ -206,8 +206,8 @@ SessionsState.
 ### R7: Spec updates for downstream impact
 
 Specs that reference PartExecutor → SessionsState relationship must be updated:
-- `SessionsState.md` — `register` caller changes from PartExecutor to AgentInteractionImpl
-- `PartExecutor.md` — Dependencies section: remove SessionsState, add AgentInteraction
+- `SessionsState.md` — `register` caller changes from PartExecutor to AgentFacadeImpl
+- `PartExecutor.md` — Dependencies section: remove SessionsState, add AgentFacade
 - `high-level.md` — if it references the bridge diagram
 
 **Verifiable:** Spec review; no spec references PartExecutor as a direct user of SessionsState.
@@ -218,7 +218,7 @@ Specs that reference PartExecutor → SessionsState relationship must be updated
 
 ### Gate 1: Interface + Spec Alignment
 
-**What:** `AgentInteraction` interface defined (Kotlin interface file + updated spec).
+**What:** `AgentFacade` interface defined (Kotlin interface file + updated spec).
 `SpawnedAgentHandle` data class defined. `Clock` interface defined. No implementations yet.
 
 **Verify:**
@@ -229,9 +229,9 @@ Specs that reference PartExecutor → SessionsState relationship must be updated
 **Decision to proceed:** Confirm the interface shape is correct before writing implementations.
 Wrong interface shape wastes all downstream work.
 
-### Gate 2: FakeAgentInteraction + Virtual Time Foundation
+### Gate 2: FakeAgentFacade + Virtual Time Foundation
 
-**What:** `FakeAgentInteraction` implemented. `TestClock` implemented.
+**What:** `FakeAgentFacade` implemented. `TestClock` implemented.
 `kotlinx-coroutines-test` added. One proof-of-concept test that uses all three
 (fake + TestClock + runTest) to test a simple scenario (e.g., spawn → send → done → completed).
 
@@ -258,12 +258,12 @@ covering:
 - All unit tests pass with virtual time (no real delays, fast execution)
 - Edge cases that would be flaky or slow as integration tests are stable as unit tests
 
-**Decision to proceed:** PartExecutor logic is validated. Ready for AgentInteractionImpl (real
+**Decision to proceed:** PartExecutor logic is validated. Ready for AgentFacadeImpl (real
 impl) and integration testing.
 
-### Gate 4: AgentInteractionImpl + Integration Sanity
+### Gate 4: AgentFacadeImpl + Integration Sanity
 
-**What:** `AgentInteractionImpl` wired to real infra. One integration test that spawns a
+**What:** `AgentFacadeImpl` wired to real infra. One integration test that spawns a
 real agent, sends instructions, receives ACK, waits for done signal.
 
 **Verify:**
@@ -280,10 +280,10 @@ correctly to real infrastructure.
 ### R1: Re-instruction pattern and fresh deferreds
 
 When the executor iterates (creates a fresh `CompletableDeferred` for the same session), how
-does this work through `AgentInteraction`?
+does this work through `AgentFacade`?
 
 Options:
-- `AgentInteraction.resetSignal(handle): Deferred<AgentSignal>` — returns a new deferred
+- `AgentFacade.resetSignal(handle): Deferred<AgentSignal>` — returns a new deferred
 - `SpawnedAgentHandle` is mutable (internal deferred swapped)
 - `sendPayloadWithAck` implicitly creates a new deferred and updates the handle
 
@@ -292,11 +292,11 @@ Options:
 ### R2: `lateFailWorkflow` visibility
 
 Currently `SessionEntry.lateFailWorkflow` is checked by the executor at transition points.
-With AgentInteraction owning SessionsState internally, the executor needs a way to check for
+With AgentFacade owning SessionsState internally, the executor needs a way to check for
 late fail-workflow.
 
 Options:
-- `AgentInteraction.checkLateFailWorkflow(handle): LateFailWorkflow?` — explicit query
+- `AgentFacade.checkLateFailWorkflow(handle): LateFailWorkflow?` — explicit query
 - `SpawnedAgentHandle` exposes an observable `lateFailWorkflow` property
 - `lateFailWorkflow` flows as a special `AgentSignal` variant (but it's not a signal — it's a
   post-hoc discovery)
@@ -307,12 +307,12 @@ Options:
 
 User questions are side-channel: the HTTP server handles them via `UserQuestionHandler` and
 delivers answers via `AckedPayloadSender`. This flow currently goes through `SessionsState`.
-With AgentInteraction absorbing SessionsState, the HTTP server needs access to
-AgentInteractionImpl for question handling.
+With AgentFacade absorbing SessionsState, the HTTP server needs access to
+AgentFacadeImpl for question handling.
 
-**Impact:** The HTTP server's relationship to AgentInteraction needs to be clarified. The server
-is a **collaborator** of AgentInteractionImpl (it triggers deferred completion and question
-handling), not a user of the `AgentInteraction` interface.
+**Impact:** The HTTP server's relationship to AgentFacade needs to be clarified. The server
+is a **collaborator** of AgentFacadeImpl (it triggers deferred completion and question
+handling), not a user of the `AgentFacade` interface.
 
 **Must resolve at Gate 1.**
 
@@ -340,10 +340,10 @@ must be injectable so tests can route everything through the test dispatcher.
 
 | Spec | Change |
 |------|--------|
-| `PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Dependencies: replace `SessionsState`, `SpawnTmuxAgentSessionUseCase` with `AgentInteraction`. Health-aware await loop: `readContextWindowState` and `sendHealthPing` calls go through `AgentInteraction`. |
-| `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) | Ownership: `register` caller → `AgentInteractionImpl` (not PartExecutor). `lookup` caller → `ShepherdServer` (unchanged). Add note: "Internal to `AgentInteractionImpl`; not directly accessed by orchestration layer." |
-| `TicketShepherdCreator.md` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Wiring: create `AgentInteractionImpl` and pass to executor factories. |
-| `SpawnTmuxAgentSessionUseCase.md` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) | Note: "Encapsulated by `AgentInteractionImpl.spawnAgent()`. Still describes the spawn flow accurately." |
+| `PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Dependencies: replace `SessionsState`, `SpawnTmuxAgentSessionUseCase` with `AgentFacade`. Health-aware await loop: `readContextWindowState` and `sendHealthPing` calls go through `AgentFacade`. |
+| `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) | Ownership: `register` caller → `AgentFacadeImpl` (not PartExecutor). `lookup` caller → `ShepherdServer` (unchanged). Add note: "Internal to `AgentFacadeImpl`; not directly accessed by orchestration layer." |
+| `TicketShepherdCreator.md` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Wiring: create `AgentFacadeImpl` and pass to executor factories. |
+| `SpawnTmuxAgentSessionUseCase.md` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) | Note: "Encapsulated by `AgentFacadeImpl.spawnAgent()`. Still describes the spawn flow accurately." |
 
 ### Specs unchanged
 
@@ -366,11 +366,11 @@ BEFORE (current spec):
        ├──► ContextWindowStateReader        │
        └──► NoStatusCallbackTimeOutUseCase  │
 
-AFTER (with AgentInteraction):
+AFTER (with AgentFacade):
 
-  PartExecutor ──► AgentInteraction (interface)
+  PartExecutor ──► AgentFacade (interface)
                         │
-                        ├── AgentInteractionImpl (production)
+                        ├── AgentFacadeImpl (production)
                         │       ├──► SessionsState ◄── ShepherdServer
                         │       ├──► AgentStarter
                         │       ├──► TmuxSessionManager
@@ -378,7 +378,7 @@ AFTER (with AgentInteraction):
                         │       ├──► AgentSessionIdResolver
                         │       └──► ContextWindowStateReader
                         │
-                        └── FakeAgentInteraction (test)
+                        └── FakeAgentFacade (test)
                                 └── Programmable behaviors + virtual time
 ```
 

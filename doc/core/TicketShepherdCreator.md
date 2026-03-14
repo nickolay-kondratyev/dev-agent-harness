@@ -39,8 +39,8 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
   N where neither exists (see [Try-N Resolution](git.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)
 - **Creates feature branch** (`git checkout -b`) from current HEAD
-- Initializes `SessionsState` (internal to `AgentInteractionImpl`)
-- Constructs `AgentInteractionImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — wires `SessionsState`,
+- Initializes `SessionsState` (internal to `AgentFacadeImpl`)
+- Constructs `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — wires `SessionsState`,
   `AgentStarter`, `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`, and
   `ContextWindowStateReader` into the facade. This is the single agent-facing dependency
   passed to all `PartExecutor` instances.

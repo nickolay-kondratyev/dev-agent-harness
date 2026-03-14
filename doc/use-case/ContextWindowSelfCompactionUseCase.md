@@ -10,10 +10,10 @@ with harness-controlled compaction at predictable boundaries.
 which is shared across all part types. No sub-part is exempt.
 
 All agent operations in this use case (send compaction instructions, read context window state,
-kill sessions, spawn new sessions) flow through the `AgentInteraction` facade
+kill sessions, spawn new sessions) flow through the `AgentFacade` facade
 (ref.ap.9h0KS4EOK5yumssRCJdbq.E). `PartExecutor` never accesses `SessionsState`,
 `TmuxCommunicator`, or `TmuxSessionManager` directly. This enables unit testing of the full
-compaction state machine via `FakeAgentInteraction` + virtual time.
+compaction state machine via `FakeAgentFacade` + virtual time.
 
 ---
 
@@ -61,11 +61,11 @@ Agent signals done
     │   ├─ remaining_percentage > 65 → continue normal flow (reviewer, next iteration, etc.)
     │   └─ remaining_percentage ≤ 65 → self-compaction:
     │       │
-    │       ├─ Reset signal via AgentInteraction (fresh deferred)
-    │       ├─ Send self-compaction instruction via AgentInteraction.sendPayloadWithAck()
+    │       ├─ Reset signal via AgentFacade (fresh deferred)
+    │       ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
     │       ├─ Await AgentSignal.SelfCompacted (with timeout)
     │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill session via AgentInteraction.killSession()
+    │       ├─ Kill session via AgentFacade.killSession()
     │       └─ Mark sub-part as needing respawn (no live session)
     │
     └─ Continue normal flow (GitCommitStrategy, next sub-part, iteration restart)
@@ -90,14 +90,14 @@ Health-aware await loop (polling every 1 second)
     │   ├─ remaining_percentage > 20 → continue await loop
     │   └─ remaining_percentage ≤ 20 → emergency compaction:
     │       │
-    │       ├─ Send Ctrl+C via AgentInteraction (interrupt agent mid-task)
+    │       ├─ Send Ctrl+C via AgentFacade (interrupt agent mid-task)
     │       ├─ Brief pause (1-2 seconds) for interrupt to take effect
-    │       ├─ Reset signal via AgentInteraction (fresh deferred)
-    │       ├─ Send self-compaction instruction via AgentInteraction.sendPayloadWithAck()
+    │       ├─ Reset signal via AgentFacade (fresh deferred)
+    │       ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
     │       ├─ Await AgentSignal.SelfCompacted (with timeout)
     │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill session via AgentInteraction.killSession()
-    │       ├─ Spawn new session via AgentInteraction.spawnAgent()
+    │       ├─ Kill session via AgentFacade.killSession()
+    │       ├─ Spawn new session via AgentFacade.spawnAgent()
     │       │   (encapsulates standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
     │       ├─ New session receives instructions including PRIVATE.md
     │       └─ Enter new health-aware await loop for the new session
@@ -472,7 +472,7 @@ by whether a live `SpawnedAgentHandle` exists for the sub-part.
 
 ### After Self-Compaction
 
-After session rotation, the session is killed via `AgentInteraction.killSession()`. On the
+After session rotation, the session is killed via `AgentFacade.killSession()`. On the
 next iteration, the executor detects no live handle and spawns a new session:
 
 ```
@@ -482,12 +482,12 @@ if (liveHandleExists(subPart)) {
     agentInteraction.sendPayloadWithAck(handle, instructions)
 } else {
     // New path: session was killed (self-compaction or crash)
-    // Spawn new session via AgentInteraction
+    // Spawn new session via AgentFacade
     handle = agentInteraction.spawnAgent(config)
 }
 ```
 
-All agent operations go through `AgentInteraction` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This
+All agent operations go through `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This
 naturally handles both self-compaction (intentional kill) and idle session death
 (unintentional kill). The same code path serves both — DRY by design.
 
@@ -500,7 +500,7 @@ the executor, so it applies to both without duplication.
 ## context_window_slim.json Validation After Session ID Resolution
 
 After `AgentSessionIdResolver` resolves the session ID (step 6a in spawn flow —
-ref.ap.hZdTRho3gQwgIXxoUtTqy.E), `AgentInteractionImpl` calls
+ref.ap.hZdTRho3gQwgIXxoUtTqy.E), `AgentFacadeImpl` calls
 `contextWindowStateReader.validatePresence(agentSessionId)` internally as part of
 `spawnAgent()`.
 
@@ -519,7 +519,7 @@ discovering it later when we need to read the context state.
 
 ## Session Rotation Detail
 
-After self-compaction completes (all agent operations via `AgentInteraction`
+After self-compaction completes (all agent operations via `AgentFacade`
 ref.ap.9h0KS4EOK5yumssRCJdbq.E):
 
 1. **Validate PRIVATE.md:** Check `${sub_part}/private/PRIVATE.md` exists and is non-empty.
@@ -689,7 +689,7 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - New HandshakeGuid, new session record in `sessionIds` array
 - PRIVATE.md picked up by ContextForAgentProvider in new instructions
 - Works for both planning and execution parts (DRY via shared PartExecutor)
-- Verifiable: unit test via `FakeAgentInteraction` — full rotation sequence;
+- Verifiable: unit test via `FakeAgentFacade` — full rotation sequence;
   integration test — real session rotation
 
 ### R11: Self-Compaction Instruction Message

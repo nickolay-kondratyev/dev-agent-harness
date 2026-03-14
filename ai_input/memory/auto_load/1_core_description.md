@@ -21,10 +21,10 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | Dependency wiring (`TicketShepherdCreator`) | ref.ap.cJbeC4udcM3J8UFoWXfGh.E |
 | Agent↔Harness protocol, endpoints, callbacks | ref.ap.wLpW8YbvqpRdxDplnN7Vh.E |
 | Agent spawning, HandshakeGuid, session ID | ref.ap.hZdTRho3gQwgIXxoUtTqy.E |
-| AgentInteraction facade (testability seam, FakeAgentInteraction, virtual time) | ref.ap.9h0KS4EOK5yumssRCJdbq.E |
+| AgentFacade facade (testability seam, FakeAgentFacade, virtual time) | ref.ap.9h0KS4EOK5yumssRCJdbq.E |
 | PartExecutor, AgentSignal, iteration loop | ref.ap.fFr7GUmCYQEV5SJi8p6AS.E |
 | Context/instruction assembly | ref.ap.9HksYVzl1KkR9E1L2x8Tx.E |
-| SessionsState (GUID→session registry, internal to AgentInteractionImpl) | ref.ap.7V6upjt21tOoCFXA7nqNh.E |
+| SessionsState (GUID→session registry, internal to AgentFacadeImpl) | ref.ap.7V6upjt21tOoCFXA7nqNh.E |
 | Health monitoring UseCases | ref.ap.RJWVLgUGjO5zAwupNLhA0.E |
 | DirectLLM tier-scoped interfaces | ref.ap.hnbdrLkRtNSDFArDFd9I2.E |
 | UserQuestionHandler strategy | ref.ap.NE4puAzULta4xlOLh5kfD.E |

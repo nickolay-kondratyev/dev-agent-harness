@@ -148,26 +148,26 @@ All agents are spawned as **interactive TMUX sessions** via `TmuxSessionManager`
 - **One TMUX session per sub-part** — kept alive across iteration loops (see Hard Constraints). New instructions delivered via `send-keys`.
 - Future: parallel sessions on separate git worktrees (branch as identifier)
 
-### AgentInteraction — Testability Facade
+### AgentFacade — Testability Facade
 
 The orchestration layer (`PartExecutor`, `TicketShepherd`) accesses **all** agent operations
-through a single **`AgentInteraction`** interface (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This is
+through a single **`AgentFacade`** interface (ref.ap.9h0KS4EOK5yumssRCJdbq.E). This is
 the testability seam between orchestration logic and infrastructure. The real implementation
-(`AgentInteractionImpl`) delegates to the existing infra components (`AgentStarter`,
+(`AgentFacadeImpl`) delegates to the existing infra components (`AgentStarter`,
 `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`, `ContextWindowStateReader`,
 `SessionsState`). None of these infra components are visible to the orchestration layer.
 
 The interface exposes high-level operations: spawn agent (returning a handle with a
 `Deferred<AgentSignal>`), send payload with ACK, send health ping, read context window state,
 and kill session. `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) is an **internal
-implementation detail** of `AgentInteractionImpl` — `PartExecutor` never touches it directly.
+implementation detail** of `AgentFacadeImpl` — `PartExecutor` never touches it directly.
 
-See [`AgentInteraction`](core/AgentInteraction.md) (ref.ap.9h0KS4EOK5yumssRCJdbq.E) for the
+See [`AgentFacade`](core/AgentFacade.md) (ref.ap.9h0KS4EOK5yumssRCJdbq.E) for the
 full spec — interface shape, decisions, signal delivery ownership, and spec impact.
 
 ### Agent Invocation
 
-Agents are spawned via [`AgentInteraction.spawnAgent()`](core/AgentInteraction.md)
+Agents are spawned via [`AgentFacade.spawnAgent()`](core/AgentFacade.md)
 (ref.ap.9h0KS4EOK5yumssRCJdbq.E), which encapsulates the full
 [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) flow internally. The returned `SpawnedAgentHandle`
@@ -260,8 +260,8 @@ detection, and context window exhaustion handling. Testing this with real agents
 sessions is slow (~minutes per test), flaky (real infrastructure), expensive (LLM API calls),
 and cannot cover edge cases like crash-after-timeout or dual-signal-stale scenarios.
 
-**Solution:** The `AgentInteraction` facade (ref.ap.9h0KS4EOK5yumssRCJdbq.E) is a testability
-seam. A `FakeAgentInteraction` replaces all agent infrastructure in unit tests, giving full
+**Solution:** The `AgentFacade` facade (ref.ap.9h0KS4EOK5yumssRCJdbq.E) is a testability
+seam. A `FakeAgentFacade` replaces all agent infrastructure in unit tests, giving full
 programmatic control over agent behavior — when spawns complete, when signals arrive, what
 context window state looks like, whether ACKs succeed.
 
@@ -269,8 +269,8 @@ context window state looks like, whether ACKs succeed.
 
 | Layer | What it tests | How | Speed |
 |-------|--------------|-----|-------|
-| **Unit tests (primary coverage)** | Orchestration state machine — PartExecutor happy path, iteration loops, timeout/crash detection, health monitoring decisions, ACK failures, context window exhaustion, late fail-workflow | `FakeAgentInteraction` + virtual time (`TestClock` + `kotlinx-coroutines-test`) | Milliseconds |
-| **Integration tests (sanity checks)** | Real infra works — TMUX sessions spawn, send-keys delivers, HTTP callbacks arrive, session ID resolves | Real `AgentInteractionImpl` + real agent (one or few sessions) | Minutes |
+| **Unit tests (primary coverage)** | Orchestration state machine — PartExecutor happy path, iteration loops, timeout/crash detection, health monitoring decisions, ACK failures, context window exhaustion, late fail-workflow | `FakeAgentFacade` + virtual time (`TestClock` + `kotlinx-coroutines-test`) | Milliseconds |
+| **Integration tests (sanity checks)** | Real infra works — TMUX sessions spawn, send-keys delivers, HTTP callbacks arrive, session ID resolves | Real `AgentFacadeImpl` + real agent (one or few sessions) | Minutes |
 
 **Unit tests are the primary coverage layer.** Every edge case in the health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E), every branch of the DoerReviewer iteration flow
@@ -295,9 +295,9 @@ Together these give **full deterministic control** over the time dimension. Test
 virtual time, set fake timestamps, and verify that the orchestration layer makes the right
 decisions (ping, suppress ping, declare crash, trigger compaction) at the right moments.
 
-### FakeAgentInteraction — Programmable Agent Behavior
+### FakeAgentFacade — Programmable Agent Behavior
 
-The `FakeAgentInteraction` implements `AgentInteraction` with full programmatic control:
+The `FakeAgentFacade` implements `AgentFacade` with full programmatic control:
 
 - **Spawn behavior** — configure whether spawn succeeds, fails, or delays
 - **Signal delivery** — complete the `Deferred<AgentSignal>` at controlled times with any
@@ -474,7 +474,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
-| Agent interaction facade | **`AgentInteraction` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentInteraction` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
+| Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
 | Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. Agents are spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument** in the CLI command. |
 | Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
@@ -507,9 +507,9 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, plan lifecycle, session ID storage |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type, structured reviewer feedback contract, WHY-NOT comments protocol |
-| [`doc/core/AgentInteraction.md`](core/AgentInteraction.md) | AgentInteraction facade — testability seam, signal ownership, FakeAgentInteraction, virtual time strategy |
+| [`doc/core/AgentFacade.md`](core/AgentFacade.md) | AgentFacade facade — testability seam, signal ownership, FakeAgentFacade, virtual time strategy |
 | [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
-| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge (internal to `AgentInteractionImpl`) |
+| [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge (internal to `AgentFacadeImpl`) |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/core/git.md`](core/git.md) | Git — branch naming, try-N resolution, commit strategy, author attribution, env var requirements |

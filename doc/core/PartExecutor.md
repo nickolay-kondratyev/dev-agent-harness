@@ -99,7 +99,7 @@ response body. It also updates `lastActivityTimestamp`.
 ### How the Bridge Works
 
 ```
-Executor                   AgentInteraction              SessionsState         Server
+Executor                   AgentFacade              SessionsState         Server
    │                            │                              │                  │
    ├─ spawnAgent(config) ──────►│                              │                  │
    │                            ├─ create CompletableDeferred  │                  │
@@ -120,7 +120,7 @@ Executor                   AgentInteraction              SessionsState         S
    │  reads AgentSignal         │                              │                  │
 ```
 
-In tests, `FakeAgentInteraction` replaces the middle three columns — the test directly
+In tests, `FakeAgentFacade` replaces the middle three columns — the test directly
 controls when the deferred is completed and with what `AgentSignal`.
 
 ---
@@ -514,12 +514,12 @@ strategy produces one commit per sub-part signal.
 
 ### Dependencies
 
-- **`AgentInteraction`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
+- **`AgentFacade`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
   operations: spawn, send payload with ACK, health ping, read context window state, kill session.
   Replaces direct dependencies on `SessionsState`, `SpawnTmuxAgentSessionUseCase`,
   `TmuxCommunicator`, and `ContextWindowStateReader`. Signal delivery flows through
   `SpawnedAgentHandle.signal` (a `Deferred<AgentSignal>`). See
-  [`AgentInteraction`](AgentInteraction.md) for the full interface spec.
+  [`AgentFacade`](AgentFacade.md) for the full interface spec.
 - `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) — assemble instructions
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
@@ -529,7 +529,7 @@ strategy produces one commit per sub-part signal.
 
 ### Testability
 
-Both executor implementations are unit-tested via `FakeAgentInteraction` + virtual time
+Both executor implementations are unit-tested via `FakeAgentFacade` + virtual time
 (`TestClock` + `kotlinx-coroutines-test`). This enables deterministic testing of the full
 state machine — including timing-sensitive health monitoring, timeout/crash detection, and
 iteration edge cases — without real TMUX sessions or real agents. See
@@ -564,7 +564,7 @@ Same as `DoerReviewerPartExecutor` — calls `GitCommitStrategy.onSubPartDone`
 
 ### Dependencies
 
-Same as `DoerReviewerPartExecutor`: `AgentInteraction` (ref.ap.9h0KS4EOK5yumssRCJdbq.E),
+Same as `DoerReviewerPartExecutor`: `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E),
 `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), `Clock`
 (ref.ap.whDS8M5aD2iggmIjDIgV9.E). No `SubPartInstructionProvider` for reviewer, no
 `FailedToConvergeUseCase` (no iteration).
