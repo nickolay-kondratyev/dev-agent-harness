@@ -7,13 +7,32 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 ---
 
+## Logging Principle
+
+**All health monitoring decisions MUST be logged with structured values.** Every check,
+every threshold comparison, every action taken — logged. Health monitoring operates in
+the background and its decisions can kill sessions; there must be a full audit trail.
+
+Examples of required log points:
+- `"file_updated_timestamp_fresh — treating as proof of life"` with `Val(fileAge, CONTEXT_FILE_AGE)`
+- `"file_updated_timestamp_stale — remaining_percentage unreliable"` with `Val(fileAge, CONTEXT_FILE_AGE)`, `Val(threshold, STALENESS_THRESHOLD)`
+- `"dual_signal_stale — triggering early ping"` with `Val(fileAge, CONTEXT_FILE_AGE)`, `Val(callbackAge, CALLBACK_AGE)`
+- `"ping_suppressed — file_updated_timestamp proves life"` with `Val(fileAge, CONTEXT_FILE_AGE)`
+- `"sending_health_ping"` with `Val(sessionName, TMUX_SESSION_NAME)`, `Val(staleDuration, STALE_DURATION)`
+- `"crash_detected — no activity after ping"` with `Val(sessionName, TMUX_SESSION_NAME)`
+
+This logging requirement applies to all health monitoring logic — the existing flow steps
+below and the dual-signal liveness model.
+
+---
+
 ## Flow
 
 0. **Startup acknowledgment** (default: 3 min): After spawn, the executor uses a shorter `noStartupAckTimeout` window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `NoStartupAckUseCase`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the normal `noActivityTimeout`. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
 0b. **Payload delivery ACK** (default: 3 min per attempt, 3 attempts max): After sending instructions via `send-keys`, the executor awaits `/signal/ack-payload` before entering the signal-await loop. If no ACK → retry `send-keys` (up to 2 retries). All retries exhausted → `AgentCrashed`. This catches the "alive but never received instruction" failure mode. See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
-1. **No activity timeout** (default: 30 min): If no callback of any kind (signal or query) within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Uses `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — any callback resets the timer.
+1. **No activity timeout** (default: 30 min): If no activity signal of any kind within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Activity is determined by `effectiveLastActivity` — the **more recent** of `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) and `ContextWindowState.fileUpdatedTimestamp` (ref.ap.ufavF1Ztk6vm74dLAgANY.E). See [Dual-Signal Liveness Model](#dual-signal-liveness-model--apdnc1m7qkxvw2zjp8yfre) below.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
-3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If **no** activity at all → triggers `NoReplyToPingUseCase`.
+3. **Ping timeout** (default: 3 min): After ping, re-check both `lastActivityTimestamp` and `fileUpdatedTimestamp`. If **any** callback arrived OR `fileUpdatedTimestamp` advanced during the ping window, the agent is alive (proof of life) — loop back to step 1. If **neither signal** shows activity → triggers `NoReplyToPingUseCase`.
 4. **Crash handling (V1)**: `NoReplyToPingUseCase` kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
@@ -40,11 +59,95 @@ ref.ap.QCjutDexa2UBDaKB3jTcF.E.
 ### Proof-of-Life Principle
 
 After sending a ping, the executor does **not** require a specific `/ping-ack` response.
-Instead, it re-checks `lastActivityTimestamp` after the ping timeout window. If **any**
-callback arrived during that window (`user-question`, `validate-plan`, `done`, `ping-ack`,
-etc.), the agent is demonstrably alive. `/ping-ack` exists as a fallback for agents that are
-alive but idle (no other callbacks to send) — which is exactly the scenario health monitoring
-aims to detect.
+Instead, it re-checks **both** `lastActivityTimestamp` **and** `fileUpdatedTimestamp` after the
+ping timeout window. If **any** callback arrived during that window (`user-question`,
+`validate-plan`, `done`, `ping-ack`, etc.) **OR** `fileUpdatedTimestamp` advanced (the agent
+processed the ping, triggering a conversation turn), the agent is demonstrably alive.
+`/ping-ack` exists as a fallback for agents that are alive but idle (no other callbacks to
+send) — which is exactly the scenario health monitoring aims to detect.
+
+`fileUpdatedTimestamp` is a **passive** liveness signal — it requires no agent cooperation
+beyond the agent being alive and processing tokens. This makes it strictly additive to the
+callback-based proof of life.
+
+### Dual-Signal Liveness Model / ap.dnc1m7qKXVw2zJP8yFRE.E
+
+The health monitoring loop uses **two independent liveness signals** to detect agent death —
+including the case where the TMUX session is alive but the agent process inside it has exited
+(OOM, fatal error, exit to shell prompt).
+
+#### The Two Signals
+
+| Signal | Source | Updated when | Proves |
+|--------|--------|-------------|--------|
+| `lastActivityTimestamp` | Agent → Server HTTP callbacks | Any callback arrives (started, done, ping-ack, ack-payload, user-question, validate-plan, self-compacted) | Agent can reach the HTTP server and is processing instructions |
+| `fileUpdatedTimestamp` | External hook → `context_window_slim.json` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | After every conversation turn (when the agent stops thinking) | Agent process is alive and consuming/producing tokens |
+
+**`effectiveLastActivity`** = `max(lastActivityTimestamp, fileUpdatedTimestamp)` — the true
+"last known alive" time. Used for all `noActivityTimeout` comparisons.
+
+#### Decision Matrix
+
+| `lastActivityTimestamp` | `fileUpdatedTimestamp` | Interpretation | Action |
+|---|---|---|---|
+| Fresh | Fresh | Agent alive, actively working | No action |
+| Stale | **Fresh** | Agent working, no callbacks needed | **Skip ping** — `fileUpdatedTimestamp` is proof of life (log: `ping_suppressed`) |
+| **Fresh** | Stale | Agent alive, in long tool execution (e.g., build) | No action — callback proves life |
+| Stale | Stale | **Likely dead** or extremely long tool execution | **Early ping** if both stale > `contextFileStaleTimeout` (log: `dual_signal_stale`) |
+
+#### Ping Suppression
+
+When `fileUpdatedTimestamp` is recent (within `contextStateStalenessThreshold` — default 5 min),
+the agent is **provably alive** even if `lastActivityTimestamp` is old. The executor skips
+the ping and resets the health timer. This prevents unnecessary interruptions to agents on
+long tasks that involve many API turns but no harness callbacks.
+
+#### Early Ping — In-Session Agent Death Detection
+
+When **both** signals are stale beyond `contextFileStaleTimeout`, the harness suspects
+in-session agent death and sends an **early ping** — without waiting for the full
+`noActivityTimeout` (30 min).
+
+```
+if (now() - fileUpdatedTimestamp > contextFileStaleTimeout
+    AND now() - lastActivityTimestamp > contextFileStaleTimeout) {
+    // Both signals stale — send early ping (log: dual_signal_stale)
+    sendPing()
+    // Standard pingTimeout (3 min) applies
+    // After ping: check BOTH signals for any advancement
+    // Neither advanced → NoReplyToPingUseCase → Crashed
+}
+```
+
+**Detection time improvement**: For the common case where the agent dies mid-work after ACKing:
+- **Before**: ~33 min (30 min `noActivityTimeout` + 3 min `pingTimeout`)
+- **After**: ~8 min (5 min `contextFileStaleTimeout` + 3 min `pingTimeout`)
+
+#### Stale Context Guard
+
+When `fileUpdatedTimestamp` is stale, `remaining_percentage` from `context_window_slim.json`
+is **unreliable** — the agent may have died and the percentage is frozen. The harness skips
+self-compaction threshold checks when the context state is stale and falls through to the
+dual-signal liveness check. See `ContextWindowSelfCompactionUseCase`
+(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the integration point.
+
+#### Post-Ping Proof of Life — Dual Check
+
+After sending a ping (whether early or standard), the executor checks **both** signals:
+
+```
+afterPingWindow:
+    callbackAdvanced = sessionEntry.lastActivityTimestamp > prePingTimestamp
+    fileAdvanced = contextState.fileUpdatedTimestamp > prePingFileTimestamp
+
+    if (callbackAdvanced OR fileAdvanced) {
+        // Agent is alive (proof of life via either signal)
+        // Log which signal proved life
+        continue  // loop back to normal monitoring
+    }
+    // Neither signal advanced → agent is dead
+    NoReplyToPingUseCase.execute(sessionEntry)
+```
 
 ### Configuration
 
@@ -52,8 +155,9 @@ aims to detect.
 |-----------|---------|-------------|
 | `noStartupAckTimeout` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `noActivityTimeout`. |
 | `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
-| `noActivityTimeout` | 30 min | Elapsed time since `lastActivityTimestamp` before triggering a ping. **Configurable per sub-part** — see below. |
-| `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any activity resets) |
+| `noActivityTimeout` | 30 min | Elapsed time since `effectiveLastActivity` before triggering a ping. **Configurable per sub-part** — see below. |
+| `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any activity in either signal resets) |
+| `contextFileStaleTimeout` | 5 min | When **both** `lastActivityTimestamp` and `fileUpdatedTimestamp` are stale beyond this threshold, send an early ping. Significantly shorter than `noActivityTimeout` because dual-signal staleness is a strong indicator of agent death. |
 
 ### Per-Sub-Part noActivityTimeout Override
 
@@ -81,10 +185,15 @@ initializing its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 | Concern | Owner | Mechanism |
 |---------|-------|-----------|
 | Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback (including `/started`) |
+| Read `fileUpdatedTimestamp` | `PartExecutor` | Via `ContextWindowStateReader.read()` on every 1-second poll iteration (ref.ap.ufavF1Ztk6vm74dLAgANY.E) |
+| Compute `effectiveLastActivity` | `PartExecutor` | `max(lastActivityTimestamp, fileUpdatedTimestamp)` — the true "last known alive" time |
 | Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `noStartupAckTimeout` until first callback arrives |
-| Check staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) |
+| Check dual-signal staleness, trigger early ping | `PartExecutor` | Health-aware await loop — both signals stale > `contextFileStaleTimeout` → early ping (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) |
+| Check `effectiveLastActivity` staleness, trigger standard ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `effectiveLastActivity` stale > `noActivityTimeout` |
+| Suppress unnecessary ping | `PartExecutor` | If `fileUpdatedTimestamp` is fresh, skip ping even when `lastActivityTimestamp` is stale |
 | Send ping message via TMUX | `NoStatusCallbackTimeOutUseCase` | Called by executor when activity is stale |
-| Declare crash, kill TMUX | `NoReplyToPingUseCase` | Called by executor when ping window expires with no activity |
+| Post-ping dual check | `PartExecutor` | After ping timeout: check both `lastActivityTimestamp` and `fileUpdatedTimestamp` for advancement |
+| Declare crash, kill TMUX | `NoReplyToPingUseCase` | Called by executor when ping window expires with no activity in **either** signal |
 | Complete deferred with `Crashed` | `PartExecutor` | After `NoReplyToPingUseCase` executes |
 | Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback |
 
@@ -196,5 +305,8 @@ with new instructions. If the doer is dead, the executor triggers crash handling
 ### Health Ping During User-Question
 When an agent sends a `/user-question` and the human is thinking, `lastActivityTimestamp` was
 reset when the question callback arrived. If the human takes longer than `noActivityTimeout`
-to respond, the health loop will send a ping. This is **harmless** — the agent can respond
-with `ping-ack` while waiting for the Q&A answer delivery via TMUX `send-keys`.
+to respond, the health loop would normally send a ping. However, with the dual-signal model,
+the agent's `fileUpdatedTimestamp` may still be recent (the agent is alive, waiting for input),
+which suppresses the ping. If both signals do go stale (very long human think time), a ping
+is sent — this is **harmless**: the agent can respond with `ping-ack` while waiting for the
+Q&A answer delivery via TMUX `send-keys`.

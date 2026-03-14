@@ -150,37 +150,105 @@ while (sessionEntry.pendingPayloadAck != null) {
     waitForAck(ackTimeout = 3 minutes, sessionEntry)
 }
 
-// Phase B: Signal-Await — health-aware wait for done/fail-workflow
+// Phase B: Signal-Await with Dual-Signal Liveness Monitoring
+// (ref.ap.dnc1m7qKXVw2zJP8yFRE.E — HealthMonitoring.md Dual-Signal Liveness Model)
+lastHealthCheck = now()
 while (true) {
-    signal = awaitSignalWithTimeout(healthCheckInterval)
+    signal = awaitSignalWithTimeout(1.second)
 
     if (signal != null) {
-        // Agent sent Done / FailWorkflow via server → deferred completed
+        // Agent sent Done / FailWorkflow / SelfCompacted via server → deferred completed
         return signal
     }
 
-    // Timeout fired — check if agent is still alive
-    elapsed = now() - sessionEntry.lastActivityTimestamp
+    // --- Read context window state (every ~1 second) ---
+    contextState = contextWindowStateReader.read(agentSessionId)
+    contextFileAge = now() - contextState.fileUpdatedTimestamp
+    callbackAge = now() - sessionEntry.lastActivityTimestamp
 
-    if (elapsed < noActivityTimeout) {
-        continue  // Activity happened recently, keep waiting
+    // --- Stale context guard: don't trust remaining_percentage if hook is stale ---
+    if (contextFileAge <= contextStateStalenessThreshold) {
+        // Context state is fresh — safe to trust remaining_percentage
+        if (contextState.remainingPercentage <= HARD_THRESHOLD) {
+            if (signalDeferred.isCompleted) {
+                return signalDeferred.await()
+            }
+            return handleEmergencyCompaction(sessionEntry)
+        }
+    } else {
+        log.warn("context_window_slim.json stale — remaining_percentage unreliable",
+            Val(contextFileAge, CONTEXT_FILE_AGE),
+            Val(contextStateStalenessThreshold, STALENESS_THRESHOLD))
     }
 
-    // No activity within timeout — ping the agent
+    // --- Dual-signal early ping check ---
+    // Both signals stale beyond contextFileStaleTimeout → suspected in-session death
+    if (contextFileAge > contextFileStaleTimeout
+        AND callbackAge > contextFileStaleTimeout) {
+        log.warn("dual_signal_stale — triggering early ping",
+            Val(contextFileAge, CONTEXT_FILE_AGE),
+            Val(callbackAge, CALLBACK_AGE),
+            Val(contextFileStaleTimeout, STALE_TIMEOUT))
+        // Fall through to ping logic below (skip waiting for noActivityTimeout)
+        goto SEND_PING
+    }
+
+    // --- Regular health checks (at normal intervals) ---
+    if (now() - lastHealthCheck >= healthCheckInterval) {
+        lastHealthCheck = now()
+
+        // Effective last activity: the more recent of the two signals
+        effectiveLastActivity = max(
+            sessionEntry.lastActivityTimestamp,
+            contextState.fileUpdatedTimestamp
+        )
+        elapsed = now() - effectiveLastActivity
+
+        if (elapsed < noActivityTimeout) {
+            if (contextFileAge <= contextStateStalenessThreshold) {
+                log.debug { "ping_suppressed — file_updated_timestamp proves life",
+                    Val(contextFileAge, CONTEXT_FILE_AGE) }
+            }
+            continue  // Activity happened recently in at least one signal
+        }
+
+        // effectiveLastActivity stale beyond noActivityTimeout
+        // Fall through to ping
+    } else {
+        continue  // Not time for health check yet
+    }
+
+    SEND_PING:
+    // Record pre-ping state for post-ping comparison
+    prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
+    prePingFileTimestamp = contextState.fileUpdatedTimestamp
+
+    log.info("sending_health_ping",
+        Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
     NoStatusCallbackTimeOutUseCase.execute(sessionEntry)  // sends ping via TMUX
 
-    // Wait for ping timeout, then re-check activity
+    // Wait for ping timeout, then re-check BOTH signals
     signal = awaitSignalWithTimeout(pingTimeout)
 
     if (signal != null) {
         return signal  // Agent responded with Done/FailWorkflow during ping window
     }
 
-    if (sessionEntry.lastActivityTimestamp updated during ping window) {
-        continue  // Any callback arrived → agent is alive (proof of life)
+    // Dual check: did EITHER signal advance during the ping window?
+    callbackAdvanced = sessionEntry.lastActivityTimestamp > prePingCallbackTimestamp
+    fileAdvanced = contextWindowStateReader.read(agentSessionId)
+                        .fileUpdatedTimestamp > prePingFileTimestamp
+
+    if (callbackAdvanced OR fileAdvanced) {
+        log.info("proof_of_life_after_ping",
+            Val(callbackAdvanced, CALLBACK_ADVANCED),
+            Val(fileAdvanced, FILE_ADVANCED))
+        continue  // Agent is alive — loop back to monitoring
     }
 
-    // No activity at all during ping window → agent is dead
+    // Neither signal advanced → agent is dead
+    log.error("crash_detected — no activity in either signal after ping",
+        Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
     NoReplyToPingUseCase.execute(sessionEntry)  // kills TMUX session
     return AgentSignal.Crashed(details)
 }
@@ -191,18 +259,28 @@ while (true) {
 - **Single writer for Crashed**: Only the executor completes the deferred with
   `AgentSignal.Crashed`. The server only completes it with `Done` or `FailWorkflow`.
   No two components race to complete the same deferred.
-- **Proof of life, not ping-ack**: After pinging, the executor checks `lastActivityTimestamp`
-  for **any** callback, not specifically `/ping-ack`. If the agent sent a `user-question` or
-  `validate-plan` during the ping window, it's alive. `/ping-ack` is the fallback for idle
-  agents with no other callbacks to send.
+- **Dual-signal proof of life**: After pinging, the executor checks **both**
+  `lastActivityTimestamp` (callbacks) and `fileUpdatedTimestamp` (context window hook) for
+  advancement. If **either** advanced, the agent is alive. This catches the case where the
+  agent processes the ping (advancing `fileUpdatedTimestamp`) but the `ping-ack` callback
+  is lost due to transient HTTP failure.
+- **Early ping on dual staleness**: When both `lastActivityTimestamp` and `fileUpdatedTimestamp`
+  are stale beyond `contextFileStaleTimeout` (5 min default), the executor sends an early ping
+  without waiting for the full `noActivityTimeout` (30 min). This reduces detection time for
+  in-session agent death from ~33 min to ~8 min (ref.ap.dnc1m7qKXVw2zJP8yFRE.E).
+- **Stale context guard**: `remaining_percentage` is only trusted when `fileUpdatedTimestamp`
+  is recent. Stale hook data → skip compaction checks → fall through to liveness monitoring.
 - **Scoped to executor lifetime**: The loop runs inside `execute()`. When the executor returns,
   monitoring stops. No orphaned watchers.
+- **Full audit trail**: Every health check decision is logged with structured values
+  (ref.ap.RJWVLgUGjO5zAwupNLhA0.E — Logging Principle).
 
 ### Dependencies (Health Monitoring)
 
 - `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — sends ping via TMUX
 - `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kills TMUX, provides crash details
 - `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback
+- `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `fileUpdatedTimestamp` for dual-signal liveness model (ref.ap.dnc1m7qKXVw2zJP8yFRE.E)
 
 ---
 

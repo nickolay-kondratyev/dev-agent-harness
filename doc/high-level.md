@@ -190,13 +190,22 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 
 ## Agent Health Monitoring
 
-Timeout + ping mechanism to detect crashed/hung agents. Five UseCase classes handle distinct
-failure scenarios (`NoStartupAckUseCase`, `NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`,
-`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). Agents call `callback_shepherd.signal.sh started`
-immediately after reading instructions — a 3-minute startup timeout catches spawn failures fast
+Timeout + ping mechanism to detect crashed/hung agents, including **in-session agent death**
+(TMUX session alive but agent process exited). Uses a **dual-signal liveness model**
+(ref.ap.dnc1m7qKXVw2zJP8yFRE.E): `SessionEntry.lastActivityTimestamp` (HTTP callbacks) and
+`ContextWindowState.fileUpdatedTimestamp` (external hook in `context_window_slim.json`, updated
+after every conversation turn). When both signals are stale beyond `contextFileStaleTimeout`
+(5 min default), the harness sends an early health ping — reducing detection time from ~33 min
+to ~8 min. When `fileUpdatedTimestamp` is fresh, pings are suppressed (proof of life without
+interrupting the agent).
+
+Five UseCase classes handle distinct failure scenarios (`NoStartupAckUseCase`,
+`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`,
+`FailedToConvergeUseCase`). Agents call `callback_shepherd.signal.sh started` immediately after
+reading instructions — a 3-minute startup timeout catches spawn failures fast
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
-(ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
-naming principle.
+(ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, dual-signal
+liveness model, and UseCase naming principle.
 
 ## Context Window Monitoring & Self-Compaction
 
@@ -385,7 +394,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
-| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json`. File not present → hard stop. OCP: future agent types provide their own reader. |
+| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage` + `file_updated_timestamp`). File not present → hard stop. `file_updated_timestamp` serves dual purpose: stale context guard (don't trust frozen `remaining_percentage`) and passive liveness signal for dual-signal health monitoring (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
 | Auto-compaction | **Disabled — harness-controlled self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code auto-compaction disabled via `~/.claude.json` (`autoCompactEnabled: false`) + `DISABLE_AUTO_COMPACT=true` env var. Harness performs controlled self-compaction at predictable thresholds (65% remaining at done boundary, 20% remaining emergency interrupt). |
 | Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | New lifecycle signal. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
 

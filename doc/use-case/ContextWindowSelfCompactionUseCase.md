@@ -31,7 +31,7 @@ a clean context window with compressed but complete prior knowledge.
 | Term | Definition |
 |------|------------|
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
-| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd. Format: `{"remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). |
+| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"remaining_percentage": N, "file_updated_timestamp": "ISO8601"}` where N is 0–100 (100 = fresh, 0 = exhausted) and `file_updated_timestamp` is the ISO 8601 timestamp of when the hook last wrote this file. |
 | **Soft threshold** | `remaining_percentage ≤ 65`. Checked at `done` boundaries. Triggers proactive self-compaction while the agent has ample room to produce a quality summary. |
 | **Hard threshold** | `remaining_percentage ≤ 20`. Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
 | **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
@@ -134,7 +134,8 @@ interface ContextWindowStateReader {
 }
 
 data class ContextWindowState(
-    val remainingPercentage: Int  // 0–100, 100 = fresh
+    val remainingPercentage: Int,          // 0–100, 100 = fresh
+    val fileUpdatedTimestamp: Instant       // When the hook last wrote this file (ISO 8601)
 )
 ```
 
@@ -401,13 +402,28 @@ while (true) {
 
     // --- Context window check (every iteration = every ~1 second) ---
     contextState = contextWindowStateReader.read(agentSessionId)
-    if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-        // Check if done already arrived (race condition guard)
-        if (signalDeferred.isCompleted) {
-            return signalDeferred.await()
+
+    // Stale context guard: don't trust remaining_percentage if the hook hasn't
+    // updated recently — the agent may have died and the percentage is frozen.
+    // See HealthMonitoring.md Dual-Signal Liveness Model (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
+    contextFileAge = now() - contextState.fileUpdatedTimestamp
+    if (contextFileAge <= contextStateStalenessThreshold) {
+        // Context state is fresh — safe to trust remaining_percentage
+        if (contextState.remainingPercentage <= HARD_THRESHOLD) {
+            // Check if done already arrived (race condition guard)
+            if (signalDeferred.isCompleted) {
+                return signalDeferred.await()
+            }
+            // Emergency compaction
+            return handleEmergencyCompaction(sessionEntry)
         }
-        // Emergency compaction
-        return handleEmergencyCompaction(sessionEntry)
+    } else {
+        // Context state is stale — remaining_percentage unreliable.
+        // Log warning and skip compaction threshold checks.
+        // The dual-signal liveness check (below) will handle detection.
+        log.warn("context_window_slim.json stale",
+            Val(contextFileAge, CONTEXT_FILE_AGE),
+            Val(contextStateStalenessThreshold, STALENESS_THRESHOLD))
     }
 
     // --- Regular health checks (at normal intervals) ---
@@ -565,6 +581,7 @@ strategies:
 | `SELF_COMPACTION_SOFT_THRESHOLD` | 65 | Compact at done boundary when `remaining_percentage ≤ 65` |
 | `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` |
 | `SELF_COMPACTION_TIMEOUT` | 5 min | Max time for agent to write PRIVATE.md and signal |
+| `contextStateStalenessThreshold` | 5 min | How old `file_updated_timestamp` can be before `remaining_percentage` is considered unreliable. When stale, compaction threshold checks are skipped and the dual-signal liveness model takes over (ref.ap.RJWVLgUGjO5zAwupNLhA0.E). |
 
 Configured via environment variables or harness config. Not per-sub-part in V1.
 
