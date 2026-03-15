@@ -28,18 +28,10 @@ The git branches will include ticket ids which guarantees not clashing.
 └── execution/                          # Execution phases
     └── ${part_name}/                   # Iteration group (e.g., ui_design, backend)
         ├── __feedback/                 # Granular feedback items (ref.ap.3Hskx3JzhDlixTnvYxclk.E)
-        │   ├── unaddressed/            #   — see full spec: ref.ap.5Y5s8gqykzGN1TVK5MZdS.E
-        │   │   ├── critical/
-        │   │   ├── important/
-        │   │   └── optional/
-        │   ├── addressed/
-        │   │   ├── critical/
-        │   │   ├── important/
-        │   │   └── optional/
-        │   └── rejected/
-        │       ├── critical/
-        │       ├── important/
-        │       └── optional/
+        │   ├── pending/               #   Reviewer writes feedback files here (severity in filename prefix)
+        │   ├── addressed/             #   Harness moves here after doer addresses
+        │   └── rejected/              #   Harness moves here after reviewer accepts rejection
+        │                              #   — see full spec: ref.ap.5Y5s8gqykzGN1TVK5MZdS.E
         └── ${sub_part}/                # Sub-part (e.g., impl, review, security_review). Order from array position in JSON.
             ├── private/
             │   └── PRIVATE.md         # Self-compaction context summary (only after session rotation)
@@ -66,11 +58,19 @@ The git branches will include ticket ids which guarantees not clashing.
 
 Lives at the **part level** (not sub-part level). Shared between doer and reviewer within
 a part. Contains individual feedback items written by the reviewer as separate markdown
-files — one per actionable issue. The harness drives an inner loop that feeds items to the
+files — one per actionable issue. Severity is encoded in filename prefixes (`critical__`,
+`important__`, `optional__`). The harness drives an inner loop that feeds items to the
 doer one at a time in severity order (critical → important → optional).
 
-Nine leaf directories (3 statuses × 3 severities) are created by `AiOutputStructure.ensureStructure()`
-at part setup — empty at creation. Not visible to agents in other parts.
+**Harness owns all file movement.** Agents write a `## Resolution: ADDRESSED` or
+`## Resolution: REJECTED` marker in the feedback file. The harness reads this marker and
+moves the file to `addressed/` or `rejected/` accordingly. When the doer rejects, the
+harness triggers a per-item rejection negotiation with the reviewer (bounded at 2
+disagreement rounds). Agents never move feedback files between directories.
+
+Three directories (`pending/`, `addressed/`, `rejected/`) are created by
+`AiOutputStructure.ensureStructure()` at part setup — empty at creation. Not visible to
+agents in other parts.
 
 Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Directory concept: ref.ap.3Hskx3JzhDlixTnvYxclk.E.

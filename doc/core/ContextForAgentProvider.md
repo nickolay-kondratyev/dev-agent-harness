@@ -66,12 +66,12 @@ Concatenation order:
 | 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — big picture context. Only present for `with-planning` workflows. |
 | 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
 | 7 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part + structured feedback format + WHY-NOT guidance | The artifact being reviewed. Reviewer must follow structured feedback format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) on `needs_iteration` and suggest WHY-NOT placements (ref.ap.kmiKk7vECiNSpJjAXYMyE.E). |
-| 7a | **Addressed feedback** (reviewer, iteration > 1) | `__feedback/addressed/{severity}/*.md` | What the doer addressed — verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
-| 7b | **Rejected feedback** (reviewer, iteration > 1) | `__feedback/rejected/{severity}/*.md` | What the doer rejected — review WHY-NOT reasoning. Reviewer may move back to `unaddressed/`. |
-| 7c | **Skipped optional feedback** (reviewer, iteration > 1) | `__feedback/unaddressed/optional/*.md` | Optional items doer chose not to address — reviewer can accept or escalate. |
-| 7d | **Feedback writing instructions** (reviewer) | Static text | How to write new feedback files to `__feedback/unaddressed/{severity}/` (one file per issue, descriptive slug filename). |
+| 7a | **Addressed feedback** (reviewer, iteration > 1) | `__feedback/addressed/*.md` | What the doer addressed — each file contains the doer's `## Resolution: ADDRESSED` with implementation notes. Verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
+| 7b | **Rejected feedback** (reviewer, iteration > 1) | `__feedback/rejected/*.md` | Items where the reviewer previously accepted the doer's rejection reasoning. Review if still appropriate given new changes. |
+| 7c | **Remaining optional feedback** (reviewer, iteration > 1) | `__feedback/pending/optional__*.md` | Optional items the doer chose to skip — reviewer can accept or write new critical/important items if the skip was wrong. |
+| 7d | **Feedback writing instructions** (reviewer) | Static text | How to write new feedback files to `__feedback/pending/` with severity filename prefix (`critical__`, `important__`, `optional__`). One file per issue. |
 | 8 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance + WHY-NOT protocol | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback) and [WHY-NOT Protocol](#why-not-comments-protocol--apkmikk7vecinsppjjaxymyee). |
-| 8a | **Per-feedback-item instructions** (doer, inner loop) | Single feedback file content + movement instructions + target paths | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Doer receives one item at a time. |
+| 8a | **Per-feedback-item instructions** (doer, inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Doer receives one item at a time. Writes `## Resolution: ADDRESSED` or `## Resolution: REJECTED` in the feedback file; harness handles file movement. |
 | 8b | **WHY-NOT reminder** (doer, all iterations) | Static text | Brief reminder to place WHY-NOT comments when discovering dead-end approaches. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
 | 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
@@ -164,9 +164,13 @@ parsing markdown headings would be fragile and over-engineered for V1. The forma
 enforced socially: the doer's instructions reference it, creating a feedback loop.
 
 **Granular feedback items:** In addition to PUBLIC.md, the reviewer writes individual
-actionable issues as separate markdown files to `__feedback/unaddressed/{severity}/`
-(ref.ap.3Hskx3JzhDlixTnvYxclk.E). The harness then feeds these to the doer one at a time
-via the inner feedback loop. Full spec: [`granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
+actionable issues as separate markdown files to `__feedback/pending/` with severity filename
+prefixes (`critical__`, `important__`, `optional__`)
+(ref.ap.3Hskx3JzhDlixTnvYxclk.E). The harness feeds these to the doer one at a time via
+the inner feedback loop. The doer writes a `## Resolution: ADDRESSED` or
+`## Resolution: REJECTED` marker; the harness reads it and moves the file accordingly.
+Rejections trigger a bounded per-item negotiation with the reviewer (at most 2 disagreement
+rounds). Full spec: [`granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E).
 
 ### Required PUBLIC.md Format on `needs_iteration`
@@ -192,7 +196,7 @@ The reviewer's `PUBLIC.md` should include these sections when the verdict is `ne
 
 **Severity levels:**
 - `must-fix` — blocks `pass`. The doer must address this or explicitly push back with reasoning.
-- `should-fix` — does not block `pass` alone, but multiple unaddressed `should-fix` items may.
+- `should-fix` — does not block `pass` alone, but multiple pending `should-fix` items may.
 
 The reviewer instructions (assembled by `ContextForAgentProvider`) include this format as
 static guidance text, wrapped in `<critical_to_keep_through_compaction>` tags.

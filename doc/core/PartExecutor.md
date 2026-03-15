@@ -370,10 +370,10 @@ the executor to send it new instructions.
    re-instruction. Then **late fail-workflow checkpoint**: check
    `SessionsState.checkLateFailWorkflow(partName)`. If set → return
    `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Then **feedback completion guard**
-   (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/unaddressed/critical/` and
-   `__feedback/unaddressed/important/` are empty. If not empty → re-instruct reviewer (one
-   retry, then `AgentCrashed`). `unaddressed/optional/` may contain files — does not block.
-   Otherwise → return `PartResult.Completed`
+   (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/pending/` contains no `critical__*`
+   or `important__*` files. If found → re-instruct reviewer (one retry, then `AgentCrashed`).
+   Remaining `optional__*` files do not block — harness moves them to `addressed/` on
+   completion. Otherwise → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **late fail-workflow checkpoint**: check
@@ -382,14 +382,17 @@ the executor to send it new instructions.
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
      **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E):
      - **Feedback files presence guard**: validate reviewer wrote feedback files to
-       `__feedback/unaddressed/` (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Empty → re-instruct
+       `__feedback/pending/` (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Empty → re-instruct
        reviewer (one retry, then `AgentCrashed`).
      - **Inner feedback loop**: process feedback items one at a time — critical → important
-       → optional. Each item: self-compaction check → doer re-instruction with single item
-       → await done → validate file moved (critical/important enforced, optional skippable)
-       → git commit. Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
-     - After inner loop: validate `unaddressed/critical/` and `unaddressed/important/` are
-       empty → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
+       → optional (severity determined by filename prefix). Each item: self-compaction check
+       → doer re-instruction with single item → await done → harness reads `## Resolution:`
+       marker from feedback file → `ADDRESSED`: harness moves to `addressed/`, git commit;
+       `REJECTED`: harness triggers per-item rejection negotiation (bounded at 2 disagreement
+       rounds, reviewer is authority). Missing marker → re-instruct doer (one retry, then
+       `AgentCrashed`). Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
+     - After inner loop: validate `pending/` contains no `critical__*` or `important__*`
+       files → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
    - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user
      decides continue or abort
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
