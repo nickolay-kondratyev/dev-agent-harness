@@ -311,11 +311,14 @@ When the executor presents the convergence failure to the user and waits for inp
 in a synchronous decision path, not in the await loop. No spurious pings or crash declarations
 can occur during this user interaction.
 
-### Post-Convergence Doer Session Check
+### Post-Convergence Doer Session — No Special Ping Needed
 After the user grants more iterations, the doer's TMUX session may have been idle for a long
-time. Before sending new instructions, the executor **pings the doer session first** to confirm
-it is still alive. If the doer responds (any callback including ping-ack), the executor proceeds
-with new instructions. If the doer is dead, the executor triggers crash handling.
+time. The executor sends new instructions directly via `AckedPayloadSender`
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E) — **no special-case pre-send ping**. If the session is dead,
+`send-keys` will fail or the ACK will never arrive → 3-attempt retry exhausted →
+`AgentSignal.Crashed`. The Payload Delivery ACK Protocol
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) already handles this exact failure mode generically —
+a dedicated ping would duplicate what ACK already does.
 
 ### Health Ping During User-Question
 When an agent sends a `/user-question` and the human is thinking, `lastActivityTimestamp` was

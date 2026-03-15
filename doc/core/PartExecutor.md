@@ -388,9 +388,11 @@ the executor to send it new instructions.
        → optional (severity determined by filename prefix). Each item: self-compaction check
        → doer re-instruction with single item → await done → harness reads `## Resolution:`
        marker from feedback file → `ADDRESSED`: harness moves to `addressed/`, git commit;
-       `REJECTED`: harness triggers per-item rejection negotiation (bounded at 2 disagreement
-       rounds, reviewer is authority). Missing marker → re-instruct doer (one retry, then
-       `AgentCrashed`). Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
+       `REJECTED`: harness delegates to `RejectionNegotiationUseCase`
+       (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E) — focused inline resolution while both agents have
+       the item in context (bounded at 2 disagreement rounds, reviewer is authority).
+       Missing marker → re-instruct doer (one retry, then `AgentCrashed`).
+       Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
      - After inner loop: validate `pending/` contains no `critical__*` or `important__*`
        files → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
    - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user

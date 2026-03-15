@@ -18,12 +18,20 @@ harness reads this marker after `done` and moves the file to `addressed/` or `re
 accordingly. This eliminates the fragile agent-driven file movement pattern and all its associated
 validation/retry/crash paths.
 
-**Per-item rejection negotiation.** When the doer rejects a feedback item, the harness sends the
-rejection (with the doer's reasoning) to the reviewer for judgment. The reviewer either accepts
-the rejection (`done pass`) or insists (`done needs_iteration`). If the reviewer insists, the
-item goes back to the doer with the reviewer's counter-reasoning. At most **2 rounds of
-disagreement** per item — after that, the doer must comply (reviewer is authority). This resolves
-disagreements at the point of contention instead of deferring them to a full iteration cycle.
+**Per-item rejection negotiation — focused resolution.** When the doer rejects a feedback item,
+the disagreement is resolved **immediately at the point of contention** — while both agents have
+the specific item in full context. The harness sends the rejection (with the doer's reasoning)
+to the reviewer for judgment. The reviewer either accepts (`done pass`) or insists
+(`done needs_iteration`). If the reviewer insists, the item goes back to the doer with the
+reviewer's counter-reasoning. At most **2 rounds of disagreement** per item — after that, the
+doer must comply (reviewer is authority).
+
+**Why inline negotiation, not deferred to the next outer iteration:** Focus. If a rejection is
+deferred, the doer has moved on and lost context about why it rejected; the reviewer has to
+re-read everything and re-file. The back-and-forth reasoning is most valuable when both agents
+are actively focused on the specific item. This is encapsulated as
+`RejectionNegotiationUseCase` (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E) — a self-contained sub use
+case with its own test surface via `FakeAgentFacade`.
 
 **Key semantic:** Feeding individual feedback items does NOT count as an iteration. An iteration
 counter increments only when the full cycle completes: reviewer → doer(all items) → reviewer.
@@ -100,9 +108,26 @@ to move). The harness is a Kotlin program that will reliably move a file. Shifti
 to the reliable actor eliminates an entire class of failure modes and their associated
 validation/retry/crash paths.
 
-### D7: Rejection negotiation — bounded at 2 rounds
+### D7: Rejection negotiation — bounded at 2 rounds, resolved at point of contention
 
 **Decided: At most 2 rounds of disagreement per item. Reviewer is authority.**
+
+**Why inline, not deferred:** When a doer rejects a feedback item, that is the moment of
+**maximum focus** — both agents have the specific item, the code context, and the reasoning
+fresh. Deferring to the next outer iteration means:
+- Doer has moved on and lost context about why it rejected
+- Reviewer must re-read everything and re-file as a new feedback item
+- The back-and-forth reasoning chain is broken across iterations
+
+Resolving immediately preserves focus and produces higher-quality outcomes.
+
+**Encapsulation:** This flow is extracted as `RejectionNegotiationUseCase`
+(ap.fvpIuw4Yeeq1IXDvLC3mL.E) — a self-contained sub use case called by
+`DoerReviewerPartExecutor` during the inner feedback loop. It receives the
+`AgentFacade`, both agent handles (doer + reviewer), and the feedback file. It returns
+a `RejectionResult` (`Accepted` → file to `rejected/`, `AddressedAfterInsistence` →
+file to `addressed/`, `AgentCrashed` → propagate). Fully testable via `FakeAgentFacade`
++ virtual time — each negotiation scenario is an independent unit test.
 
 When the doer rejects a feedback item:
 1. Harness sends the rejection + doer's reasoning to the reviewer
@@ -261,7 +286,7 @@ PROCESS_FEEDBACK_ITEM(file):
     └─ (next file)
 ```
 
-### REJECTION_NEGOTIATION — Per-Item Disagreement Resolution
+### REJECTION_NEGOTIATION — Per-Item Disagreement Resolution (RejectionNegotiationUseCase / ap.fvpIuw4Yeeq1IXDvLC3mL.E)
 
 ```
 REJECTION_NEGOTIATION(file):
@@ -324,7 +349,7 @@ reviewer feedback in one go. In the current design:
 With the inner feedback loop:
 - Soft compaction triggers between items while the agent has ample room to summarize
 - The agent finishes one item, compacts, starts fresh on the next
-- Emergency interrupts become rare — the soft threshold (65% remaining) catches most cases
+- Emergency interrupts become rare — the soft threshold (35% remaining / 65% used) catches most cases
 
 **The inner loop makes self-compaction proactive rather than reactive.**
 
@@ -470,14 +495,23 @@ On reviewer PASS:
 - Verifiable: unit test — instruction content includes exactly one feedback item and
   resolution marker instructions
 
-### R5: Per-Item Rejection Negotiation
+### R5: Per-Item Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
+- **Encapsulated as `RejectionNegotiationUseCase`** — self-contained sub use case, called by
+  `DoerReviewerPartExecutor` from within the inner feedback loop
+- **Why inline:** Focus. Both agents have the specific item in context at the point of
+  contention. Deferring loses context and breaks the reasoning chain (see D7).
+- **Interface:** Receives `AgentFacade`, both agent handles, feedback file path.
+  Returns `RejectionResult` sealed class: `Accepted`, `AddressedAfterInsistence`, `AgentCrashed`
 - When doer writes `## Resolution: REJECTED`, harness sends rejection + reasoning to reviewer
 - Reviewer signals `done pass` (accept rejection) or `done needs_iteration` (insist)
-- If reviewer accepts → harness moves file to `rejected/`
+- If reviewer accepts → `RejectionResult.Accepted` → harness moves file to `rejected/`
 - If reviewer insists → item sent back to doer with counter-reasoning
 - At most **2 rounds of disagreement** per item
-- After 2 rounds of reviewer insistence, doer MUST address (third rejection → AgentCrashed)
+- After 2 rounds of reviewer insistence, doer MUST address (third rejection → `RejectionResult.AgentCrashed`)
 - Reuses existing signal semantics (no protocol extension)
+- **Testability:** Fully unit-testable via `FakeAgentFacade` + virtual time. Each negotiation
+  scenario (accept, insist→address, insist→reject→insist→forced, crash) is an independent test.
+  The use case is tested in isolation from `DoerReviewerPartExecutor` — clean boundary.
 - Verifiable: unit test — full negotiation flow: reject → insist → address;
   reject → accept; reject → insist → reject → insist → forced compliance
 
@@ -569,16 +603,20 @@ ContextForAgentProvider. Harness-owned file movement. Iteration counter unchange
 - Unit test: needs_iteration with empty pending after retry → AgentCrashed
 **Proceed when:** Full inner loop works with FakeAgentFacade, including guards and file movement.
 
-### Gate 4: Rejection Negotiation
+### Gate 4: Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
 **Scope:** R5
-**What:** Per-item rejection negotiation flow. Bounded at 2 disagreement rounds.
+**What:** `RejectionNegotiationUseCase` — self-contained sub use case extracted from
+`DoerReviewerPartExecutor`. Per-item rejection negotiation flow. Bounded at 2 disagreement
+rounds. Tested in isolation via `FakeAgentFacade` + virtual time.
 **Verify:**
-- Unit test: REJECTED → reviewer accepts (pass) → file moved to rejected/
-- Unit test: REJECTED → reviewer insists (needs_iteration) → back to doer → doer addresses
-- Unit test: REJECTED → 2 rounds of insistence → doer forced to comply
-- Unit test: REJECTED → 2 rounds + doer still rejects → AgentCrashed
+- Unit test: REJECTED → reviewer accepts (pass) → `RejectionResult.Accepted` → file moved to rejected/
+- Unit test: REJECTED → reviewer insists (needs_iteration) → back to doer → doer addresses → `RejectionResult.AddressedAfterInsistence`
+- Unit test: REJECTED → 2 rounds of insistence → doer forced to comply → `RejectionResult.AddressedAfterInsistence`
+- Unit test: REJECTED → 2 rounds + doer still rejects → `RejectionResult.AgentCrashed`
 - Unit test: reviewer uses existing session (re-instruction to idle session)
-**Proceed when:** Full negotiation flow works including all boundary cases.
+- Unit test: self-compaction check between negotiation rounds
+**Proceed when:** Full negotiation flow works including all boundary cases. Use case tests
+pass independently of `DoerReviewerPartExecutor` tests.
 
 ### Gate 5: Part Completion Guard
 **Scope:** R8

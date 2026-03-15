@@ -38,8 +38,8 @@ a clean context window with compressed but complete prior knowledge.
 |------|------------|
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
 | **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"remaining_percentage": N, "file_updated_timestamp": "ISO8601"}` where N is 0–100 (100 = fresh, 0 = exhausted) and `file_updated_timestamp` is the ISO 8601 timestamp of when the hook last wrote this file. |
-| **Soft threshold** | `remaining_percentage ≤ 65`. Checked at `done` boundaries. Triggers proactive self-compaction while the agent has ample room to produce a quality summary. |
-| **Hard threshold** | `remaining_percentage ≤ 20`. Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
+| **Soft threshold** | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35). Triggers when the agent has **used 65%** of its context (35% remaining). Checked at `done` boundaries — proactive compaction while the agent still has room to produce a quality summary. |
+| **Hard threshold** | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20). Triggers when the agent has **used 80%** of its context (20% remaining). Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
 | **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
 | **PRIVATE.md** | Agent's self-compaction summary. Written to `${sub_part}/private/PRIVATE.md` in `.ai_out/`. Contains compressed but context-rich summary of the agent's work, decisions, and challenges. |
 
@@ -47,7 +47,7 @@ a clean context window with compressed but complete prior knowledge.
 
 ## Two Thresholds, Two Flows
 
-### Flow 1: Soft Threshold at Done Boundary (remaining_percentage ≤ 65)
+### Flow 1: Soft Threshold at Done Boundary (remaining_percentage ≤ 35)
 
 Triggered after `AgentSignal.Done` (any result: `COMPLETED`, `PASS`, `NEEDS_ITERATION`),
 after PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) succeeds.
@@ -58,8 +58,8 @@ Agent signals done
     ├─ PUBLIC.md validation (existing step)
     │
     ├─ Read context_window_slim.json
-    │   ├─ remaining_percentage > 65 → continue normal flow (reviewer, next iteration, etc.)
-    │   └─ remaining_percentage ≤ 65 → self-compaction:
+    │   ├─ remaining_percentage > SELF_COMPACTION_SOFT_THRESHOLD → continue normal flow (reviewer, next iteration, etc.)
+    │   └─ remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD → self-compaction:
     │       │
     │       ├─ Reset signal via AgentFacade (fresh deferred)
     │       ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
@@ -593,10 +593,14 @@ strategies:
 
 | Threshold | Default | Meaning |
 |-----------|---------|---------|
-| `SELF_COMPACTION_SOFT_THRESHOLD` | 65 | Compact at done boundary when `remaining_percentage ≤ 65` |
-| `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` |
+| `SELF_COMPACTION_SOFT_THRESHOLD` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
+| `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
 | `SELF_COMPACTION_TIMEOUT` | 5 min | Max time for agent to write PRIVATE.md and signal |
 | `contextFileStaleTimeout` | 5 min | How old `file_updated_timestamp` can be before `remaining_percentage` is considered unreliable. When stale, compaction threshold checks are skipped and the dual-signal liveness model takes over. **Same parameter** as in HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — defined once, used for both stale context guard and dual-signal early ping trigger. |
+
+**Centralized constants:** All threshold values MUST be defined as named constants in a single
+location (e.g., `CompactionThresholds` object) — never as magic numbers in the codebase. This
+makes tuning easy: one place to adjust, one place to review.
 
 Configured via environment variables or harness config. Not per-sub-part in V1.
 
@@ -657,7 +661,7 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 
 ### R6: Soft Compaction at Done Boundary
 - After `AgentSignal.Done` + PUBLIC.md validation, read context window state
-- If `remaining_percentage ≤ 65` → send compaction instruction, await SelfCompacted
+- If `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → send compaction instruction, await SelfCompacted
 - Validate PRIVATE.md, kill session (lazy respawn — spawns when sub-part next needed)
 - Verifiable: unit test — done signal → low context → compaction → session killed
 
@@ -769,7 +773,7 @@ respawn.
 | **1-second polling overhead** | Continuous file reads during entire agent work period | File is ~30 bytes JSON on local filesystem. Measured overhead: negligible (< 0.1ms per read). |
 | **Self-compaction itself fails** | Agent at 20% remaining may not have enough context to summarize | 5-minute timeout. If fails → `AgentCrashed` → `FailedToExecutePlanUseCase`. Consider shorter PRIVATE.md template for emergency compaction. |
 | **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files (remaining_percentage never changes) → health monitoring's existing timeout eventually fires. |
-| **65% remaining is too aggressive** | Frequent unnecessary self-compactions | Threshold is configurable. Monitor in practice and adjust. Each compaction adds ~2 minutes overhead. |
+| **35% remaining triggers too early for some workloads** | Frequent unnecessary self-compactions | Threshold is a centralized constant, easily adjustable. Monitor in practice and tune. Each compaction adds ~2 minutes overhead. |
 
 ---
 
