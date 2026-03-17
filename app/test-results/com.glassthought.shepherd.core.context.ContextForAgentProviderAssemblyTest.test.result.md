@@ -7,8 +7,8 @@ skipped: 0
 
 - GIVEN a doer request on iteration 1
   - WHEN instructions are assembled
+    - [PASS] THEN contains WHY-NOT keyword
     - [PASS] THEN does NOT include pushback guidance (first iteration)
-    - [PASS] THEN includes WHY-NOT reminder (all iterations)
 - GIVEN a doer request on iteration 2 with reviewer feedback
   - WHEN instructions are assembled
     - [PASS] THEN includes pushback guidance

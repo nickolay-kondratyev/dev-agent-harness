@@ -13,7 +13,7 @@ skipped: 0
     - [PASS] THEN contains 'fail-workflow' signal
     - [PASS] THEN contains 'ping-ack' signal
     - [PASS] THEN contains 'user-question' signal
-    - [PASS] THEN contains WHY-NOT protocol reference
+    - [PASS] THEN contains WHY-NOT keyword
     - [PASS] THEN contains callback example with 'completed' (not 'pass' or 'needs_iteration')
     - [PASS] THEN contains callback signal script name
     - [PASS] THEN contains part name

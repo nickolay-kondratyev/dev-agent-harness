@@ -154,36 +154,13 @@ object InstructionSections {
 
         - **If you agree**: implement the requested changes.
         - **If you disagree**: you are empowered to push back, but you MUST defend your decision
-          **in the code** using a ${ProtocolVocabulary.WHY_NOT} comment (see below). This comment
+          **in the code** using a ${ProtocolVocabulary.WHY_NOT} comment. This comment
           is NOT for the reviewer — it is for any future reader of this code who might have the
           same question.
         - **Do NOT push back for the sake of pushing back.** Only reject feedback when you
           genuinely believe the reviewer is incorrect or missing context.
         - **Document your reasoning in PUBLIC.md**: for each reviewer point, state whether you
           accepted or rejected it and why.
-    """.trimIndent()
-
-    // ── Section 8b: WHY-NOT reminder ─────────────────────────────────────────
-
-    /**
-     * Brief reminder to place WHY-NOT comments. Included for all doer iterations.
-     *
-     * Spec: WHY-NOT Comments Protocol (ref.ap.kmiKk7vECiNSpJjAXYMyE.E).
-     */
-    val WHY_NOT_REMINDER: String = """
-        ## ${ProtocolVocabulary.WHY_NOT} Comments — Durable Pitfall Documentation
-
-        When you reject a reviewer suggestion, discover a dead-end approach, or fix a rejected
-        approach, place a `${ProtocolVocabulary.WHY_NOT}` comment at the code location where
-        someone might naturally attempt the wrong approach:
-
-        ```
-        // ${ProtocolVocabulary.WHY_NOT}(YYYY-MM-DD): Don't use <approach> here — <concise reason>.
-        // <what constraint makes it wrong>. Revisit if <conditions change>.
-        ```
-
-        ${ProtocolVocabulary.WHY_NOT} comments are NOT carved in stone — they represent the best
-        understanding at the time. Future agents may override if circumstances change.
     """.trimIndent()
 
     // ── Section 12: Callback script usage ────────────────────────────────────
