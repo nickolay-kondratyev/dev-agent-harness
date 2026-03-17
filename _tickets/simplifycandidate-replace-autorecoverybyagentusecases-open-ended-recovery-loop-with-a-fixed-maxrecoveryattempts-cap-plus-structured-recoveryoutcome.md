@@ -1,11 +1,11 @@
 ---
 id: nid_3htabsnb3hsz27p7l26jrrskc_E
 title: "SIMPLIFY_CANDIDATE: Replace AutoRecoveryByAgentUseCase's open-ended recovery loop with a fixed MaxRecoveryAttempts cap plus structured RecoveryOutcome"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:16:00Z
-status_updated_iso: 2026-03-17T22:16:00Z
+status_updated_iso: 2026-03-17T22:29:16Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
