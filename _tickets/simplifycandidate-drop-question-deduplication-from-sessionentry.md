@@ -1,11 +1,11 @@
 ---
 id: nid_fbfzm0k8h28agsioj1mxycezm_E
 title: "SIMPLIFY_CANDIDATE: Drop question deduplication from SessionEntry"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:34Z
-status_updated_iso: 2026-03-15T01:08:34Z
+status_updated_iso: 2026-03-17T19:54:42Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
