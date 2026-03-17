@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:10:17Z
 id: nid_j90sxdtb3gjbgzvp1i2tfld8b_E
 title: "SIMPLIFY_CANDIDATE: Write current_state.json only at checkpoints in V1 (not every transition)"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:05:10Z
-status_updated_iso: 2026-03-17T21:05:10Z
+status_updated_iso: 2026-03-17T23:10:17Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
