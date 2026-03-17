@@ -101,14 +101,27 @@ On startup, the CLI delegates to the **`Initializer`** — the true top-level or
 that owns the full startup sequence:
 
 0. **`EnvironmentValidator.validate()`** (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) — runs **before**
-   any infrastructure is created. Validates:
+   any infrastructure is created. **Collects all failures before throwing** — so the user
+   sees every missing prerequisite in one run instead of N sequential fix-and-retry cycles.
+   Checks:
    - **Docker**: process is running inside a Docker container (`/.dockerenv` must exist).
-     Hard fail if not — agents are spawned with `--dangerously-skip-permissions` which is
-     only safe inside a container.
-   - **tmux**: `tmux` binary must be on `$PATH` and executable (`which tmux` succeeds).
-     Hard fail with red console error if not — tmux is a non-negotiable prerequisite for
-     agent session management. There is no fallback; without tmux, the harness cannot function.
+     Agents are spawned with `--dangerously-skip-permissions` which is only safe inside a
+     container.
+   - **tmux**: `tmux` binary must be on `$PATH` (`which tmux` succeeds). Required for agent
+     session management; without it the harness cannot function.
    - **Required env vars**: all `Constants.REQUIRED_ENV_VARS.ALL` are present and non-blank.
+
+   If any checks fail, throws `IllegalStateException` with a **consolidated** error listing
+   every issue at once, e.g.:
+   ```
+   Environment validation failed:
+     - Not running in a Docker container (/.dockerenv not found). Shepherd requires Docker for safety.
+     - tmux not found on $PATH. Install: apt install tmux
+     - Missing required env vars: Z_AI_API_TOKEN, TICKET_SHEPHERD_SERVER_PORT
+   ```
+   **Implementation pattern**: each check is a pure function returning `String?` — `null`
+   on success, a human-readable error message on failure. `validate()` collects non-null
+   results into a `List<String>` and throws once at the end if the list is non-empty.
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
    shared infrastructure (tmux, LLM, logging) that outlives any single ticket.
