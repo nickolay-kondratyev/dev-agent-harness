@@ -12,6 +12,7 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, state, session]
 ---
 
+--------------------------------------------------------------------------------
 The spec (doc/core/SessionsState.md, doc/schema/plan-and-current-state.md) stores SubPartRole as an explicit enum field in every SessionEntry (DOER at position 0, REVIEWER at position 1).
 
 Problem:
@@ -32,4 +33,6 @@ Robustness improvement:
 - Future role additions: update only `fromIndex()`, not session records.
 
 Relevant specs: doc/core/SessionsState.md, doc/schema/plan-and-current-state.md
+--------------------------------------------------------------------------------
 
+OK let's simplify. Array position would be doer and reviwer. Perform the simplification.
