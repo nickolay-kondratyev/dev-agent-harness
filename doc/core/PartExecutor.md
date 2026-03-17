@@ -50,10 +50,11 @@ budget exceeded), not in TicketShepherd.
 ## AgentSignal / ap.UsyJHSAzLm5ChDLd0H6PK.E
 
 Sealed class representing what flows through the `CompletableDeferred<AgentSignal>` to
-the executor. `Done`, `FailWorkflow`, and `SelfCompacted` are completed by the server;
-`Crashed` is produced by the executor's own health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E). This is the **callback bridge** — the mechanism by
-which an HTTP callback wakes the suspended executor coroutine.
+the executor (as the return value of `sendPayloadAndAwaitSignal`). `Done`, `FailWorkflow`,
+and `SelfCompacted` are completed by the server; `Crashed` is produced by the facade's
+health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) inside `sendPayloadAndAwaitSignal`.
+This is the **callback bridge** — the mechanism by which an HTTP callback or health-timeout
+resolves the suspended facade call.
 
 ```kotlin
 sealed class AgentSignal {
@@ -63,7 +64,7 @@ sealed class AgentSignal {
     /** Agent called /callback-shepherd/signal/fail-workflow */
     data class FailWorkflow(val reason: String) : AgentSignal()
 
-    /** Executor's health-aware await loop determined the agent has crashed */
+    /** Facade's health-aware await loop (inside sendPayloadAndAwaitSignal) determined the agent has crashed */
     data class Crashed(val details: String) : AgentSignal()
 
     /** Agent completed self-compaction (ref.ap.HU6KB4uRDmOObD54gdjYs.E) */
@@ -87,48 +88,52 @@ enum class DoneResult {
 |----------|---------|---------|
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
 | `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E). |
-| `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this |
-| `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; executor's ACK-await phase reads this |
+| `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this inside `sendPayloadAndAwaitSignal` |
+| `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; facade's ACK-await phase reads this |
 
 All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
-(ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the executor's health-aware await loop knows the agent
-is alive.
+(ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the facade's health-aware await loop (inside
+`sendPayloadAndAwaitSignal`) knows the agent is alive.
 
 ### How the Bridge Works
 
 ```
-Executor                   AgentFacade              SessionsState         Server
-   │                            │                              │                  │
-   ├─ spawnAgent(config) ──────►│                              │                  │
-   │                            ├─ create CompletableDeferred  │                  │
-   │                            ├─ register SessionEntry ─────►│                  │
-   │                            ├─ spawn TMUX, bootstrap       │                  │
-   │                            ├─ return SpawnedAgentHandle   │                  │
-   ◄─ handle (with Deferred) ──┤  (includes signal Deferred)  │                  │
-   │                            │                              │                  │
-   ├─ suspend on handle         │                              │                  │
-   │    .signal.await() ────────┤                              │                  │
-   │                            │                              │ ◄── POST /done   │
-   │                            │                              │  lookup(guid) ──►│
-   │                            │                              │  validate result │
-   │                            │                              │  entry.signal    │
-   │                            │                              │  .complete(Done) │
-   │                            │                              │                  │
-   ◄─ resumes from await() ────┤                              │                  │
-   │  reads AgentSignal         │                              │                  │
+Executor              AgentFacade (sendPayloadAndAwaitSignal)   SessionsState   Server
+   │                         │                                        │           │
+   ├─ spawnAgent(config) ───►│                                        │           │
+   │                         ├─ spawn TMUX, bootstrap                 │           │
+   │                         ├─ initial SessionEntry registration ────►│           │
+   │                         ├─ return SpawnedAgentHandle (no Deferred)│          │
+   ◄─ handle ───────────────┤                                         │           │
+   │                         │                                         │           │
+   ├─ sendPayloadAnd         │                                         │           │
+   │   AwaitSignal ─────────►│                                         │           │
+   │   (handle, payload)     ├─ create fresh CompletableDeferred       │           │
+   │   [suspends]            ├─ re-register SessionEntry ─────────────►│           │
+   │                         ├─ send payload via send-keys             │           │
+   │                         ├─ ACK-await phase                        │           │
+   │                         ├─ health-aware signal-await loop         │ ◄─ /done  │
+   │                         │    (1s ticks, ping, compaction)         │ lookup ──►│
+   │                         │                                         │ complete()│
+   │                         ◄─ deferred completes → loop exits        │           │
+   ◄─ AgentSignal ──────────┤                                         │           │
 ```
 
-In tests, `FakeAgentFacade` replaces the middle three columns — the test directly
-controls when the deferred is completed and with what `AgentSignal`.
+In tests, `FakeAgentFacade` replaces the entire facade column — the test pre-programs the
+`AgentSignal` to return from `sendPayloadAndAwaitSignal`.
 
 ---
 
 ## Health-Aware Await Loop / ap.QCjutDexa2UBDaKB3jTcF.E
 
-The executor does **not** simply call `signalDeferred.await()`. Instead, it runs a
-health-aware await loop that incorporates timeout checks using Kotlin's `withTimeoutOrNull`
-/ `select`. This makes the executor the **single owner** of both the signal await and the
-health monitoring — no separate background coroutine, no race conditions on the deferred.
+> **Owned by `AgentFacadeImpl.sendPayloadAndAwaitSignal`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E).
+> `PartExecutorImpl` does **not** run this loop directly — it calls
+> `sendPayloadAndAwaitSignal(handle, payload)` and receives the `AgentSignal` back as a return
+> value. This section documents the loop logic for `AgentFacadeImpl` implementors and reviewers.
+
+The loop runs inside `sendPayloadAndAwaitSignal` using Kotlin's `withTimeoutOrNull` / `select`.
+The facade is the **single owner** of both the signal await and the health monitoring — no
+separate background coroutine, no race conditions on the deferred.
 
 Full health monitoring spec: ref.ap.6HIM68gd4kb8D2WmvQDUK.E (HealthMonitoring.md).
 
@@ -230,26 +235,31 @@ while (true) {
 
 ### Key Properties
 
-- **Single writer for Crashed**: Only the executor completes the deferred with
-  `AgentSignal.Crashed`. The server only completes it with `Done` or `FailWorkflow`.
-  No two components race to complete the same deferred.
-- **Callbacks-only liveness**: After pinging, the executor checks only
+- **Single writer for Crashed**: Only the **facade** (inside `sendPayloadAndAwaitSignal`)
+  completes the deferred with `AgentSignal.Crashed`. The server only completes it with
+  `Done` or `FailWorkflow`. No two components race to complete the same deferred.
+- **Callbacks-only liveness**: After pinging, the facade checks only
   `lastActivityTimestamp` for advancement. If any callback arrived during the ping window,
   the agent is alive. Simple 2-case model (fresh callback / stale callback).
   See HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) for the simplification tradeoff.
 - **Separate compaction concern**: `context_window_slim.json` is polled every ~1 second for
   `remaining_percentage` to drive compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
   This is independent of liveness — compaction checks run regardless of callback freshness.
-- **Scoped to executor lifetime**: The loop runs inside `execute()`. When the executor returns,
-  monitoring stops. No orphaned watchers.
+- **Scoped to sendPayloadAndAwaitSignal call**: The loop runs inside one
+  `sendPayloadAndAwaitSignal` invocation. When the method returns, monitoring stops.
+  No orphaned watchers.
 - **Full audit trail**: Every health check decision is logged with structured values
   (ref.ap.RJWVLgUGjO5zAwupNLhA0.E — Logging Principle).
 
-### Dependencies (Health Monitoring)
+### Dependencies (Health Monitoring — owned by `AgentFacadeImpl`)
+
+These are constructor dependencies of `AgentFacadeImpl`, not `PartExecutorImpl`:
 
 - `AgentUnresponsiveUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — parameterized by `DetectionContext`: sends ping (`NO_ACTIVITY_TIMEOUT`), kills TMUX + provides crash details (`PING_TIMEOUT`, `STARTUP_TIMEOUT`)
 - `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback (sole liveness signal)
 - `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `remaining_percentage` for compaction decisions only (ref.ap.8nwz2AHf503xwq8fKuLcl.E); NOT used for liveness
+- `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
+- `HarnessTimeoutConfig` — all timeout and threshold constants
 
 ---
 
@@ -277,26 +287,26 @@ TMUX session, waiting for the executor to send it new instructions.
 ### Flow (doer+reviewer path — `reviewerConfig != null`)
 
 1. **Start doer**:
-   a. First iteration: **spawn** doer TMUX session → create `CompletableDeferred` → register
-      `SessionEntry` → send instructions → enter health-aware await loop
-      (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
-   b. Subsequent iterations (re-entry from step 4): doer session **already alive** → create
-      fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
-      deferred) → assemble new instructions (includes reviewer feedback) → deliver via
-      `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing** session →
-      enter health-aware await loop
+   a. First iteration: **spawn** doer TMUX session (via `agentFacade.spawnAgent()`) → assemble
+      initial instructions → `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)` →
+      receive `AgentSignal`
+   b. Subsequent iterations (re-entry from step 4): doer session **already alive** → assemble
+      new instructions (includes reviewer feedback) →
+      `agentFacade.sendPayloadAndAwaitSignal(handle, newInstructions)` → receive `AgentSignal`.
+      The facade internally creates a fresh `CompletableDeferred`, re-registers the
+      `SessionEntry`, and runs the full health-aware await loop
+      (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
    Then → start reviewer:
-   a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
-      register `SessionEntry` → send instructions (includes doer's `PUBLIC.md`) → enter
-      health-aware await loop
+   a. First iteration: **spawn** reviewer TMUX session (via `agentFacade.spawnAgent()`) →
+      assemble instructions (includes doer's `PUBLIC.md`) →
+      `agentFacade.sendPayloadAndAwaitSignal(reviewerHandle, instructions)` → receive `AgentSignal`
    b. Subsequent iterations (re-entry from step 1b→2): reviewer session **already alive** →
-      create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
-      new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
-      deliver via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing**
-      session → enter health-aware await loop
+      assemble new instructions (includes doer's updated `PUBLIC.md`) →
+      `agentFacade.sendPayloadAndAwaitSignal(reviewerHandle, newInstructions)` → receive
+      `AgentSignal`
 3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **feedback completion guard**
@@ -347,17 +357,15 @@ after `done` prevents downstream corruption.
 3. If **valid** → proceed to next step (reviewer start, iteration restart, etc.)
 4. If **missing or empty** → re-instruction attempt (one retry):
    a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
-   b. Create fresh `CompletableDeferred<AgentSignal>` → re-register `SessionEntry`
-      (same HandshakeGuid, new deferred)
-   c. Deliver a re-instruction message via `AckedPayloadSender`
-      (ref.ap.tbtBcVN2iCl1xfHJthllP.E) telling the agent:
+   b. Call `agentFacade.sendPayloadAndAwaitSignal(handle, reInstructionPayload)` with a
+      message telling the agent:
       - Its `PUBLIC.md` at `<path>` is missing or empty
       - It must write `PUBLIC.md` with its work log (decisions, rationale, what was done)
-      - It must re-signal `done` with the same result value
-   d. Enter health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) waiting for the
-      re-signal
-   e. On re-signal received → re-validate `PUBLIC.md`
-   f. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
+      - It must re-signal `done` with the same result value.
+      The facade internally handles fresh deferred creation, re-registration, ACK, and the
+      health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
+   c. On `AgentSignal` received → re-validate `PUBLIC.md`
+   d. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
       message: `"Agent failed to produce PUBLIC.md after explicit re-instruction"`.
       `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, halt).
 
@@ -396,15 +404,20 @@ TMUX session per sub-part, kept alive across iterations.
 
 On iteration > 1, both agents already have live TMUX sessions. The executor does NOT
 kill/respawn — it:
-1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
-2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
-3. Assembles new instructions via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
-4. Delivers the instruction file path via `AckedPayloadSender`
-   (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to the existing TMUX session
-5. On ACK received, enters health-aware signal-await loop
-   (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+1. Assembles new instructions via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
+2. Calls `agentFacade.sendPayloadAndAwaitSignal(handle, newInstructions): AgentSignal`
 
-This pattern is identical for both doer and reviewer re-instruction.
+`sendPayloadAndAwaitSignal` internally handles all deferred lifecycle details:
+- Creates a **fresh** `CompletableDeferred<AgentSignal>`
+- Re-registers the `SessionEntry` (same `HandshakeGuid`, new deferred)
+- Delivers the instruction file path via `AckedPayloadSender`
+  (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to the existing TMUX session
+- Runs the health-aware signal-await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) until a signal arrives
+- Returns the `AgentSignal` to the executor
+
+This pattern is identical for both doer and reviewer re-instruction. The executor never
+touches `CompletableDeferred` or `SessionsState` directly — all deferred lifecycle
+management is encapsulated by `AgentFacade`.
 
 ### Idle Session Death — send-keys Failure
 
@@ -433,30 +446,35 @@ strategy produces one commit per sub-part signal.
 ### Dependencies
 
 - **`AgentFacade`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
-  operations: spawn, send payload with ACK, health ping, read context window state, kill session.
-  Replaces direct dependencies on `SessionsState`, `SpawnTmuxAgentSessionUseCase`,
-  `TmuxCommunicator`, and `ContextWindowStateReader`. Signal delivery flows through
-  `SpawnedAgentHandle.signal` (a `Deferred<AgentSignal>`). See
-  [`AgentFacade`](AgentFacade.md) for the full interface spec.
+  operations: spawn (`spawnAgent`), full payload-and-signal cycle
+  (`sendPayloadAndAwaitSignal`), and kill (`killSession`). Fully encapsulates
+  `SessionsState`, `CompletableDeferred` lifecycle, ACK protocol, health-aware await loop,
+  and context-window compaction. The executor never accesses `SessionsState`,
+  `TmuxCommunicator`, `ContextWindowStateReader`, or `AgentUnresponsiveUseCase` directly.
+  See [`AgentFacade`](AgentInteraction.md) for the full interface spec.
 - `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) — assemble instruction files for agents (doer, reviewer, planner, plan-reviewer)
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
-- `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
-  in the health-aware await loop. Production: `SystemClock`. Tests: `TestClock` with virtual time.
-- `HarnessTimeoutConfig` (`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — all
-  timeout and threshold constants (`startupAckTimeout`, `healthCheckInterval`, `noActivityTimeout`,
-  `pingTimeout`, `payloadAckTimeout`, `payloadAckRetries`, `selfCompactionTimeout`,
-  `contextWindowSoftThresholdPct`, `contextWindowHardThresholdPct`). Injected from
-  `ShepherdContext.timeoutConfig`; tests pass `HarnessTimeoutConfig.forTests()` for fast timeouts.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 
+> **Note:** `Clock`, `HarnessTimeoutConfig`, `AgentUnresponsiveUseCase`, and
+> `ContextWindowStateReader` are constructor dependencies of `AgentFacadeImpl`, **not**
+> `PartExecutorImpl`. They support the health-aware await loop that lives inside
+> `sendPayloadAndAwaitSignal`.
+
 ### Testability
 
-`PartExecutorImpl` is unit-tested via `FakeAgentFacade` + virtual time
-(`TestClock` + `kotlinx-coroutines-test`). This enables deterministic testing of both
-the doer-only and doer+reviewer paths — including timing-sensitive health monitoring,
-timeout/crash detection, and iteration edge cases — without real TMUX sessions or real
-agents. See [Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage)
+`PartExecutorImpl` is unit-tested via `FakeAgentFacade`. The fake's
+`sendPayloadAndAwaitSignal` returns pre-programmed `AgentSignal` values without re-running
+the health-aware loop — keeping executor tests simple, fast, and deterministic.
+
+Edge cases tested at the **executor level** (via fake signals): doer-only path, doer+reviewer
+iteration, fail-workflow, crash, converge budget exceeded.
+
+Edge cases tested at the **facade level** (`AgentFacadeImpl` unit tests with `TestClock` +
+`kotlinx-coroutines-test`): ping trigger, crash detection, ACK retry, compaction.
+
+See [Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage)
 in high-level.md.
 
 ---
@@ -464,10 +482,10 @@ in high-level.md.
 ### Doer-Only Path (`reviewerConfig == null`)
 
 When `reviewerConfig` is null, the executor runs the trivial subset of the full flow:
-spawn doer → register → send instructions → enter health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) → **PUBLIC.md validation**
-(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) → map `AgentSignal` to `PartResult`. No reviewer, no
-iteration. A single doer can still crash/hang — the same health-aware await loop applies.
+`agentFacade.spawnAgent(config)` → `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`
+→ **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) → map `AgentSignal` to
+`PartResult`. No reviewer, no iteration. A single doer can still crash/hang — the same
+health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) applies, running inside the facade.
 
 #### Signal-to-PartResult Mapping (doer-only)
 
@@ -490,5 +508,7 @@ If they somehow leak through, treat as a bug — fail with `IllegalStateExceptio
 - **Run by**: `TicketShepherd` — always controls which executor is active
 - **Lifecycle**: one executor per part, created just before execution, discarded after `execute()` returns
 - `TicketShepherd` holds an `activeExecutor` reference — the currently running `PartExecutor`.
-  This gives cancellation a single reference point. Health monitoring is internal to each
-  executor via its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
+  This gives cancellation a single reference point. Health monitoring is internal to the
+  facade's `sendPayloadAndAwaitSignal` (ref.ap.QCjutDexa2UBDaKB3jTcF.E), not the executor
+  itself — cancelling the executor coroutine cancels the outstanding `sendPayloadAndAwaitSignal`
+  call as well.

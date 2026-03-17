@@ -46,10 +46,14 @@ genuinely needs all of them.
 
 ### D2: Signal delivery → Facade owns it
 
-**Chosen:** `spawnAgent()` returns a `SpawnedAgentHandle` that includes a `Deferred<AgentSignal>`.
-The facade creates and manages the `CompletableDeferred` internally. In the real impl,
-`SessionsState` is an internal detail — the HTTP server completes the deferred via SessionsState,
-but PartExecutor never touches SessionsState directly.
+**Chosen:** The facade creates and manages `CompletableDeferred<AgentSignal>` entirely
+internally. `PartExecutor` never touches `SessionsState` or a raw deferred directly.
+
+- `spawnAgent()` returns a `SpawnedAgentHandle` (no `Deferred` exposed on the handle).
+- `sendPayloadAndAwaitSignal(handle, payload)` is the single entry point for every
+  payload delivery + signal receive cycle. It creates a fresh `CompletableDeferred`,
+  re-registers the `SessionEntry`, sends the payload with ACK, runs the health-aware
+  await loop, and returns the `AgentSignal` to the caller. This resolves **R1** (see below).
 
 **Over:** Signal path stays in SessionsState, PartExecutor uses both AgentFacade (outbound)
 and SessionsState (inbound). This would split the agent abstraction and force tests to coordinate
@@ -68,29 +72,28 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 
 | Method | What it encapsulates | Internal delegation |
 |--------|---------------------|---------------------|
-| `spawnAgent(config)` | Bootstrap handshake, session ID resolution, deferred creation, SessionsState registration | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` |
-| `sendPayloadWithAck(handle, payload)` | ACK protocol (wrap, send, retry 3×, confirm) | `TmuxCommunicator` + ACK XML wrapping + `SessionsState.pendingPayloadAck` polling |
-| `sendHealthPing(handle)` | TMUX send-keys ping | `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT`) → `TmuxCommunicator` |
-| `readContextWindowState(handle)` | Read context_window_slim.json | `ContextWindowStateReader` |
+| `spawnAgent(config)` | Bootstrap handshake, session ID resolution, initial `SessionsState` registration, TMUX session start | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` |
+| `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` | Full signal lifecycle: create fresh `CompletableDeferred`, re-register `SessionEntry`, send payload with ACK (3× retry), run health-aware await loop, return `AgentSignal` | `TmuxCommunicator` + ACK wrapping + `SessionsState` + `AgentUnresponsiveUseCase` + `ContextWindowStateReader` + `ContextWindowSelfCompactionUseCase` |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
 `SpawnedAgentHandle` contains:
 - `guid: HandshakeGuid`
 - `sessionId: ResumableAgentSessionId`
-- `signal: Deferred<AgentSignal>` — executor awaits this
 - Observable `lastActivityTimestamp` — updated by real impl on every HTTP callback; controlled
-  by test in fake
+  by test in `FakeAgentFacade`
 
-**The health-aware await loop stays in PartExecutor.** The executor owns the decision logic
-(when to ping, when to declare crash, when to trigger compaction). `AgentFacade` provides
-the **operations** (ping, read state); the executor provides the **decisions**.
+**`sendPayloadAndAwaitSignal` fully encapsulates the signal lifecycle**, including the
+health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E). The executor owns no deferred
+references and calls no health-ping or context-window methods directly. See
+[`PartExecutor.md`](PartExecutor.md) for the loop pseudocode (marked as internal to this method).
 
 ---
 
 ## Virtual Time Strategy / ap.whDS8M5aD2iggmIjDIgV9.E
 
-The health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) has two timing dependencies that
-must both be controllable in tests:
+The health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) lives **inside
+`sendPayloadAndAwaitSignal`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) and has two timing
+dependencies that must be controllable in tests:
 
 ### 1. Coroutine delays → `kotlinx-coroutines-test` TestDispatcher
 
@@ -102,7 +105,7 @@ With `runTest {}` and `TestCoroutineScheduler`, these advance instantly via `adv
 ### 2. Wall-clock reads → `Clock` interface
 
 The loop compares timestamps: `now() - sessionEntry.lastActivityTimestamp`. A `Clock` (or
-`TimeSource`) abstraction injected into the executor allows tests to control "now."
+`TimeSource`) abstraction injected into `AgentFacadeImpl` allows tests to control "now."
 
 ```kotlin
 // Production: Clock { Instant.now() }
@@ -115,31 +118,47 @@ interface Clock {
 **Both are needed.** TestDispatcher alone doesn't control `Instant.now()` calls. A Clock alone
 doesn't control `delay()` suspension. Together, they give full control over the time dimension.
 
+`Clock` and `HarnessTimeoutConfig` are constructor dependencies of `AgentFacadeImpl` (not
+`PartExecutorImpl`). For `FakeAgentFacade`, the test controls signal delivery directly
+(see R3) — the loop is not re-executed inside the fake.
+
 ### Test shape with virtual time
 
+For **executor tests** (`PartExecutorImpl`) — the fake returns signals on demand:
 ```
-// Pseudocode — illustrates the pattern, not the API
+// Pseudocode — illustrates executor-level test
+runTest {
+    val fake = FakeAgentFacade()
+    val executor = PartExecutorImpl(agentFacade = fake, ...)
+
+    // Program the fake: spawn succeeds, then agent sends COMPLETED
+    fake.onSpawn { handle }
+    fake.onSendPayloadAndAwaitSignal { AgentSignal.Done(DoneResult.COMPLETED) }
+
+    val result = executor.execute()
+    result shouldBe PartResult.Completed
+}
+```
+
+For **facade tests** (`AgentFacadeImpl`) — both virtual time axes are needed to test
+the health-aware loop inside `sendPayloadAndAwaitSignal`:
+```
+// Pseudocode — illustrates facade-level health-loop test
 runTest {
     val clock = TestClock(startTime)
-    val fake = FakeAgentFacade()
-    val executor = PartExecutorImpl(agentFacade = fake, clock = clock, ...)
+    val fakeSessionsState = FakeSessionsState()
+    val facade = AgentFacadeImpl(clock = clock, ...)
 
-    // Spawn doer — fake returns handle immediately
-    launch { executor.execute() }
+    launch { signal = facade.sendPayloadAndAwaitSignal(handle, payload) }
 
-    // Advance 31 minutes — past noActivityTimeout (30 min)
+    // Advance 31 minutes past noActivityTimeout — no callback
     clock.advance(31.minutes)
     advanceTimeBy(31.minutes)
 
-    // Verify: executor sent a health ping
-    fake.verifyPingSent(handle)
-
-    // Don't advance timestamp — simulate dead agent
-    clock.advance(3.minutes)  // past ping timeout
+    // Verify: facade sent health ping; no response → AgentCrashed
+    clock.advance(3.minutes)
     advanceTimeBy(3.minutes)
-
-    // Verify: executor returned AgentCrashed
-    result shouldBe PartResult.AgentCrashed(...)
+    signal shouldBe AgentSignal.Crashed(...)
 }
 ```
 
@@ -168,26 +187,31 @@ Delegates to existing infra components. No new behavior — wiring only.
 
 ### R3: `FakeAgentFacade` (test double)
 
-Programmable fake that allows tests to:
-- Control spawn behavior (succeed, fail, delay)
-- Control signal delivery (complete deferred at controlled time with any AgentSignal variant)
-- Control ACK behavior (succeed, timeout, partial)
-- Control context window state (return any ContextWindowState)
-- Control lastActivityTimestamp advancement
-- Verify interactions (was ping sent? was session killed? what payloads were sent?)
+Programmable fake for `PartExecutorImpl` unit tests that allows tests to:
+- Control spawn behavior (succeed, fail)
+- Control `sendPayloadAndAwaitSignal` return value — return any `AgentSignal` variant, optionally
+  with a `suspend` delay to simulate latency
+- Control `killSession` (record that it was called)
+- Verify interactions: was `sendPayloadAndAwaitSignal` called? with what payloads? was session killed?
+
+The fake does **not** re-run the health-aware loop internally — it simply returns the
+pre-programmed signal. Health-loop edge cases (timeouts, ping, crash, compaction) are tested
+via `AgentFacadeImpl` unit tests with `TestClock` + `TestDispatcher`.
 
 **Verifiable:**
-- Unit tests for FakeAgentFacade itself (meta-tests that verify the fake behaves correctly)
-- Used by PartExecutor unit tests — if PartExecutor tests pass, the fake is verified implicitly
+- Unit tests for `FakeAgentFacade` itself (meta-tests that verify the fake behaves correctly)
+- Used by `PartExecutorImpl` unit tests — if executor tests pass, the fake is verified implicitly
 
 ### R4: `Clock` interface + `TestClock`
 
 - `Clock` interface with `now(): Instant`
 - Production `SystemClock` implementation
 - `TestClock` with `advance(duration)` for tests
-- Injected into any component that reads wall time (PartExecutor health loop)
+- Injected into `AgentFacadeImpl` (not `PartExecutorImpl`) — only the facade reads wall time
+  in its health-aware await loop
 
-**Verifiable:** TestClock unit tests; PartExecutor tests use TestClock and verify timing decisions.
+**Verifiable:** TestClock unit tests; AgentFacadeImpl health-loop tests use TestClock and verify
+timing decisions (ping trigger, crash detection).
 
 ### R5: `kotlinx-coroutines-test` dependency
 
@@ -195,13 +219,15 @@ Added to `gradle/libs.versions.toml` and `app/build.gradle.kts` as `testImplemen
 
 **Verifiable:** PartExecutor tests use `runTest {}` with `advanceTimeBy()`.
 
-### R6: PartExecutor no longer depends on SessionsState directly
+### R6: PartExecutor no longer depends on SessionsState, Clock, or health-monitoring infra directly
 
-PartExecutor takes `AgentFacade` as its agent-facing dependency. `SessionsState` is not
-in PartExecutor's constructor.
+PartExecutor takes `AgentFacade` as its sole agent-facing dependency. `SessionsState`,
+`Clock`, `AgentUnresponsiveUseCase`, and `ContextWindowStateReader` are **not** in
+PartExecutor's constructor — they are constructor dependencies of `AgentFacadeImpl`.
 
-**Verifiable:** PartExecutor constructor signature; PartExecutor unit tests construct without
-SessionsState.
+**Verifiable:** PartExecutor constructor signature; PartExecutor unit tests construct with only
+`AgentFacade`, `ContextForAgentProvider`, `GitCommitStrategy`, and iteration config — no clock,
+no session state, no health-monitoring types.
 
 ### R7: Spec updates for downstream impact
 
@@ -277,17 +303,16 @@ correctly to real infrastructure.
 
 ## Risks & Open Questions
 
-### R1: Re-instruction pattern and fresh deferreds
+### R1: Re-instruction pattern and fresh deferreds ✅ RESOLVED
 
-When the executor iterates (creates a fresh `CompletableDeferred` for the same session), how
-does this work through `AgentFacade`?
+**Resolved:** `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` creates a fresh
+`CompletableDeferred`, re-registers the `SessionEntry` (same `HandshakeGuid`, new deferred),
+sends the payload, and runs the health-aware await loop — returning the `AgentSignal` directly.
 
-Options:
-- `AgentFacade.resetSignal(handle): Deferred<AgentSignal>` — returns a new deferred
-- `SpawnedAgentHandle` is mutable (internal deferred swapped)
-- `sendPayloadWithAck` implicitly creates a new deferred and updates the handle
-
-**Must resolve at Gate 1.** This affects the interface shape.
+The executor never sees deferreds. On iteration, it simply calls `sendPayloadAndAwaitSignal`
+again with the new instructions payload. Forgetting to reset the deferred is no longer possible
+— the method owns that lifecycle unconditionally. Eliminates the silent-hang class of bugs
+noted in ticket `nid_0o3dqyqe9tlwpi9uroe9tdqpn_E`.
 
 ### R2: `UserQuestionHandler`
 
