@@ -1,11 +1,11 @@
 ---
 id: nid_qf6iicpkgyd6qxjfccgy9ch4t_E
 title: "SIMPLIFY_CANDIDATE: TmuxCommandRunner should capture and surface process output instead of discarding it"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:39:05Z
-status_updated_iso: 2026-03-17T21:39:05Z
+status_updated_iso: 2026-03-17T21:55:23Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
