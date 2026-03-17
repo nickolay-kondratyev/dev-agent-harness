@@ -1,11 +1,11 @@
 ---
 id: nid_0v5md2o3evkrt31x57eapl0yc_E
 title: "SIMPLIFY_CANDIDATE: Remove plan validation query endpoint — validate harness-side only"
-status: in_progress
+status: open
 deps: []
 links: []
 created_iso: 2026-03-15T01:14:29Z
-status_updated_iso: 2026-03-17T19:40:34Z
+status_updated_iso: 2026-03-15T01:14:29Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
