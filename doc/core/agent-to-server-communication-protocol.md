@@ -373,7 +373,7 @@ window between spawn and first callback. This is significantly shorter than the 
 `noActivityTimeout` (30 min) because startup failures should be caught fast.
 
 If no callback of any kind arrives within `noStartupAckTimeout` after spawn, the executor
-triggers `NoStartupAckUseCase` → logs a clear error identifying the spawn failure → returns
+triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error identifying the spawn failure → returns
 `PartResult.AgentCrashed`. See [Health Monitoring](../use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
 
@@ -530,7 +530,7 @@ The agent has no reason to re-send `done` — it already did. With retry, the tr
 is resolved locally in the script before the agent ever sees an error.
 
 The same applies to `/signal/started` — without retry, a transient failure during the
-bootstrap handshake causes `NoStartupAckUseCase` to kill the agent after 3 minutes, wasting a
+bootstrap handshake causes `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) to kill the agent after 3 minutes, wasting a
 healthy agent over a momentary HTTP blip.
 
 ---

@@ -205,7 +205,7 @@ while (true) {
             log.info("sending_health_ping",
                 Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME),
                 Val(callbackAge, STALE_DURATION))
-            NoStatusCallbackTimeOutUseCase.execute(sessionEntry)  // sends ping via TMUX
+            AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.NO_ACTIVITY_TIMEOUT)  // sends ping via TMUX
 
             // Wait for ping timeout, then re-check
             signal = awaitSignalWithTimeout(pingTimeout)
@@ -225,7 +225,7 @@ while (true) {
             // No callback → agent is dead
             log.error("crash_detected — no activity after ping",
                 Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
-            NoReplyToPingUseCase.execute(sessionEntry)  // kills TMUX session
+            AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.PING_TIMEOUT)  // kills TMUX session
             return AgentSignal.Crashed(details)
         }
     }
@@ -251,8 +251,7 @@ while (true) {
 
 ### Dependencies (Health Monitoring)
 
-- `NoStatusCallbackTimeOutUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — sends ping via TMUX
-- `NoReplyToPingUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — kills TMUX, provides crash details
+- `AgentUnresponsiveUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — parameterized by `DetectionContext`: sends ping (`NO_ACTIVITY_TIMEOUT`), kills TMUX + provides crash details (`PING_TIMEOUT`, `STARTUP_TIMEOUT`)
 - `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback (sole liveness signal)
 - `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `remaining_percentage` for compaction decisions only (ref.ap.8nwz2AHf503xwq8fKuLcl.E); NOT used for liveness
 

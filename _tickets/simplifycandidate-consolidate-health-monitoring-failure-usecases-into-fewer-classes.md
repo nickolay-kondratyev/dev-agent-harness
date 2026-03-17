@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:46:01Z
 id: nid_9ein5ehx3nqngxs42vk9umr7v_E
 title: "SIMPLIFY_CANDIDATE: Consolidate health monitoring failure UseCases into fewer classes"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:14:40Z
-status_updated_iso: 2026-03-15T01:14:40Z
+status_updated_iso: 2026-03-17T17:46:01Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
