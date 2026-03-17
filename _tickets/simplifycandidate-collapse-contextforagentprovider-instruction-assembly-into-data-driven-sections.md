@@ -1,11 +1,11 @@
 ---
 id: nid_12eb788ddd9frhmdob4s3bxoh_E
 title: "SIMPLIFY_CANDIDATE: Collapse ContextForAgentProvider instruction assembly into data-driven sections"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:31:50Z
-status_updated_iso: 2026-03-17T21:31:50Z
+status_updated_iso: 2026-03-17T21:40:51Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
