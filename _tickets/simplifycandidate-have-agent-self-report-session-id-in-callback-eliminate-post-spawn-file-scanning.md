@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:17:03Z
 id: nid_rchs79r92tshvjb3m2jpudb1f_E
 title: "SIMPLIFY_CANDIDATE: Have agent self-report session ID in callback — eliminate post-spawn file scanning"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:02:14Z
-status_updated_iso: 2026-03-17T22:15:26Z
+status_updated_iso: 2026-03-17T22:17:03Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -51,3 +52,8 @@ Relevant code:
 
 --------------------------------------------------------------------------------
 DECISION: NO. lets document that agents do NOT have their session id in their context. Hence, we need scanning with GUID handshake to find out their session id. This needs to be documented to avoid running into such advice for "simplification"
+## Notes
+
+**2026-03-17T22:17:00Z**
+
+RESOLUTION: Decision documented in specs. Added explicit 'Why Not: Agent Self-Reporting (Rejected — Do Not Revisit)' subsection to doc/use-case/SpawnTmuxAgentSessionUseCase.md and updated doc/high-level.md (Session ID Tracking section + Key Technology Decisions table) to cross-reference the rejected approach. No code changes — spec-only update per task instructions.

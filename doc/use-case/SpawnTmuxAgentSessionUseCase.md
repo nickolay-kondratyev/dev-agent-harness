@@ -245,6 +245,22 @@ Yet the harness needs the session ID for:
 3. **The resolver is NOT internal coupling** — it's the harness extracting externally observable
    artifacts (JSONL files that Claude Code writes). The agent is unaware of the resolver.
 
+#### Why Not: Agent Self-Reporting (Rejected — Do Not Revisit)
+
+**Evaluated as a simplification candidate and rejected.** A natural-seeming optimization is
+to have the agent include its own session ID in the `/callback-shepherd/signal/started`
+(or `/signal/done`) payload, eliminating file scanning entirely. This was explicitly
+evaluated and rejected:
+
+- **Claude Code agents cannot know their own session ID.** There is no API, env var, CLI
+  flag, or file that Claude Code exposes to a running agent to let it discover its own
+  session ID. This was validated empirically, not assumed.
+- **GUID handshake + JSONL scanning is necessary**, not an implementation detail to be
+  optimized away. It exists *because* self-reporting is impossible.
+
+**Do not reopen this as a simplification opportunity.** The complexity lives in the resolver,
+not in an avoidable design choice.
+
 #### Resolution Mechanism (ClaudeCode)
 
 The `ClaudeCodeAgentSessionIdResolver` polls `$HOME/.claude/projects/.../*.jsonl` for files

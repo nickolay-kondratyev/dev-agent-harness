@@ -345,11 +345,17 @@ All of these run in milliseconds with deterministic outcomes.
 ## Session ID Tracking — AgentSessionIdResolver
 
 Claude Code does **not** expose its session ID to the agent from within its own context
-(validated). The `AgentSessionIdResolver` **interface** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
+(validated empirically). The `AgentSessionIdResolver` **interface** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
 abstracts session ID discovery so each agent type can provide its own resolver
 (`ClaudeCodeAgentSessionIdResolver` scans JSONL files; future agent types will differ).
 Session IDs are recorded in `current_state.json` for **inspection and debugging** (V1)
 and **resume** (V2).
+
+**Why not have the agent self-report its session ID?** Evaluated and rejected: Claude Code
+provides no mechanism for a running agent to discover its own session ID (no API, env var,
+or CLI flag). GUID handshake + JSONL scanning is the necessary approach, not an
+over-engineering to simplify away. See the full rationale in
+[SpawnTmuxAgentSessionUseCase — AgentSessionIdResolver: Why Not Self-Reporting](use-case/SpawnTmuxAgentSessionUseCase.md#why-not-agent-self-reporting-rejected--do-not-revisit).
 
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for full details
 on HandshakeGuid, AgentSessionIdResolver (interface rationale, integration testing guidance),
@@ -490,7 +496,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
 | Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
 | Agent start command | **AgentStarter interface** (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) | Different agent types have different CLI invocations. Interface required: each `AgentType` provides its own `AgentStarter` (OCP). V1: `ClaudeCodeAgentStarter`. Agents are spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument** in the CLI command. |
-| Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
+| Session tracking | **AgentSessionIdResolver interface** | Claude Code cannot expose its session ID to the agent (validated empirically — no API, env var, or CLI flag). Agent self-reporting is impossible; GUID handshake + JSONL scanning is the required approach (see [rejected simplification rationale](use-case/SpawnTmuxAgentSessionUseCase.md#why-not-agent-self-reporting-rejected--do-not-revisit)). Interface required: different agent types have different discovery mechanisms (OCP). Session IDs recorded for inspection (V1) + resume (V2). `ClaudeCodeAgentSessionIdResolver` impl scans JSONL files. |
 | Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
