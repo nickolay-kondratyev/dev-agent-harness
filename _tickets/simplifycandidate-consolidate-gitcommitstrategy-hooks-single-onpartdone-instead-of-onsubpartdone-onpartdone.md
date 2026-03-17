@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:37:06Z
 id: nid_etfsnuwx7spgvh8ayj0z12deg_E
 title: "SIMPLIFY_CANDIDATE: Consolidate GitCommitStrategy hooks — single onPartDone instead of onSubPartDone + onPartDone"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:31:32Z
-status_updated_iso: 2026-03-15T01:31:32Z
+status_updated_iso: 2026-03-17T17:37:06Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

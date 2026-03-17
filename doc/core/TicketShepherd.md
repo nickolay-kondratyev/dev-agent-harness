@@ -25,7 +25,7 @@ creates executors for each part, runs them in sequence, and handles the results.
         Planning failures are rare (plan validated via `/callback-shepherd/query/validate-plan`
         ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E before agents signal done). When they happen,
         the human is the right handler — no special recovery logic.
-   d. Kill TMUX sessions for the planning part (`removeAllForPart`), `GitCommitStrategy.onPartDone`
+   d. Kill TMUX sessions for the planning part (`removeAllForPart`)
    e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`.
       Throws `PlanConversionException` on malformed/invalid plan; `TicketShepherd` catches it
       and delegates to `FailedToExecutePlanUseCase(planConversionException)`.
@@ -36,8 +36,7 @@ creates executors for each part, runs them in sequence, and handles the results.
    b. `activeExecutor` = executor
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
-      - `Completed` → kill TMUX sessions for part,
-        `GitCommitStrategy.onPartDone` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), move to next part
+      - `Completed` → kill TMUX sessions for part, move to next part
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention).
       - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase(partResult)` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
@@ -84,7 +83,7 @@ information needed for different cleanup strategies.
   Creates an appropriate `PartExecutor` for each part and calls `execute()`. The executor
   owns the spawn → wait → iterate cycle internally.
 - **Manages part lifecycle** — creates executors, kills TMUX sessions when a part completes
-  (via `AgentFacade`), triggers `GitCommitStrategy` hooks (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+  (via `AgentFacade`). Git commits are handled by the executor via `GitCommitStrategy.onSubPartDone` (see [Git Commit Strategy](git.md) ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
 - **Controls which executor is active** — always holds a single `activeExecutor` reference,
   giving cancellation one place to look. Health monitoring is owned by each executor
   internally via its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).

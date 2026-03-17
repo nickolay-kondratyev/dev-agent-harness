@@ -82,23 +82,16 @@ is preserved in git (ref.ap.56azZbk7lAMll0D4Ot2G0.E — plan-and-current-state i
 
 ## When Commits Happen — GitCommitStrategy
 
-Commit timing is **swappable** via a `GitCommitStrategy` interface. The harness calls the strategy
-at two hook points during workflow execution:
+Commit timing is controlled via a `GitCommitStrategy` interface with a single hook:
 
 | Hook | When it fires |
 |------|---------------|
 | `onSubPartDone` | After a sub-part signals `result` via `/callback-shepherd/signal/done` (before the next sub-part starts or iteration resumes) |
-| `onPartDone` | After a part completes (all sub-parts finished, TMUX sessions killed) |
 
-Each `GitCommitStrategy` implementation decides **which hooks to commit at**. Examples:
-
-| Strategy | `onSubPartDone` | `onPartDone` | Use case |
-|---|---|---|---|
-| `CommitPerSubPart` | ✅ commit | no-op (already committed) | Maximum granularity — every doer completion, every reviewer pass/needs_iteration gets its own commit |
-| `CommitPerPart` | no-op | ✅ commit | Minimal commits — one per completed part |
-
-**V1 default: `CommitPerSubPart`** — preserves full iteration history in git, which is the primary
-reason for harness-owned commits.
+**V1 strategy: `CommitPerSubPart`** — commits after every sub-part done signal. This preserves
+full iteration history in git (every doer completion, every reviewer pass/needs_iteration gets
+its own commit), which is the primary reason for harness-owned commits. The granularity also
+enables auditing agent communication via PUBLIC.md across iterations.
 
 **Empty commit handling:** If `git diff --cached` is empty after `git add -A` (no changes
 since last commit), the commit is **skipped**. This avoids noise from `needs_iteration`
@@ -106,7 +99,7 @@ commits where the reviewer flagged issues but the doer hasn't changed code yet.
 
 ### Hook Context
 
-Both hooks receive sufficient context to build the commit message and author:
+The hook receives sufficient context to build the commit message and author:
 
 - Part name, sub-part name
 - Sub-part role (doer/reviewer)
@@ -241,15 +234,15 @@ A git-specific use case that packages context and delegates to `AutoRecoveryByAg
 
 **Ownership**: The failure handling (catch → recovery → retry → fallback to
 `FailedToExecutePlanUseCase`) is encapsulated within the `GitCommitStrategy` implementation.
-The executor calls `onSubPartDone`/`onPartDone` and either gets a successful commit or a
+The executor calls `onSubPartDone` and either gets a successful commit or a
 `FailedToExecutePlanUseCase` escalation — the executor does not orchestrate the recovery itself.
 
 ### Failure Points Covered
 
 | Git Operation | Where It Happens | Recovery Via |
 |---|---|---|
-| `git add -A` | `GitCommitStrategy.onSubPartDone` / `onPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
-| `git commit` | `GitCommitStrategy.onSubPartDone` / `onPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
+| `git add -A` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
+| `git commit` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
 | `git checkout -b` | `TicketShepherdCreator` (startup) | **Not covered** — startup failures fail hard (no recovery agent). The working tree is validated clean at this point, so `checkout -b` failures indicate a more fundamental issue. |
 
 ---
@@ -261,5 +254,5 @@ The harness performs these git operations during a workflow:
 | When | Operation |
 |---|---|
 | Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
-| `onSubPartDone` / `onPartDone` (per strategy) | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
+| `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
 | Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): delegates to `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — ClaudeCode `--print` with sonnet. Agent reads `.ai_out/` artifacts, generates failure summary, appends to ticket, commits on try branch, and attempts best-effort propagation to originating branch. Non-fatal — agent failure is logged and skipped. |
