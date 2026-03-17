@@ -14,7 +14,7 @@ overloaded in this codebase (`ShepherdContext`, etc.).
 Agents run in isolated TMUX sessions with no shared memory. Their only input is the instruction
 file sent via `send-keys`. Getting the right content into that file — and keeping irrelevant
 content out — is critical for agent effectiveness. The provider centralizes this assembly so
-callers (`SubPartInstructionProvider` implementations) don't need to know the concatenation rules.
+`PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) doesn't need to know the concatenation rules.
 
 ---
 
@@ -417,15 +417,14 @@ This means no cleanup is needed and the full communication is git-tracked alongs
 outputs (`comm/out/PUBLIC.md`).
 
 The provider writes the file and returns its `Path`. The caller
-(`PartExecutor` via `SubPartInstructionProvider`) sends the path to the agent via TMUX `send-keys`.
+(`PartExecutor` ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) sends the path to the agent via TMUX `send-keys`.
 
 ---
 
 ## Ownership and Wiring
 
 - **Created by** `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
-- **Used by** `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) implementations —
-  called by `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) during instruction assembly
+- **Used by** `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) directly during instruction assembly
 - **Depends on**: `.ai_out/` directory schema (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for path resolution
 
 ---

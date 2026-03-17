@@ -92,8 +92,8 @@ information needed for different cleanup strategies.
 
 - Does **not** interpret `/callback-shepherd/signal/done` results directly — the server completes
   the `signalDeferred` on `SessionEntry`, and the executor reads the `AgentSignal`.
-- Does **not** assemble agent instructions — delegates to `SubPartInstructionProvider`
-  (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) via the executor.
+- Does **not** assemble agent instructions — delegates to `ContextForAgentProvider`
+  (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) via the executor.
 - Does **not** run the planning iteration loop itself — delegates to a planning
   `PartExecutorImpl` (with reviewer) created by `DetailedPlanningUseCase`
   (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E).

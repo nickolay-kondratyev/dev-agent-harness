@@ -31,19 +31,19 @@ Creates a `PartExecutorImpl` (with reviewer) configured for the planning phase:
 |--------|-------|
 | Doer role | `PLANNER` |
 | Reviewer role | `PLAN_REVIEWER` |
-| `SubPartInstructionProvider` | Planning-specific implementation (see below) |
+| `ContextForAgentProvider` | Shared provider — executor calls planner/plan-reviewer methods directly (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) |
 | Iteration semantics | Same as execution parts — reviewer signals `pass` or `needs_iteration` |
 
-### Planning SubPartInstructionProvider
+### Planning Instruction Assembly
 
-A planning-specific implementation of `SubPartInstructionProvider`
-(ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) that wraps `ContextForAgentProvider`
-(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) planner/plan-reviewer methods:
+The planning executor uses `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) directly —
+the same provider used by execution executors. The executor calls the appropriate method based on
+the sub-part role:
 
-| Method | Delegates to | Content |
-|--------|-------------|---------|
-| `assembleDoerInstructions()` | `ContextForAgentProvider` planner assembly | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
-| `assembleReviewerInstructions()` | `ContextForAgentProvider` plan-reviewer assembly | Ticket + `plan.json` from `harness_private/` + review criteria |
+| Sub-Part | Provider Method | Content |
+|----------|----------------|---------|
+| PLANNER (doer) | `assemblePlannerInstructions()` | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
+| PLAN_REVIEWER (reviewer) | `assemblePlanReviewerInstructions()` | Ticket + `plan.json` from `harness_private/` + review criteria |
 
 ---
 
@@ -86,5 +86,5 @@ This means:
 - Same health monitoring (timeout → ping → crash detection)
 - Same `PartResult` outcomes (`Completed`, `FailedWorkflow`, `FailedToConverge`, `AgentCrashed`)
 
-The only difference is the instruction content (assembled by the planning-specific
-`SubPartInstructionProvider`).
+The only difference is the instruction content (the executor calls `ContextForAgentProvider`'s
+planner/plan-reviewer methods instead of the execution doer/reviewer methods).
