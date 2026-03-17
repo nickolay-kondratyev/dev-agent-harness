@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:31:36Z
 id: nid_2fjt9y0umyucxnzsmmnu08vip_E
 title: "SIMPLIFY_CANDIDATE: Extract HealthAwareSignalAwaiter from PartExecutor"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:53Z
-status_updated_iso: 2026-03-15T01:03:53Z
+status_updated_iso: 2026-03-17T17:31:36Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -51,3 +52,9 @@ The PartExecutor calls `awaiter.awaitSignal(handle, config)` and gets back an Ag
 ## Risk
 - Low: This is a pure extraction refactor. No behavior changes. The await loop interface is clean (session in, signal out). The PartExecutor already treats the await as a black box conceptually — this just makes it a literal black box.
 
+
+## Notes
+
+**2026-03-17T17:31:45Z**
+
+Closed as no-longer-needed. Recent simplifications (drop dual-signal liveness model, eliminate late-fail-workflow checkpoint) already reduced PartExecutor complexity significantly. The remaining health-aware await loop is ~60 lines of clean linear pseudocode. Extraction would redistribute complexity rather than eliminate it — especially problematic given emergency compaction changes sessions mid-await, requiring the extracted component to take most of the executor's dependencies. Poor ROI.
