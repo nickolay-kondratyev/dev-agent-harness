@@ -442,6 +442,11 @@ strategy produces one commit per sub-part signal.
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
   in the health-aware await loop. Production: `SystemClock`. Tests: `TestClock` with virtual time.
+- `HarnessTimeoutConfig` (`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — all
+  timeout and threshold constants (`startupAckTimeout`, `healthCheckInterval`, `noActivityTimeout`,
+  `pingTimeout`, `payloadAckTimeout`, `payloadAckRetries`, `selfCompactionTimeout`,
+  `contextWindowSoftThresholdPct`, `contextWindowHardThresholdPct`). Injected from
+  `ShepherdContext.timeoutConfig`; tests pass `HarnessTimeoutConfig.forTests()` for fast timeouts.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 

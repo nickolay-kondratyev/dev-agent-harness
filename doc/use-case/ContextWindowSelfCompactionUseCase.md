@@ -612,16 +612,17 @@ strategies:
 
 ### V1: Global Defaults
 
-| Threshold | Default | Meaning |
-|-----------|---------|---------|
-| `SELF_COMPACTION_SOFT_THRESHOLD` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
-| `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
-| `SELF_COMPACTION_TIMEOUT` | 5 min | Max time for agent to write PRIVATE.md and signal |
+| Threshold | `HarnessTimeoutConfig` field | Default | Meaning |
+|-----------|------------------------------|---------|---------|
+| `SELF_COMPACTION_SOFT_THRESHOLD` | `contextWindowSoftThresholdPct` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
+| `SELF_COMPACTION_HARD_THRESHOLD` | `contextWindowHardThresholdPct` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
+| `SELF_COMPACTION_TIMEOUT` | `selfCompactionTimeout` | 5 min | Max time for agent to write PRIVATE.md and signal |
 | ~~`contextFileStaleTimeout`~~ | ~~5 min~~ | **Removed.** Previously gated `remaining_percentage` freshness and dual-signal early ping. With the simplified liveness model (HTTP callbacks only — ref.ap.dnc1m7qKXVw2zJP8yFRE.E), `remaining_percentage` is always trusted when the file is present. The `validatePresence()` call after spawn (see below) catches hook misconfiguration. If the hook stops mid-session, `remaining_percentage` freezes — worst case, the compaction check acts on stale data, which is a benign failure mode (either compaction triggers on an already-dead agent, which is harmless, or it doesn't trigger and the agent runs out of context, which health monitoring eventually catches via callback staleness). |
 
-**Centralized constants:** All threshold values MUST be defined as named constants in a single
-location (e.g., `CompactionThresholds` object) — never as magic numbers in the codebase. This
-makes tuning easy: one place to adjust, one place to review.
+**Centralized constants:** All threshold values are fields of `HarnessTimeoutConfig`
+(`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — never as magic numbers in the
+codebase. Injected via `ShepherdContext.timeoutConfig`; tests use `HarnessTimeoutConfig.forTests()`
+for fast timeouts. One place to tune, one place to review.
 
 Configured via environment variables or harness config. Not per-sub-part in V1.
 
