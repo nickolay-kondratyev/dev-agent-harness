@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T20:34:28Z
 id: nid_42opcvts7o5uhqux83dqoh9t1_E
 title: "SIMPLIFY_CANDIDATE: Remove feedback file movement — use in-file markers as sole source of truth"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:44Z
-status_updated_iso: 2026-03-17T20:32:30Z
+status_updated_iso: 2026-03-17T20:34:28Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -45,5 +46,19 @@ Files affected:
 --------------------------------------------------------------------------------
 DECISION:
 LETS keep the harness moving the files, lets add documentation on the WHY this is the case is so it'
-s easier to track what is happening between the files 
+s easier to track what is happening between the files
 
+## Resolution
+
+**Decision: Keep file movement. Added WHY documentation.**
+
+The proposal to remove file movement was evaluated and declined. File movement provides
+**observability benefits** that markers alone cannot:
+
+1. `ls pending/` / `ls addressed/` / `ls rejected/` = instant state dashboard, zero parsing
+2. `git log` shows file renames that map 1:1 to state transitions — auditable without inspecting content
+3. Markers remain the canonical source of truth for harness logic; directories are deliberate redundancy for humans
+
+**Changes made:**
+- `doc/plan/granular-feedback-loop.md` — D6: added "Why move files at all" rationale paragraph
+- `doc/schema/ai-out-directory.md` — `__feedback/` section: added same observability rationale

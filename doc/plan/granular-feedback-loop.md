@@ -108,6 +108,15 @@ to move). The harness is a Kotlin program that will reliably move a file. Shifti
 to the reliable actor eliminates an entire class of failure modes and their associated
 validation/retry/crash paths.
 
+**Why move files at all (not just use markers)?** The `## Resolution` marker is the source of
+truth for harness logic — that's what determines the outcome. The directory movement is a
+**deliberate redundancy for observability**: `ls pending/` instantly shows what's unresolved,
+`ls addressed/` shows what's done, `ls rejected/` shows what was rejected. Without movement,
+a human debugging a stuck feedback loop must open every file and scan for markers. With movement,
+directory listings ARE the state dashboard — zero parsing required. Additionally, `git log`
+shows file renames that map 1:1 to state transitions, making the feedback lifecycle auditable
+in version history without inspecting file contents.
+
 ### D7: Rejection negotiation — bounded at 1 round, resolved at point of contention
 
 **Decided: At most 1 round of disagreement per item. Reviewer is authority.**
