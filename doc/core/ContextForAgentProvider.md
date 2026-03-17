@@ -23,60 +23,75 @@ callers (`SubPartInstructionProvider` implementations) don't need to know the co
 ```kotlin
 interface ContextForAgentProvider {
 
-    /**
-     * Assembles instruction file for an execution agent (doer or reviewer).
-     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
-     * Returns the path to the written file.
-     */
-    suspend fun assembleExecutionAgentInstructions(request: ExecutionAgentInstructionRequest): Path
+    /** Assembles instruction file for a doer execution agent. */
+    suspend fun assembleDoerInstructions(request: DoerInstructionRequest): Path
 
-    /**
-     * Assembles instruction file for the PLANNER agent.
-     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
-     * Returns the path to the written file.
-     */
+    /** Assembles instruction file for a reviewer execution agent. */
+    suspend fun assembleReviewerInstructions(request: ReviewerInstructionRequest): Path
+
+    /** Assembles instruction file for the PLANNER agent. */
     suspend fun assemblePlannerInstructions(request: PlannerInstructionRequest): Path
 
-    /**
-     * Assembles instruction file for the PLAN_REVIEWER agent.
-     * Writes to the sub-part's comm/in/instructions.md in .ai_out/.
-     * Returns the path to the written file.
-     */
+    /** Assembles instruction file for the PLAN_REVIEWER agent. */
     suspend fun assemblePlanReviewerInstructions(request: PlanReviewerInstructionRequest): Path
 }
 ```
 
-Three methods, not one generic method. Each agent type has different content needs, and the
-type system should make that explicit. No `when(agentKind)` branching inside a single method.
+Four methods — one per role. Each agent type has different content needs, and the type system
+makes that explicit. No boolean flags, no `when(agentKind)` branching inside a single method.
+Each request type carries only the fields relevant to its role (e.g., `feedbackDir` only on
+`ReviewerInstructionRequest`, `reviewerPublicMdPath` only on `DoerInstructionRequest`).
 
 ---
 
 ## Instruction File Content — By Agent Type
 
-### Execution Agent (Doer / Reviewer) — ap.5N6TJ1MKDHCG01cJwTMFk.E
+Each role has a dedicated template method (`buildDoerSections`, `buildReviewerSections`, etc.)
+that reads linearly with no role-dispatching conditionals. The only conditionals within a
+template are state-dependent (e.g., `iterationNumber > 1`).
 
-Concatenation order:
+### Doer — ap.5N6TJ1MKDHCG01cJwTMFk.E
+
+Concatenation order (via `assembleDoerInstructions` / `DoerInstructionRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
-| 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing and what that part is about. Essential for multi-part workflows where the ticket describes the whole task but this agent handles one piece. |
+| 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
 | 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
 | 4 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | May be empty on first agent. Agent can modify it. |
-| 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — big picture context. Only present for `with-planning` workflows. |
+| 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
 | 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
-| 7 | **Iteration context** (reviewer only) | Doer's current `PUBLIC.md` for this part + structured feedback format + WHY-NOT guidance | The artifact being reviewed. Reviewer must follow structured feedback format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) on `needs_iteration` and suggest WHY-NOT placements (ref.ap.kmiKk7vECiNSpJjAXYMyE.E). |
-| 7a | **Addressed feedback** (reviewer, iteration > 1) | `__feedback/addressed/*.md` | What the doer addressed — each file contains the doer's `## Resolution: ADDRESSED` with implementation notes. Verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
-| 7b | **Rejected feedback** (reviewer, iteration > 1) | `__feedback/rejected/*.md` | Items where the reviewer previously accepted the doer's rejection reasoning. Review if still appropriate given new changes. |
-| 7c | **Remaining optional feedback** (reviewer, iteration > 1) | `__feedback/pending/optional__*.md` | Optional items the doer chose to skip — reviewer can accept or write new critical/important items if the skip was wrong. |
-| 7d | **Feedback writing instructions** (reviewer) | Static text | How to write new feedback files to `__feedback/pending/` with severity filename prefix (`critical__`, `important__`, `optional__`). One file per issue. |
-| 8 | **Iteration feedback** (doer on iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance + WHY-NOT protocol | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback) and [WHY-NOT Protocol](#why-not-comments-protocol--apkmikk7vecinsppjjaxymyee). |
-| 8a | **Per-feedback-item instructions** (doer, inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Doer receives one item at a time. Writes `## Resolution: ADDRESSED` or `## Resolution: REJECTED` in the feedback file; harness handles file movement. |
-| 8b | **WHY-NOT reminder** (doer, all iterations) | Static text | Brief reminder to place WHY-NOT comments when discovering dead-end approaches. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
+| 8 | **Iteration feedback** (iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback). |
+| 8a | **Per-feedback-item instructions** (inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
+| 8b | **WHY-NOT reminder** (all iterations) | Static text | Brief reminder to place WHY-NOT comments. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
 | 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
-| 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, review verdicts. No duplication of plan/SHARED_CONTEXT.md content. |
-| 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base: codebase discoveries, anchor points of interest, cross-cutting constraints, patterns observed. Mutable — update in place, don't append duplicates. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
-| 12 | **Callback script usage** | Static help text (signal + query scripts), wrapped in `<critical_to_keep_through_compaction>` | Survives Claude Code context compaction |
+| 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done. |
+| 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
+| 12 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done completed` for doers |
+
+### Reviewer
+
+Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRequest`):
+
+| # | Section | Source | Notes |
+|---|---------|--------|-------|
+| 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
+| 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
+| 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
+| 4 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | May be empty on first agent. Agent can modify it. |
+| 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
+| 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
+| 7 | **Doer output for review** | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
+| 7 | **Structured feedback format** | Static text | Reviewer must follow structured feedback format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) on `needs_iteration` |
+| 7a | **Addressed feedback** (iteration > 1) | `__feedback/addressed/*.md` | What the doer addressed. Verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
+| 7b | **Rejected feedback** (iteration > 1) | `__feedback/rejected/*.md` | Items where the reviewer previously accepted rejection reasoning. |
+| 7c | **Remaining optional feedback** (iteration > 1) | `__feedback/pending/optional__*.md` | Optional items the doer chose to skip. |
+| 7d | **Feedback writing instructions** | Static text | How to write new feedback files to `__feedback/pending/` with severity filename prefix. |
+| 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
+| 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, review verdicts. |
+| 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
+| 12 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done pass` and `done needs_iteration` for reviewers |
 
 ### Planner
 
