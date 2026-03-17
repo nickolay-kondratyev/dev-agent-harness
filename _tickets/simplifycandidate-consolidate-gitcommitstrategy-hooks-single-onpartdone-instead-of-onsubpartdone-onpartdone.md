@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, git, commit-strategy]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Current State
 Git spec (doc/core/git.md) defines GitCommitStrategy with two hooks:
 - onSubPartDone: commits after each sub-part completes
@@ -38,4 +40,16 @@ Single hook: onPartDone. Commits only at part boundaries. Remove onSubPartDone e
 
 ## Spec references
 - doc/core/git.md (GitCommitStrategy interface, commit message convention)
+
+DECISION
+--------------------------------------------------------------------------------
+## Decision: keep onSubPartDone
+KEEP onSubPartDone
+
+The reason why is that early ON (starting strategy) we will want to commit on each onSubPartDone so that we can audit the communication between the agents. As we are starting with PUBLIC.md being overridden.
+
+However, once we get going we could switch to just onPartDone. 
+
+SO to KISS for V1 lets have onSubPartDone implementation WITHOUT onPartDone yet. And commit per onSubPartDone
+
 
