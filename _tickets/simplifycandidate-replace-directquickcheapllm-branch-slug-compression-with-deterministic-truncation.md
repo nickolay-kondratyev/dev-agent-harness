@@ -1,11 +1,11 @@
 ---
 id: nid_xqmr7spyvat0g24ax7o22lepm_E
 title: "SIMPLIFY_CANDIDATE: Replace DirectQuickCheapLLM branch-slug compression with deterministic truncation"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:21Z
-status_updated_iso: 2026-03-17T21:32:21Z
+status_updated_iso: 2026-03-17T22:00:40Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
