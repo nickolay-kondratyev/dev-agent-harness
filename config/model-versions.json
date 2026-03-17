@@ -1,0 +1,8 @@
+{
+  "modelVersions": {
+    "sonnet": "4.6",
+    "opus": "4.1",
+    "glm-5": "1.0",
+    "glm-4.7-flash": "1.0"
+  }
+}

@@ -155,7 +155,7 @@ CC_opus-v4.1_WITH-nickolaykondratyev
 |---|---|
 | `CODING_AGENT` | Short code derived from `agentType` in the session record. Mapping: `ClaudeCode` → `CC`, `PI` → `PI`. |
 | `CODING_MODEL` | `model` field from the session record (e.g., `sonnet`, `opus`, `glm-5`) |
-| `VERSION_OF_MODEL` | Resolved from `${MODEL_VERSION_DIR}/${model}` file (see [Model Version Resolution](#model-version-resolution)) |
+| `VERSION_OF_MODEL` | Resolved from `config/model-versions.json` (see [Model Version Resolution](#model-version-resolution)) |
 | `HOST_USERNAME` | `${HOST_USERNAME}` environment variable |
 
 **Commit email stays as-is** — uses whatever is configured in the git config for the repo.
@@ -165,21 +165,33 @@ Only the author name is overridden per commit (via `git commit --author`).
 
 ## Model Version Resolution
 
-Model versions are resolved from files on disk, not hardcoded.
+Model versions are resolved from a structured JSON config file checked into the repo.
 
-**Directory**: `${MODEL_VERSION_DIR}` environment variable points to a directory containing one file
-per model. Each file is named after the model and contains the version string (no newline padding).
+**Config file**: `config/model-versions.json` — a single JSON file mapping model names to version
+strings. Located in the repo itself — no external directories, no environment variables.
 
+```json
+{
+  "modelVersions": {
+    "sonnet": "4.6",
+    "opus": "4.1",
+    "glm-5": "1.0",
+    "glm-4.7-flash": "1.0"
+  }
+}
 ```
-${MODEL_VERSION_DIR}/
-├── sonnet          # contains: 4.6
-├── opus            # contains: 4.1
-├── glm-5           # contains: 1.0
-└── glm-4.7-flash   # contains: 1.0
-```
 
-**Lookup**: The `model` field from the session record (e.g., `"sonnet"`) is used as the filename.
-If the file does not exist → fail hard with a clear error naming the missing file.
+**Lookup**: The `model` field from the session record (e.g., `"sonnet"`) is used as the key in
+the `modelVersions` map. If the key does not exist → fail hard with a clear error naming the
+missing model.
+
+**Loading**: The config file is read **once at harness initialization** (not on every commit).
+If the file is missing or malformed → fail hard at startup with a clear error.
+
+**Why JSON config over file-per-model directory**: Eliminates the `MODEL_VERSION_DIR` env var,
+removes file I/O at commit time, prevents "file not found" and "wrong content" failure classes,
+and co-locates all model versions in a single version-controlled file. Can be updated without
+recompilation.
 
 ---
 
@@ -191,7 +203,6 @@ immediately with a clear error message if any is missing.
 | Env var | Purpose | Validated at |
 |---|---|---|
 | `HOST_USERNAME` | Identifies the human operator in commit author attribution | Initialization |
-| `MODEL_VERSION_DIR` | Directory containing model version files for commit author attribution | Initialization |
 | `TICKET_SHEPHERD_AGENTS_DIR` | Directory containing agent role definition `.md` files (ref.ap.Q7kR9vXm3pNwLfYtJ8dZs.E). Must point to `_config/agents/_generated/`. | Initialization |
 | `MY_ENV` | Root directory for environment-specific configuration. System prompt files resolved relative to this path. Must contain `config/claude/ai_input/system_prompt/for_planning.md` and `config/claude/ai_input/system_prompt/default.md`. See [System Prompt File Resolution](../use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). | Initialization |
 
