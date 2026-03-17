@@ -1,11 +1,11 @@
 ---
 id: nid_fh3cqdak5erqyxp748a8f135i_E
 title: "SIMPLIFY_CANDIDATE: Inline StraightforwardPlanUseCase into SetupPlanUseCase — eliminate near-empty class"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:41:41Z
-status_updated_iso: 2026-03-17T23:41:41Z
+status_updated_iso: 2026-03-17T23:48:16Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
