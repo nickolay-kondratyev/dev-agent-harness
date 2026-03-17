@@ -91,7 +91,7 @@ shepherd run --workflow <name> --ticket <path> --iteration-max <N>
   - `status` must be `in_progress` — fail hard otherwise (see Hard Constraints).
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
-- `--iteration-max` **(required)**: default iteration budget for reviewer sub-parts. The planner uses this value when generating `plan.json`. For `straightforward` workflows, this overrides `iteration.max` in the static workflow JSON. The user can further override at runtime via `FailedToConvergeUseCase`.
+- `--iteration-max` **(required)**: default iteration budget for reviewer sub-parts. The planner uses this value when generating `plan_flow.json`. For `straightforward` workflows, this overrides `iteration.max` in the static workflow JSON. The user can further override at runtime via `FailedToConvergeUseCase`.
 
 ### Startup — Initializer
 
@@ -370,7 +370,7 @@ contract.
 
 See:
 - [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) — `.ai_out/` directory tree, scoping rules, cross-agent visibility via ContextForAgentProvider
-- [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) — unified parts/sub-parts schema, `plan.json` / `current_state.json` lifecycle, iteration semantics, session ID storage
+- [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) — unified parts/sub-parts schema, `plan_flow.json` / `current_state.json` lifecycle, iteration semantics, session ID storage
 
 **Key points:**
 - **JSON** under `./config/workflows/`. **Jackson + Kotlin module** for serialization.
@@ -389,7 +389,7 @@ A [`ContextForAgentProvider`](core/ContextForAgentProvider.md) (ref.ap.9HksYVzl1
 interface is responsible for assembling instruction files for agents:
 - Execution agent instructions (role def + ticket + PLAN.md + prior PUBLIC.md files + callback script usage)
 - Planner instructions (ticket + role catalog + plan format instructions)
-- PLAN_REVIEWER instructions (includes `plan.json` from `harness_private/`)
+- PLAN_REVIEWER instructions (includes `plan_flow.json` from `harness_private/`)
 
 ### Role Catalog — Auto-Discovered
 <!-- ap.iF4zXT5FUcqOzclp5JVHj.E -->
@@ -433,7 +433,7 @@ which model (`model`) to use are **workflow-level decisions**, not role-level pr
 
 | Workflow type | Who assigns `agentType` + `model`? | Where it lives |
 |---|---|---|
-| `with-planning` | **Planner agent** — assigns per sub-part in `plan.json` | `plan.json` → `current_state.json` |
+| `with-planning` | **Planner agent** — assigns per sub-part in `plan_flow.json` | `plan_flow.json` → `current_state.json` |
 | `straightforward` | **Static workflow JSON** — specified per sub-part | `config/workflows/*.json` → `current_state.json` |
 
 This design supports varying agents across sub-parts (e.g., ClaudeCode-opus for planning,

@@ -136,10 +136,10 @@ Concatenation order (via `AgentRole.REVIEWER` / `UnifiedInstructionRequest`):
 | 2 | **Ticket** | The ticket markdown file | |
 | 3 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
 | 4 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
-| 5 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
+| 5 | **Plan format instructions** | Static text — JSON schema for `plan_flow.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
 | 6 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
-| 7 | **plan.json output path** | `harness_private/plan.json` (absolute path) | |
-| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
+| 7 | **plan_flow.json output path** | `harness_private/plan_flow.json` (absolute path) | Strict workflow definition — harness-consumed. |
+| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable implementation guide (clarified requirements, tradeoffs, architecture constraints, file paths) — fed to implementor sub-parts with `loadsPlan: true`. |
 | 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 11 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done completed` |
@@ -150,7 +150,7 @@ Concatenation order (via `AgentRole.REVIEWER` / `UnifiedInstructionRequest`):
 |---|---------|--------|-------|
 | 1 | **Role definition** | PLAN_REVIEWER role file from `$TICKET_SHEPHERD_AGENTS_DIR` | |
 | 2 | **Ticket** | The ticket markdown file | |
-| 3 | **plan.json content** | Read from `harness_private/plan.json` | Injected by provider — not in `shared/` |
+| 3 | **plan_flow.json content** | Read from `harness_private/plan_flow.json` | Injected by provider — not in `shared/` |
 | 4 | **PLAN.md content** | Read from `shared/plan/PLAN.md` | |
 | 5 | **Available agent types & models** | Same as planner receives | Reference for validating planner's `agentType` + `model` assignments |
 | 6 | **Planner's PUBLIC.md** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale |
@@ -187,11 +187,11 @@ Each logical content block is one `InstructionSection` subtype:
 | `FeedbackItem` | Single feedback file + resolution instructions — doer inner-loop only (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
 | `RoleCatalog` | All role definitions (name + description) — planner only |
 | `AvailableAgentTypes` | Supported agent types + models — planner and plan-reviewer |
-| `PlanFormatInstructions` | JSON schema for `plan.json` — planner only |
+| `PlanFormatInstructions` | JSON schema for `plan_flow.json` — planner only |
 | `PlannerFeedback` | Plan reviewer's PUBLIC.md — planner, iteration > 1 |
-| `PlanJsonOutputPath` | Absolute path to `harness_private/plan.json` — planner only |
+| `PlanFlowJsonOutputPath` | Absolute path to `harness_private/plan_flow.json` — planner only |
 | `PlanMdOutputPath` | Absolute path to `shared/plan/PLAN.md` — planner only |
-| `PlanJsonContent` | Read `harness_private/plan.json` — plan-reviewer only |
+| `PlanFlowJsonContent` | Read `harness_private/plan_flow.json` — plan-reviewer only |
 | `PlanMdContent` | Read `shared/plan/PLAN.md` — plan-reviewer only |
 | `PlannerPublicMd` | Planner's PUBLIC.md — plan-reviewer only |
 | `PlanReviewerPriorFeedback` | Plan reviewer's own prior PUBLIC.md — plan-reviewer, iteration > 1 |
@@ -214,10 +214,10 @@ Reviewer:     [RoleDefinition, PartContext, Ticket, PlanMd, PriorPublicMd,
 
 Planner:      [RoleDefinition, Ticket, RoleCatalog, AvailableAgentTypes,
                PlanFormatInstructions, PlannerFeedback,
-               PlanJsonOutputPath, PlanMdOutputPath, PublicMdOutputPath,
+               PlanFlowJsonOutputPath, PlanMdOutputPath, PublicMdOutputPath,
                WritingGuidelines, CallbackHelp]
 
-PlanReviewer: [RoleDefinition, Ticket, PlanJsonContent, PlanMdContent,
+PlanReviewer: [RoleDefinition, Ticket, PlanFlowJsonContent, PlanMdContent,
                AvailableAgentTypes, PlannerPublicMd, PlanReviewerPriorFeedback,
                PublicMdOutputPath, WritingGuidelines, CallbackHelp]
 ```
