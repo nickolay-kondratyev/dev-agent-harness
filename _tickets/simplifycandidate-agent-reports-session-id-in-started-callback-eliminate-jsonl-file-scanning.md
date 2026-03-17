@@ -46,3 +46,5 @@ The agent knows its own session ID — let it report it directly.
 - `doc/use-case/SpawnTmuxAgentSessionUseCase.md`
 - `doc/core/agent-to-server-communication-protocol.md`
 
+## WHY-NOT
+Agents do not have access to session id.

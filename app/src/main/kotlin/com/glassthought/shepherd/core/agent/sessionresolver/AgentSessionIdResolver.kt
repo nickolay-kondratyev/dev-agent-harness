@@ -11,6 +11,16 @@ import com.asgard.core.annotation.AnchorPoint
  *
  * See ref.ap.7sZveqPcid5z1ntmLs27UqN6.E for TmuxSession (the caller context).
  * See ref.ap.gCgRdmWd9eTGXPbHJvyxI.E for the ClaudeCodeAgentSessionIdResolver implementation.
+ *
+ * ## Why?
+ * ### Why do we need it
+ * We need it to be able to record the session ID in v2 we can add resumes with using this.
+ * In V1 we can at least manually inspect the session so we do not lose the observability.
+ *
+ * ### Why this way?
+ * Main alternative would have been to ask the agent to report the session ID. However, it appears
+ * that Claude Code does not have access to the session ID itself. Hence, this additional
+ * side resolver.
  */
 @AnchorPoint("ap.D3ICqiFdFFgbFIPLMTYdoyss.E")
 interface AgentSessionIdResolver {
