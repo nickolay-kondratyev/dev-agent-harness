@@ -1,11 +1,11 @@
 ---
 id: nid_a8n55s2p9qiz4xwkea7tg1baa_E
 title: "SIMPLIFY_CANDIDATE: Replace model version file-reading with structured config"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:34Z
-status_updated_iso: 2026-03-15T01:03:34Z
+status_updated_iso: 2026-03-17T20:47:59Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
