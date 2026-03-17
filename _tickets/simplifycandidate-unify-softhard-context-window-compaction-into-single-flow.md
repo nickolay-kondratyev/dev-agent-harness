@@ -1,11 +1,11 @@
 ---
 id: nid_agxosk4u7c6kwe7eoi9ke32rw_E
 title: "SIMPLIFY_CANDIDATE: Unify soft/hard context window compaction into single flow"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:01Z
-status_updated_iso: 2026-03-15T01:03:01Z
+status_updated_iso: 2026-03-17T20:49:28Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
