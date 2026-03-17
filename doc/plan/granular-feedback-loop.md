@@ -260,14 +260,15 @@ NEEDS_ITERATION) gains an inner loop:
       Validate: at least one file exists in __feedback/pending/
       ├─ If files exist → proceed to inner loop
       └─ If empty → reviewer said needs_iteration but wrote no feedback files.
-         Re-instruct reviewer: "You signaled needs_iteration but wrote no feedback files
-         to __feedback/pending/. Write individual feedback files (one per issue) with
-         severity prefix, then re-signal needs_iteration."
-         ├─ Await reviewer re-signal (one retry)
-         ├─ On needs_iteration with files → proceed to inner loop
-         ├─ On needs_iteration with still no files → PartResult.AgentCrashed(
+         ReInstructAndAwait.execute(reviewerHandle, message) [ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E]
+         message: "You signaled needs_iteration but wrote no feedback files
+                   to __feedback/pending/. Write individual feedback files (one per issue)
+                   with severity prefix, then re-signal needs_iteration."
+         ├─ On Responded(needs_iteration) with files → proceed to inner loop
+         ├─ On Responded(needs_iteration) with still no files → PartResult.AgentCrashed(
          │   "Reviewer signaled needs_iteration twice without writing feedback files")
-         └─ On pass → proceed to step 3 (reviewer changed its mind)
+         ├─ On Responded(pass) → proceed to step 3 (reviewer changed its mind)
+         └─ On Crashed/FailedWorkflow → propagate immediately
    f. ── INNER FEEDBACK LOOP ──
       │
       ├─ List files in pending/ matching critical__* (sorted by filename)
@@ -299,11 +300,12 @@ NEEDS_ITERATION) gains an inner loop:
 PROCESS_FEEDBACK_ITEM(file):
     ├─ Self-compaction check at done boundary (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
     ├─ Assemble doer instructions with THIS ONE feedback item
-    ├─ Deliver via AckedPayloadSender to existing doer session (re-instruction pattern)
-    ├─ Await doer done signal (health-aware await loop)
+    ├─ ReInstructAndAwait.execute(doerHandle, instructions) [ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E]
+    │   └─ On Crashed/FailedWorkflow → propagate immediately
     ├─ PUBLIC.md validation (shallow — exists, non-empty)
     ├─ Read ## Resolution marker from feedback file
-    │   ├─ Missing marker → re-instruct doer (one retry, then AgentCrashed)
+    │   ├─ Missing marker → ReInstructAndAwait.execute(doerHandle, "write marker")
+    │   │                    (one retry, then AgentCrashed)
     │   ├─ ADDRESSED → harness moves file to addressed/, GitCommitStrategy.onSubPartDone
     │   └─ REJECTED → REJECTION_NEGOTIATION(file)
     └─ (next file)
@@ -313,11 +315,11 @@ PROCESS_FEEDBACK_ITEM(file):
 
 ```
 REJECTION_NEGOTIATION(file):
-    ├─ Send rejection + doer's reasoning to reviewer (idle session, re-instruction pattern)
-    │   "The implementor rejected this feedback item. Review the reasoning below
-    │    and decide: accept the rejection (done pass) or insist (done needs_iteration)
-    │    with counter-reasoning."
-    ├─ Await reviewer done signal
+    ├─ ReInstructAndAwait.execute(reviewerHandle, message) [ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E]
+    │   message: "The implementor rejected this feedback item. Review the reasoning below
+    │             and decide: accept the rejection (done pass) or insist (done needs_iteration)
+    │             with counter-reasoning."
+    │   └─ On Crashed/FailedWorkflow → propagate immediately
     │
     ├─ if reviewer signals PASS:
     │   └─ Reviewer accepts rejection → harness moves file to rejected/
@@ -325,11 +327,12 @@ REJECTION_NEGOTIATION(file):
     │
     └─ if reviewer signals NEEDS_ITERATION:
         └─ Reviewer insists → doer MUST comply (reviewer is authority).
-           Send to doer: "Reviewer insists this must be addressed. Their reasoning:
-           <reviewer's counter-reasoning from PUBLIC.md>.
-           You MUST address this item. Write '## Resolution: ADDRESSED' with your
-           implementation notes."
-           Await doer done → validate ADDRESSED (AgentCrashed if still REJECTED)
+           ReInstructAndAwait.execute(doerHandle, message) [ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E]
+           message: "Reviewer insists this must be addressed. Their reasoning:
+                     <reviewer's counter-reasoning from PUBLIC.md>.
+                     You MUST address this item. Write '## Resolution: ADDRESSED'."
+           On Responded → validate ADDRESSED (AgentCrashed if still REJECTED)
+           On Crashed/FailedWorkflow → propagate immediately
            Harness moves to addressed/ → return
 ```
 
@@ -339,8 +342,9 @@ REJECTION_NEGOTIATION(file):
 - **Uses existing signals:** Reviewer uses `done pass` (accept) or `done needs_iteration` (insist).
   No protocol extension needed.
 - **Self-compaction friendly:** Each negotiation step is a done boundary.
-- **Uses existing infrastructure:** Both sessions are already alive. The re-instruction pattern
-  (`sendPayloadWithAck` to existing session) handles delivery to the idle session.
+- **Uses `ReInstructAndAwait`** (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E): Both sessions are already
+  alive. `ReInstructAndAwait` handles deferred reset, `sendPayloadWithAck` delivery, and
+  health-aware await — one call per step instead of hand-rolled plumbing.
 
 ### Connection to Self-Compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
 
@@ -484,7 +488,8 @@ On reviewer PASS:
 - Feed ONE feedback file at a time to the doer via re-instruction pattern
 - Doer signals `done completed` after each item
 - Harness reads `## Resolution:` marker from feedback file after doer's `done`
-- Missing marker → re-instruct doer (one retry, then AgentCrashed)
+- Missing marker → re-instruct doer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
+  (one retry, then AgentCrashed)
 - `ADDRESSED` → harness moves file to `addressed/`
 - `REJECTED` → triggers rejection negotiation (R5)
 - Optional items: doer can skip (writes `## Resolution: ADDRESSED` noting skip)
@@ -512,7 +517,8 @@ On reviewer PASS:
 - When doer writes `## Resolution: REJECTED`, harness sends rejection + reasoning to reviewer
 - Reviewer signals `done pass` (accept rejection) or `done needs_iteration` (insist)
 - If reviewer accepts → `RejectionResult.Accepted` → harness moves file to `rejected/`
-- If reviewer insists → doer MUST address immediately (reviewer is authority)
+- If reviewer insists → doer MUST address immediately (reviewer is authority).
+  Re-instruction to doer delivered via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
 - **1 round of disagreement** per item — reviewer judges once, judgment is final
 - If doer still writes REJECTED after reviewer insistence → `RejectionResult.AgentCrashed`
 - Reuses existing signal semantics (no protocol extension)
@@ -540,7 +546,8 @@ On reviewer PASS:
 ### R8: Part Completion Guard — No Pending Critical/Important
 - After reviewer `PASS` + PUBLIC.md validation: harness checks `pending/` for
   `critical__*` and `important__*` files
-- If found: re-instruct reviewer (one retry, then AgentCrashed)
+- If found: re-instruct reviewer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
+  (one retry, then AgentCrashed)
 - Remaining `optional__*` files → acceptable; harness moves to `addressed/` on completion
 - Verifiable: unit test — PASS with pending critical → re-instruction → eventual
   completion or failure
@@ -548,7 +555,8 @@ On reviewer PASS:
 ### R9: Feedback Files Presence Guard on `needs_iteration`
 - After reviewer signals `needs_iteration`: harness checks that at least one file exists in
   `pending/`
-- If empty: re-instruct reviewer to write feedback files (one retry)
+- If empty: re-instruct reviewer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
+  to write feedback files (one retry)
 - If still empty after retry: `PartResult.AgentCrashed`
 - If reviewer changes verdict to `pass` on retry: proceed to completion (step 3)
 - Verifiable: unit test — needs_iteration with empty pending → re-instruction → eventual
