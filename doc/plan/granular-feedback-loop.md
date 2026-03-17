@@ -117,6 +117,21 @@ directory listings ARE the state dashboard — zero parsing required. Additional
 shows file renames that map 1:1 to state transitions, making the feedback lifecycle auditable
 in version history without inspecting file contents.
 
+**Simplification candidate evaluated and rejected:** A simpler approach was considered —
+keep all feedback files in a single flat `__feedback/` directory and derive state purely from
+the inline `## Resolution:` marker (no marker = pending, ADDRESSED/REJECTED = resolved). This
+would eliminate file-movement logic in the harness and make state detection a single file read.
+**Rejected for the following reasons:**
+1. **Glanceability.** A human engineer checking a running or completed part can `ls pending/`
+   to instantly see what's still unresolved, and `ls rejected/` to see what was contested —
+   without opening any files. In a flat directory, every file must be opened and scanned to
+   reconstruct the current state. This matters most when debugging a stuck feedback loop.
+2. **Rejected feedback is immediately visible.** `ls rejected/` surfaces disputed items at a
+   glance. In a flat directory, rejected items are invisible without scanning file contents.
+3. **Harness file-movement is a straightforward, low-cost operation.** The harness is a Kotlin
+   program performing a standard file rename. This is not a meaningful source of complexity.
+   The observability benefit outweighs the minimal encoding cost.
+
 ### D7: Rejection negotiation — bounded at 1 round, resolved at point of contention
 
 **Decided: At most 1 round of disagreement per item. Reviewer is authority.**
