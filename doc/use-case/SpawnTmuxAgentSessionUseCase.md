@@ -102,8 +102,8 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
    b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
       in `current_state.json` under the sub-part's `sessionIds` array
    c. Agent is confirmed alive, env is correct, server is reachable → proceed to Phase 2
-7. On timeout (no `/signal/started` within `noStartupAckTimeout`) → `NoStartupAckUseCase` →
-   `PartResult.AgentCrashed`
+7. On timeout (no `/signal/started` within `noStartupAckTimeout`) → `AgentUnresponsiveUseCase`
+   (`STARTUP_TIMEOUT`) → `PartResult.AgentCrashed`
 
 ### Phase 2: Work — Full Instructions
 
@@ -307,10 +307,10 @@ rather than introducing a new failure flow.
 
 ## Agent Crash Recovery (V1)
 
-**V1: no automatic recovery.** When `NoReplyToPingUseCase` detects an agent crash, the TMUX
-session is killed, `signalDeferred` is completed with `AgentSignal.Crashed`, and
-`TicketShepherd` delegates to `FailedToExecutePlanUseCase` — prints red error, halts, waits
-for human intervention. V2 may add automatic retry with `--resume`
+**V1: no automatic recovery.** When `AgentUnresponsiveUseCase` (`PING_TIMEOUT`) detects an
+agent crash, the TMUX session is killed, `signalDeferred` is completed with
+`AgentSignal.Crashed`, and `TicketShepherd` delegates to `FailedToExecutePlanUseCase` — prints
+red error, halts, waits for human intervention. V2 may add automatic retry with `--resume`
 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
@@ -356,7 +356,7 @@ encapsulation and type safety.
 "Kill a TMUX session" means `tmux kill-session -t ${sessionName}`. This destroys the session
 and all its windows/panes. Used by:
 - `removeAllForPart` (on part completion)
-- `NoReplyToPingUseCase` (on crash detection)
+- `AgentUnresponsiveUseCase` (`PING_TIMEOUT` — on crash detection)
 - Interrupt protocol (on user kill confirmation — ref.ap.P3po8Obvcjw4IXsSUSU91.E)
 
 ---

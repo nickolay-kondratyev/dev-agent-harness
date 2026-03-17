@@ -215,9 +215,11 @@ ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — updated on every agent → server callback. W
 arrives within `noActivityTimeout` (30 min default, configurable per sub-part), the harness
 pings the agent; if no reply within `pingTimeout` (3 min), the agent is declared crashed.
 
-Five UseCase classes handle distinct failure scenarios (`NoStartupAckUseCase`,
-`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`,
-`FailedToConvergeUseCase`). Agents call `callback_shepherd.signal.sh started` immediately after
+Three UseCase classes handle distinct failure scenarios (`AgentUnresponsiveUseCase`,
+`FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). `AgentUnresponsiveUseCase` is
+parameterized by `DetectionContext` (`STARTUP_TIMEOUT`, `NO_ACTIVITY_TIMEOUT`, `PING_TIMEOUT`)
+— consolidating the three unresponsive-agent paths into one class with context-specific logging.
+Agents call `callback_shepherd.signal.sh started` immediately after
 reading instructions — a 3-minute startup timeout catches spawn failures fast
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase

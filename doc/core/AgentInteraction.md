@@ -70,7 +70,7 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 |--------|---------------------|---------------------|
 | `spawnAgent(config)` | Bootstrap handshake, session ID resolution, deferred creation, SessionsState registration | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` |
 | `sendPayloadWithAck(handle, payload)` | ACK protocol (wrap, send, retry 3×, confirm) | `TmuxCommunicator` + ACK XML wrapping + `SessionsState.pendingPayloadAck` polling |
-| `sendHealthPing(handle)` | TMUX send-keys ping | `NoStatusCallbackTimeOutUseCase` → `TmuxCommunicator` |
+| `sendHealthPing(handle)` | TMUX send-keys ping | `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT`) → `TmuxCommunicator` |
 | `readContextWindowState(handle)` | Read context_window_slim.json | `ContextWindowStateReader` |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
@@ -350,7 +350,7 @@ BEFORE (current spec):
        ├──► SpawnTmuxAgentSessionUseCase     │
        ├──► TmuxCommunicator (ACK)          │
        ├──► ContextWindowStateReader        │
-       └──► NoStatusCallbackTimeOutUseCase  │
+       └──► AgentUnresponsiveUseCase        │
 
 AFTER (with AgentFacade):
 

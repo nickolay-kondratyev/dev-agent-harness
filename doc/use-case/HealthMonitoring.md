@@ -1,9 +1,9 @@
 # Agent Health Monitoring — UseCase Pattern / ap.RJWVLgUGjO5zAwupNLhA0.E
 
-Timeout + ping mechanism to detect crashed/hung agents. Each distinct failure scenario
-is encapsulated in its own UseCase class — simple, stateless, single-responsibility operations
-that the `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) invokes from its health-aware
-await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
+Timeout + ping mechanism to detect crashed/hung agents. Failure scenarios are encapsulated
+in UseCase classes — simple, stateless, single-responsibility operations that the `PartExecutor`
+(ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) invokes from its health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 Liveness is determined **solely by HTTP callback timestamps** (`lastActivityTimestamp`).
 The `context_window_slim.json` file is used for **context window compaction decisions only**
@@ -28,12 +28,12 @@ This logging requirement applies to all health monitoring logic described below.
 
 ## Flow
 
-0. **Startup acknowledgment** (default: 3 min): After spawn, the executor uses a shorter `noStartupAckTimeout` window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `NoStartupAckUseCase`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the normal `noActivityTimeout`. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
+0. **Startup acknowledgment** (default: 3 min): After spawn, the executor uses a shorter `noStartupAckTimeout` window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.STARTUP_TIMEOUT`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the normal `noActivityTimeout`. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
 0b. **Payload delivery ACK** (default: 3 min per attempt, 3 attempts max): After sending instructions via `send-keys`, the executor awaits `/signal/ack-payload` before entering the signal-await loop. If no ACK → retry `send-keys` (up to 2 retries). All retries exhausted → `AgentCrashed`. This catches the "alive but never received instruction" failure mode. See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
-1. **No activity timeout** (default: 30 min): If no HTTP callback of any kind arrives within configured timeout → triggers `NoStatusCallbackTimeOutUseCase`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
+1. **No activity timeout** (default: 30 min): If no HTTP callback of any kind arrives within configured timeout → triggers `AgentUnresponsiveUseCase` with `DetectionContext.NO_ACTIVITY_TIMEOUT`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
-3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `NoReplyToPingUseCase`.
-4. **Crash handling (V1)**: `NoReplyToPingUseCase` kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `AgentUnresponsiveUseCase` with `DetectionContext.PING_TIMEOUT`.
+4. **Crash handling (V1)**: `AgentUnresponsiveUseCase` (with `PING_TIMEOUT` context) kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -128,9 +128,9 @@ initializing its health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 | Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback (including `/started`) |
 | Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `noStartupAckTimeout` until first callback arrives |
 | Check `lastActivityTimestamp` staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `lastActivityTimestamp` stale > `noActivityTimeout` |
-| Send ping message via TMUX | `PartExecutor` | Via `AgentFacade.sendHealthPing()` — delegates internally to `NoStatusCallbackTimeOutUseCase` |
+| Send ping message via TMUX | `PartExecutor` | Via `AgentFacade.sendHealthPing()` — delegates internally to `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT` context) |
 | Post-ping check | `PartExecutor` | After ping timeout: check `lastActivityTimestamp` for advancement |
-| Declare crash, kill TMUX | `PartExecutor` | Via `AgentFacade.killSession()` — delegates internally to `NoReplyToPingUseCase` |
+| Declare crash, kill TMUX | `PartExecutor` | Via `AgentFacade.killSession()` — delegates internally to `AgentUnresponsiveUseCase` (`PING_TIMEOUT` context) |
 | Complete deferred with `Crashed` | `PartExecutor` | After kill session executes |
 | Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback (via `SessionsState` internal to `AgentFacadeImpl`) |
 
@@ -153,11 +153,27 @@ high-level.md for the full testing approach.
 
 | UseCase | Trigger | Action |
 |---|---|---|
-| `NoStartupAckUseCase` | No callback of any kind within `noStartupAckTimeout` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Log clear error identifying spawn failure (includes session name, HandshakeGuid, env vars). Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `noActivityTimeout`. |
-| `NoStatusCallbackTimeOutUseCase` | `lastActivityTimestamp` stale beyond `noActivityTimeout` | Ping agent via TMUX send-keys |
-| `NoReplyToPingUseCase` | No callback (`lastActivityTimestamp` unchanged) after ping timeout | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+| `AgentUnresponsiveUseCase` | Agent fails to respond — see `DetectionContext` below | Parameterized by `DetectionContext`. Logs structured context (detection reason, session name, durations). Action depends on context — see table below. Single class, single failure-handling path for all unresponsive-agent scenarios. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See `doc_v2/FailedToExecutePlanUseCaseV2.md` for V2 automated cleanup. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM (ref.ap.hnbdrLkRtNSDFArDFd9I2.E), present to user, user decides whether to grant more iterations |
+
+### AgentUnresponsiveUseCase — DetectionContext
+
+The three previously separate unresponsive-agent UseCases (`NoStartupAckUseCase`,
+`NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`) are consolidated into a single
+`AgentUnresponsiveUseCase` parameterized by a `DetectionContext` enum. All contexts result
+in the same outcome (kill TMUX session, return `AgentCrashed`) with context-specific logging.
+
+| `DetectionContext` | Trigger | Log context | Action |
+|---|---|---|---|
+| `STARTUP_TIMEOUT` | No callback of any kind within `noStartupAckTimeout` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Session name, HandshakeGuid, env vars, timeout duration | Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `noActivityTimeout`. |
+| `NO_ACTIVITY_TIMEOUT` | `lastActivityTimestamp` stale beyond `noActivityTimeout` | Session name, stale duration, `noActivityTimeout` value | Ping agent via TMUX send-keys. (If ping also times out → `PING_TIMEOUT`.) |
+| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after ping timeout | Session name, ping timeout duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+
+**Design rationale**: The three detection contexts share the same conceptual event (agent
+is unresponsive) and the same outcome (kill session, return crashed). A single class with
+parameterized logging eliminates divergence risk between three classes that should behave
+identically, and makes it easy to add new detection triggers (just add an enum value).
 
 **UseCase naming principle**: when logic has a natural UseCase name (verb + noun + context),
 encapsulate it in a dedicated UseCase class. These are **simple encapsulated objects** — NOT
