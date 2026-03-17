@@ -155,8 +155,7 @@ threshold is also crossed. No interrupt sent.
 ## ContextWindowStateReader / ap.ufavF1Ztk6vm74dLAgANY.E
 
 Agent-type-specific interface for reading context window state. Follows the same OCP
-pattern as `AgentStarter` (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) and `AgentSessionIdResolver`
-(ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E) — one implementation per agent type.
+pattern as `AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) — one implementation per agent type.
 
 ```kotlin
 interface ContextWindowStateReader {
@@ -208,7 +207,7 @@ Reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_wi
        Making it a hard-stop would cause false-positive AgentCrashed events on transient
        hook hiccups. -->
 
-- `validatePresence()` called after `AgentSessionIdResolver` resolves the session ID
+- `validatePresence()` called after `AgentTypeAdapter.resolveSessionId()` resolves the session ID
   (step 6a in spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E). Confirms hook is active
   before any work begins.
 
@@ -414,7 +413,7 @@ Two mechanisms are required (belt and suspenders):
 **1. Config file: `~/.claude.json`** (the **app-state** file) must contain
 `"autoCompactEnabled": false`.
 
-Write logic (same as what `ClaudeCodeAgentStarter` must do on every spawn):
+Write logic (same as what `ClaudeCodeAdapter.buildStartCommand()` must do on every spawn):
 
 ```bash
 # If file doesn't exist, create it:
@@ -452,8 +451,8 @@ agent spawns.
 | When | What | Where |
 |------|------|-------|
 | **Harness startup** | `EnvironmentValidator` (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) reads `~/.claude.json`, parses JSON, verifies `autoCompactEnabled == false`. Hard fail with clear error if the file is missing, unparseable, or `autoCompactEnabled` is not `false`. | `EnvironmentValidator.validate()` |
-| **Every agent spawn** | `ClaudeCodeAgentStarter` (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) does **both**: (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present — see bash above), and (2) exports `DISABLE_AUTO_COMPACT=true` in the TMUX session env (alongside `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT`). | `ClaudeCodeAgentStarter.buildStartCommand()` |
-| **Every session rotation** | Same as above — a rotated session is a new spawn. The `ClaudeCodeAgentStarter.buildStartCommand()` call inherently re-applies both mechanisms. | Implicit — covered by spawn flow |
+| **Every agent spawn** | `ClaudeCodeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) does **both**: (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present — see bash above), and (2) exports `DISABLE_AUTO_COMPACT=true` in the TMUX session env (alongside `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT`). | `ClaudeCodeAdapter.buildStartCommand()` |
+| **Every session rotation** | Same as above — a rotated session is a new spawn. The `ClaudeCodeAdapter.buildStartCommand()` call inherently re-applies both mechanisms. | Implicit — covered by spawn flow |
 
 ---
 
@@ -565,7 +564,7 @@ the executor, so it applies to both without duplication.
 
 ## context_window_slim.json Validation After Session ID Resolution
 
-After `AgentSessionIdResolver` resolves the session ID (step 6a in spawn flow —
+After `AgentTypeAdapter.resolveSessionId()` resolves the session ID (step 6a in spawn flow —
 ref.ap.hZdTRho3gQwgIXxoUtTqy.E), `AgentFacadeImpl` calls
 `contextWindowStateReader.validatePresence(agentSessionId)` internally as part of
 the spawn step within `sendPayload()`.
@@ -704,12 +703,12 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 ### R2: Auto-Compaction Disabled On Each Agent Start
 - Full mechanism spec: ref.ap.7bD0uLeoQQSFS16TQeCRF.E
 - `EnvironmentValidator` validates `~/.claude.json` contains `"autoCompactEnabled": false` at harness startup — hard fail if not
-- `ClaudeCodeAgentStarter` on **every spawn** (including session rotations): (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present), (2) exports `DISABLE_AUTO_COMPACT=true` in TMUX session env
+- `ClaudeCodeAdapter` on **every spawn** (including session rotations): (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present), (2) exports `DISABLE_AUTO_COMPACT=true` in TMUX session env
 - NOT `~/.claude/settings.json` — that file silently ignores `autoCompactEnabled` (ref: github.com/anthropics/claude-code/issues/6689)
 - Verifiable: startup validation test; integration test confirming Claude Code does not auto-compact
 
 ### R3: context_window_slim.json Validation After Session ID Resolution
-- After `AgentSessionIdResolver` resolves session ID, call `contextWindowStateReader.validatePresence()`
+- After `AgentTypeAdapter.resolveSessionId()` resolves session ID, call `contextWindowStateReader.validatePresence()`
 - Missing file → `PartResult.AgentCrashed` with clear error about hook misconfiguration
 - Verifiable: unit test — mock resolver returns ID, mock reader throws → executor returns AgentCrashed
 
@@ -778,7 +777,7 @@ Single method handling both triggers via `CompactionTrigger` enum:
 ### Gate 1: Foundation — Reader + Validation + Auto-Compaction Off
 **Scope:** R1, R2, R3
 **What:** ContextWindowStateReader interface + ClaudeCode impl. EnvironmentValidator
-checks auto-compaction off. ClaudeCodeAgentStarter exports env var + writes config.
+checks auto-compaction off. ClaudeCodeAdapter exports env var + writes config.
 context_window_slim.json validated after session ID resolution.
 **Verify:**
 - Unit tests: reader parses valid/invalid/missing JSON

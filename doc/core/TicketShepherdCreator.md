@@ -41,9 +41,9 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 - **Creates feature branch** (`git checkout -b`) from current HEAD
 - Initializes `SessionsState` (internal to `AgentFacadeImpl`)
 - Constructs `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — wires `SessionsState`,
-  `AgentStarter`, `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`, and
-  `ContextWindowStateReader` into the facade. This is the single agent-facing dependency
-  passed to all `PartExecutor` instances.
+  `AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E), `TmuxSessionManager`,
+  `TmuxCommunicator`, and `ContextWindowStateReader` into the facade. This is the single
+  agent-facing dependency passed to all `PartExecutor` instances.
 - Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
 - Sets up `.ai_out/` directory structure for the branch (depends on branch name from previous steps)
 - Creates `current_state.json` with `parts` array — for `with-planning` workflows, the

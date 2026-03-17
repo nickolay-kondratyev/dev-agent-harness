@@ -35,8 +35,8 @@ env-var pattern that successfully redirects Claude Code to GLM in the engineer's
 
 When implementing GLM injection for test spawned agents:
 
-**Where**: `ClaudeCodeAgentStarter.buildStartCommand()` (ref.ap file:
-`app/src/main/kotlin/com/glassthought/ticketShepherd/core/agent/starter/impl/ClaudeCodeAgentStarter.kt`)
+**Where**: `ClaudeCodeAdapter.buildStartCommand()` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E — file path
+may change as implementation evolves to the unified `AgentTypeAdapter` interface)
 
 The current command template is:
 ```bash
@@ -48,7 +48,7 @@ For test environments, prepend the GLM env-var exports:
 bash -c 'export ANTHROPIC_BASE_URL=... && export ANTHROPIC_AUTH_TOKEN=... && cd <workingDir> && unset CLAUDECODE && claude ...'
 ```
 
-**Trigger**: `ClaudeCodeAgentStarterBundleFactory` already receives `environment: Environment`.
+**Trigger**: `ClaudeCodeAdapter` factory already receives `environment: Environment`.
 Use `environment.isTest` to conditionally inject the GLM env vars. The API token is already
 present in the process env as `Z_AI_GLM_API_TOKEN` (required by `SharedContextIntegFactory`
 via `Constants.Z_AI_API.API_TOKEN_ENV_VAR`).
