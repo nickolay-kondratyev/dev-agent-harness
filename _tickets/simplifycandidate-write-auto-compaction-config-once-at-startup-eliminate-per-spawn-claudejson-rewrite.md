@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 In doc/use-case/ContextWindowSelfCompactionUseCase.md (ref.ap.7bD0uLeoQQSFS16TQeCRF.E, lines 405-451), the auto-compaction disable mechanism uses belt-and-suspenders:
 
 1. **Startup**: EnvironmentValidator validates ~/.claude.json contains "autoCompactEnabled": false
@@ -48,4 +50,6 @@ The per-spawn config file rewrite involves:
 Affected specs:
 - doc/use-case/ContextWindowSelfCompactionUseCase.md (Harness Responsibilities table, ClaudeCodeAgentStarter section)
 - doc/use-case/SpawnTmuxAgentSessionUseCase.md (ClaudeCodeAgentStarter)
+--------------------------------------------------------------------------------
 
+Belt and suspenders are fine here as we arent confidient in Claude's Codes respect of settings. However, what we SHOULD simplify out is things like JQ dependency we are in kotlin and we can use things like Jackson for JSON serialization. 
