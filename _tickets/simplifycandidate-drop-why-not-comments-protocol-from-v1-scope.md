@@ -1,11 +1,11 @@
 ---
 id: nid_o27zof98wzuwuc5c85x4q3vrb_E
 title: "SIMPLIFY_CANDIDATE: Drop WHY-NOT Comments Protocol from V1 scope"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:13:56Z
-status_updated_iso: 2026-03-15T01:13:56Z
+status_updated_iso: 2026-03-17T19:28:29Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
