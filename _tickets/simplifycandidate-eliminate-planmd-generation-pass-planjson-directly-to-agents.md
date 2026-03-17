@@ -1,11 +1,11 @@
 ---
 id: nid_heb1lnwki8npbiotbm5h80pdy_E
 title: "SIMPLIFY_CANDIDATE: Eliminate PLAN.md generation — pass plan.json directly to agents"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:19Z
-status_updated_iso: 2026-03-17T22:01:19Z
+status_updated_iso: 2026-03-17T22:10:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
