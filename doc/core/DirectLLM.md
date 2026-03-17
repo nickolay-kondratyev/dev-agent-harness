@@ -37,3 +37,52 @@ add a new interface, no changes to existing callers).
 
 Model assignments are configuration — changing the model behind a tier requires no code changes
 outside the `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E).
+
+---
+
+## JSON Serialization: `kotlinx.serialization`
+
+`GlmAnthropicCompatibleApi` uses **`kotlinx.serialization`** with `@Serializable` data classes
+for request/response JSON — not `org.json.JSONObject`.
+
+**Why:** Compile-time field safety, idiomatic Kotlin, flat/readable structure, easy to extend
+when the API schema evolves (add `system`, `temperature`, etc.).
+
+### Request Body
+
+```kotlin
+@Serializable
+data class AnthropicChatRequestBody(
+    val model: String,
+    @SerialName("max_tokens") val maxTokens: Int,
+    val messages: List<AnthropicMessage>,
+)
+
+@Serializable
+data class AnthropicMessage(val role: String, val content: String)
+```
+
+Serialized via `Json.encodeToString(...)`. V1: single `user` message, no streaming.
+
+### Response Parsing
+
+```kotlin
+@Serializable
+data class AnthropicChatResponseBody(
+    val content: List<AnthropicContentBlock>,
+)
+
+@Serializable
+data class AnthropicContentBlock(val type: String, val text: String)
+```
+
+Deserialized via `Json { ignoreUnknownKeys = true }.decodeFromString(...)`.
+`ignoreUnknownKeys` ensures forward compatibility when the API adds fields.
+
+Validation: content array must be non-empty and first block must have `type == "text"`.
+
+### Scope
+
+These data classes are `internal` to the `glm` package — they model the Anthropic-compatible
+wire format, not a shared domain concept. If a second provider appears with the same wire
+format, the classes can be promoted to the `directLLMApi` package.
