@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:30:39Z
 id: nid_vjwbfu6yug70h62ao9skd36mr_E
 title: "SIMPLIFY_CANDIDATE: Remove LLM summary from FailedToConvergeUseCase — show raw PUBLIC.md to user"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:13:44Z
-status_updated_iso: 2026-03-17T23:27:33Z
+status_updated_iso: 2026-03-17T23:30:39Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -38,3 +39,12 @@ Affected specs:
 - doc/use-case/HealthMonitoring.md (FailedToConvergeUseCase Detail)
 - doc/core/PartExecutor.md (step 4, iteration budget exceeded)
 
+
+## Notes
+
+**2026-03-17T23:30:34Z**
+
+RESOLVED: Removed LLM summarization from FailedToConvergeUseCase in two spec files:
+- doc/use-case/HealthMonitoring.md: UseCase table + Detail section now specify raw PUBLIC.md presentation
+- doc/core/DirectLLM.md: Removed FailedToConvergeUseCase as DirectBudgetHighLLM consumer, updated to LlmUserQuestionHandler
+Commit: 49fa718
