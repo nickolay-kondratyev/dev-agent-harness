@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:59:36Z
 id: nid_qf6iicpkgyd6qxjfccgy9ch4t_E
 title: "SIMPLIFY_CANDIDATE: TmuxCommandRunner should capture and surface process output instead of discarding it"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:39:05Z
-status_updated_iso: 2026-03-17T21:55:23Z
+status_updated_iso: 2026-03-17T21:59:36Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -30,3 +31,9 @@ data class ProcessResult
 
 **Robustness improvement:** Session lifecycle errors (send-keys to dead session, tmux version mismatches, permission failures) currently produce opaque failures with no diagnostic info. With ProcessResult, the harness can log the actual tmux error, dramatically reducing time-to-debug production issues.
 
+
+## Notes
+
+**2026-03-17T21:59:41Z**
+
+Resolved by introducing ProcessResult(exitCode, stdOut, stdErr) data class. TmuxCommandRunner.run() now reads stdout and stderr concurrently (prevents buffer deadlock) and returns the full result. All callers in TmuxCommunicatorImpl and TmuxSessionManager now include stderr in exception messages. Commit: 838edf5
