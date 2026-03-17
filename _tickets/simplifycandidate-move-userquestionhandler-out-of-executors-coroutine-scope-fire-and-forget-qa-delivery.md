@@ -1,11 +1,11 @@
 ---
 id: nid_ardsgbv0n6z48ya1y3079ez2u_E
 title: "SIMPLIFY_CANDIDATE: Move UserQuestionHandler out of executor's coroutine scope — decoupled Q&A with ping suppression"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:57Z
-status_updated_iso: 2026-03-17T22:01:57Z
+status_updated_iso: 2026-03-17T23:01:11Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
