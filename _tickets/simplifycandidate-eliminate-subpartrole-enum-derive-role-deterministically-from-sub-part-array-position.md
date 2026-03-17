@@ -1,11 +1,11 @@
 ---
 id: nid_k78p6ln09ffxywfaq5r0dqimh_E
 title: "SIMPLIFY_CANDIDATE: Eliminate SubPartRole enum — derive role deterministically from sub-part array position"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:15:00Z
-status_updated_iso: 2026-03-17T22:15:00Z
+status_updated_iso: 2026-03-17T22:28:22Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
