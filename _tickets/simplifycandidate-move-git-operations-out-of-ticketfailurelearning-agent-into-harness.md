@@ -1,11 +1,11 @@
 ---
 id: nid_6wp9jlm7u11cza0qfzr5phuz1_E
 title: "SIMPLIFY_CANDIDATE: Move git operations out of TicketFailureLearning agent into harness"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:16Z
-status_updated_iso: 2026-03-15T01:03:16Z
+status_updated_iso: 2026-03-17T20:36:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
