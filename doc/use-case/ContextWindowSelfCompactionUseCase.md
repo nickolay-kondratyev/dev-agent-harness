@@ -45,12 +45,65 @@ a clean context window with compressed but complete prior knowledge.
 
 ---
 
-## Two Thresholds, Two Flows
+## Two Thresholds, One Flow
 
-### Flow 1: Soft Threshold at Done Boundary (remaining_percentage ≤ 35)
+Both thresholds trigger the **same** core compaction flow — `performCompaction()`. The only
+differences are the **entry conditions** (how the compaction is triggered) and the
+**post-compaction behavior** (lazy vs immediate respawn). Unifying these into a single flow
+eliminates the risk of the two paths diverging over time and makes compaction testable as
+one well-exercised code path.
 
-Triggered after `AgentSignal.Done` (any result: `COMPLETED`, `PASS`, `NEEDS_ITERATION`),
-after PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) succeeds.
+### CompactionTrigger
+
+```kotlin
+enum class CompactionTrigger {
+    /** Agent at done boundary with ≤35% context remaining. No interrupt needed. */
+    DONE_BOUNDARY,
+    /** Agent mid-task with ≤20% context remaining. Requires Ctrl+C interrupt first. */
+    EMERGENCY_INTERRUPT,
+}
+```
+
+### Trigger Detection
+
+| Trigger | Where detected | Condition |
+|---------|---------------|-----------|
+| `DONE_BOUNDARY` | After `AgentSignal.Done` + PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35) |
+| `EMERGENCY_INTERRUPT` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E), every ~1 second | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20) |
+
+### Unified Compaction Flow — `performCompaction(sessionEntry, trigger)`
+
+```
+performCompaction(sessionEntry, trigger: CompactionTrigger):
+    │
+    ├─ 1. Pre-compaction (trigger-dependent):
+    │   ├─ DONE_BOUNDARY: no-op (agent already idle at done boundary)
+    │   └─ EMERGENCY_INTERRUPT:
+    │       ├─ Race condition guard: if signalDeferred.isCompleted → return signal (skip compaction)
+    │       ├─ Send Ctrl+C via AgentFacade (interrupt agent mid-task)
+    │       └─ Brief pause (1-2 seconds) for interrupt to take effect
+    │
+    ├─ 2. Core compaction (shared — identical for both triggers):
+    │   ├─ Reset signal via AgentFacade (fresh deferred)
+    │   ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
+    │   │   (EMERGENCY_INTERRUPT: prepend interrupt acknowledgment prefix — see Instruction Message)
+    │   ├─ Await AgentSignal.SelfCompacted (with timeout: SELF_COMPACTION_TIMEOUT)
+    │   ├─ Validate PRIVATE.md exists and is non-empty
+    │   ├─ Git commit — captures PRIVATE.md + any changes before compaction
+    │   └─ Kill session via AgentFacade.killSession()
+    │
+    └─ 3. Post-compaction (trigger-dependent):
+        ├─ DONE_BOUNDARY: mark sub-part as needing respawn (lazy — spawns when next needed).
+        │   Continue normal flow (next sub-part, iteration restart, etc.)
+        └─ EMERGENCY_INTERRUPT: immediate respawn:
+            ├─ Spawn new session via AgentFacade.spawnAgent()
+            │   (standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
+            ├─ New session receives instructions including PRIVATE.md
+            │   via ContextForAgentProvider (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
+            └─ Enter new health-aware await loop for the new session
+```
+
+### Entry Point: Done Boundary (Soft Threshold)
 
 ```
 Agent signals done
@@ -58,15 +111,9 @@ Agent signals done
     ├─ PUBLIC.md validation (existing step)
     │
     ├─ Read context_window_slim.json
-    │   ├─ remaining_percentage > SELF_COMPACTION_SOFT_THRESHOLD → continue normal flow (reviewer, next iteration, etc.)
-    │   └─ remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD → self-compaction:
-    │       │
-    │       ├─ Reset signal via AgentFacade (fresh deferred)
-    │       ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
-    │       ├─ Await AgentSignal.SelfCompacted (with timeout)
-    │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill session via AgentFacade.killSession()
-    │       └─ Mark sub-part as needing respawn (no live session)
+    │   ├─ remaining_percentage > SELF_COMPACTION_SOFT_THRESHOLD → continue normal flow
+    │   └─ remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD:
+    │       └─ performCompaction(sessionEntry, DONE_BOUNDARY)
     │
     └─ Continue normal flow (GitCommitStrategy, next sub-part, iteration restart)
 ```
@@ -76,10 +123,7 @@ no live session and spawns a new one via the standard spawn flow
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E). The new session's instructions include `PRIVATE.md`
 via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
 
-### Flow 2: Hard Threshold Mid-Task — Emergency Interrupt (remaining_percentage ≤ 20)
-
-Triggered during the health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) when the
-agent is actively working.
+### Entry Point: Health-Aware Await Loop (Hard Threshold)
 
 ```
 Health-aware await loop (polling every 1 second)
@@ -87,27 +131,18 @@ Health-aware await loop (polling every 1 second)
     ├─ Check: signal arrived? → return signal (normal path)
     │
     ├─ Read context_window_slim.json
-    │   ├─ remaining_percentage > 20 → continue await loop
-    │   └─ remaining_percentage ≤ 20 → emergency compaction:
-    │       │
-    │       ├─ Send Ctrl+C via AgentFacade (interrupt agent mid-task)
-    │       ├─ Brief pause (1-2 seconds) for interrupt to take effect
-    │       ├─ Reset signal via AgentFacade (fresh deferred)
-    │       ├─ Send self-compaction instruction via AgentFacade.sendPayloadWithAck()
-    │       ├─ Await AgentSignal.SelfCompacted (with timeout)
-    │       ├─ Validate PRIVATE.md exists and is non-empty
-    │       ├─ Kill session via AgentFacade.killSession()
-    │       ├─ Spawn new session via AgentFacade.spawnAgent()
-    │       │   (encapsulates standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
-    │       ├─ New session receives instructions including PRIVATE.md
-    │       └─ Enter new health-aware await loop for the new session
+    │   ├─ remaining_percentage > SELF_COMPACTION_HARD_THRESHOLD → continue await loop
+    │   └─ remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD:
+    │       └─ performCompaction(sessionEntry, EMERGENCY_INTERRUPT)
     │
     └─ Regular health checks (at normal intervals — ref.ap.6HIM68gd4kb8D2WmvQDUK.E)
 ```
 
-**Race condition: `done` arrives between detection and interrupt.** The executor checks
-if the deferred was completed before sending Ctrl+C. If `Done` arrived, the executor
-falls through to the normal done-boundary compaction (Flow 1). No interrupt sent.
+**Race condition: `done` arrives between detection and interrupt.** The `performCompaction()`
+pre-compaction step for `EMERGENCY_INTERRUPT` checks if the deferred was completed before
+sending Ctrl+C. If `Done` arrived, it returns the signal — the executor then falls through
+to the done-boundary path which may trigger `performCompaction(DONE_BOUNDARY)` if the soft
+threshold is also crossed. No interrupt sent.
 
 ---
 
@@ -227,7 +262,7 @@ After writing the file, signal completion:
 `callback_shepherd.signal.sh self-compacted`
 ```
 
-**For emergency interrupt (Flow 2)**, the message is prepended with:
+**For `EMERGENCY_INTERRUPT` trigger**, the message is prepended with:
 
 ```markdown
 You were interrupted because your context window is critically low.
@@ -403,12 +438,9 @@ while (true) {
     // --- Context window check for compaction (every iteration = every ~1 second) ---
     contextState = agentFacade.readContextWindowState(handle)
     if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-        // Check if done already arrived (race condition guard)
-        if (signalDeferred.isCompleted) {
-            return signalDeferred.await()
-        }
-        // Emergency compaction
-        return handleEmergencyCompaction(sessionEntry)
+        // performCompaction handles race condition guard (isCompleted check),
+        // Ctrl+C interrupt, and immediate respawn internally.
+        return performCompaction(sessionEntry, CompactionTrigger.EMERGENCY_INTERRUPT)
     }
 
     // --- Health checks: lastActivityTimestamp only (at normal intervals) ---
@@ -506,8 +538,8 @@ discovering it later when we need to read the context state.
 
 ## Session Rotation Detail
 
-After self-compaction completes (all agent operations via `AgentFacade`
-ref.ap.9h0KS4EOK5yumssRCJdbq.E):
+The **core compaction steps** (shared by both triggers) execute via `AgentFacade`
+(ref.ap.9h0KS4EOK5yumssRCJdbq.E):
 
 1. **Validate PRIVATE.md:** Check `${sub_part}/private/PRIVATE.md` exists and is non-empty.
    If missing after one retry → `PartResult.AgentCrashed`.
@@ -515,6 +547,14 @@ ref.ap.9h0KS4EOK5yumssRCJdbq.E):
    changes the agent made before compaction.
 3. **Kill session:** `agentFacade.killSession(handle)` — internally kills TMUX session
    and cleans up `SessionsState`.
+
+**Post-compaction — trigger-dependent:**
+
+**`DONE_BOUNDARY`:** No immediate respawn. The sub-part is marked as having no live session.
+The next time the executor needs this sub-part, it detects no live handle and spawns a new
+session via `agentFacade.spawnAgent(config)` (standard spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
+
+**`EMERGENCY_INTERRUPT`:** Immediate respawn:
 4. **Spawn new session:** `agentFacade.spawnAgent(config)` — encapsulates the standard
    spawn flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E): new `HandshakeGuid`, new TMUX session,
    bootstrap handshake, session ID resolution + context_window_slim.json validation, new
@@ -524,12 +564,6 @@ ref.ap.9h0KS4EOK5yumssRCJdbq.E):
    `agentFacade.sendPayloadWithAck(newHandle, instructions)`.
 6. **Enter health-aware await loop:** Normal monitoring resumes on the new handle's
    `signal` deferred.
-
-**For Flow 1 (done boundary):** Steps 5–7 happen when the executor next needs this sub-part
-(lazy respawn). Not immediately after compaction.
-
-**For Flow 2 (emergency interrupt):** Steps 5–7 happen immediately — the agent was
-interrupted mid-task and needs to resume work.
 
 ---
 
@@ -637,20 +671,19 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Regular health checks still fire at normal intervals (tracked by elapsed time)
 - Verifiable: unit test — mock reader returning decreasing values → executor triggers emergency compaction at threshold
 
-### R5: Emergency Compaction (Hard Threshold)
-- Send Ctrl+C to TMUX session via `send-keys`
-- Brief pause (1-2 seconds) for interrupt to take effect
-- Race condition guard: check if `signalDeferred` was completed before interrupting
-- Send self-compaction instruction via `AckedPayloadSender`
-- Await `AgentSignal.SelfCompacted` within 5-minute timeout
-- Validate PRIVATE.md, kill session, spawn new session, send instructions, resume monitoring
-- Verifiable: unit test — full emergency compaction sequence with mocked TMUX/reader
+### R5: `performCompaction()` — Unified Compaction Flow
 
-### R6: Soft Compaction at Done Boundary
-- After `AgentSignal.Done` + PUBLIC.md validation, read context window state
-- If `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → send compaction instruction, await SelfCompacted
-- Validate PRIVATE.md, kill session (lazy respawn — spawns when sub-part next needed)
-- Verifiable: unit test — done signal → low context → compaction → session killed
+Single method handling both triggers via `CompactionTrigger` enum:
+- `DONE_BOUNDARY`: no pre-compaction interrupt; post-compaction = lazy respawn
+- `EMERGENCY_INTERRUPT`: pre-compaction = race guard + Ctrl+C + pause; post-compaction = immediate respawn + send instructions + resume monitoring
+- Core steps shared: reset deferred → send instruction → await `SelfCompacted` → validate PRIVATE.md → git commit → kill session
+- Instruction message uses interrupt-acknowledgment prefix for `EMERGENCY_INTERRUPT`
+- Verifiable: unit test — both trigger variants exercise the same core steps; only pre/post differ
+
+### R6: Trigger Detection
+- **Done boundary** (`DONE_BOUNDARY`): after `AgentSignal.Done` + PUBLIC.md validation, read context window state; if `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → call `performCompaction(DONE_BOUNDARY)`
+- **Emergency interrupt** (`EMERGENCY_INTERRUPT`): health-aware await loop detects `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default 20) → call `performCompaction(EMERGENCY_INTERRUPT)`
+- Verifiable: unit test — done signal → low context → `DONE_BOUNDARY` compaction → session killed; unit test — polling detects hard threshold → `EMERGENCY_INTERRUPT` compaction
 
 ### R7: Self-Compacted Signal Endpoint
 - New endpoint `/callback-shepherd/signal/self-compacted`
@@ -718,28 +751,21 @@ ContextForAgentProvider includes PRIVATE.md. Self-compaction instruction templat
 **Proceed when:** Signal flows through server → deferred, instructions include PRIVATE.md,
 template produces correct messages.
 
-### Gate 3: Soft Compaction (Done Boundary)
-**Scope:** R6, R10
-**What:** Post-done context check, compaction flow, session rotation (lazy respawn).
+### Gate 3: `performCompaction()` — Unified Compaction Flow + Trigger Detection
+**Scope:** R4, R5, R6, R10
+**What:** `CompactionTrigger` enum, `performCompaction()` with shared core + trigger-specific
+pre/post steps. Done-boundary trigger detection. 1-second polling loop with emergency trigger detection.
 **Verify:**
-- Unit test: done → low context → compaction instruction → SelfCompacted → session killed
-- Unit test: done → healthy context → no compaction (normal flow)
+- Unit test: `DONE_BOUNDARY` — done → low context → compaction instruction → SelfCompacted → session killed (lazy respawn)
+- Unit test: `DONE_BOUNDARY` — done → healthy context → no compaction (normal flow)
+- Unit test: `EMERGENCY_INTERRUPT` — polling detects hard threshold → Ctrl+C → compaction → rotate → respawn → resume
+- Unit test: `EMERGENCY_INTERRUPT` race condition guard — done arrives before interrupt → no Ctrl+C sent
 - Unit test: session rotation → next use spawns new session with PRIVATE.md
 - Unit test: fallback when agent signals `done` instead of `self-compacted`
-**Proceed when:** Full soft compaction + rotation works in unit tests.
-
-### Gate 4: Hard Compaction (Emergency Interrupt)
-**Scope:** R4, R5
-**What:** 1-second polling loop, emergency Ctrl+C interrupt, mid-task compaction, immediate
-respawn.
-**Verify:**
-- Unit test: polling detects context dropping below threshold
-- Unit test: race condition guard — done arrives before interrupt
-- Unit test: Ctrl+C sent → compaction instruction → SelfCompacted → rotate → respawn → resume
 - Unit test: health checks still fire at normal intervals despite 1-second loop
-**Proceed when:** Emergency compaction works reliably in unit tests.
+**Proceed when:** Both trigger variants of `performCompaction()` work in unit tests.
 
-### Gate 5: Integration Validation
+### Gate 4: Integration Validation
 **Scope:** All requirements end-to-end
 **What:** Integration test with real Claude Code agent confirming full flow.
 **Verify:**

@@ -179,12 +179,10 @@ while (true) {
     // --- Read context window state for compaction decisions (every ~1 second) ---
     contextState = contextWindowStateReader.read(agentSessionId)
     if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-        if (signalDeferred.isCompleted) {
-            return signalDeferred.await()
-        }
-        // Emergency compaction — see ContextWindowSelfCompactionUseCase
+        // performCompaction handles the race condition guard (isCompleted check),
+        // Ctrl+C interrupt, and immediate respawn — see ContextWindowSelfCompactionUseCase
         // (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
-        return handleEmergencyCompaction(sessionEntry)
+        return performCompaction(sessionEntry, CompactionTrigger.EMERGENCY_INTERRUPT)
     }
 
     // --- Health check: lastActivityTimestamp only ---

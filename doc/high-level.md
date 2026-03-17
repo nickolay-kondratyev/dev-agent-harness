@@ -234,9 +234,14 @@ context summary. Claude Code's built-in auto-compaction is **disabled** (via
 `~/.claude.json` + `DISABLE_AUTO_COMPACT=true` env var); the harness is the sole
 controller of context management.
 
-Two thresholds:
-- **Soft (35% remaining / 65% used)**: at `done` boundaries — proactive compaction while the agent still has room to summarize
-- **Hard (20% remaining)**: continuous 1-second polling — emergency mid-task interrupt (Ctrl+C) + forced compaction
+Two thresholds, one unified `performCompaction()` flow:
+- **Soft (35% remaining / 65% used)**: at `done` boundaries — proactive compaction while the agent still has room to summarize (`CompactionTrigger.DONE_BOUNDARY`, lazy respawn)
+- **Hard (20% remaining)**: continuous 1-second polling — emergency mid-task interrupt (Ctrl+C) + forced compaction (`CompactionTrigger.EMERGENCY_INTERRUPT`, immediate respawn)
+
+Both triggers share the same core compaction steps: reset signal → send instruction →
+await `SelfCompacted` → validate `PRIVATE.md` → git commit → kill session. Only the
+pre-compaction (interrupt vs no-op) and post-compaction (immediate vs lazy respawn)
+differ by trigger.
 
 After self-compaction, the agent's TMUX session is killed and a new one spawned. The new
 session receives `PRIVATE.md` (the compressed context summary) via `ContextForAgentProvider`
@@ -245,8 +250,8 @@ session receives `PRIVATE.md` (the compressed context summary) via `ContextForAg
 external hook artifact. File not present → hard stop failure.
 
 See [`ContextWindowSelfCompactionUseCase`](use-case/ContextWindowSelfCompactionUseCase.md)
-(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — flows, thresholds, signal protocol,
-PRIVATE.md schema, and session rotation mechanics.
+(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — `CompactionTrigger`, unified flow,
+thresholds, signal protocol, PRIVATE.md schema, and session rotation mechanics.
 
 ---
 
