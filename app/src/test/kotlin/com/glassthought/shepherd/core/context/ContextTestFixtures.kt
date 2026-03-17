@@ -134,8 +134,8 @@ object ContextTestFixtures {
             roleDefinition = roleDefinition("PLANNER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
             roleCatalogEntries = listOf(
-                InstructionSections.RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
-                InstructionSections.RoleCatalogEntry("REVIEWER", "Reviews code", null),
+                RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
+                RoleCatalogEntry("REVIEWER", "Reviews code", null),
             ),
             iterationNumber = 1,
             planReviewerPublicMdPath = null,

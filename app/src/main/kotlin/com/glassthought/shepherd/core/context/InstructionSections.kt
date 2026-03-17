@@ -364,16 +364,6 @@ object InstructionSections {
         }
     }
 
-    /**
-     * Minimal role info for the planner's role catalog section.
-     * Avoids coupling to [com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition].
-     */
-    data class RoleCatalogEntry(
-        val name: String,
-        val description: String,
-        val descriptionLong: String?,
-    )
-
     // ── Reviewer iteration > 1: feedback state sections header ───────────────
 
     /**

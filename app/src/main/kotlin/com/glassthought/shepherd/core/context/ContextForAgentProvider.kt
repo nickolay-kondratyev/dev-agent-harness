@@ -69,7 +69,7 @@ data class UnifiedInstructionRequest(
     val feedbackDir: Path? = null,
 
     // ── PLANNER-only ────────────────────────────────────────────────────────
-    val roleCatalogEntries: List<InstructionSections.RoleCatalogEntry> = emptyList(),
+    val roleCatalogEntries: List<RoleCatalogEntry> = emptyList(),
     val planReviewerPublicMdPath: Path? = null, // null on iteration 1
     val planJsonOutputPath: Path? = null,
     val planMdOutputPath: Path? = null,
@@ -79,4 +79,17 @@ data class UnifiedInstructionRequest(
     val planMdContent: String? = null,
     val plannerPublicMdPath: Path? = null,
     val priorPlanReviewerPublicMdPath: Path? = null, // null on iteration 1
+)
+
+/**
+ * Minimal role info for the planner's role catalog section.
+ *
+ * A top-level data model type — independent of [InstructionSections] (the rendering layer).
+ * Avoids coupling to [com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition] which
+ * carries heavy implementation details the planner does not need.
+ */
+data class RoleCatalogEntry(
+    val name: String,
+    val description: String,
+    val descriptionLong: String?,
 )

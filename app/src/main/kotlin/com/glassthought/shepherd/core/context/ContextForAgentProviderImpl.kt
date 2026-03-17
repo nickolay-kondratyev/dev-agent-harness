@@ -30,10 +30,11 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         request: UnifiedInstructionRequest,
     ): Path {
         out.debug("assembling_instructions") {
-            listOf(
-                Val(role.name, ValType.STRING_USER_AGNOSTIC),
-                Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
-            )
+            buildList {
+                add(Val(role.name, ValType.STRING_USER_AGNOSTIC))
+                add(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+                request.partName?.let { add(Val(it, ValType.STRING_USER_AGNOSTIC)) }
+            }
         }
 
         val sections = when (role) {
