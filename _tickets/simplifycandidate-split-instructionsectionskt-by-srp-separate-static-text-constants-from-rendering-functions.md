@@ -38,4 +38,5 @@ Split into focused files:
 - Static text constants separated from rendering functions
 - All instruction assembly tests pass
 - No behavior change in assembled instructions
+- Make sure any inputs into the strings are clearly stated, such as with input arguments that are templatized.
 
