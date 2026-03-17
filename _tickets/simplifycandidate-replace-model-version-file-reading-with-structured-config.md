@@ -47,3 +47,6 @@ Option 1 is preferred because it co-locates model version with model selection (
 ## Risk
 - Low: This is a display/attribution concern. The version only appears in commit author strings. Changing the resolution mechanism has no functional impact on orchestration.
 
+--------------------------------------------------------------------------------
+
+OK lets refactor to have JSON structure. But it should be a file as JSON not a map hardcoded. WHY: to be able to update the configuration without recompilation.
