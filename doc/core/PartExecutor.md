@@ -99,12 +99,13 @@ is alive.
 ```
 Executor                   AgentFacade              SessionsState         Server
    │                            │                              │                  │
-   ├─ spawnAgent(config) ──────►│                              │                  │
+   ├─ sendPayload(cfg,null,p) ─►│                              │                  │
+   │                            ├─ spawn TMUX, bootstrap       │                  │
    │                            ├─ create CompletableDeferred  │                  │
    │                            ├─ register SessionEntry ─────►│                  │
-   │                            ├─ spawn TMUX, bootstrap       │                  │
+   │                            ├─ send payload with ACK       │                  │
    │                            ├─ return SpawnedAgentHandle   │                  │
-   ◄─ handle (with Deferred) ──┤  (includes signal Deferred)  │                  │
+   ◄─ handle (with Deferred) ──┤  (includes fresh signal Def) │                  │
    │                            │                              │                  │
    ├─ suspend on handle         │                              │                  │
    │    .signal.await() ────────┤                              │                  │
@@ -276,27 +277,18 @@ TMUX session, waiting for the executor to send it new instructions.
 
 ### Flow (doer+reviewer path — `reviewerConfig != null`)
 
-1. **Start doer**:
-   a. First iteration: **spawn** doer TMUX session → create `CompletableDeferred` → register
-      `SessionEntry` → send instructions → enter health-aware await loop
-      (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
-   b. Subsequent iterations (re-entry from step 4): doer session **already alive** → create
-      fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid, new
-      deferred) → assemble new instructions (includes reviewer feedback) → deliver via
-      `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing** session →
-      enter health-aware await loop
+1. **Start doer**: assemble instructions via `ContextForAgentProvider`
+   (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) → call `agentFacade.sendPayload(doerConfig, doerHandle,
+   instructions)` → `AgentFacade` transparently handles session lifecycle (spawn on first run
+   or after idle-session death, re-use if alive) → executor updates `doerHandle` → enter
+   health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
 2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
-   Then → start reviewer:
-   a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
-      register `SessionEntry` → send instructions (includes doer's `PUBLIC.md`) → enter
-      health-aware await loop
-   b. Subsequent iterations (re-entry from step 1b→2): reviewer session **already alive** →
-      create fresh `CompletableDeferred` → re-register `SessionEntry` (same HandshakeGuid,
-      new deferred) → assemble new instructions (includes doer's updated `PUBLIC.md`) →
-      deliver via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to **existing**
-      session → enter health-aware await loop
+   Then → start reviewer: assemble instructions (includes doer's `PUBLIC.md`) → call
+   `agentFacade.sendPayload(reviewerConfig, reviewerHandle, instructions)` → `AgentFacade`
+   transparently handles session lifecycle → executor updates `reviewerHandle` → enter
+   health-aware await loop
 3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then **feedback completion guard**
@@ -394,32 +386,36 @@ TMUX session per sub-part, kept alive across iterations.
 
 ### Re-Instruction Pattern
 
-On iteration > 1, both agents already have live TMUX sessions. The executor does NOT
-kill/respawn — it:
-1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
-2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
-3. Assembles new instructions via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
-4. Delivers the instruction file path via `AckedPayloadSender`
-   (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to the existing TMUX session
-5. On ACK received, enters health-aware signal-await loop
-   (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+The executor uses the same call on every iteration — first run or re-instruction:
 
-This pattern is identical for both doer and reviewer re-instruction.
+```kotlin
+handle = agentFacade.sendPayload(config, handle, instructions)
+// handle is null on first run, non-null on re-instruction
+// AgentFacade transparently: spawns if null/dead, re-uses if alive
+// Always returns handle with fresh signal deferred
+```
 
-### Idle Session Death — send-keys Failure
+`AgentFacade.sendPayload` internally:
+1. Determines session state (null handle → spawn; alive → re-use; dead → respawn)
+2. Creates a **fresh** `CompletableDeferred<AgentSignal>` and re-registers `SessionEntry`
+3. Delivers the instruction payload with ACK protocol (ref.ap.tbtBcVN2iCl1xfHJthllP.E)
+4. Returns the handle (new or same)
+
+The executor then enters the health-aware signal-await loop on `handle.signal`
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E). This pattern is identical for doer and reviewer.
+
+### Idle Session Death — Transparent Respawn
 
 When the executor sends instructions to an idle session via TMUX `send-keys`, the session
 may have died while idle (e.g., TMUX killed externally, OOM, terminal crash). This is not
-expected in normal operation but must be handled.
+expected in normal operation but is handled transparently.
 
-**V1 behavior**: If `send-keys` fails (after retry — transient TMUX errors are retried),
-the executor logs an **ERROR** with the session name, HandshakeGuid, and the `send-keys`
-failure details, then returns `PartResult.AgentCrashed` with a message indicating which
-sub-part's idle session died. `TicketShepherd` delegates to `FailedToExecutePlanUseCase`
-(red error, halt — waits for human intervention).
-
-No automatic respawn in V1. See `doc_v2/idle-session-recovery.md` for V2 design
-(automatic respawn of the dead idle session with `--resume`).
+**Behavior**: `AgentFacade.sendPayload()` detects send-keys failure (after transient retries),
+kills the stale session entry, spawns a fresh session, and sends the payload to the new
+session — all transparently. The executor is not aware a respawn occurred: it receives a
+new `SpawnedAgentHandle` and enters the health-aware await loop on the new session. No crash
+is surfaced for idle session death. The new session starts fresh (no `--resume`) and receives
+its instructions via the standard `sendPayload` flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
 
 ### Git Commits During Execution
 
@@ -433,11 +429,12 @@ strategy produces one commit per sub-part signal.
 ### Dependencies
 
 - **`AgentFacade`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
-  operations: spawn, send payload with ACK, health ping, read context window state, kill session.
-  Replaces direct dependencies on `SessionsState`, `SpawnTmuxAgentSessionUseCase`,
-  `TmuxCommunicator`, and `ContextWindowStateReader`. Signal delivery flows through
-  `SpawnedAgentHandle.signal` (a `Deferred<AgentSignal>`). See
-  [`AgentFacade`](AgentFacade.md) for the full interface spec.
+  operations: `sendPayload` (handles session lifecycle + ACK protocol transparently),
+  `sendHealthPing`, `readContextWindowState`, `killSession`. Replaces direct dependencies on
+  `SessionsState`, `SpawnTmuxAgentSessionUseCase`, `TmuxCommunicator`, and
+  `ContextWindowStateReader`. Signal delivery flows through `SpawnedAgentHandle.signal`
+  (a `Deferred<AgentSignal>`, always fresh after each `sendPayload` call). See
+  [`AgentFacade`](AgentInteraction.md) for the full interface spec.
 - `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) — assemble instruction files for agents (doer, reviewer, planner, plan-reviewer)
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
@@ -464,8 +461,8 @@ in high-level.md.
 ### Doer-Only Path (`reviewerConfig == null`)
 
 When `reviewerConfig` is null, the executor runs the trivial subset of the full flow:
-spawn doer → register → send instructions → enter health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) → **PUBLIC.md validation**
+`sendPayload(doerConfig, null, instructions)` (AgentFacade spawns session) → enter health-aware
+await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) → **PUBLIC.md validation**
 (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) → map `AgentSignal` to `PartResult`. No reviewer, no
 iteration. A single doer can still crash/hang — the same health-aware await loop applies.
 

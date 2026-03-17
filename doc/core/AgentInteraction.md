@@ -46,10 +46,10 @@ genuinely needs all of them.
 
 ### D2: Signal delivery → Facade owns it
 
-**Chosen:** `spawnAgent()` returns a `SpawnedAgentHandle` that includes a `Deferred<AgentSignal>`.
-The facade creates and manages the `CompletableDeferred` internally. In the real impl,
-`SessionsState` is an internal detail — the HTTP server completes the deferred via SessionsState,
-but PartExecutor never touches SessionsState directly.
+**Chosen:** `sendPayload()` returns a `SpawnedAgentHandle` that includes a fresh
+`Deferred<AgentSignal>`. The facade creates and manages the `CompletableDeferred` internally
+on every call. In the real impl, `SessionsState` is an internal detail — the HTTP server
+completes the deferred via SessionsState, but PartExecutor never touches SessionsState directly.
 
 **Over:** Signal path stays in SessionsState, PartExecutor uses both AgentFacade (outbound)
 and SessionsState (inbound). This would split the agent abstraction and force tests to coordinate
@@ -68,22 +68,41 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 
 | Method | What it encapsulates | Internal delegation |
 |--------|---------------------|---------------------|
-| `spawnAgent(config)` | Bootstrap handshake, session ID resolution, deferred creation, SessionsState registration | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` |
-| `sendPayloadWithAck(handle, payload)` | ACK protocol (wrap, send, retry 3×, confirm) | `TmuxCommunicator` + ACK XML wrapping + `SessionsState.pendingPayloadAck` polling |
+| `sendPayload(config, existingHandle, payload)` | Session lifecycle (spawn if `existingHandle` is null or dead) + ACK protocol (wrap, send, retry 3×, confirm). Always creates a fresh signal deferred. Returns the handle (same or newly-spawned). | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` + `TmuxCommunicator` + ACK XML wrapping |
 | `sendHealthPing(handle)` | TMUX send-keys ping | `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT`) → `TmuxCommunicator` |
 | `readContextWindowState(handle)` | Read context_window_slim.json | `ContextWindowStateReader` |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
+### `sendPayload` — Session Lifecycle Contract
+
+`sendPayload(config, existingHandle, payload): SpawnedAgentHandle` transparently manages
+session lifecycle so the executor never needs to branch on session state:
+
+1. **`existingHandle == null`** → spawn new session (full bootstrap: new HandshakeGuid, TMUX
+   session, handshake, session ID resolution) → send payload with ACK → return new handle
+2. **`existingHandle` alive** → create fresh signal deferred (re-register `SessionEntry`) →
+   send payload with ACK → return same handle (updated deferred)
+3. **`existingHandle` dead** (send-keys fails after transient retries) → kill stale session
+   entry → spawn new session → send payload with ACK → return new handle
+
+The executor calls `sendPayload` identically for first-run and re-instruction — no branching
+on session state. Idle session death (case 3) is handled transparently: the dead session is
+replaced with a fresh one; no crash is surfaced to the executor.
+
+**Note:** Respawn on idle session death (case 3) does NOT use `--resume`. The session died
+while idle — conversation history is irrelevant. The new session receives fresh instructions
+from `ContextForAgentProvider` (including `PRIVATE.md` if present, ref.ap.8nwz2AHf503xwq8fKuLcl.E).
+
 `SpawnedAgentHandle` contains:
 - `guid: HandshakeGuid`
 - `sessionId: ResumableAgentSessionId`
-- `signal: Deferred<AgentSignal>` — executor awaits this
+- `signal: Deferred<AgentSignal>` — executor awaits this (fresh on every `sendPayload` call)
 - Observable `lastActivityTimestamp` — updated by real impl on every HTTP callback; controlled
   by test in fake
 
 **The health-aware await loop stays in PartExecutor.** The executor owns the decision logic
 (when to ping, when to declare crash, when to trigger compaction). `AgentFacade` provides
-the **operations** (ping, read state); the executor provides the **decisions**.
+the **operations** (send, ping, read state); the executor provides the **decisions**.
 
 ---
 
@@ -169,12 +188,12 @@ Delegates to existing infra components. No new behavior — wiring only.
 ### R3: `FakeAgentFacade` (test double)
 
 Programmable fake that allows tests to:
-- Control spawn behavior (succeed, fail, delay)
+- Control `sendPayload` behavior (succeed with new/same handle, simulate dead-session respawn, fail)
 - Control signal delivery (complete deferred at controlled time with any AgentSignal variant)
 - Control ACK behavior (succeed, timeout, partial)
 - Control context window state (return any ContextWindowState)
 - Control lastActivityTimestamp advancement
-- Verify interactions (was ping sent? was session killed? what payloads were sent?)
+- Verify interactions (was ping sent? was session killed? what payloads were sent? how many spawns?)
 
 **Verifiable:**
 - Unit tests for FakeAgentFacade itself (meta-tests that verify the fake behaves correctly)
@@ -233,7 +252,7 @@ Wrong interface shape wastes all downstream work.
 
 **What:** `FakeAgentFacade` implemented. `TestClock` implemented.
 `kotlinx-coroutines-test` added. One proof-of-concept test that uses all three
-(fake + TestClock + runTest) to test a simple scenario (e.g., spawn → send → done → completed).
+(fake + TestClock + runTest) to test a simple scenario (e.g., sendPayload → await done → completed).
 
 **Verify:**
 - Proof-of-concept test passes
@@ -277,17 +296,13 @@ correctly to real infrastructure.
 
 ## Risks & Open Questions
 
-### R1: Re-instruction pattern and fresh deferreds
+### R1: Re-instruction pattern and fresh deferreds — **RESOLVED**
 
-When the executor iterates (creates a fresh `CompletableDeferred` for the same session), how
-does this work through `AgentFacade`?
-
-Options:
-- `AgentFacade.resetSignal(handle): Deferred<AgentSignal>` — returns a new deferred
-- `SpawnedAgentHandle` is mutable (internal deferred swapped)
-- `sendPayloadWithAck` implicitly creates a new deferred and updates the handle
-
-**Must resolve at Gate 1.** This affects the interface shape.
+`sendPayload(config, existingHandle, payload)` always creates a fresh signal deferred as
+part of its contract (step 2 of the session lifecycle — alive session path). The handle
+returned always has a fresh `signal: Deferred<AgentSignal>`. No separate `resetSignal()`
+method needed. The executor always awaits the handle returned by its most recent `sendPayload`
+call.
 
 ### R2: `UserQuestionHandler`
 
@@ -329,7 +344,7 @@ must be injectable so tests can route everything through the test dispatcher.
 | `PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Dependencies: replace `SessionsState`, `SpawnTmuxAgentSessionUseCase` with `AgentFacade`. Health-aware await loop: `readContextWindowState` and `sendHealthPing` calls go through `AgentFacade`. |
 | `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) | Ownership: `register` caller → `AgentFacadeImpl` (not PartExecutor). `lookup` caller → `ShepherdServer` (unchanged). Add note: "Internal to `AgentFacadeImpl`; not directly accessed by orchestration layer." |
 | `TicketShepherdCreator.md` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Wiring: create `AgentFacadeImpl` and pass to executor factories. |
-| `SpawnTmuxAgentSessionUseCase.md` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) | Note: "Encapsulated by `AgentFacadeImpl.spawnAgent()`. Still describes the spawn flow accurately." |
+| `SpawnTmuxAgentSessionUseCase.md` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) | Note: "Encapsulated by `AgentFacadeImpl.sendPayload()` (triggered when `existingHandle` is null or dead). Still describes the spawn flow accurately." |
 
 ### Specs unchanged
 
