@@ -136,10 +136,10 @@ Concatenation order (via `AgentRole.REVIEWER` / `UnifiedInstructionRequest`):
 | 2 | **Ticket** | The ticket markdown file | |
 | 3 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
 | 4 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
-| 5 | **Plan format instructions** | Static text — JSON schema for `plan_flow.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
+| 5 | **Plan format instructions** | Static text — JSON schema for `plan_flow.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. |
 | 6 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
 | 7 | **plan_flow.json output path** | `harness_private/plan_flow.json` (absolute path) | Strict workflow definition — harness-consumed. |
-| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable implementation guide (clarified requirements, tradeoffs, architecture constraints, file paths) — fed to implementor sub-parts with `loadsPlan: true`. |
+| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable implementation guide (clarified requirements, tradeoffs, architecture constraints, file paths) — fed to all doer sub-parts in `with-planning` workflows. |
 | 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 11 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done completed` |
@@ -175,7 +175,7 @@ Each logical content block is one `InstructionSection` subtype:
 | `RoleDefinition` | Full `.md` file for the role from `$TICKET_SHEPHERD_AGENTS_DIR` |
 | `PartContext` | Part `name` and `description` from `current_state.json` |
 | `Ticket` | Ticket markdown file content |
-| `PlanMd` | `shared/plan/PLAN.md` — omitted when `withPlanning` is false |
+| `PlanMd` | `shared/plan/PLAN.md` — always included for `with-planning` workflows; absent for straightforward workflows |
 | `PriorPublicMd` | Prior completed PUBLIC.md files per [Visibility Rules](#visibility-rules) |
 | `DoerOutputForReview` | Doer's current PUBLIC.md — reviewer only |
 | `StructuredFeedbackFormat` | Static structured-feedback format instruction — reviewer only |
