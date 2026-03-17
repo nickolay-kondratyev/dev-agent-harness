@@ -1,11 +1,11 @@
 ---
 id: nid_kiqq72tfx38uosam7ig8fbqk9_E
 title: "SIMPLIFY_CANDIDATE: Write auto-compaction config once at startup — eliminate per-spawn ~/.claude.json rewrite"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:14:23Z
-status_updated_iso: 2026-03-17T23:14:23Z
+status_updated_iso: 2026-03-17T23:38:07Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
