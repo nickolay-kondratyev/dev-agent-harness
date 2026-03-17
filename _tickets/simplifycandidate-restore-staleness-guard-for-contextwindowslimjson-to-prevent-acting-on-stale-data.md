@@ -1,11 +1,11 @@
 ---
 id: nid_b5l7sip07e2kft5h8bzndq3fo_E
 title: "SIMPLIFY_CANDIDATE: Restore staleness guard for context_window_slim.json to prevent acting on stale data"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:05:35Z
-status_updated_iso: 2026-03-17T21:05:35Z
+status_updated_iso: 2026-03-17T22:33:06Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
