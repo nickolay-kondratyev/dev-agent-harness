@@ -41,3 +41,7 @@ If architectural decisions or shared context need to persist, they go into the p
 - doc/schema/ai-out-directory.md (SHARED_CONTEXT.md definition)
 - doc/core/ContextForAgentProvider.md (instruction assembly includes SHARED_CONTEXT.md)
 
+--------------------------------------------------------------------------------
+OK lets simplify. 
+
+BUT let's make sure the agents are properly instructed to capture the reasoning within the code files and persistent documentation (CLAUDE.md, deep memory, md notes) they create/edit so that the reasoning survives beyond the current iteration. 
