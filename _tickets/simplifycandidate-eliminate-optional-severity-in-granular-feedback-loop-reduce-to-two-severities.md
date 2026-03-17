@@ -1,11 +1,11 @@
 ---
 id: nid_ldztnvmnyg6lt6wjud2eeps8i_E
 title: "SIMPLIFY_CANDIDATE: Eliminate optional severity in granular feedback loop — reduce to two severities"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:13:16Z
-status_updated_iso: 2026-03-17T23:13:16Z
+status_updated_iso: 2026-03-17T23:30:50Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
