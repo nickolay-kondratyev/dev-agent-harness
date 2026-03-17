@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:45:35Z
 id: nid_ysgpuu6eo09h0skpvrbwfefok_E
 title: "SIMPLIFY_CANDIDATE: Make SubPart state transitions explicit via SubPartStateTransition enum — eliminate scattered implicit transition validation"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:15:45Z
-status_updated_iso: 2026-03-17T22:40:26Z
+status_updated_iso: 2026-03-17T22:45:35Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -39,3 +40,9 @@ Robustness improvement:
 
 Relevant specs: doc/schema/plan-and-current-state.md (SubPartStatus section), doc/core/PartExecutor.md
 
+
+## Notes
+
+**2026-03-17T22:45:31Z**
+
+Completed spec-only update. Added SubPartStateTransition sealed class (ap.EHY557yZ39aJ0lV00gPGF.E) to doc/schema/plan-and-current-state.md with 5 transitions (Spawn, Complete, Fail, IterateContinue, ResumeForIteration) and 3 validators (transitionTo(AgentSignal), validateCanSpawn(), validateCanResumeForIteration()). Updated doc/core/PartExecutor.md with Status Mutation Protocol table. Committed as 83265f7.
