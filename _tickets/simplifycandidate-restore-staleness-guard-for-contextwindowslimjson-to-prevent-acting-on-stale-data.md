@@ -12,6 +12,7 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, compaction, context-window]
 ---
 
+--------------------------------------------------------------------------------
 Per spec (doc/use-case/ContextWindowSelfCompactionUseCase.md), the `contextFileStaleTimeout` was removed. The current design trusts `remaining_percentage` from context_window_slim.json whenever it is present, with no check for how recently the file was written.
 
 The file is written by an external hook (vintrin_env). If the hook:
@@ -33,4 +34,12 @@ The spec acknowledges this as a "benign failure mode" — but in practice, an ag
 This change makes the stale-hook case detectable and logged, and avoids the harness silently acting on incorrect data.
 
 Spec reference: doc/use-case/ContextWindowSelfCompactionUseCase.md, ref.ap.ufavF1Ztk6vm74dLAgANY.E (ContextWindowStateReader)
+--------------------------------------------------------------------------------
+
+OUCH Yes we need the staleness guard and we should respect the timestamp that was last written into the file.
+LETS make sure we have the staleness check.
+And this is how the file looks like `{"file_updated_timestamp":"2026-03-17T21:31:03.390Z","remaining_percentage":74}`
+
+
+
 
