@@ -21,40 +21,78 @@ content out — is critical for agent effectiveness. The provider centralizes th
 ## Interface
 
 ```kotlin
+enum class AgentRole { DOER, REVIEWER, PLANNER, PLAN_REVIEWER }
+
 interface ContextForAgentProvider {
 
-    /** Assembles instruction file for a doer execution agent. */
-    suspend fun assembleDoerInstructions(request: DoerInstructionRequest): Path
-
-    /** Assembles instruction file for a reviewer execution agent. */
-    suspend fun assembleReviewerInstructions(request: ReviewerInstructionRequest): Path
-
-    /** Assembles instruction file for the PLANNER agent. */
-    suspend fun assemblePlannerInstructions(request: PlannerInstructionRequest): Path
-
-    /** Assembles instruction file for the PLAN_REVIEWER agent. */
-    suspend fun assemblePlanReviewerInstructions(request: PlanReviewerInstructionRequest): Path
+    /**
+     * Assembles the instruction file for an agent.
+     * `role` selects the section plan; `request` supplies all data needed by any role.
+     * Writes to `request.outputDir/instructions.md`. Returns the written path.
+     */
+    suspend fun assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest): Path
 }
 ```
 
-Four methods — one per role. Each agent type has different content needs, and the type system
-makes that explicit. No boolean flags, no `when(agentKind)` branching inside a single method.
-Each request type carries only the fields relevant to its role (e.g., `feedbackDir` only on
-`ReviewerInstructionRequest`, `reviewerPublicMdPath` only on `DoerInstructionRequest`).
+Single public method. The executor passes `role` — no longer needs to know which of four methods
+to call, making it impossible to call the wrong one. Adding a new agent role requires only a new
+`AgentRole` variant and a plan list, not a new interface method + request type.
+
+### UnifiedInstructionRequest
+
+```kotlin
+data class UnifiedInstructionRequest(
+    // ── common (all roles) ────────────────────────────────────────────────────
+    val roleDefinition: RoleDefinition,
+    val ticketContent: String,
+    val iterationNumber: Int,
+    val outputDir: Path,
+    val publicMdOutputPath: Path,
+
+    // ── execution agents (DOER + REVIEWER) ────────────────────────────────────
+    val partName: String? = null,
+    val partDescription: String? = null,
+    val planMdPath: Path? = null,              // null → no-planning workflow
+    val priorPublicMdPaths: List<Path> = emptyList(),
+
+    // ── DOER-only ─────────────────────────────────────────────────────────────
+    val reviewerPublicMdPath: Path? = null,    // null on iteration 1
+
+    // ── REVIEWER-only ─────────────────────────────────────────────────────────
+    val doerPublicMdPath: Path? = null,
+    val feedbackDir: Path? = null,
+
+    // ── PLANNER-only ──────────────────────────────────────────────────────────
+    val roleCatalogEntries: List<RoleCatalogEntry> = emptyList(),
+    val planReviewerPublicMdPath: Path? = null, // null on iteration 1
+    val planJsonOutputPath: Path? = null,
+    val planMdOutputPath: Path? = null,
+
+    // ── PLAN_REVIEWER-only ────────────────────────────────────────────────────
+    val planJsonContent: String? = null,
+    val planMdContent: String? = null,
+    val plannerPublicMdPath: Path? = null,
+    val priorPlanReviewerPublicMdPath: Path? = null, // null on iteration 1
+)
+```
+
+Role-specific fields are `null` (or empty list) when not applicable. The `role` parameter is the
+discriminator — the provider accesses only the fields relevant to the given role. Unused fields
+are visible from the grouping comments above.
 
 ---
 
 ## Instruction File Content — By Agent Type
 
 Each role defines its section sequence as an `InstructionPlan` — a `List<InstructionSection>`.
-A single internal `assembleFromPlan(plan: InstructionPlan, request: InstructionRequest)` walks
-the plan and renders each section. State-dependent sections (e.g. `iterationNumber > 1`) are
-modeled as conditional section types within the plan, not as conditionals scattered across
+A single internal `assembleFromPlan(plan: List<InstructionSection>, request: UnifiedInstructionRequest)`
+walks the plan and renders each section. State-dependent sections (e.g. `iterationNumber > 1`)
+are modeled as conditional section types within the plan, not as conditionals scattered across
 role-specific template methods.
 
 ### Doer — ap.5N6TJ1MKDHCG01cJwTMFk.E
 
-Concatenation order (via `assembleDoerInstructions` / `DoerInstructionRequest`):
+Concatenation order (via `AgentRole.DOER` / `UnifiedInstructionRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -71,7 +109,7 @@ Concatenation order (via `assembleDoerInstructions` / `DoerInstructionRequest`):
 
 ### Reviewer
 
-Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRequest`):
+Concatenation order (via `AgentRole.REVIEWER` / `UnifiedInstructionRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -189,21 +227,22 @@ PlanReviewer: [RoleDefinition, Ticket, PlanJsonContent, PlanMdContent,
 ```kotlin
 private suspend fun assembleFromPlan(
     plan: List<InstructionSection>,
-    request: InstructionRequest,
+    request: UnifiedInstructionRequest,
 ): Path
 ```
 
-The four public methods build their role-specific plan and delegate to `assembleFromPlan`.
-`InstructionRequest` is a sealed interface extended by all four role-specific request types.
-Each `InstructionSection` extracts what it needs from `InstructionRequest` — conditional
-sections (e.g. `IterationFeedback`, `PlanMd`) simply render empty when the condition is false.
+`assembleInstructions` selects the role-specific plan (a `List<InstructionSection>`) by
+dispatching on `role`, then delegates to `assembleFromPlan`. Each `InstructionSection` reads
+only the fields it needs from `UnifiedInstructionRequest` — conditional sections
+(e.g. `IterationFeedback`, `PlanMd`) simply render empty when the condition is false.
 
 ### Benefits
 
 - **DRY**: shared sections (`Ticket`, `WritingGuidelines`, `CallbackHelp`, etc.) have exactly one implementation each.
 - **Legible structure**: instruction composition is readable as a data list, not scattered across template methods.
-- **Extensible**: new section = one new `InstructionSection` subtype; new role = one new plan list.
+- **Extensible**: new section = one new `InstructionSection` subtype; new role = one new `AgentRole` variant + one plan list.
 - **Testable**: each `InstructionSection` can be unit-tested in isolation.
+- **Simplified call site**: `PartExecutor` calls one method with a `role` parameter — impossible to call the wrong one; no role dispatch at the call site.
 
 ---
 
