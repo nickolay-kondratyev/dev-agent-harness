@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:07:02Z
 id: nid_h5xjerwi7qvms0rh5qffmuj0k_E
 title: "SIMPLIFY_CANDIDATE: Extract Tmux error-check into reusable helper — eliminate 4 duplicate error-check blocks"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:46:35Z
-status_updated_iso: 2026-03-17T23:00:00Z
+status_updated_iso: 2026-03-17T23:07:02Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -51,3 +52,9 @@ Each call site becomes: `commandRunner.run(...).orThrow("create tmux session")`
 - All existing tmux-related tests pass
 - No behavior change in error messages
 
+
+## Notes
+
+**2026-03-17T23:07:07Z**
+
+RESOLVED: Extracted ProcessResult.orThrow(operation: String) internal extension function into ProcessResult.kt. Replaced 5 duplicate error-check blocks (2 in TmuxSessionManager, 3 in TmuxCommunicatorImpl). Zero behavior change — error messages preserved character-for-character. Added ProcessResultTest unit test covering success and failure paths. All tests pass.
