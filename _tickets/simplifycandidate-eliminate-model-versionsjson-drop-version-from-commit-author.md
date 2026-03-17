@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, spec, git]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Problem
 
 The commit author format `CC_sonnet-v4.6_WITH-nickolaykondratyev` includes `VERSION_OF_MODEL` resolved from `config/model-versions.json` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E). This introduces:
@@ -42,4 +44,6 @@ This eliminates:
 
 - `doc/core/git.md` — Model Version Resolution section, Commit Author section
 - `doc/high-level.md` — mentions model-versions.json under Required Environment Variables
+--------------------------------------------------------------------------------
 
+DECISION: we need model versions. Lets document the WHY. Why do we need it? So that later it's easy to track which parts of code were made with which models. So that we can track which parts of code depending on the complexity of code could use an upgrade. Or could use additional testing coverage etc.. this history is important  
