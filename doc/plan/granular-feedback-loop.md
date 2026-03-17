@@ -222,9 +222,19 @@ at InputValidator.kt:32. Adding a redundant check would violate DRY and mislead
 future readers into thinking the upstream validation is insufficient.
 ```
 
+or (optional items only):
+
+```markdown
+## Resolution: SKIPPED
+Reviewed — this is a minor style preference that does not affect correctness or
+maintainability. Chose to skip.
+```
+
 The harness reads the `## Resolution:` line to determine disposition. Parsing is minimal —
-scan for `## Resolution: ADDRESSED` or `## Resolution: REJECTED` (case-insensitive match
-on the keyword after `## Resolution:`). Any other value or missing marker → re-instruct doer.
+scan for `## Resolution: ADDRESSED`, `## Resolution: REJECTED`, or `## Resolution: SKIPPED`
+(case-insensitive match on the keyword after `## Resolution:`). `SKIPPED` is valid only for
+`optional__` prefixed files — the harness treats it as a skip acknowledgment and moves the
+file to `addressed/`. Any other value or missing marker → re-instruct doer.
 
 ### Creation Timing
 
@@ -281,8 +291,8 @@ NEEDS_ITERATION) gains an inner loop:
       │   For each file:
       │   ├─ Same as PROCESS_FEEDBACK_ITEM but with skip guidance in instructions
       │   ├─ "This is OPTIONAL. Address if worthwhile, or write
-      │   │    '## Resolution: ADDRESSED' noting you chose to skip, then signal done."
-      │   └─ Skipped optional items: harness moves to addressed/ (doer explicitly chose to skip)
+      │   │    '## Resolution: SKIPPED' noting you chose to skip, then signal done."
+      │   └─ Skipped optional items (SKIPPED marker): harness moves to addressed/ (doer explicitly chose to skip)
       │
       └─ END INNER LOOP
    g. Validate: pending/ contains no critical__* or important__* files
@@ -392,7 +402,7 @@ The doer receives a focused instruction per item:
 For optional items, add:
 ```markdown
 **This feedback is OPTIONAL.** You may choose to skip it. If skipping, write
-`## Resolution: ADDRESSED` noting you reviewed it and chose to skip, then signal done.
+`## Resolution: SKIPPED` noting you reviewed it and chose to skip, then signal done.
 ```
 
 ### Reviewer Instructions for Rejection Judgment
@@ -492,7 +502,7 @@ On reviewer PASS:
   (one retry, then AgentCrashed)
 - `ADDRESSED` → harness moves file to `addressed/`
 - `REJECTED` → triggers rejection negotiation (R5)
-- Optional items: doer can skip (writes `## Resolution: ADDRESSED` noting skip)
+- Optional items: doer can skip (writes `## Resolution: SKIPPED` noting skip)
 - Self-compaction check (ref.ap.8nwz2AHf503xwq8fKuLcl.E) at each done boundary
 - Git commit after each processed item
 - Verifiable: unit test with FakeAgentFacade — items processed in severity order,
@@ -529,13 +539,17 @@ On reviewer PASS:
   reject → reviewer insists → doer addresses; reject → reviewer insists → doer still rejects → crash
 
 ### R6: Resolution Marker in Feedback Files
-- Doer appends `## Resolution: ADDRESSED` or `## Resolution: REJECTED` to the feedback file
+- Doer appends `## Resolution: ADDRESSED`, `## Resolution: REJECTED`, or
+  `## Resolution: SKIPPED` (optional items only) to the feedback file
 - `ADDRESSED` includes brief implementation notes
 - `REJECTED` includes clear justification
+- `SKIPPED` includes brief note on why the optional item was not addressed
+- `SKIPPED` is valid only for `optional__` prefixed files — harness treats it as
+  skip acknowledgment and moves the file to `addressed/`
 - Harness reads the marker: scan for `## Resolution:` line, extract keyword
 - Harness does NOT validate the reasoning content (same KISS principle as PUBLIC.md format —
   ref.ap.EslyJMFQq8BBrFXCzYw5P.E enforcement boundary)
-- Verifiable: harness correctly parses ADDRESSED, REJECTED, and missing marker cases
+- Verifiable: harness correctly parses ADDRESSED, REJECTED, SKIPPED, and missing marker cases
 
 ### R7: Reviewer Instructions Include `__feedback/` State (Full Pass)
 - On iteration > 1: reviewer sees `addressed/` and `rejected/` file contents
