@@ -43,16 +43,6 @@ object InstructionSections {
         `$path`
     """.trimIndent()
 
-    /**
-     * Renders the SHARED_CONTEXT.md path section.
-     */
-    fun sharedContextMdPath(path: Path): String = """
-        ## SHARED_CONTEXT.md Path
-
-        You may read and update the shared context file at:
-        `$path`
-    """.trimIndent()
-
     // ── Section 10: PUBLIC.md writing guidelines ─────────────────────────────
 
     /**
@@ -63,42 +53,22 @@ object InstructionSections {
     val PUBLIC_MD_WRITING_GUIDELINES: String = """
         ## PUBLIC.md Writing Guidelines
 
-        Your PUBLIC.md is your work log — the record of what you did, why, and what you decided.
+        Your PUBLIC.md is your work log — the record of what you did, why, and what you learned.
         It is read by downstream agents and reviewers.
 
         Include:
         - **Decisions made** and rationale (especially non-obvious ones)
         - **What was done** — a summary of changes, not a diff
+        - **Codebase discoveries** — key classes, patterns, gotchas, anchor points of interest
+        - **Cross-cutting constraints** that affect other parts of the workflow
         - **Review verdicts** (if you are a reviewer): ${ProtocolVocabulary.DoneResult.PASS} or ${ProtocolVocabulary.DoneResult.NEEDS_ITERATION}
 
-        Do NOT duplicate content from the plan or SHARED_CONTEXT.md.
+        Do NOT duplicate content already in the plan.
         Do NOT include code — reference file paths and line numbers instead.
-    """.trimIndent()
 
-    // ── Section 11: SHARED_CONTEXT.md writing guidelines ─────────────────────
-
-    /**
-     * Static guidance on what to write in SHARED_CONTEXT.md.
-     *
-     * Spec: ContextForAgentProvider.md section 11. See also ai-out-directory.md
-     * (ref.ap.BXQlLDTec7cVVOrzXWfR7.E).
-     */
-    val SHARED_CONTEXT_MD_GUIDELINES: String = """
-        ## SHARED_CONTEXT.md Writing Guidelines
-
-        SHARED_CONTEXT.md is a shared knowledge base across all agents in this workflow.
-        Update it in place — do NOT append duplicates.
-
-        Good content:
-        - Codebase discoveries (key classes, patterns, gotchas)
-        - Anchor points of interest (ap.XXX references)
-        - Cross-cutting constraints that affect multiple parts
-        - Patterns observed that downstream agents should follow
-
-        Bad content:
-        - Your specific decisions (those belong in PUBLIC.md)
-        - Temporary state or progress notes
-        - Content already in the plan
+        **Durable reasoning**: Capture important reasoning in the code itself (WHY-NOT comments),
+        persistent documentation (CLAUDE.md, deep memory, .md notes), and the ticket — not just
+        here. PUBLIC.md is read by downstream agents but does not persist beyond this workflow run.
     """.trimIndent()
 
     // ── Section 7: Reviewer iteration context ────────────────────────────────

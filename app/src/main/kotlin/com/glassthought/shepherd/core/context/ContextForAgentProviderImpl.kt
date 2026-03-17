@@ -47,27 +47,22 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         add(InstructionSections.partContext(request.partName, request.partDescription))
         // 3. Ticket
         add(ticketSection(request.ticketContent))
-        // 4. SHARED_CONTEXT.md
-        add(sharedContextSection(request.sharedContextPath))
-        // 5. PLAN.md (with-planning only)
+        // 4. PLAN.md (with-planning only)
         request.planMdPath?.let { add(planSection(it)) }
-        // 6. Prior PUBLIC.md files
+        // 5. Prior PUBLIC.md files
         addAll(priorPublicMdSections(request.priorPublicMdPaths))
-        // 8. Iteration feedback (iteration > 1): reviewer's PUBLIC.md + pushback guidance
+        // 7. Iteration feedback (iteration > 1): reviewer's PUBLIC.md + pushback guidance
         if (request.iterationNumber > 1 && request.reviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.reviewerPublicMdPath))
             add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
         }
-        // 8b. WHY-NOT reminder (all iterations)
+        // 7b. WHY-NOT reminder (all iterations)
         add(InstructionSections.WHY_NOT_REMINDER)
-        // 9. Output paths
+        // 8. Output paths
         add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-        add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
-        // 10. PUBLIC.md writing guidelines
+        // 9. PUBLIC.md writing guidelines
         add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-        // 11. SHARED_CONTEXT.md writing guidelines
-        add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
-        // 12. Callback script usage
+        // 10. Callback script usage
         add(
             InstructionSections.callbackScriptUsage(
                 forReviewer = false,
@@ -99,30 +94,25 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         add(InstructionSections.partContext(request.partName, request.partDescription))
         // 3. Ticket
         add(ticketSection(request.ticketContent))
-        // 4. SHARED_CONTEXT.md
-        add(sharedContextSection(request.sharedContextPath))
-        // 5. PLAN.md (with-planning only)
+        // 4. PLAN.md (with-planning only)
         request.planMdPath?.let { add(planSection(it)) }
-        // 6. Prior PUBLIC.md files
+        // 5. Prior PUBLIC.md files
         addAll(priorPublicMdSections(request.priorPublicMdPaths))
-        // 7. Doer's PUBLIC.md for review
+        // 6. Doer's PUBLIC.md for review
         request.doerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
-        // 7 (cont). Structured feedback format
+        // 6a. Structured feedback format
         add(InstructionSections.REVIEWER_FEEDBACK_FORMAT)
-        // 7a–7c. Feedback state (iteration > 1)
+        // 6b–6d. Feedback state (iteration > 1)
         if (request.iterationNumber > 1 && request.feedbackDir != null) {
             addAll(feedbackStateSections(request.feedbackDir))
         }
-        // 7d. Feedback writing instructions
+        // 6e. Feedback writing instructions
         add(InstructionSections.FEEDBACK_WRITING_INSTRUCTIONS)
-        // 9. Output paths
+        // 7. Output paths
         add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-        add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
-        // 10. PUBLIC.md writing guidelines
+        // 8. PUBLIC.md writing guidelines
         add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-        // 11. SHARED_CONTEXT.md writing guidelines
-        add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
-        // 12. Callback script usage
+        // 9. Callback script usage
         add(
             InstructionSections.callbackScriptUsage(
                 forReviewer = true,
@@ -149,27 +139,25 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Ticket
         add(ticketSection(request.ticketContent))
-        // 3. SHARED_CONTEXT.md
-        add(sharedContextSection(request.sharedContextPath))
-        // 4. Role catalog
+        // 3. Role catalog
         add(InstructionSections.roleCatalog(request.roleCatalogEntries))
-        // 5. Available agent types & models
+        // 4. Available agent types & models
         add(InstructionSections.AGENT_TYPES_AND_MODELS)
-        // 6. Plan format instructions
+        // 5. Plan format instructions
         add(InstructionSections.PLAN_FORMAT_INSTRUCTIONS)
-        // 7. Reviewer feedback (iteration > 1)
+        // 6. Reviewer feedback (iteration > 1)
         if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
         }
-        // 8. plan.json output path
+        // 7. plan.json output path
         add(planJsonOutputPathSection(request.planJsonOutputPath))
-        // 9. PLAN.md output path
+        // 8. PLAN.md output path
         add(planMdOutputPathSection(request.planMdOutputPath))
-        // 10. PUBLIC.md output path
+        // 9. PUBLIC.md output path
         add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-        // 11. PUBLIC.md writing guidelines
+        // 10. PUBLIC.md writing guidelines
         add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-        // 12. Callback script usage (includes validate-plan query)
+        // 11. Callback script usage (includes validate-plan query)
         add(
             InstructionSections.callbackScriptUsage(
                 forReviewer = false,
@@ -229,13 +217,6 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     private fun ticketSection(content: String): String =
         "# Ticket\n\n$content"
-
-    private fun sharedContextSection(path: Path): String =
-        if (Files.exists(path)) {
-            "# SHARED_CONTEXT\n\n${path.readText()}"
-        } else {
-            "# SHARED_CONTEXT\n\n_No shared context yet._"
-        }
 
     private fun planSection(planMdPath: Path): String =
         "# Plan\n\n${planMdPath.readText()}"

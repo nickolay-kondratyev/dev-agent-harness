@@ -36,9 +36,6 @@ object ContextTestFixtures {
         val outputDir = tempDir.resolve("comm/in")
         Files.createDirectories(outputDir)
 
-        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        Files.writeString(sharedContextPath, "Shared context content.")
-
         val publicMdOutputPath = tempDir.resolve("comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
@@ -47,7 +44,6 @@ object ContextTestFixtures {
             partName = "part_1_implementation",
             partDescription = "Implement the main feature",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            sharedContextPath = sharedContextPath,
             planMdPath = null,
             priorPublicMdPaths = emptyList(),
             iterationNumber = 1,
@@ -64,11 +60,6 @@ object ContextTestFixtures {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
-        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        if (!Files.exists(sharedContextPath)) {
-            Files.writeString(sharedContextPath, "Shared context content.")
-        }
-
         val doerPublicMd = tempDir.resolve("doer/comm/out/PUBLIC.md")
         Files.createDirectories(doerPublicMd.parent)
         Files.writeString(doerPublicMd, "# Doer Output\n\nImplemented feature X.")
@@ -81,7 +72,6 @@ object ContextTestFixtures {
             partName = "part_1_implementation",
             partDescription = "Review the implementation",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            sharedContextPath = sharedContextPath,
             planMdPath = null,
             priorPublicMdPaths = emptyList(),
             iterationNumber = 1,
@@ -99,11 +89,6 @@ object ContextTestFixtures {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
-        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        if (!Files.exists(sharedContextPath)) {
-            Files.writeString(sharedContextPath, "Shared context content.")
-        }
-
         val doerPublicMd = tempDir.resolve("doer/comm/out/PUBLIC.md")
         Files.createDirectories(doerPublicMd.parent)
         Files.writeString(doerPublicMd, "# Doer Output\n\nImplemented feature X.")
@@ -119,7 +104,6 @@ object ContextTestFixtures {
             partName = "part_1_implementation",
             partDescription = "Review the implementation",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            sharedContextPath = sharedContextPath,
             planMdPath = null,
             priorPublicMdPaths = emptyList(),
             iterationNumber = 2,
@@ -137,11 +121,6 @@ object ContextTestFixtures {
         val outputDir = tempDir.resolve("planner/comm/in")
         Files.createDirectories(outputDir)
 
-        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        if (!Files.exists(sharedContextPath)) {
-            Files.writeString(sharedContextPath, "Shared context content.")
-        }
-
         val planJsonOutputPath = tempDir.resolve("harness_private/plan.json")
         Files.createDirectories(planJsonOutputPath.parent)
 
@@ -154,7 +133,6 @@ object ContextTestFixtures {
         return PlannerInstructionRequest(
             roleDefinition = roleDefinition("PLANNER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            sharedContextPath = sharedContextPath,
             roleCatalogEntries = listOf(
                 InstructionSections.RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
                 InstructionSections.RoleCatalogEntry("REVIEWER", "Reviews code", null),
