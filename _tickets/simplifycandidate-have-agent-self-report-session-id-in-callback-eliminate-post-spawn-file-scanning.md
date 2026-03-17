@@ -1,11 +1,11 @@
 ---
 id: nid_rchs79r92tshvjb3m2jpudb1f_E
 title: "SIMPLIFY_CANDIDATE: Have agent self-report session ID in callback — eliminate post-spawn file scanning"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:02:14Z
-status_updated_iso: 2026-03-17T22:02:14Z
+status_updated_iso: 2026-03-17T22:15:26Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
