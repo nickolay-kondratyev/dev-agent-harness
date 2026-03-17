@@ -289,7 +289,7 @@ Options:
 
 **Must resolve at Gate 1.** This affects the interface shape.
 
-### R2: `pendingQuestions` and `UserQuestionHandler`
+### R2: `UserQuestionHandler`
 
 User questions are side-channel: the HTTP server handles them via `UserQuestionHandler` and
 delivers answers via `AckedPayloadSender`. This flow currently goes through `SessionsState`.
