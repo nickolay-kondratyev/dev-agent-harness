@@ -30,6 +30,8 @@ Replace the 12-section conditional assembly with 3-4 pre-built role-based templa
 
 Each template is a single, readable, self-contained instruction document with clear placeholder substitution points. The conditional logic moves from runtime section selection to template selection (a single if/when).
 
+Make sure there are clear subsitutions & extension points so that we can EXTEND the templates. 
+
 ## Why This Improves Robustness
 - Easier to audit what each role actually sees (read one template vs trace 12 conditional sections)
 - Fewer code paths = fewer bugs in instruction assembly
