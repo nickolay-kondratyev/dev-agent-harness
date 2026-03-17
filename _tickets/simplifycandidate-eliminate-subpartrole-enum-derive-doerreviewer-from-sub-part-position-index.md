@@ -1,11 +1,11 @@
 ---
 id: nid_njvc0721iruumnk99k2wqmqbx_E
 title: "SIMPLIFY_CANDIDATE: Eliminate SubPartRole enum — derive doer/reviewer from sub-part position index"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:05Z
-status_updated_iso: 2026-03-17T21:32:05Z
+status_updated_iso: 2026-03-17T21:49:33Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
