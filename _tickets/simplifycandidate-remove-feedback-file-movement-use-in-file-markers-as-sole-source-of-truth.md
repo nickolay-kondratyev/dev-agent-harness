@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, feedback, file-management]
 ---
 
+FEEDBACK
+--------------------------------------------------------------------------------
 The granular feedback loop spec (doc/plan/granular-feedback-loop.md) uses harness-owned file movement:
 - Reviewer writes feedback items to __feedback/pending/ with severity-prefixed filenames
 - Doer writes ## Resolution: ADDRESSED/REJECTED marker in the file
@@ -39,4 +41,9 @@ Files affected:
 - doc/plan/granular-feedback-loop.md (simplify file lifecycle section)
 - doc/schema/ai-out-directory.md (simplify __feedback/ directory structure)
 - Feedback processing implementation in PartExecutor
+
+--------------------------------------------------------------------------------
+DECISION:
+LETS keep the harness moving the files, lets add documentation on the WHY this is the case is so it'
+s easier to track what is happening between the files 
 
