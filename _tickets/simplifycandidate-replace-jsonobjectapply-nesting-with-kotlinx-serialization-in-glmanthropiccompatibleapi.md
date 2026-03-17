@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:04:53Z
 id: nid_ijwf9bbptrogesnrp1h2kbkhq_E
 title: "SIMPLIFY_CANDIDATE: Replace JSONObject.apply nesting with Kotlinx Serialization in GlmAnthropicCompatibleApi"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:46:49Z
-status_updated_iso: 2026-03-17T23:02:47Z
+status_updated_iso: 2026-03-17T23:04:53Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -62,3 +63,14 @@ private fun buildRequestBody(prompt: String): String =
 - Serialized output is functionally identical (verified by contract test or snapshot)
 - No behavior change in API calls
 
+---
+
+## Resolution
+
+**Spec updated** in `doc/core/DirectLLM.md`. Added new section "JSON Serialization: `kotlinx.serialization`" specifying:
+
+1. **Request body** — `AnthropicChatRequestBody` + `AnthropicMessage` data classes with `@Serializable`, serialized via `Json.encodeToString(...)`.
+2. **Response parsing** — `AnthropicChatResponseBody` + `AnthropicContentBlock` data classes, deserialized via `Json { ignoreUnknownKeys = true }.decodeFromString(...)`. Validation preserved (non-empty content, `type == "text"`).
+3. **Scope** — classes are `internal` to the `glm` package.
+
+Code implementation deferred to a separate follow-up (this ticket was spec-only per task instructions).
