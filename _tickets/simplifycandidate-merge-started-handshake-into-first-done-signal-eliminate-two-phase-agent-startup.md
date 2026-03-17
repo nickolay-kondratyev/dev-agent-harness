@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, protocol, agent-startup]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 Currently agent startup uses a TWO-PHASE handshake:
 1. Agent starts via TMUX + bootstrap message
 2. Agent calls /callback-shepherd/signal/started (3-min startupAckTimeout)
@@ -40,4 +42,7 @@ Relevant specs:
 Relevant code:
 - Server endpoint handler for /started
 - PartExecutor health-aware await loop startup phase
+--------------------------------------------------------------------------------
 
+DECISION: KEEP two phase
+We have the two phase handshake since getting the ACK back with a GUID is FAST. While the instructions could take a LONG time (over half an hour could be valid). Hence, to know the state of the agent we want to have this 2 phase handshake. Lets have spec document the WHY.
