@@ -26,3 +26,6 @@ All of this exists for the rare edge case where an agent signals `done` and then
 
 **Spec files affected:** doc/core/agent-to-server-communication-protocol.md (remove late fail-workflow section), doc/core/SessionsState.md (remove lateFailWorkflow field and methods), doc/core/PartExecutor.md (remove checkpoint logic), doc/core/TicketShepherd.md (remove checkpoint logic).
 
+--------------------------------------------------------------------------------
+OK yes lets simplify and just LOG error as proposed above. Lets document that this is simplification to KISS.
+
