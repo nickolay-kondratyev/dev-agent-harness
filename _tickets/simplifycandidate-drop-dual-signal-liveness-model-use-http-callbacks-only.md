@@ -36,13 +36,7 @@ Files affected:
 ## OK: lets simplify but still use context_window_slim.json for CONTEXT compaction
 OK we can simplify, and just rely on HTTP callbacks for health checks. 
 
-Before we do so, can you look into WHY we went with addition of context_window_slim.json monitoring in the first place?
-
-And another question comes up: `context_window_slim.json` is NOT fragile, its auto udpated on each conversation. So the question is to consider pivoting the other way and rely solely on `context_window_slim.json` for health instead of HTTP? Solely HTTP could be the better approach though.
-
-
-
-
+Lets document that this is unlikely case and that as I understand if this happens we just wait longer to learn of failure. This is acceptable tradeoff for the sake of simplification. As the case that we are protecting against is not likely to happen.
 
 
 
