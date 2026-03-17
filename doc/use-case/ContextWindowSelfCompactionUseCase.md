@@ -37,7 +37,7 @@ a clean context window with compressed but complete prior knowledge.
 | Term | Definition |
 |------|------------|
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
-| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). |
+| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"file_updated_timestamp": "<ISO-8601 UTC>", "remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). The `file_updated_timestamp` field is used for staleness detection — if the timestamp is older than `contextFileStaleTimeout`, the value is treated as stale (unknown). |
 | **Soft threshold** | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35). Triggers when the agent has **used 65%** of its context (35% remaining). Checked at `done` boundaries — proactive compaction while the agent still has room to produce a quality summary. |
 | **Hard threshold** | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20). Triggers when the agent has **used 80%** of its context (20% remaining). Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
 | **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
@@ -160,6 +160,11 @@ interface ContextWindowStateReader {
      * Throws [ContextWindowStateUnavailableException] if the state file
      * is not present — this is a hard stop failure indicating the
      * external hook is not configured.
+     *
+     * Returns [ContextWindowState] with [ContextWindowState.remainingPercentage] = null
+     * when the file is present but its [ContextWindowState.fileUpdatedTimestamp] is older
+     * than [HarnessTimeoutConfig.contextFileStaleTimeout].  Callers MUST treat null as
+     * "unknown" — no compaction should be triggered, but a warning must be logged.
      */
     suspend fun read(agentSessionId: String): ContextWindowState
 
@@ -171,7 +176,12 @@ interface ContextWindowStateReader {
 }
 
 data class ContextWindowState(
-    val remainingPercentage: Int,          // 0–100, 100 = fresh
+    /**
+     * Remaining context percentage (0–100, 100 = fresh, 0 = exhausted).
+     * Null when the value is stale (file_updated_timestamp older than contextFileStaleTimeout).
+     * Callers must not trigger compaction on a null value; they should log a warning instead.
+     */
+    val remainingPercentage: Int?,
 )
 ```
 
@@ -181,10 +191,43 @@ Reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_wi
 
 - File missing → `ContextWindowStateUnavailableException` (extends `AsgardBaseException`)
   — **hard stop failure**. Means the external hook is not writing context state.
-- File present but malformed → same exception with details.
+- File present but malformed (missing `remaining_percentage` or `file_updated_timestamp`,
+  or unparseable JSON) → same exception with parse error details.
+- File present, `file_updated_timestamp` older than `contextFileStaleTimeout` (default 5 min):
+  → return `ContextWindowState(remainingPercentage = null)`. Log a warning (not an exception
+  — the hook may have temporarily stalled; health monitoring will catch a dead agent).
+
+  <!-- WHY staleness is NOT a hard-stop: the hook stopping mid-session is a recoverable
+       situation. An unknown context state is safe to ignore (no compaction triggered).
+       A truly dead agent will be caught by the existing noActivityTimeout in health monitoring.
+       Making it a hard-stop would cause false-positive AgentCrashed events on transient
+       hook hiccups. -->
+
 - `validatePresence()` called after `AgentSessionIdResolver` resolves the session ID
   (step 6a in spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E). Confirms hook is active
   before any work begins.
+
+### Caller Behavior on Stale State
+
+Both compaction trigger sites (done-boundary check and emergency-interrupt poll) must handle
+`remainingPercentage == null`:
+
+```
+contextState = agentFacade.readContextWindowState(handle)
+if (contextState.remainingPercentage == null) {
+    // Log warning: "context_window_slim.json is stale — skipping compaction check"
+    // Do NOT trigger compaction. Continue normal flow.
+    continue
+}
+if (contextState.remainingPercentage <= threshold) {
+    // trigger compaction
+}
+```
+
+This is the **safe default**: a stale hook freezes compaction decisions rather than
+triggering false compactions or silently ignoring context exhaustion. The existing
+health-monitoring timeout (`noActivityTimeout`) will catch an agent that has truly
+run out of context and gone silent.
 
 ### Non-TMUX Agents
 
@@ -607,7 +650,7 @@ strategies:
 | `SELF_COMPACTION_SOFT_THRESHOLD` | `contextWindowSoftThresholdPct` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
 | `SELF_COMPACTION_HARD_THRESHOLD` | `contextWindowHardThresholdPct` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
 | `SELF_COMPACTION_TIMEOUT` | `selfCompactionTimeout` | 5 min | Max time for agent to write PRIVATE.md and signal |
-| ~~`contextFileStaleTimeout`~~ | ~~5 min~~ | **Removed.** Previously gated `remaining_percentage` freshness and dual-signal early ping. With the simplified liveness model (HTTP callbacks only — ref.ap.dnc1m7qKXVw2zJP8yFRE.E), `remaining_percentage` is always trusted when the file is present. The `validatePresence()` call after spawn (see below) catches hook misconfiguration. If the hook stops mid-session, `remaining_percentage` freezes — worst case, the compaction check acts on stale data, which is a benign failure mode (either compaction triggers on an already-dead agent, which is harmless, or it doesn't trigger and the agent runs out of context, which health monitoring eventually catches via callback staleness). |
+| `contextFileStaleTimeout` | `HarnessTimeoutConfig` field | 5 min | Maximum age of `file_updated_timestamp` in `context_window_slim.json` before the value is considered stale. When stale: `remainingPercentage` is treated as null (unknown) — no compaction is triggered, a warning is logged. This guards against the hook silently stopping mid-session and the harness acting on a frozen `remaining_percentage` that looks healthy but is minutes old. Uses `file_updated_timestamp` from the JSON body (not OS file mtime). |
 
 **Centralized constants:** All threshold values are fields of `HarnessTimeoutConfig`
 (`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — never as magic numbers in the
@@ -640,8 +683,11 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Interface with `read(agentSessionId)` and `validatePresence(agentSessionId)` methods
 - `ClaudeCodeContextWindowStateReader` reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_window_slim.json`
 - File missing → `ContextWindowStateUnavailableException` (hard stop)
-- File malformed → same exception with parse error details
-- Verifiable: unit test with fake file; integration test confirming file presence after real Claude Code session
+- File malformed (missing required fields or unparseable JSON) → same exception with parse error details
+- File present, `file_updated_timestamp` older than `contextFileStaleTimeout` → `ContextWindowState(remainingPercentage = null)` + log warning (not an exception)
+- `ContextWindowState.remainingPercentage` is nullable (`Int?`); null = stale/unknown
+- Callers (done-boundary check, emergency-interrupt poll): skip compaction trigger when `remainingPercentage == null`, log warning instead
+- Verifiable: unit test with fake file (fresh timestamp → value returned); unit test (stale timestamp → null returned + warning logged); unit test (file missing → exception); integration test confirming file presence after real Claude Code session
 
 ### R2: Auto-Compaction Disabled On Each Agent Start
 - Full mechanism spec: ref.ap.7bD0uLeoQQSFS16TQeCRF.E
@@ -776,7 +822,7 @@ pre/post steps. Done-boundary trigger detection. 1-second polling loop with emer
 | **PRIVATE.md quality varies** | Poor summarization → degraded agent performance in new session | Structured prompt template with specific sections. Iterate on template based on real-world results. |
 | **1-second polling overhead** | Continuous file reads during entire agent work period | File is ~30 bytes JSON on local filesystem. Measured overhead: negligible (< 0.1ms per read). |
 | **Self-compaction itself fails** | Agent at 20% remaining may not have enough context to summarize | 5-minute timeout. If fails → `AgentCrashed` → `FailedToExecutePlanUseCase`. Consider shorter PRIVATE.md template for emergency compaction. |
-| **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files (remaining_percentage never changes) → health monitoring's existing timeout eventually fires. |
+| **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files (file_updated_timestamp > contextFileStaleTimeout) → `remainingPercentage` returned as null → compaction is skipped with a logged warning → health monitoring's existing noActivityTimeout eventually catches a truly dead/silent agent. |
 | **35% remaining triggers too early for some workloads** | Frequent unnecessary self-compactions | Threshold is a centralized constant, easily adjustable. Monitor in practice and tune. Each compaction adds ~2 minutes overhead. |
 
 ---

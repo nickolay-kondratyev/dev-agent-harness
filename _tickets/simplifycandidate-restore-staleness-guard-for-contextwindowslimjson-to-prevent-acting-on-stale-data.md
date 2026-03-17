@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:36:41Z
 id: nid_b5l7sip07e2kft5h8bzndq3fo_E
 title: "SIMPLIFY_CANDIDATE: Restore staleness guard for context_window_slim.json to prevent acting on stale data"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:05:35Z
-status_updated_iso: 2026-03-17T22:33:06Z
+status_updated_iso: 2026-03-17T22:36:41Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -43,3 +44,19 @@ And this is how the file looks like `{"file_updated_timestamp":"2026-03-17T21:31
 
 
 
+
+## Notes
+
+**2026-03-17T22:36:37Z**
+
+## Resolution
+
+Updated spec (doc/use-case/ContextWindowSelfCompactionUseCase.md) and HarnessTimeoutConfig.kt:
+
+1. **Vocabulary**: Updated `context_window_slim.json` format to document the `file_updated_timestamp` field.
+2. **ContextWindowStateReader spec**: Added staleness guard — when `file_updated_timestamp` is older than `contextFileStaleTimeout` (default 5 min), `remainingPercentage` is returned as `null`.
+3. **ContextWindowState**: Changed `remainingPercentage` to `Int?` (nullable). Null = stale/unknown. Callers skip compaction and log a warning.
+4. **Caller behavior**: Documented that both done-boundary and emergency-interrupt polls must check for null and skip compaction with a warning.
+5. **Thresholds table**: Restored `contextFileStaleTimeout` field (was incorrectly removed as "benign failure mode").
+6. **HarnessTimeoutConfig.kt**: Added `contextFileStaleTimeout: Duration = 5.minutes` field and `2.seconds` fast-test override.
+7. **Risks section**: Updated stale-hook risk entry to reflect the new detection behavior.
