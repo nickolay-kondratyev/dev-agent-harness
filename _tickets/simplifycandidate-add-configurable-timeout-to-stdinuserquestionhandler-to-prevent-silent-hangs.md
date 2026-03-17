@@ -12,6 +12,9 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, ux, qa-flow]
 ---
 
+
+FEEDBACK:
+--------------------------------------------------------------------------------
 Per spec (doc/core/UserQuestionHandler.md), V1 StdinUserQuestionHandler blocks indefinitely waiting for stdin input.
 
 If the harness process is:
@@ -32,3 +35,6 @@ Simpler alternative (if a full timeout is overkill): at minimum print a visible 
 
 Spec reference: doc/core/UserQuestionHandler.md
 
+--------------------------------------------------------------------------------
+
+DECISION: NO lets allow the STDIN feedback to wait for user. However long it takes. Justification user could be in a meeting or went on a walk. We should NOT fail workflow if it took even hours to answer the question. The workflow should stop and wait. Lets document this use case in spec.
