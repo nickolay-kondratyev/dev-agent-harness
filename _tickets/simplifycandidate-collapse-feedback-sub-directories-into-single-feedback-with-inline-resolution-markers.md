@@ -1,11 +1,11 @@
 ---
 id: nid_p2pbpopi88d2nj7bchj8jgpba_E
 title: "SIMPLIFY_CANDIDATE: Collapse feedback sub-directories into single __feedback/ with inline resolution markers"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:23:22Z
-status_updated_iso: 2026-03-17T21:23:22Z
+status_updated_iso: 2026-03-17T21:28:37Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
