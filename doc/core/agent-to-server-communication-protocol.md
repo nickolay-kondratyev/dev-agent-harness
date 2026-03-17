@@ -331,6 +331,35 @@ triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error i
 After the first callback arrives, the executor switches to the normal `noActivityTimeout`
 (30 min) for the remainder of the agent's work.
 
+### WHY-NOT: Eliminating Phase 1 (Merging `/started` Into First `done`)
+
+A natural simplification is to drop Phase 1 entirely — the first `/signal/done` would serve
+as proof-of-life. This was evaluated and rejected for a fundamental reason:
+
+**`/started` fires in seconds; the first `done` can take 30+ minutes.**
+
+Phase 1 (`/signal/started`) fires immediately on agent startup — a trivial "I'm alive and
+can reach the server" signal with no work attached. Phase 2 (`/signal/done`) only completes
+when the agent finishes its work, which can take 30 minutes or more for complex tasks.
+
+The two phases give the harness **precise state observability** at all times:
+
+| State | What the harness knows | Timeout applied |
+|-------|------------------------|-----------------|
+| After spawn, before `/started` | Agent may not have started — startup may have failed | `noStartupAckTimeout` (3 min) |
+| After `/started`, before `done` | Agent is alive and working | `noActivityTimeout` (30 min) |
+
+Without Phase 1 (single-phase model):
+- The harness cannot distinguish "agent crashed on startup" from "agent is working on a long
+  task" — both look identical until the first callback arrives.
+- To avoid false positives on long-running work, `noStartupAckTimeout` would have to be set
+  to 30+ minutes — which is the same as having no startup timeout at all.
+- A misconfigured or crashed agent would not be detected for 30+ minutes rather than 3.
+
+The dual-timeout model (`noStartupAckTimeout` vs. `noActivityTimeout`) exists precisely
+because these two windows have fundamentally different failure probabilities and acceptable
+detection latencies. Merging the phases collapses this distinction.
+
 ---
 
 ## Structured Text Delivery — Instruction Files in `.ai_out/`
