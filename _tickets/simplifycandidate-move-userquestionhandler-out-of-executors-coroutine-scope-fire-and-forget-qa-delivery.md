@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:11:56Z
 id: nid_ardsgbv0n6z48ya1y3079ez2u_E
 title: "SIMPLIFY_CANDIDATE: Move UserQuestionHandler out of executor's coroutine scope — decoupled Q&A with ping suppression"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:57Z
-status_updated_iso: 2026-03-17T23:02:36Z
+status_updated_iso: 2026-03-17T23:11:56Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -83,3 +84,28 @@ The following checks must gate on `isQAPending`:
 - `SessionEntry` state
 - Health-aware await loop inside `AgentFacadeImpl.sendPayloadAndAwaitSignal`
 - Context compaction trigger logic
+
+---
+
+## Resolution
+
+**Completed: spec-only changes applied to 7 spec documents.**
+
+### Spec Documents Updated
+
+| Document | Change |
+|----------|--------|
+| `doc/core/UserQuestionHandler.md` | Full rewrite: Q&A coordinator architecture, question queuing, batch delivery, coordinator lifecycle, ping suppression rationale, answer file format |
+| `doc/core/SessionsState.md` | Added `pendingQA: QAPendingState?` field to SessionEntry, `QAPendingState` data model with `PendingQuestion`, `isQAPending` derived property, multiple-question queuing behavior |
+| `doc/core/PartExecutor.md` | Health-aware await loop pseudocode: added `isQAPending` gate before compaction + health checks; updated "What Does NOT Flow Through AgentSignal" table for user-question |
+| `doc/use-case/HealthMonitoring.md` | Replaced "Health Ping During User-Question — harmless" section with "Suppressed" section documenting why pings waste context window during Q&A |
+| `doc/use-case/ContextWindowSelfCompactionUseCase.md` | Added Q&A gate column to trigger detection table; added `isQAPending` check to health-aware await loop pseudocode |
+| `doc/core/agent-to-server-communication-protocol.md` | Updated user-question section, signal design, routing, and AckedPayloadSender callers table to reflect Q&A coordinator and pendingQA |
+| `doc/core/AgentInteraction.md` | Clarified R2: Q&A coordinator relationship to AgentFacade — coordinator is server-owned, independent of facade |
+
+### Design Decisions Made
+
+1. **Q&A coordinator is server-owned, not facade-owned** — it accesses `SessionEntry` and `AckedPayloadSender` directly, outside the executor's coroutine scope
+2. **Three checks gated on `isQAPending`**: health pings, context window compaction, noActivityTimeout — all suppressed when agent is in known-idle Q&A wait state
+3. **Batch delivery**: all answers delivered together after full queue is answered, preventing agent mid-flight resume while additional answers pending
+4. **Session death during Q&A**: detected when coordinator's `AckedPayloadSender` fails — no special executor-side handling needed
