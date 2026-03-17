@@ -5,6 +5,7 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
+import com.glassthought.shepherd.core.agent.tmux.util.orThrow
 
 /**
  * Sends keystrokes and text to an existing tmux pane.
@@ -83,20 +84,12 @@ class TmuxCommunicatorImpl(
 
         // [-l]: send text literally so words like "Space", "Enter", "Escape" are NOT
         // interpreted as tmux key names.
-        val literalResult = commandRunner.run("send-keys", "-t", paneTarget, "-l", text)
-        if (literalResult.exitCode != 0) {
-            throw IllegalStateException(
-                "Failed to send literal keys to tmux pane [$paneTarget]. Exit code: [${literalResult.exitCode}]. Stderr: [${literalResult.stdErr}]"
-            )
-        }
+        commandRunner.run("send-keys", "-t", paneTarget, "-l", text)
+            .orThrow("send literal keys to tmux pane [$paneTarget]")
 
         // Send Enter as a separate command (NOT literal — we want the actual key press).
-        val enterResult = commandRunner.run("send-keys", "-t", paneTarget, "Enter")
-        if (enterResult.exitCode != 0) {
-            throw IllegalStateException(
-                "Failed to send Enter to tmux pane [$paneTarget]. Exit code: [${enterResult.exitCode}]. Stderr: [${enterResult.stdErr}]"
-            )
-        }
+        commandRunner.run("send-keys", "-t", paneTarget, "Enter")
+            .orThrow("send Enter to tmux pane [$paneTarget]")
     }
 
     override suspend fun sendRawKeys(paneTarget: String, keys: String) {
@@ -106,11 +99,7 @@ class TmuxCommunicatorImpl(
             Val(keys, ValType.SHELL_COMMAND),
         )
 
-        val result = commandRunner.run("send-keys", "-t", paneTarget, keys)
-        if (result.exitCode != 0) {
-            throw IllegalStateException(
-                "Failed to send raw keys to tmux pane [$paneTarget]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
-            )
-        }
+        commandRunner.run("send-keys", "-t", paneTarget, keys)
+            .orThrow("send raw keys to tmux pane [$paneTarget]")
     }
 }

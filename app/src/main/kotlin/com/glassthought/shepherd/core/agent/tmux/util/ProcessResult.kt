@@ -12,3 +12,13 @@ data class ProcessResult(
     val stdOut: String,
     val stdErr: String,
 )
+
+/**
+ * Throws [IllegalStateException] if this result indicates failure (non-zero exit code).
+ *
+ * @param operation Short description of the failed operation (used in the error message).
+ */
+internal fun ProcessResult.orThrow(operation: String) {
+    if (exitCode != 0)
+        throw IllegalStateException("Failed to $operation. Exit code: [$exitCode]. Stderr: [$stdErr]")
+}
