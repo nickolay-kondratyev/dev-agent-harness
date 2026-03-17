@@ -1,11 +1,11 @@
 ---
 id: nid_r1mfznwnpynbq5t9rksza5q4h_E
 title: "SIMPLIFY_CANDIDATE: Extract shared ReInstructWithRetry abstraction from PartExecutorImpl"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:04:44Z
-status_updated_iso: 2026-03-17T21:04:44Z
+status_updated_iso: 2026-03-17T21:43:54Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
