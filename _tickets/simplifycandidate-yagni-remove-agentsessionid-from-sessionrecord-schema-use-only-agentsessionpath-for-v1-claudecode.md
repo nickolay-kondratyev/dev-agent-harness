@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:13:08Z
 id: nid_d3yo168rp46gu1odszeve8gun_E
 title: "SIMPLIFY_CANDIDATE: YAGNI — remove agentSessionId from SessionRecord schema, use only agentSessionPath for V1 ClaudeCode"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:29Z
-status_updated_iso: 2026-03-17T23:09:40Z
+status_updated_iso: 2026-03-17T23:13:08Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -59,7 +60,7 @@ DECISION: we actually only use `agentSessionId` for Claude Code lets re-align th
 {
   "handshakeGuid": "...",
   "agentSession": {
-    "id":"" 
+    "id":""
   },
   "agentType": "ClaudeCode",
   "model": "...",
@@ -67,3 +68,13 @@ DECISION: we actually only use `agentSessionId` for Claude Code lets re-align th
 }
 ```
 And we can start with only having `agentSession.id` to start out with.
+
+## Resolution
+
+Replaced the `agentSessionId`/`agentSessionPath` OR-branch with a unified `agentSession: { id }` sub-object in the SessionRecord schema. Changes:
+
+1. **`doc/schema/plan-and-current-state.md`** — Updated Session Record Schema table: removed `agentSessionId` (optional) and `agentSessionPath` (optional) fields, replaced with `agentSession` (required) sub-object containing `agentSession.id` (required). Updated all 5 JSON examples. Added V2+ HTML comment noting that `agentSession` can be extended with additional fields (e.g., `path`) when other agent types are supported.
+2. **`doc/use-case/SpawnTmuxAgentSessionUseCase.md`** — Updated cross-reference to session record fields.
+3. **`doc_v2/idle-session-recovery.md`** — Updated `--resume` reference from `agentSessionId` to `agentSession.id`.
+
+**Not changed** (correctly so): Kotlin interface parameter names (`agentSessionId` in `ContextWindowStateReader.read()` etc.) — these are internal code names, not JSON schema fields. They take the value that now comes from `agentSession.id` in the schema.

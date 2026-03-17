@@ -16,7 +16,7 @@ Automatic respawn of the dead idle session:
 
 1. Detect `send-keys` failure (after retry)
 2. Spawn a **new** TMUX session for the dead sub-part
-3. Use `--resume` with the `agentSessionId` from `current_state.json` to restore the
+3. Use `--resume` with the `agentSession.id` from `current_state.json` to restore the
    agent's conversation context
 4. Send the new instructions to the respawned session
 5. Continue the iteration loop as normal
