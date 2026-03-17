@@ -1,11 +1,11 @@
 ---
 id: nid_h5xjerwi7qvms0rh5qffmuj0k_E
 title: "SIMPLIFY_CANDIDATE: Extract Tmux error-check into reusable helper — eliminate 4 duplicate error-check blocks"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:46:35Z
-status_updated_iso: 2026-03-17T22:46:35Z
+status_updated_iso: 2026-03-17T23:00:00Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
