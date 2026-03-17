@@ -1,11 +1,11 @@
 ---
 id: nid_d3yo168rp46gu1odszeve8gun_E
 title: "SIMPLIFY_CANDIDATE: YAGNI — remove agentSessionId from SessionRecord schema, use only agentSessionPath for V1 ClaudeCode"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:29Z
-status_updated_iso: 2026-03-17T22:47:29Z
+status_updated_iso: 2026-03-17T23:09:40Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
