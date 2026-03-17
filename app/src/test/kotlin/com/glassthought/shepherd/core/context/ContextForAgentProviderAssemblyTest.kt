@@ -18,7 +18,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a doer request with a plan (with-planning workflow)") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-plan-test")
-        val baseRequest = ContextTestFixtures.doerRequest(tempDir)
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         val planMdPath = tempDir.resolve("shared/plan/PLAN.md")
         Files.createDirectories(planMdPath.parent)
@@ -27,7 +27,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = baseRequest.copy(planMdPath = planMdPath)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleDoerInstructions(request).readText()
 
             it("THEN includes PLAN.md content") {
                 text shouldContain "Step 1: Do the thing"
@@ -38,10 +38,10 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a doer request without a plan (no-planning workflow)") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-no-plan-test")
-        val request = ContextTestFixtures.doerRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleDoerInstructions(request).readText()
 
             it("THEN does NOT include plan section header") {
                 text shouldNotContain "# Plan\n"
@@ -52,10 +52,10 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a doer request on iteration 1") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-doer-iter1-test")
-        val request = ContextTestFixtures.doerRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleDoerInstructions(request).readText()
 
             it("THEN does NOT include pushback guidance (first iteration)") {
                 text shouldNotContain "Handling Reviewer Feedback"
@@ -70,7 +70,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a doer request on iteration 2 with reviewer feedback") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-doer-iter2-test")
-        val baseRequest = ContextTestFixtures.doerRequest(tempDir)
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         val reviewerPublicMd = tempDir.resolve("reviewer/comm/out/PUBLIC.md")
         Files.createDirectories(reviewerPublicMd.parent)
@@ -78,11 +78,11 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
 
         val request = baseRequest.copy(
             iterationNumber = 2,
-            peerPublicMdPath = reviewerPublicMd,
+            reviewerPublicMdPath = reviewerPublicMd,
         )
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleDoerInstructions(request).readText()
 
             it("THEN includes pushback guidance") {
                 text shouldContain "Handling Reviewer Feedback"
@@ -97,36 +97,10 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a reviewer request on iteration 1") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-reviewer-iter1-test")
-
-        val doerPublicMd = tempDir.resolve("doer/comm/out/PUBLIC.md")
-        Files.createDirectories(doerPublicMd.parent)
-        Files.writeString(doerPublicMd, "# Implementation\n\nDone.")
-
-        val outputDir = tempDir.resolve("reviewer/comm/in")
-        Files.createDirectories(outputDir)
-        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        Files.writeString(sharedContextPath, "Context.")
-        val publicMdOutputPath = tempDir.resolve("reviewer/comm/out/PUBLIC.md")
-        Files.createDirectories(publicMdOutputPath.parent)
-
-        val request = ExecutionAgentInstructionRequest(
-            roleDefinition = ContextTestFixtures.roleDefinition("REVIEWER"),
-            partName = "part_1",
-            partDescription = "Review impl",
-            ticketContent = "Ticket.",
-            sharedContextPath = sharedContextPath,
-            planMdPath = null,
-            priorPublicMdPaths = emptyList(),
-            iterationNumber = 1,
-            isReviewer = true,
-            peerPublicMdPath = doerPublicMd,
-            feedbackDir = null,
-            outputDir = outputDir,
-            publicMdOutputPath = publicMdOutputPath,
-        )
+        val request = ContextTestFixtures.reviewerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleReviewerInstructions(request).readText()
 
             it("THEN includes structured feedback format guidance") {
                 text shouldContain "Structured Feedback Format"
@@ -137,7 +111,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
             }
 
             it("THEN includes doer's output for review") {
-                text shouldContain "Done."
+                text shouldContain "Implemented feature X"
             }
 
             it("THEN does NOT include addressed/rejected feedback headers (first iteration)") {
@@ -149,10 +123,10 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a reviewer request on iteration 2 with feedback state") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-reviewer-iter2-test")
-        val request = ContextTestFixtures.reviewerRequestWithFeedback(tempDir)
+        val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleReviewerInstructions(request).readText()
 
             it("THEN includes addressed feedback header") {
                 text shouldContain "Addressed Feedback"
@@ -167,7 +141,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN a doer request with prior PUBLIC.md files") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-prior-outputs-test")
-        val baseRequest = ContextTestFixtures.doerRequest(tempDir)
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         val priorPublicMd = tempDir.resolve("part_0/impl/comm/out/PUBLIC.md")
         Files.createDirectories(priorPublicMd.parent)
@@ -176,7 +150,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = baseRequest.copy(priorPublicMdPaths = listOf(priorPublicMd))
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleExecutionAgentInstructions(request).readText()
+            val text = provider.assembleDoerInstructions(request).readText()
 
             it("THEN includes prior PUBLIC.md content") {
                 text shouldContain "Set up database schema"
@@ -191,10 +165,10 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     describe("GIVEN instructions are assembled for any agent") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-file-test")
-        val request = ContextTestFixtures.doerRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN the file is written") {
-            val path = provider.assembleExecutionAgentInstructions(request)
+            val path = provider.assembleDoerInstructions(request)
 
             it("THEN the file is named instructions.md") {
                 path.fileName.toString() shouldContain "instructions.md"

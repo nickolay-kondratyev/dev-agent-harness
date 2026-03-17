@@ -11,8 +11,8 @@ import java.nio.file.Path
  * ticket, shared context, prior agent outputs, and communication tooling. The provider is the
  * **single place** that decides what each agent sees.
  *
- * Three methods, not one generic method. Each agent type has different content needs, and the
- * type system makes that explicit.
+ * Four methods — one per role. Each agent type has different content needs, and the type system
+ * makes that explicit. No `when(agentKind)` branching inside a single method, no boolean flags.
  *
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
@@ -22,11 +22,18 @@ import java.nio.file.Path
 interface ContextForAgentProvider {
 
     /**
-     * Assembles instruction file for an execution agent (doer or reviewer).
+     * Assembles instruction file for a doer execution agent.
      * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
      * Returns the path to the written file.
      */
-    suspend fun assembleExecutionAgentInstructions(request: ExecutionAgentInstructionRequest): Path
+    suspend fun assembleDoerInstructions(request: DoerInstructionRequest): Path
+
+    /**
+     * Assembles instruction file for a reviewer execution agent.
+     * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
+     * Returns the path to the written file.
+     */
+    suspend fun assembleReviewerInstructions(request: ReviewerInstructionRequest): Path
 
     /**
      * Assembles instruction file for the PLANNER agent.
@@ -49,7 +56,7 @@ interface ContextForAgentProvider {
 }
 
 /**
- * Request for assembling execution agent (doer/reviewer) instructions.
+ * Request for assembling doer execution agent instructions.
  *
  * @param roleDefinition The agent's role definition (loaded from catalog)
  * @param partName Name of the current part in the workflow
@@ -59,13 +66,11 @@ interface ContextForAgentProvider {
  * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
  * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
  * @param iterationNumber Current iteration (1-based)
- * @param isReviewer True if assembling for the reviewer sub-part
- * @param peerPublicMdPath Path to peer sub-part's PUBLIC.md (reviewer→doer or doer→reviewer)
- * @param feedbackDir Path to `__feedback/` directory at part level (for reviewer on iter > 1)
+ * @param reviewerPublicMdPath Path to reviewer's PUBLIC.md from prior iteration — null on iteration 1
  * @param outputDir Directory where `instructions.md` will be written
  * @param publicMdOutputPath Where the agent should write its PUBLIC.md
  */
-data class ExecutionAgentInstructionRequest(
+data class DoerInstructionRequest(
     val roleDefinition: RoleDefinition,
     val partName: String,
     val partDescription: String,
@@ -74,8 +79,37 @@ data class ExecutionAgentInstructionRequest(
     val planMdPath: Path?,
     val priorPublicMdPaths: List<Path>,
     val iterationNumber: Int,
-    val isReviewer: Boolean,
-    val peerPublicMdPath: Path?,
+    val reviewerPublicMdPath: Path?,
+    val outputDir: Path,
+    val publicMdOutputPath: Path,
+)
+
+/**
+ * Request for assembling reviewer execution agent instructions.
+ *
+ * @param roleDefinition The agent's role definition (loaded from catalog)
+ * @param partName Name of the current part in the workflow
+ * @param partDescription Description of what this part accomplishes
+ * @param ticketContent Full ticket markdown content (including frontmatter)
+ * @param sharedContextPath Path to `.ai_out/${branch}/shared/SHARED_CONTEXT.md`
+ * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
+ * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
+ * @param iterationNumber Current iteration (1-based)
+ * @param doerPublicMdPath Path to doer's PUBLIC.md for this part — null if doer hasn't run yet
+ * @param feedbackDir Path to `__feedback/` directory at part level (for iteration > 1)
+ * @param outputDir Directory where `instructions.md` will be written
+ * @param publicMdOutputPath Where the agent should write its PUBLIC.md
+ */
+data class ReviewerInstructionRequest(
+    val roleDefinition: RoleDefinition,
+    val partName: String,
+    val partDescription: String,
+    val ticketContent: String,
+    val sharedContextPath: Path,
+    val planMdPath: Path?,
+    val priorPublicMdPaths: List<Path>,
+    val iterationNumber: Int,
+    val doerPublicMdPath: Path?,
     val feedbackDir: Path?,
     val outputDir: Path,
     val publicMdOutputPath: Path,

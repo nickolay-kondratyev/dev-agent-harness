@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T18:03:31Z
 id: nid_orpcmdfj1m06lyajssewwn1k9_E
 title: "SIMPLIFY_CANDIDATE: Reduce ContextForAgentProvider instruction sections from 12 conditional to role-based templates"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:31:13Z
-status_updated_iso: 2026-03-15T01:31:13Z
+status_updated_iso: 2026-03-17T18:03:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -29,6 +30,8 @@ Replace the 12-section conditional assembly with 3-4 pre-built role-based templa
 - PlannerTemplate
 
 Each template is a single, readable, self-contained instruction document with clear placeholder substitution points. The conditional logic moves from runtime section selection to template selection (a single if/when).
+
+Make sure there are clear subsitutions & extension points so that we can EXTEND the templates. 
 
 ## Why This Improves Robustness
 - Easier to audit what each role actually sees (read one template vs trace 12 conditional sections)

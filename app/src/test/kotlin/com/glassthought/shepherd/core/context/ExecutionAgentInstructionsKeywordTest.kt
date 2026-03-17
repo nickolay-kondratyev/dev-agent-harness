@@ -15,13 +15,13 @@ import kotlin.io.path.readText
  */
 class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
 
-    describe("GIVEN a doer execution agent request on iteration 1") {
+    describe("GIVEN a doer instruction request on iteration 1") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("doer-keyword-test")
-        val request = ContextTestFixtures.doerRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleExecutionAgentInstructions(request)
+            val instructionsPath = provider.assembleDoerInstructions(request)
             val text = instructionsPath.readText()
 
             // ── Callback signal script ───────────────────────────────────
@@ -90,13 +90,13 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a reviewer execution agent request on iteration 2 with feedback") {
+    describe("GIVEN a reviewer instruction request on iteration 2 with feedback") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("reviewer-keyword-test")
-        val request = ContextTestFixtures.reviewerRequestWithFeedback(tempDir)
+        val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleExecutionAgentInstructions(request)
+            val instructionsPath = provider.assembleReviewerInstructions(request)
             val text = instructionsPath.readText()
 
             // ── Reviewer-specific done results ───────────────────────────

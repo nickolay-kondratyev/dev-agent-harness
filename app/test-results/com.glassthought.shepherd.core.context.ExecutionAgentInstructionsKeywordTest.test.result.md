@@ -5,7 +5,7 @@ failed: 0
 skipped: 0
 ---
 
-- GIVEN a doer execution agent request on iteration 1
+- GIVEN a doer instruction request on iteration 1
   - WHEN instructions are assembled
     - [PASS] THEN contains 'ack-payload' signal
     - [PASS] THEN contains 'completed' done result for doer
@@ -21,7 +21,7 @@ skipped: 0
     - [PASS] THEN contains role name
     - [PASS] THEN contains ticket content
     - [PASS] THEN does NOT contain query script (execution agents have no queries)
-- GIVEN a reviewer execution agent request on iteration 2 with feedback
+- GIVEN a reviewer instruction request on iteration 2 with feedback
   - WHEN instructions are assembled
     - [PASS] THEN contains 'addressed' feedback status
     - [PASS] THEN contains 'critical' severity

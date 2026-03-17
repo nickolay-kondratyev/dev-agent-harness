@@ -7,7 +7,7 @@ import java.nio.file.Path
 /**
  * Test fixtures for [ContextForAgentProvider] tests.
  *
- * Creates temporary directories and files needed by the provider. Each call to a `create*Request`
+ * Creates temporary directories and files needed by the provider. Each call to a factory
  * method sets up a self-contained filesystem structure under the provided [tempDir].
  */
 object ContextTestFixtures {
@@ -30,9 +30,9 @@ object ContextTestFixtures {
     }
 
     /**
-     * Creates a minimal doer execution agent request with all required filesystem structures.
+     * Creates a minimal doer instruction request with all required filesystem structures.
      */
-    fun doerRequest(tempDir: Path): ExecutionAgentInstructionRequest {
+    fun doerInstructionRequest(tempDir: Path): DoerInstructionRequest {
         val outputDir = tempDir.resolve("comm/in")
         Files.createDirectories(outputDir)
 
@@ -42,7 +42,7 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return ExecutionAgentInstructionRequest(
+        return DoerInstructionRequest(
             roleDefinition = roleDefinition("IMPLEMENTOR"),
             partName = "part_1_implementation",
             partDescription = "Implement the main feature",
@@ -51,8 +51,41 @@ object ContextTestFixtures {
             planMdPath = null,
             priorPublicMdPaths = emptyList(),
             iterationNumber = 1,
-            isReviewer = false,
-            peerPublicMdPath = null,
+            reviewerPublicMdPath = null,
+            outputDir = outputDir,
+            publicMdOutputPath = publicMdOutputPath,
+        )
+    }
+
+    /**
+     * Creates a reviewer instruction request on iteration 1 with doer's PUBLIC.md.
+     */
+    fun reviewerInstructionRequest(tempDir: Path): ReviewerInstructionRequest {
+        val outputDir = tempDir.resolve("reviewer/comm/in")
+        Files.createDirectories(outputDir)
+
+        val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
+        if (!Files.exists(sharedContextPath)) {
+            Files.writeString(sharedContextPath, "Shared context content.")
+        }
+
+        val doerPublicMd = tempDir.resolve("doer/comm/out/PUBLIC.md")
+        Files.createDirectories(doerPublicMd.parent)
+        Files.writeString(doerPublicMd, "# Doer Output\n\nImplemented feature X.")
+
+        val publicMdOutputPath = tempDir.resolve("reviewer/comm/out/PUBLIC.md")
+        Files.createDirectories(publicMdOutputPath.parent)
+
+        return ReviewerInstructionRequest(
+            roleDefinition = roleDefinition("REVIEWER"),
+            partName = "part_1_implementation",
+            partDescription = "Review the implementation",
+            ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
+            sharedContextPath = sharedContextPath,
+            planMdPath = null,
+            priorPublicMdPaths = emptyList(),
+            iterationNumber = 1,
+            doerPublicMdPath = doerPublicMd,
             feedbackDir = null,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
@@ -60,14 +93,16 @@ object ContextTestFixtures {
     }
 
     /**
-     * Creates a reviewer execution agent request on iteration > 1 with feedback directory.
+     * Creates a reviewer instruction request on iteration > 1 with feedback directory.
      */
-    fun reviewerRequestWithFeedback(tempDir: Path): ExecutionAgentInstructionRequest {
+    fun reviewerInstructionRequestWithFeedback(tempDir: Path): ReviewerInstructionRequest {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
         val sharedContextPath = tempDir.resolve("SHARED_CONTEXT.md")
-        Files.writeString(sharedContextPath, "Shared context content.")
+        if (!Files.exists(sharedContextPath)) {
+            Files.writeString(sharedContextPath, "Shared context content.")
+        }
 
         val doerPublicMd = tempDir.resolve("doer/comm/out/PUBLIC.md")
         Files.createDirectories(doerPublicMd.parent)
@@ -79,7 +114,7 @@ object ContextTestFixtures {
         // Use test resource feedback directory
         val feedbackDir = resourceDir("feedback")
 
-        return ExecutionAgentInstructionRequest(
+        return ReviewerInstructionRequest(
             roleDefinition = roleDefinition("REVIEWER"),
             partName = "part_1_implementation",
             partDescription = "Review the implementation",
@@ -88,8 +123,7 @@ object ContextTestFixtures {
             planMdPath = null,
             priorPublicMdPaths = emptyList(),
             iterationNumber = 2,
-            isReviewer = true,
-            peerPublicMdPath = doerPublicMd,
+            doerPublicMdPath = doerPublicMd,
             feedbackDir = feedbackDir,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
