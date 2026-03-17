@@ -1,11 +1,11 @@
 ---
 id: nid_zcx2kqker77ku9xvwsq607tt6_E
 title: "SIMPLIFY_CANDIDATE: Add configurable timeout to StdinUserQuestionHandler to prevent silent hangs"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:05:21Z
-status_updated_iso: 2026-03-17T21:05:21Z
+status_updated_iso: 2026-03-17T22:02:51Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
