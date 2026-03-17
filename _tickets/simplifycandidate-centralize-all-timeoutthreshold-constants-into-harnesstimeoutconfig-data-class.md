@@ -1,11 +1,11 @@
 ---
 id: nid_c6uvtzkas9kkjnp82r89qeskd_E
 title: "SIMPLIFY_CANDIDATE: Centralize all timeout/threshold constants into HarnessTimeoutConfig data class"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:23:25Z
-status_updated_iso: 2026-03-17T21:23:25Z
+status_updated_iso: 2026-03-17T21:24:57Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
