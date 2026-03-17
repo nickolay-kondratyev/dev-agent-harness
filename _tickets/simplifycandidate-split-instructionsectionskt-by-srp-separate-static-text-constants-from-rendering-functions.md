@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:11:49Z
 id: nid_fpi6tyz0ab5i3ll3ka96l7mbr_E
 title: "SIMPLIFY_CANDIDATE: Split InstructionSections.kt by SRP — separate static text constants from rendering functions"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:14Z
-status_updated_iso: 2026-03-17T23:05:29Z
+status_updated_iso: 2026-03-17T23:11:49Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -39,4 +40,21 @@ Split into focused files:
 - All instruction assembly tests pass
 - No behavior change in assembled instructions
 - Make sure any inputs into the strings are clearly stated, such as with input arguments that are templatized.
+
+## Resolution
+
+**Completed.** Split `InstructionSections.kt` (410 lines, 1 object) into two focused files:
+
+- **`InstructionText.kt`** — `object InstructionText` with 9 static `val` constants (pure Markdown text)
+- **`InstructionRenderers.kt`** — `object InstructionRenderers` with 5 rendering functions + `RoleCatalogEntry` data class
+
+All rendering functions take explicit parameters (e.g., `partContext(partName, partDescription)`), making inputs clear via function signatures.
+
+Updated references in:
+- `ContextForAgentProviderImpl.kt` — all `InstructionSections.X` → `InstructionText.X` or `InstructionRenderers.X`
+- `ContextForAgentProvider.kt` — `PlannerInstructionRequest.roleCatalogEntries` type updated
+- `ContextTestFixtures.kt` — `RoleCatalogEntry` references updated
+- `ProtocolVocabulary.kt` — KDoc reference updated
+
+Full test suite passes with zero behavior change.
 
