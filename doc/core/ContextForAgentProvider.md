@@ -46,9 +46,11 @@ Each request type carries only the fields relevant to its role (e.g., `feedbackD
 
 ## Instruction File Content — By Agent Type
 
-Each role has a dedicated template method (`buildDoerSections`, `buildReviewerSections`, etc.)
-that reads linearly with no role-dispatching conditionals. The only conditionals within a
-template are state-dependent (e.g., `iterationNumber > 1`).
+Each role defines its section sequence as an `InstructionPlan` — a `List<InstructionSection>`.
+A single internal `assembleFromPlan(plan: InstructionPlan, request: InstructionRequest)` walks
+the plan and renders each section. State-dependent sections (e.g. `iterationNumber > 1`) are
+modeled as conditional section types within the plan, not as conditionals scattered across
+role-specific template methods.
 
 ### Doer — ap.5N6TJ1MKDHCG01cJwTMFk.E
 
@@ -118,6 +120,90 @@ Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRe
 | 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/comm/out/PUBLIC.md` — tells the reviewer where to write its output |
 | 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 10 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done pass` / `needs_iteration` |
+
+---
+
+## Internal Design: Data-Driven Assembly
+
+The four public methods share a single rendering engine. Only the section list (the
+"plan") differs per role.
+
+### InstructionSection (sealed class)
+
+Each logical content block is one `InstructionSection` subtype:
+
+| Section type | Description |
+|---|---|
+| `RoleDefinition` | Full `.md` file for the role from `$TICKET_SHEPHERD_AGENTS_DIR` |
+| `PartContext` | Part `name` and `description` from `current_state.json` |
+| `Ticket` | Ticket markdown file content |
+| `PlanMd` | `shared/plan/PLAN.md` — omitted when `withPlanning` is false |
+| `PriorPublicMd` | Prior completed PUBLIC.md files per [Visibility Rules](#visibility-rules) |
+| `DoerOutputForReview` | Doer's current PUBLIC.md — reviewer only |
+| `StructuredFeedbackFormat` | Static structured-feedback format instruction — reviewer only |
+| `AddressedFeedback` | `__feedback/addressed/*.md` — reviewer, iteration > 1 |
+| `RejectedFeedback` | `__feedback/rejected/*.md` — reviewer, iteration > 1 |
+| `RemainingOptionalFeedback` | `__feedback/pending/optional__*.md` — reviewer, iteration > 1 |
+| `FeedbackWritingInstructions` | Static instructions for writing feedback files — reviewer only |
+| `IterationFeedback` | Reviewer's PUBLIC.md + pushback guidance — doer, iteration > 1 |
+| `FeedbackItem` | Single feedback file + resolution instructions — doer inner-loop only (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
+| `RoleCatalog` | All role definitions (name + description) — planner only |
+| `AvailableAgentTypes` | Supported agent types + models — planner and plan-reviewer |
+| `PlanFormatInstructions` | JSON schema for `plan.json` — planner only |
+| `PlannerFeedback` | Plan reviewer's PUBLIC.md — planner, iteration > 1 |
+| `PlanJsonOutputPath` | Absolute path to `harness_private/plan.json` — planner only |
+| `PlanMdOutputPath` | Absolute path to `shared/plan/PLAN.md` — planner only |
+| `PlanJsonContent` | Read `harness_private/plan.json` — plan-reviewer only |
+| `PlanMdContent` | Read `shared/plan/PLAN.md` — plan-reviewer only |
+| `PlannerPublicMd` | Planner's PUBLIC.md — plan-reviewer only |
+| `PlanReviewerPriorFeedback` | Plan reviewer's own prior PUBLIC.md — plan-reviewer, iteration > 1 |
+| `PublicMdOutputPath` | Computed output path for the agent's PUBLIC.md |
+| `WritingGuidelines` | Static PUBLIC.md writing guidance |
+| `CallbackHelp` | Compaction-survival callback script usage (role-specific done signal) |
+
+### InstructionPlan per role
+
+```
+Doer:         [RoleDefinition, PartContext, Ticket, PlanMd, PriorPublicMd,
+               IterationFeedback, FeedbackItem,
+               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+
+Reviewer:     [RoleDefinition, PartContext, Ticket, PlanMd, PriorPublicMd,
+               DoerOutputForReview, StructuredFeedbackFormat,
+               AddressedFeedback, RejectedFeedback, RemainingOptionalFeedback,
+               FeedbackWritingInstructions,
+               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+
+Planner:      [RoleDefinition, Ticket, RoleCatalog, AvailableAgentTypes,
+               PlanFormatInstructions, PlannerFeedback,
+               PlanJsonOutputPath, PlanMdOutputPath, PublicMdOutputPath,
+               WritingGuidelines, CallbackHelp]
+
+PlanReviewer: [RoleDefinition, Ticket, PlanJsonContent, PlanMdContent,
+               AvailableAgentTypes, PlannerPublicMd, PlanReviewerPriorFeedback,
+               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+```
+
+### assembleFromPlan
+
+```kotlin
+private suspend fun assembleFromPlan(
+    plan: List<InstructionSection>,
+    request: InstructionRequest,
+): Path
+```
+
+The four public methods build their role-specific plan and delegate to `assembleFromPlan`.
+`InstructionRequest` is a sealed interface extended by all four role-specific request types.
+Each `InstructionSection` extracts what it needs from `InstructionRequest` — conditional
+sections (e.g. `IterationFeedback`, `PlanMd`) simply render empty when the condition is false.
+
+### Benefits
+
+- **DRY**: shared sections (`Ticket`, `WritingGuidelines`, `CallbackHelp`, etc.) have exactly one implementation each.
+- **Legible structure**: instruction composition is readable as a data list, not scattered across template methods.
+- **Extensible**: new section = one new `InstructionSection` subtype; new role = one new plan list.
+- **Testable**: each `InstructionSection` can be unit-tested in isolation.
 
 ---
 
