@@ -52,7 +52,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Part context
-        add(InstructionSections.partContext(
+        add(InstructionRenderers.partContext(
             requireNotNull(request.partName) { "partName required for DOER role" },
             requireNotNull(request.partDescription) { "partDescription required for DOER role" },
         ))
@@ -65,15 +65,15 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 7. Iteration feedback (iteration > 1): reviewer's PUBLIC.md + pushback guidance
         if (request.iterationNumber > 1 && request.reviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.reviewerPublicMdPath))
-            add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
+            add(InstructionText.DOER_PUSHBACK_GUIDANCE)
         }
         // 8. Output paths
-        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
         // 9. PUBLIC.md writing guidelines
-        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
         // 10. Callback script usage
         add(
-            InstructionSections.callbackScriptUsage(
+            InstructionRenderers.callbackScriptUsage(
                 forReviewer = false,
                 includePlanValidation = false,
             )
@@ -86,7 +86,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Part context
-        add(InstructionSections.partContext(
+        add(InstructionRenderers.partContext(
             requireNotNull(request.partName) { "partName required for REVIEWER role" },
             requireNotNull(request.partDescription) { "partDescription required for REVIEWER role" },
         ))
@@ -99,20 +99,20 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 6. Doer's PUBLIC.md for review
         request.doerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
         // 6a. Structured feedback format
-        add(InstructionSections.REVIEWER_FEEDBACK_FORMAT)
+        add(InstructionText.REVIEWER_FEEDBACK_FORMAT)
         // 6b–6d. Feedback state (iteration > 1)
         if (request.iterationNumber > 1 && request.feedbackDir != null) {
             addAll(feedbackStateSections(request.feedbackDir))
         }
         // 6e. Feedback writing instructions
-        add(InstructionSections.FEEDBACK_WRITING_INSTRUCTIONS)
+        add(InstructionText.FEEDBACK_WRITING_INSTRUCTIONS)
         // 7. Output paths
-        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
         // 8. PUBLIC.md writing guidelines
-        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
         // 9. Callback script usage
         add(
-            InstructionSections.callbackScriptUsage(
+            InstructionRenderers.callbackScriptUsage(
                 forReviewer = true,
                 includePlanValidation = false,
             )
@@ -134,11 +134,11 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 2. Ticket
         add(ticketSection(request.ticketContent))
         // 3. Role catalog
-        add(InstructionSections.roleCatalog(request.roleCatalogEntries))
+        add(InstructionRenderers.roleCatalog(request.roleCatalogEntries))
         // 4. Available agent types & models
-        add(InstructionSections.AGENT_TYPES_AND_MODELS)
+        add(InstructionText.AGENT_TYPES_AND_MODELS)
         // 5. Plan format instructions
-        add(InstructionSections.PLAN_FORMAT_INSTRUCTIONS)
+        add(InstructionText.PLAN_FORMAT_INSTRUCTIONS)
         // 6. Reviewer feedback (iteration > 1)
         if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
@@ -148,12 +148,12 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 8. PLAN.md output path
         add(planMdOutputPathSection(planMdOutputPath))
         // 9. PUBLIC.md output path
-        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
         // 10. PUBLIC.md writing guidelines
-        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
         // 11. Callback script usage (includes validate-plan query)
         add(
-            InstructionSections.callbackScriptUsage(
+            InstructionRenderers.callbackScriptUsage(
                 forReviewer = false,
                 includePlanValidation = true,
             )
@@ -182,7 +182,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 4. PLAN.md content
         add(planMdContentSection(planMdContent))
         // 5. Available agent types & models
-        add(InstructionSections.AGENT_TYPES_AND_MODELS)
+        add(InstructionText.AGENT_TYPES_AND_MODELS)
         // 6. Planner's PUBLIC.md
         add(plannerPublicMdSection(plannerPublicMdPath))
         // 7. Iteration feedback (iteration > 1)
@@ -190,12 +190,12 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))
         }
         // 8. PUBLIC.md output path
-        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
         // 9. PUBLIC.md writing guidelines
-        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
         // 10. Callback script usage (includes validate-plan query)
         add(
-            InstructionSections.callbackScriptUsage(
+            InstructionRenderers.callbackScriptUsage(
                 forReviewer = true,
                 includePlanValidation = true,
             )
@@ -242,12 +242,12 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         // 7a. Addressed feedback
         val addressed = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.ADDRESSED)
         if (addressed.isNotEmpty()) {
-            add(InstructionSections.ADDRESSED_FEEDBACK_HEADER + "\n\n" + addressed)
+            add(InstructionText.ADDRESSED_FEEDBACK_HEADER + "\n\n" + addressed)
         }
         // 7b. Rejected feedback
         val rejected = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.REJECTED)
         if (rejected.isNotEmpty()) {
-            add(InstructionSections.REJECTED_FEEDBACK_HEADER + "\n\n" + rejected)
+            add(InstructionText.REJECTED_FEEDBACK_HEADER + "\n\n" + rejected)
         }
         // 7c. Skipped optional
         val skippedOptional = collectFeedbackFilesInDir(
@@ -256,7 +256,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
                 .resolve(ProtocolVocabulary.Severity.OPTIONAL)
         )
         if (skippedOptional.isNotEmpty()) {
-            add(InstructionSections.SKIPPED_OPTIONAL_HEADER + "\n\n" + skippedOptional)
+            add(InstructionText.SKIPPED_OPTIONAL_HEADER + "\n\n" + skippedOptional)
         }
     }
 
