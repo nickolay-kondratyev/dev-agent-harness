@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T19:21:12Z
 id: nid_zt4yszk5f92t7q1pawy93x6ms_E
 title: "SIMPLIFY_CANDIDATE: Reduce rejection negotiation from 2 rounds to 1"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:02:46Z
-status_updated_iso: 2026-03-17T19:16:52Z
+status_updated_iso: 2026-03-17T19:21:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -32,3 +33,28 @@ Reduce rejection negotiation to 1 round (reviewer insists once → accepted as a
 ## Risk
 - Low: The doer still gets one chance to push back. Legitimate disagreements are captured. The only thing lost is a second round that almost never changes the outcome.
 
+
+## Notes
+
+**2026-03-17T19:21:07Z**
+
+## Resolution
+
+Reduced rejection negotiation from 2 rounds to 1 round across all spec documents.
+
+### What changed
+- **RejectionNegotiationUseCase** no longer has a loop or disagreementRound counter
+- Reviewer judges once: `done pass` (accept rejection) or `done needs_iteration` (insist)
+- If reviewer insists → doer MUST comply immediately (reviewer is authority)
+- If doer still rejects after reviewer insistence → AgentCrashed
+- No second round of back-and-forth
+
+### Files updated
+- `doc/plan/granular-feedback-loop.md` — D7 decision, REJECTION_NEGOTIATION pseudocode, R5 requirement, Gate 4 verification, risks table, resolved questions, design change summary
+- `doc/core/PartExecutor.md` — step 4 flow description
+- `doc/high-level.md` — reviewer feedback delivery row in overview table
+
+### Why this is safe
+- Reviewer was already designated as authority — second round just delayed the inevitable
+- Doer still gets one chance to push back (the initial REJECTED reasoning)
+- Legitimate disagreements are captured in the reviewer judgment step

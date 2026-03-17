@@ -22,9 +22,9 @@ validation/retry/crash paths.
 the disagreement is resolved **immediately at the point of contention** — while both agents have
 the specific item in full context. The harness sends the rejection (with the doer's reasoning)
 to the reviewer for judgment. The reviewer either accepts (`done pass`) or insists
-(`done needs_iteration`). If the reviewer insists, the item goes back to the doer with the
-reviewer's counter-reasoning. At most **2 rounds of disagreement** per item — after that, the
-doer must comply (reviewer is authority).
+(`done needs_iteration`). If the reviewer insists, the doer must comply immediately —
+reviewer is authority. At most **1 round of disagreement** per item (reviewer judges once,
+and that judgment is final).
 
 **Why inline negotiation, not deferred to the next outer iteration:** Focus. If a rejection is
 deferred, the doer has moved on and lost context about why it rejected; the reviewer has to
@@ -108,9 +108,9 @@ to move). The harness is a Kotlin program that will reliably move a file. Shifti
 to the reliable actor eliminates an entire class of failure modes and their associated
 validation/retry/crash paths.
 
-### D7: Rejection negotiation — bounded at 2 rounds, resolved at point of contention
+### D7: Rejection negotiation — bounded at 1 round, resolved at point of contention
 
-**Decided: At most 2 rounds of disagreement per item. Reviewer is authority.**
+**Decided: At most 1 round of disagreement per item. Reviewer is authority.**
 
 **Why inline, not deferred:** When a doer rejects a feedback item, that is the moment of
 **maximum focus** — both agents have the specific item, the code context, and the reasoning
@@ -132,14 +132,14 @@ file to `addressed/`, `AgentCrashed` → propagate). Fully testable via `FakeAge
 When the doer rejects a feedback item:
 1. Harness sends the rejection + doer's reasoning to the reviewer
 2. Reviewer signals `done pass` (accept rejection) or `done needs_iteration` (insist)
-3. If reviewer insists: item goes back to doer with counter-reasoning. **Round 1.**
-4. If doer addresses it → done. If doer rejects again → back to reviewer. **Round 2.**
-5. If reviewer insists a second time → doer MUST address. Third rejection →
-   `PartResult.AgentCrashed` (fundamentally broken agent).
+3. If reviewer accepts (`done pass`) → rejection stands, file moves to `rejected/`
+4. If reviewer insists (`done needs_iteration`) → doer MUST address (reviewer is authority).
+   Doer receives the reviewer's counter-reasoning and must write `## Resolution: ADDRESSED`.
+   If doer still writes `REJECTED` → `PartResult.AgentCrashed` (fundamentally broken agent).
 
 This reuses existing signal semantics:
 - Reviewer `done pass` = "rejection is reasonable, move on"
-- Reviewer `done needs_iteration` = "must be addressed, sending back"
+- Reviewer `done needs_iteration` = "must be addressed — final word"
 
 ---
 
@@ -289,43 +289,29 @@ PROCESS_FEEDBACK_ITEM(file):
 
 ```
 REJECTION_NEGOTIATION(file):
-    disagreementRound = 0
-
-    loop:
-        disagreementRound++
-
-        ├─ Send rejection + doer's reasoning to reviewer (idle session, re-instruction pattern)
-        │   "The implementor rejected this feedback item. Review the reasoning below
-        │    and decide: accept the rejection (done pass) or insist (done needs_iteration)
-        │    with counter-reasoning."
-        ├─ Await reviewer done signal
-        │
-        ├─ if reviewer signals PASS:
-        │   └─ Reviewer accepts rejection → harness moves file to rejected/
-        │      GitCommitStrategy.onSubPartDone → return
-        │
-        └─ if reviewer signals NEEDS_ITERATION:
-            ├─ if disagreementRound >= 2:
-            │   └─ Max disagreement rounds reached. Doer MUST comply.
-            │      Send to doer: "Reviewer has insisted twice. You MUST address this item.
-            │      Write '## Resolution: ADDRESSED' with your implementation notes."
-            │      Await doer done → validate ADDRESSED (AgentCrashed if still REJECTED)
-            │      Harness moves to addressed/ → return
-            │
-            └─ if disagreementRound < 2:
-                ├─ Send back to doer with reviewer's counter-reasoning:
-                │   "Reviewer insists this must be addressed. Their reasoning:
-                │    <reviewer's counter-reasoning from PUBLIC.md>.
-                │    Address this item or provide stronger rejection reasoning."
-                ├─ Await doer done
-                ├─ Read ## Resolution marker
-                ├─ if ADDRESSED → harness moves to addressed/ → return
-                └─ if REJECTED → continue loop (next disagreement round)
+    ├─ Send rejection + doer's reasoning to reviewer (idle session, re-instruction pattern)
+    │   "The implementor rejected this feedback item. Review the reasoning below
+    │    and decide: accept the rejection (done pass) or insist (done needs_iteration)
+    │    with counter-reasoning."
+    ├─ Await reviewer done signal
+    │
+    ├─ if reviewer signals PASS:
+    │   └─ Reviewer accepts rejection → harness moves file to rejected/
+    │      GitCommitStrategy.onSubPartDone → return
+    │
+    └─ if reviewer signals NEEDS_ITERATION:
+        └─ Reviewer insists → doer MUST comply (reviewer is authority).
+           Send to doer: "Reviewer insists this must be addressed. Their reasoning:
+           <reviewer's counter-reasoning from PUBLIC.md>.
+           You MUST address this item. Write '## Resolution: ADDRESSED' with your
+           implementation notes."
+           Await doer done → validate ADDRESSED (AgentCrashed if still REJECTED)
+           Harness moves to addressed/ → return
 ```
 
 **Properties:**
-- **Bounded:** At most 2 rounds of disagreement. After round 2, doer must comply.
-- **Reviewer is authority:** The reviewer's insistence is the escalation mechanism.
+- **No loop:** Single round — reviewer judges once, judgment is final. No disagreement counter.
+- **Reviewer is authority:** If the reviewer insists, the doer must comply. Period.
 - **Uses existing signals:** Reviewer uses `done pass` (accept) or `done needs_iteration` (insist).
   No protocol extension needed.
 - **Self-compaction friendly:** Each negotiation step is a done boundary.
@@ -503,15 +489,15 @@ On reviewer PASS:
 - When doer writes `## Resolution: REJECTED`, harness sends rejection + reasoning to reviewer
 - Reviewer signals `done pass` (accept rejection) or `done needs_iteration` (insist)
 - If reviewer accepts → `RejectionResult.Accepted` → harness moves file to `rejected/`
-- If reviewer insists → item sent back to doer with counter-reasoning
-- At most **2 rounds of disagreement** per item
-- After 2 rounds of reviewer insistence, doer MUST address (third rejection → `RejectionResult.AgentCrashed`)
+- If reviewer insists → doer MUST address immediately (reviewer is authority)
+- **1 round of disagreement** per item — reviewer judges once, judgment is final
+- If doer still writes REJECTED after reviewer insistence → `RejectionResult.AgentCrashed`
 - Reuses existing signal semantics (no protocol extension)
 - **Testability:** Fully unit-testable via `FakeAgentFacade` + virtual time. Each negotiation
-  scenario (accept, insist→address, insist→reject→insist→forced, crash) is an independent test.
+  scenario (accept, insist→address, insist→crash) is an independent test.
   The use case is tested in isolation from `PartExecutorImpl` — clean boundary.
-- Verifiable: unit test — full negotiation flow: reject → insist → address;
-  reject → accept; reject → insist → reject → insist → forced compliance
+- Verifiable: unit test — full negotiation flow: reject → reviewer accepts;
+  reject → reviewer insists → doer addresses; reject → reviewer insists → doer still rejects → crash
 
 ### R6: Resolution Marker in Feedback Files
 - Doer appends `## Resolution: ADDRESSED` or `## Resolution: REJECTED` to the feedback file
@@ -604,15 +590,14 @@ ContextForAgentProvider. Harness-owned file movement. Iteration counter unchange
 ### Gate 4: Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
 **Scope:** R5
 **What:** `RejectionNegotiationUseCase` — self-contained sub use case extracted from
-`PartExecutorImpl`. Per-item rejection negotiation flow. Bounded at 2 disagreement
-rounds. Tested in isolation via `FakeAgentFacade` + virtual time.
+`PartExecutorImpl`. Per-item rejection negotiation flow. Single round — reviewer judges
+once, judgment is final. Tested in isolation via `FakeAgentFacade` + virtual time.
 **Verify:**
 - Unit test: REJECTED → reviewer accepts (pass) → `RejectionResult.Accepted` → file moved to rejected/
-- Unit test: REJECTED → reviewer insists (needs_iteration) → back to doer → doer addresses → `RejectionResult.AddressedAfterInsistence`
-- Unit test: REJECTED → 2 rounds of insistence → doer forced to comply → `RejectionResult.AddressedAfterInsistence`
-- Unit test: REJECTED → 2 rounds + doer still rejects → `RejectionResult.AgentCrashed`
+- Unit test: REJECTED → reviewer insists (needs_iteration) → doer addresses → `RejectionResult.AddressedAfterInsistence`
+- Unit test: REJECTED → reviewer insists → doer still rejects → `RejectionResult.AgentCrashed`
 - Unit test: reviewer uses existing session (re-instruction to idle session)
-- Unit test: self-compaction check between negotiation rounds
+- Unit test: self-compaction check between negotiation steps
 **Proceed when:** Full negotiation flow works including all boundary cases. Use case tests
 pass independently of `PartExecutorImpl` tests.
 
@@ -647,9 +632,9 @@ pass independently of `PartExecutorImpl` tests.
 | **Reviewer writes monolithic PUBLIC.md instead of individual files** | Inner loop has nothing to process; iteration stalls | Harness-enforced guard (R9): if `needs_iteration` but `pending/` is empty → re-instruct reviewer. One retry, then AgentCrashed. |
 | **Too many feedback files overwhelm the inner loop** | Many small items means many done→compaction cycles; overhead accumulates | Each cycle is lightweight (one file read, one instruction assembly). 20 items × 2 min each = 40 min — comparable to current single-pass behavior but with better context management. |
 | **Severity classification is subjective** | Reviewer calls something "optional" that should be "critical" | Severity determines processing order and skip rules, not quality. The reviewer is the severity authority. |
-| **Doer rejects everything** | All items go through rejection negotiation; expensive | Bounded at 2 rounds per item. `iteration.max` budget still applies at the macro level. Persistent rejection after forced compliance → AgentCrashed. |
+| **Doer rejects everything** | All items go through rejection negotiation; expensive | Bounded at 1 round per item (reviewer judges once). `iteration.max` budget still applies at the macro level. Rejection after reviewer insistence → AgentCrashed. |
 | **Resolution marker missing or malformed** | Harness can't determine disposition | Re-instruct doer with explicit marker format (one retry, then AgentCrashed). Marker format is deliberately simple (`## Resolution: ADDRESSED/REJECTED`) to minimize parse failures. |
-| **Reviewer always insists on rejected items** | 2 rounds × N items → expensive negotiation | This is correct behavior — the reviewer IS the authority. The cost is proportional to the number of genuine disagreements, which should be small in practice. |
+| **Reviewer always insists on rejected items** | 1 round × N items → each insistence forces compliance | This is correct behavior — the reviewer IS the authority. The cost is proportional to the number of genuine disagreements, which should be small in practice. |
 
 ---
 
@@ -674,8 +659,9 @@ pass independently of `PartExecutorImpl` tests.
    failures as a failure class entirely.
 
 6. **How are rejections resolved?** Per-item rejection negotiation. Doer rejects → reviewer
-   judges → accept or insist. Bounded at 2 disagreement rounds. Reviewer is authority.
-   Resolves disagreements at the point of contention instead of deferring to full iteration cycle.
+   judges → accept or insist. Bounded at 1 round (reviewer judges once, judgment is final).
+   Reviewer is authority. Resolves disagreements at the point of contention instead of
+   deferring to full iteration cycle.
 
 ---
 
@@ -689,5 +675,5 @@ pass independently of `PartExecutorImpl` tests.
 | **Movement records** | Agents append movement log entries | Eliminated — resolution marker in file is sufficient |
 | **Rejection handling** | Reviewer moves rejected items back to unaddressed on next full pass | Per-item negotiation: doer rejects → reviewer judges → bounded resolution |
 | **File-move failure paths** | 4 distinct validation/retry/crash paths | Zero — harness is the mover |
-| **Disagreement resolution** | Deferred to next full iteration cycle | Immediate, bounded at 2 rounds per item |
+| **Disagreement resolution** | Deferred to next full iteration cycle | Immediate, bounded at 1 round per item (reviewer judges once, final) |
 | **Agent cognitive load** | Must understand 9-directory structure + movement mechanics | Write resolution marker in the file they're already editing |

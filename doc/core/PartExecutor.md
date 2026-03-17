@@ -351,7 +351,7 @@ TMUX session, waiting for the executor to send it new instructions.
        marker from feedback file → `ADDRESSED`: harness moves to `addressed/`, git commit;
        `REJECTED`: harness delegates to `RejectionNegotiationUseCase`
        (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E) — focused inline resolution while both agents have
-       the item in context (bounded at 2 disagreement rounds, reviewer is authority).
+       the item in context (1 round: reviewer judges once, judgment is final).
        Missing marker → re-instruct doer (one retry, then `AgentCrashed`).
        Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
      - After inner loop: validate `pending/` contains no `critical__*` or `important__*`
