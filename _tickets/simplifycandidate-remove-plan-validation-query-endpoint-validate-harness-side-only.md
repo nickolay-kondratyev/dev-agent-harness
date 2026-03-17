@@ -26,7 +26,7 @@ The query endpoint adds:
 - The callback_shepherd.query.sh script itself (separate from the signal script)
 - Server-side plan parsing and schema validation logic (duplicated with convertPlanToExecutionParts)
 
-**Simplification:** Remove the `/validate-plan` query endpoint entirely. Do validation ONLY in `convertPlanToExecutionParts()` — single source of truth. If the plan is invalid, the conversion fails, PartExecutor returns FailedWorkflow, and the planning loop retries (or exhausts budget).
+**Simplification:** Remove the `/validate-plan` query endpoint entirely. Do validation ONLY in `convertPlanToExecutionParts()` — single source of truth. If the plan is invalid, the conversion fails, PartExecutor returns FailedWorkflow, and the planning loop retries (or exhausts budget). OK lets make sure we have a SOLID pathway for refeeding the failure to the Planner. And we log a WARN if this happens. 
 
 **Robustness improvement:** Single validation point = no drift between what agents validate and what the harness validates. Eliminates the possibility of agents passing their own validation but failing harness validation (or vice versa). Simpler agent instructions.
 
