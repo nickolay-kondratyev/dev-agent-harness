@@ -269,7 +269,7 @@ context window state looks like, whether ACKs succeed.
 
 | Layer | What it tests | How | Speed |
 |-------|--------------|-----|-------|
-| **Unit tests (primary coverage)** | Orchestration state machine — PartExecutor happy path, iteration loops, timeout/crash detection, health monitoring decisions, ACK failures, context window exhaustion, late fail-workflow | `FakeAgentFacade` + virtual time (`TestClock` + `kotlinx-coroutines-test`) | Milliseconds |
+| **Unit tests (primary coverage)** | Orchestration state machine — PartExecutor happy path, iteration loops, timeout/crash detection, health monitoring decisions, ACK failures, context window exhaustion | `FakeAgentFacade` + virtual time (`TestClock` + `kotlinx-coroutines-test`) | Milliseconds |
 | **Integration tests (sanity checks)** | Real infra works — TMUX sessions spawn, send-keys delivers, HTTP callbacks arrive, session ID resolves | Real `AgentFacadeImpl` + real agent (one or few sessions) | Minutes |
 
 **Unit tests are the primary coverage layer.** Every edge case in the health-aware await loop
@@ -321,7 +321,7 @@ Scenarios that are impractical or impossible to test with real agents become tri
 - ACK delivery fails 3 times → verify session crashed
 - Context window hits 20% during work → verify emergency compaction triggered
 - Reviewer sends needs_iteration 5 times at budget max → verify FailedToConverge path
-- Late fail-workflow arrives after done signal → verify checkpoint catches it
+
 - fileUpdatedTimestamp is fresh but lastActivityTimestamp is stale → verify ping suppressed
 
 All of these run in milliseconds with deterministic outcomes.

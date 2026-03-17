@@ -289,21 +289,7 @@ Options:
 
 **Must resolve at Gate 1.** This affects the interface shape.
 
-### R2: `lateFailWorkflow` visibility
-
-Currently `SessionEntry.lateFailWorkflow` is checked by the executor at transition points.
-With AgentFacade owning SessionsState internally, the executor needs a way to check for
-late fail-workflow.
-
-Options:
-- `AgentFacade.checkLateFailWorkflow(handle): LateFailWorkflow?` — explicit query
-- `SpawnedAgentHandle` exposes an observable `lateFailWorkflow` property
-- `lateFailWorkflow` flows as a special `AgentSignal` variant (but it's not a signal — it's a
-  post-hoc discovery)
-
-**Must resolve at Gate 1.**
-
-### R3: `pendingQuestions` and `UserQuestionHandler`
+### R2: `pendingQuestions` and `UserQuestionHandler`
 
 User questions are side-channel: the HTTP server handles them via `UserQuestionHandler` and
 delivers answers via `AckedPayloadSender`. This flow currently goes through `SessionsState`.
