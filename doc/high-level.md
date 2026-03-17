@@ -209,22 +209,23 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 
 ## Agent Health Monitoring
 
-Timeout + ping mechanism to detect crashed/hung agents, including **in-session agent death**
-(TMUX session alive but agent process exited). Uses a **dual-signal liveness model**
-(ref.ap.dnc1m7qKXVw2zJP8yFRE.E): `SessionEntry.lastActivityTimestamp` (HTTP callbacks) and
-`ContextWindowState.fileUpdatedTimestamp` (external hook in `context_window_slim.json`, updated
-after every conversation turn). When both signals are stale beyond `contextFileStaleTimeout`
-(5 min default), the harness sends an early health ping — reducing detection time from ~33 min
-to ~8 min. When `fileUpdatedTimestamp` is fresh, pings are suppressed (proof of life without
-interrupting the agent).
+Timeout + ping mechanism to detect crashed/hung agents. Liveness is determined **solely by
+HTTP callback timestamps** (`SessionEntry.lastActivityTimestamp`
+ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — updated on every agent → server callback. When no callback
+arrives within `noActivityTimeout` (30 min default, configurable per sub-part), the harness
+pings the agent; if no reply within `pingTimeout` (3 min), the agent is declared crashed.
 
 Five UseCase classes handle distinct failure scenarios (`NoStartupAckUseCase`,
 `NoStatusCallbackTimeOutUseCase`, `NoReplyToPingUseCase`, `FailedToExecutePlanUseCase`,
 `FailedToConvergeUseCase`). Agents call `callback_shepherd.signal.sh started` immediately after
 reading instructions — a 3-minute startup timeout catches spawn failures fast
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E). See [Health Monitoring](use-case/HealthMonitoring.md)
-(ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, dual-signal
-liveness model, and UseCase naming principle.
+(ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
+naming principle.
+
+> **Note:** `context_window_slim.json` is used for **compaction decisions only**
+> (ref.ap.8nwz2AHf503xwq8fKuLcl.E), not for liveness detection. This is a deliberate
+> simplification — see [HealthMonitoring.md Simplification Tradeoff](use-case/HealthMonitoring.md#liveness-model-http-callbacks-only--apdnc1m7qkxvw2zjp8yfre).
 
 ## Context Window Monitoring & Self-Compaction
 
@@ -258,7 +259,7 @@ The orchestration layer (`PartExecutor`, `TicketShepherd`) contains the most com
 the system: a state machine with spawn, timeout, health monitoring, iteration loops, crash
 detection, and context window exhaustion handling. Testing this with real agents and real TMUX
 sessions is slow (~minutes per test), flaky (real infrastructure), expensive (LLM API calls),
-and cannot cover edge cases like crash-after-timeout or dual-signal-stale scenarios.
+and cannot cover edge cases like crash-after-timeout or callback-stale scenarios.
 
 **Solution:** The `AgentFacade` facade (ref.ap.9h0KS4EOK5yumssRCJdbq.E) is a testability
 seam. A `FakeAgentFacade` replaces all agent infrastructure in unit tests, giving full
@@ -289,11 +290,11 @@ The health-aware await loop has two kinds of timing dependencies, both must be c
 | Dependency | Mechanism | Test control |
 |-----------|-----------|-------------|
 | Coroutine delays (`delay()`, `withTimeout()`) | 1-second tick polling, ACK timeouts, ping timeouts | `kotlinx-coroutines-test` `TestDispatcher` + `advanceTimeBy()` |
-| Wall-clock reads (`now()` for timestamp age comparisons) | `fileUpdatedTimestamp` age, `lastActivityTimestamp` age | `Clock` interface with `TestClock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) |
+| Wall-clock reads (`now()` for timestamp age comparisons) | `lastActivityTimestamp` age | `Clock` interface with `TestClock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) |
 
 Together these give **full deterministic control** over the time dimension. Tests advance
 virtual time, set fake timestamps, and verify that the orchestration layer makes the right
-decisions (ping, suppress ping, declare crash, trigger compaction) at the right moments.
+decisions (ping, declare crash, trigger compaction) at the right moments.
 
 ### FakeAgentFacade — Programmable Agent Behavior
 
@@ -303,8 +304,7 @@ The `FakeAgentFacade` implements `AgentFacade` with full programmatic control:
 - **Signal delivery** — complete the `Deferred<AgentSignal>` at controlled times with any
   variant (Done, FailWorkflow, Crashed, SelfCompacted)
 - **ACK behavior** — configure whether payload ACK succeeds, times out, or partially fails
-- **Context window state** — return programmable `ContextWindowState` (any remaining percentage,
-  any `fileUpdatedTimestamp`)
+- **Context window state** — return programmable `ContextWindowState` (any remaining percentage)
 - **Activity timestamps** — control `lastActivityTimestamp` advancement
 - **Interaction verification** — assert what was sent (payloads, pings, kill calls) and in
   what order
@@ -317,12 +317,9 @@ result." No coordinating 5 separate fakes. One fake, one scenario, one assertion
 Scenarios that are impractical or impossible to test with real agents become trivial:
 
 - Agent crashes 31 minutes into work → verify ping sent, no reply, session killed
-- Agent dies mid-task but TMUX stays alive (in-session death) → verify dual-signal detection
 - ACK delivery fails 3 times → verify session crashed
 - Context window hits 20% during work → verify emergency compaction triggered
 - Reviewer sends needs_iteration 5 times at budget max → verify FailedToConverge path
-
-- fileUpdatedTimestamp is fresh but lastActivityTimestamp is stale → verify ping suppressed
 
 All of these run in milliseconds with deterministic outcomes.
 
@@ -492,7 +489,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
-| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage` + `file_updated_timestamp`). File not present → hard stop. `file_updated_timestamp` serves dual purpose: stale context guard (don't trust frozen `remaining_percentage`) and passive liveness signal for dual-signal health monitoring (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
+| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage`). File not present → hard stop. Used for **compaction decisions only** (ref.ap.8nwz2AHf503xwq8fKuLcl.E), NOT for liveness (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
 | Auto-compaction | **Disabled — harness-controlled self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code auto-compaction disabled via `~/.claude.json` (`autoCompactEnabled: false`) + `DISABLE_AUTO_COMPACT=true` env var. Harness performs controlled self-compaction at predictable thresholds (35% remaining / 65% used at done boundary, 20% remaining / 80% used emergency interrupt). Thresholds are centralized constants for easy tuning. |
 | Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | New lifecycle signal. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
 | Reviewer feedback delivery | **Granular per-item feedback loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) | Reviewer writes individual feedback files to `__feedback/pending/` with severity filename prefix (`critical__`, `important__`, `optional__`) (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Harness feeds items to doer one at a time — critical → important → optional. Doer writes `## Resolution: ADDRESSED/REJECTED` marker; **harness** moves files. Rejections trigger bounded per-item negotiation (2 rounds max, reviewer is authority). Self-compaction checkpoints between items. `iteration.current` unchanged by inner loop. |

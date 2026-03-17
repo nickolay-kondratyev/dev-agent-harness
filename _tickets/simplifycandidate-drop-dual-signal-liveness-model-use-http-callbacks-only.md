@@ -1,17 +1,19 @@
 ---
+closed_iso: 2026-03-17T17:00:48Z
 id: nid_s6jsgj1f3zuifzyh726d7su95_E
 title: "SIMPLIFY_CANDIDATE: Drop dual-signal liveness model — use HTTP callbacks only"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:05Z
-status_updated_iso: 2026-03-15T01:08:05Z
+status_updated_iso: 2026-03-17T17:00:48Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, health-monitoring]
 ---
 
+## FEEDBACK:
 The health monitoring spec (doc/use-case/HealthMonitoring.md) uses a dual-signal liveness model:
 1. HTTP callback timestamps from agent → server
 2. External context_window_slim.json file polling via an external hook
@@ -23,10 +25,19 @@ Proposal: Use HTTP callback timestamps only for liveness detection.
 - If agent is dead, callbacks stop → timeout fires → health UseCase kicks in.
 - Decision matrix drops from 4 cases to 2 (fresh callback / stale callback).
 - Removes fragile external dependency on context_window_slim.json hook.
+  - This is NOT fragile. 
 - The context_window_slim.json can still be used for context window COMPACTION decisions (its original purpose), but NOT for liveness.
 
 Files affected:
 - doc/use-case/HealthMonitoring.md (simplify decision matrix)
 - doc/core/PartExecutor.md (simplify health-aware await loop)
 - Implementation of health monitoring UseCases (ref.ap.RJWVLgUGjO5zAwupNLhA0.E)
+
+--------------------------------------------------------------------------------
+## OK: lets simplify but still use context_window_slim.json for CONTEXT compaction
+OK we can simplify, and just rely on HTTP callbacks for health checks. 
+
+Lets document that this is unlikely case and that as I understand if this happens we just wait longer to learn of failure. This is acceptable tradeoff for the sake of simplification. As the case that we are protecting against is not likely to happen.
+
+
 
