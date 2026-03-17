@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:08:18Z
 id: nid_5mtpb9669k6kpwd7qzfhru6lx_E
 title: "SIMPLIFY_CANDIDATE: Replace GLMHighestTierApi/GLMQuickCheapApi wrapper classes with factory functions"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:38:55Z
-status_updated_iso: 2026-03-17T21:52:45Z
+status_updated_iso: 2026-03-17T22:08:18Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -33,3 +34,9 @@ This reduces ~80 lines to ~10, eliminates 2 files, and means any new parameter a
 
 **Robustness improvement:** Fewer places for parameter mismatch between the two tier classes and the underlying implementation.
 
+
+## Notes
+
+**2026-03-17T22:08:25Z**
+
+Completed. Deleted GLMHighestTierApi.kt and GLMQuickCheapApi.kt. Created GlmDirectLlmFactory (internal object) with createBudgetHighLLM, createQuickCheapLLM, and private buildDelegate. GlmAnthropicCompatibleApi construction now in one place (was 3). All tests pass.

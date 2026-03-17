@@ -2,13 +2,13 @@ package com.glassthought.directLLMApi.glm
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
-import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GlmDirectLlmFactory
 import io.kotest.matchers.types.shouldBeInstanceOf
 import okhttp3.OkHttpClient
 import java.util.concurrent.TimeUnit
 
 /**
- * Unit tests for [GLMHighestTierApi] using MockWebServer to verify
+ * Unit tests for the budget-high GLM API tier using MockWebServer to verify
  * HTTP request construction and response parsing without real network calls.
  *
  * Shared HTTP contract tests are in [glmApiHttpContractTests].
@@ -18,7 +18,7 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
     val modelName = "glm-5"
 
     glmApiHttpContractTests(modelName) { outFactory, httpClient, model, maxTokens, endpoint, token ->
-        GLMHighestTierApi(
+        GlmDirectLlmFactory.createBudgetHighLLM(
             outFactory = outFactory,
             httpClient = httpClient,
             modelName = model,
@@ -28,9 +28,9 @@ class GLMHighestTierApiTest : AsgardDescribeSpec({
         )
     }
 
-    describe("GIVEN a GLMHighestTierApi instance") {
+    describe("GIVEN a budget-high GLM API instance") {
         it("THEN it implements DirectBudgetHighLLM") {
-            val api = GLMHighestTierApi(
+            val api = GlmDirectLlmFactory.createBudgetHighLLM(
                 outFactory = outFactory,
                 httpClient = OkHttpClient.Builder().readTimeout(5, TimeUnit.SECONDS).build(),
                 modelName = modelName,

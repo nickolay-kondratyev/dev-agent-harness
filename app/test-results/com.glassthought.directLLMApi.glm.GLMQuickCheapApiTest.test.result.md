@@ -26,5 +26,5 @@ skipped: 0
   - WHEN prompt contains special characters needing JSON escaping
     - [PASS] THEN request body is valid JSON with correctly escaped content
     - [PASS] THEN response is returned successfully
-- GIVEN a GLMQuickCheapApi instance
+- GIVEN a quick/cheap GLM API instance
   - [PASS] THEN it implements DirectQuickCheapLLM
