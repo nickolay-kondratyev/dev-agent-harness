@@ -65,10 +65,9 @@ Called internally **after** the planning executor completes successfully
 2. Validate plan_flow.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E):
    a. Valid JSON conforming to schema (required fields, types)
    b. At least one execution part exists
-   c. At least one sub-part has loadsPlan: true
-   d. Every agentType is a supported type (V1: ClaudeCode)
-   e. Every model is valid for the given agentType
-   f. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
+   c. Every agentType is a supported type (V1: ClaudeCode)
+   d. Every model is valid for the given agentType
+   e. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
       non-existent role assignments before execution starts)
 3. Convert plan_flow.json → current_state.json (write to harness_private/)
 4. Delete plan_flow.json (current_state.json is now the single source of truth)

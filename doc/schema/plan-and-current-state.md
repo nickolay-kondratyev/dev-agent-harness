@@ -17,7 +17,6 @@ parts/sub-parts schema. One parser handles everything.
 | `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
 | `agentType` | yes | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). Assigned by the planner (with-planning workflows) or specified in static workflow JSON (straightforward workflows). Never from role definitions — see ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E. |
 | `model` | yes | Actual model name (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Same assignment source as `agentType`. Must be the **actual model name**, never a tier name like `"BudgetHigh"` — required for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
-| `loadsPlan` | no | Boolean. When `true`, the harness includes `PLAN.md` in this sub-part's instruction assembly. The planner must set this on at least one implementor sub-part. Validated harness-side in `convertPlanToExecutionParts` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E). Default: `false`. Note: `PLAN.md` is the human-readable implementation guide; `plan_flow.json` is the workflow definition — these are distinct files with distinct consumers. |
 | `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can override via `FailedToConvergeUseCase`. |
@@ -192,7 +191,7 @@ The PLANNER agent produces **two separate files** with entirely different purpos
 | File | Consumer | Purpose |
 |------|----------|---------|
 | `harness_private/plan_flow.json` | Harness (machine-parsed) | Strict workflow definition: which agent roles, models, order, and iteration budgets. The harness validates and converts it to `current_state.json`. |
-| `shared/plan/PLAN.md` | Implementation agents (LLM-read) | Human-readable guide: clarified requirements, tradeoffs, architecture constraints, affected file paths, design decisions. Fed to `loadsPlan: true` sub-parts. |
+| `shared/plan/PLAN.md` | Implementation agents (LLM-read) | Human-readable guide: clarified requirements, tradeoffs, architecture constraints, affected file paths, design decisions. Fed to all doer sub-parts in `with-planning` workflows. |
 
 **Why both:** `plan_flow.json` tells the harness *how to run the workflow*. `PLAN.md` tells
 implementation agents *what to build and how*. They serve different consumers and carry
@@ -241,7 +240,7 @@ This means:
       "name": "ui_design",
       "description": "Design the dashboard UI",
       "subParts": [
-        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet", "loadsPlan": true },
+        { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet" },
         { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 3 } }
       ]
@@ -250,7 +249,7 @@ This means:
       "name": "backend_impl",
       "description": "Implement API endpoints",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTOR", "agentType": "ClaudeCode", "model": "opus", "loadsPlan": true },
+        { "name": "impl", "role": "IMPLEMENTOR", "agentType": "ClaudeCode", "model": "opus" },
         { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]

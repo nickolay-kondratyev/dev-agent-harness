@@ -50,7 +50,7 @@ The git branches will include ticket ids which guarantees not clashing.
 | `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
 | `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan_flow.json` | harness_private/ | Planner's raw output (with-planning only). Strict machine-readable workflow definition: which agent roles, models, and iteration budgets to use. Consumed and validated by the harness. Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
-| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Captures the *what and how* to implement: clarified requirements, tradeoffs decided during planning, architecture constraints, affected file paths, and design decisions. Consumed by implementation agents (`loadsPlan: true` sub-parts) — not parsed by the harness. See [What Goes Where — plan_flow.json vs PLAN.md](#what-goes-where--plan_flowjson-vs-planmd) below. |
+| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Captures the *what and how* to implement: clarified requirements, tradeoffs decided during planning, architecture constraints, affected file paths, and design decisions. Consumed by all doer sub-parts in `with-planning` workflows — not parsed by the harness. See [What Goes Where — plan_flow.json vs PLAN.md](#what-goes-where--plan_flowjson-vs-planmd) below. |
 
 ### `__feedback/` — Granular Feedback Items
 
@@ -119,8 +119,8 @@ These two files are produced by the PLANNER agent and serve entirely different c
 | Strict machine-readable format — parsed and validated by the harness | Human-readable markdown — read by implementation agents |
 | Which agent roles to run, in what order, with which models | Clarified requirements that didn't exist in the original ticket |
 | Iteration budgets per reviewer | Tradeoffs decided during planning and why |
-| `agentType` and `loadsPlan` per sub-part | Architecture constraints and relevant file paths |
-| Consumed by the harness to drive execution | Passed to implementor sub-parts (`loadsPlan: true`) |
+| `agentType` per sub-part | Architecture constraints and relevant file paths |
+| Consumed by the harness to drive execution | Passed to all doer sub-parts in `with-planning` workflows |
 
 **Why both exist:** `plan_flow.json` tells the harness *how to run the workflow* (which agents,
 what model, in what order). `PLAN.md` tells implementation agents *what to build and how* — it
