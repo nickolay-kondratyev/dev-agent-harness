@@ -21,7 +21,7 @@ Health monitoring (ref.ap.RJWVLgUGjO5zAwupNLhA0.E, doc/use-case/HealthMonitoring
 
 The first three (1-3) all represent the same conceptual event: **the agent is unresponsive**. The only difference is detection context (when was unresponsiveness detected). Each results in the same outcome: kill TMUX session, return AgentCrashed.
 
-**Simplification:** Merge NoStartupAckUseCase, NoStatusCallbackTimeOutUseCase, and NoReplyToPingUseCase into a single `AgentUnresponsiveUseCase` with a detection-context parameter (enum: STARTUP_TIMEOUT, NO_ACTIVITY_TIMEOUT, PING_TIMEOUT). Same logging and outcome logic, one class instead of three.
+**Simplification:** Merge NoStartupAckUseCase, NoStatusCallbackTimeOutUseCase, and NoReplyToPingUseCase into a single `AgentUnresponsiveUseCase` with a detection-context parameter (enum: STARTUP_TIMEOUT, NO_ACTIVITY_TIMEOUT, PING_TIMEOUT). Same logging and outcome logic, one class instead of three. And make sure the same context logging wise is preserved so we understand WHY this use case was triggerred.
 
 Keep FailedToExecutePlanUseCase and FailedToConvergeUseCase separate — they have fundamentally different semantics (general failure handling and budget exhaustion, respectively).
 
