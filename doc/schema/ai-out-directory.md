@@ -66,6 +66,14 @@ moves the file to `addressed/` or `rejected/` accordingly. When the doer rejects
 harness triggers a per-item rejection negotiation with the reviewer (bounded at 2
 disagreement rounds). Agents never move feedback files between directories.
 
+**Why move files when markers are the source of truth?** The `## Resolution` marker drives
+harness logic — it is the canonical state. The directory movement is a **deliberate redundancy
+for observability**: `ls pending/` instantly shows unresolved items, `ls addressed/` shows
+completed work, `ls rejected/` shows accepted rejections. This makes directory listings a
+zero-parsing state dashboard for human debugging. Git history also benefits — file renames
+map 1:1 to state transitions, making the feedback lifecycle auditable without inspecting file
+contents.
+
 Three directories (`pending/`, `addressed/`, `rejected/`) are created by
 `AiOutputStructure.ensureStructure()` at part setup — empty at creation. Not visible to
 agents in other parts.
