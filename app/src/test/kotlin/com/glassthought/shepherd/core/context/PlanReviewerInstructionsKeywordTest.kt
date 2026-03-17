@@ -19,7 +19,7 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.planReviewerRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assemblePlanReviewerInstructions(request)
+            val instructionsPath = provider.assembleInstructions(AgentRole.PLAN_REVIEWER, request)
             val text = instructionsPath.readText()
 
             // ── Reviewer-specific done results ───────────────────────────
@@ -50,7 +50,7 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
 
             // ── Plan content ─────────────────────────────────────────────
             it("THEN contains plan.json content") {
-                text shouldContain request.planJsonContent
+                text shouldContain request.planJsonContent!!
             }
 
             it("THEN contains PLAN.md content") {

@@ -32,14 +32,14 @@ object ContextTestFixtures {
     /**
      * Creates a minimal doer instruction request with all required filesystem structures.
      */
-    fun doerInstructionRequest(tempDir: Path): DoerInstructionRequest {
+    fun doerInstructionRequest(tempDir: Path): UnifiedInstructionRequest {
         val outputDir = tempDir.resolve("comm/in")
         Files.createDirectories(outputDir)
 
         val publicMdOutputPath = tempDir.resolve("comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return DoerInstructionRequest(
+        return UnifiedInstructionRequest(
             roleDefinition = roleDefinition("IMPLEMENTOR"),
             partName = "part_1_implementation",
             partDescription = "Implement the main feature",
@@ -56,7 +56,7 @@ object ContextTestFixtures {
     /**
      * Creates a reviewer instruction request on iteration 1 with doer's PUBLIC.md.
      */
-    fun reviewerInstructionRequest(tempDir: Path): ReviewerInstructionRequest {
+    fun reviewerInstructionRequest(tempDir: Path): UnifiedInstructionRequest {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -67,7 +67,7 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("reviewer/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return ReviewerInstructionRequest(
+        return UnifiedInstructionRequest(
             roleDefinition = roleDefinition("REVIEWER"),
             partName = "part_1_implementation",
             partDescription = "Review the implementation",
@@ -85,7 +85,7 @@ object ContextTestFixtures {
     /**
      * Creates a reviewer instruction request on iteration > 1 with feedback directory.
      */
-    fun reviewerInstructionRequestWithFeedback(tempDir: Path): ReviewerInstructionRequest {
+    fun reviewerInstructionRequestWithFeedback(tempDir: Path): UnifiedInstructionRequest {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -99,7 +99,7 @@ object ContextTestFixtures {
         // Use test resource feedback directory
         val feedbackDir = resourceDir("feedback")
 
-        return ReviewerInstructionRequest(
+        return UnifiedInstructionRequest(
             roleDefinition = roleDefinition("REVIEWER"),
             partName = "part_1_implementation",
             partDescription = "Review the implementation",
@@ -117,7 +117,7 @@ object ContextTestFixtures {
     /**
      * Creates a planner instruction request.
      */
-    fun plannerRequest(tempDir: Path): PlannerInstructionRequest {
+    fun plannerRequest(tempDir: Path): UnifiedInstructionRequest {
         val outputDir = tempDir.resolve("planner/comm/in")
         Files.createDirectories(outputDir)
 
@@ -130,12 +130,12 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("planner/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return PlannerInstructionRequest(
+        return UnifiedInstructionRequest(
             roleDefinition = roleDefinition("PLANNER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
             roleCatalogEntries = listOf(
-                InstructionSections.RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
-                InstructionSections.RoleCatalogEntry("REVIEWER", "Reviews code", null),
+                RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
+                RoleCatalogEntry("REVIEWER", "Reviews code", null),
             ),
             iterationNumber = 1,
             planReviewerPublicMdPath = null,
@@ -149,7 +149,7 @@ object ContextTestFixtures {
     /**
      * Creates a plan reviewer instruction request.
      */
-    fun planReviewerRequest(tempDir: Path): PlanReviewerInstructionRequest {
+    fun planReviewerRequest(tempDir: Path): UnifiedInstructionRequest {
         val outputDir = tempDir.resolve("plan_reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -160,7 +160,7 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("plan_reviewer/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return PlanReviewerInstructionRequest(
+        return UnifiedInstructionRequest(
             roleDefinition = roleDefinition("PLAN_REVIEWER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
             planJsonContent = """{"parts": []}""",

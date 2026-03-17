@@ -5,6 +5,14 @@ failed: 0
 skipped: 0
 ---
 
+- GIVEN a DOER request with null partName
+  - [PASS] THEN assembleInstructions throws IllegalArgumentException
+- GIVEN a PLANNER request with null planJsonOutputPath
+  - [PASS] THEN assembleInstructions throws IllegalArgumentException
+- GIVEN a PLAN_REVIEWER request with null planJsonContent
+  - [PASS] THEN assembleInstructions throws IllegalArgumentException
+- GIVEN a REVIEWER request with null partName
+  - [PASS] THEN assembleInstructions throws IllegalArgumentException
 - GIVEN a doer request on iteration 1
   - WHEN instructions are assembled
     - [PASS] THEN contains WHY-NOT keyword

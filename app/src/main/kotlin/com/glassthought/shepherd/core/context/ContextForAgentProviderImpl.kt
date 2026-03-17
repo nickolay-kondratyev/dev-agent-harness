@@ -13,9 +13,10 @@ import kotlin.io.path.readText
 /**
  * Default implementation of [ContextForAgentProvider].
  *
- * Each `assemble*()` method delegates to a private `build*Sections()` template method. Each
- * template uses `buildList` to show the concatenation order as a readable linear sequence — no
- * role-dispatching conditionals. The `buildList` IS the documentation of the concatenation order.
+ * `assembleInstructions` dispatches on [AgentRole] to pick the correct internal section plan.
+ * Each private `build*Sections()` method uses `buildList` to show the concatenation order as a
+ * readable linear sequence — no scattered role-dispatching conditionals. The `buildList` IS the
+ * documentation of the concatenation order.
  *
  * See ContextForAgentProvider.md (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for the authoritative
  * concatenation tables.
@@ -24,27 +25,37 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
 
-    // ── Doer ──────────────────────────────────────────────────────────────────
-
-    override suspend fun assembleDoerInstructions(
-        request: DoerInstructionRequest,
+    override suspend fun assembleInstructions(
+        role: AgentRole,
+        request: UnifiedInstructionRequest,
     ): Path {
-        out.debug("assembling_doer_instructions") {
-            listOf(
-                Val(request.partName, ValType.STRING_USER_AGNOSTIC),
-                Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
-            )
+        out.debug("assembling_instructions") {
+            buildList {
+                add(Val(role.name, ValType.STRING_USER_AGNOSTIC))
+                add(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+                request.partName?.let { add(Val(it, ValType.STRING_USER_AGNOSTIC)) }
+            }
         }
 
-        val sections = buildDoerSections(request)
+        val sections = when (role) {
+            AgentRole.DOER -> buildDoerSections(request)
+            AgentRole.REVIEWER -> buildReviewerSections(request)
+            AgentRole.PLANNER -> buildPlannerSections(request)
+            AgentRole.PLAN_REVIEWER -> buildPlanReviewerSections(request)
+        }
         return writeInstructionsFile(request.outputDir, sections)
     }
 
-    private fun buildDoerSections(request: DoerInstructionRequest): List<String> = buildList {
+    // ── Doer ──────────────────────────────────────────────────────────────────
+
+    private fun buildDoerSections(request: UnifiedInstructionRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Part context
-        add(InstructionSections.partContext(request.partName, request.partDescription))
+        add(InstructionSections.partContext(
+            requireNotNull(request.partName) { "partName required for DOER role" },
+            requireNotNull(request.partDescription) { "partDescription required for DOER role" },
+        ))
         // 3. Ticket
         add(ticketSection(request.ticketContent))
         // 4. PLAN.md (with-planning only)
@@ -71,25 +82,14 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     // ── Reviewer ──────────────────────────────────────────────────────────────
 
-    override suspend fun assembleReviewerInstructions(
-        request: ReviewerInstructionRequest,
-    ): Path {
-        out.debug("assembling_reviewer_instructions") {
-            listOf(
-                Val(request.partName, ValType.STRING_USER_AGNOSTIC),
-                Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
-            )
-        }
-
-        val sections = buildReviewerSections(request)
-        return writeInstructionsFile(request.outputDir, sections)
-    }
-
-    private fun buildReviewerSections(request: ReviewerInstructionRequest): List<String> = buildList {
+    private fun buildReviewerSections(request: UnifiedInstructionRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Part context
-        add(InstructionSections.partContext(request.partName, request.partDescription))
+        add(InstructionSections.partContext(
+            requireNotNull(request.partName) { "partName required for REVIEWER role" },
+            requireNotNull(request.partDescription) { "partDescription required for REVIEWER role" },
+        ))
         // 3. Ticket
         add(ticketSection(request.ticketContent))
         // 4. PLAN.md (with-planning only)
@@ -121,18 +121,14 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     // ── Planner ───────────────────────────────────────────────────────────────
 
-    override suspend fun assemblePlannerInstructions(
-        request: PlannerInstructionRequest,
-    ): Path {
-        out.debug("assembling_planner_instructions") {
-            listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+    private fun buildPlannerSections(request: UnifiedInstructionRequest): List<String> = buildList {
+        val planJsonOutputPath = requireNotNull(request.planJsonOutputPath) {
+            "planJsonOutputPath required for PLANNER role"
+        }
+        val planMdOutputPath = requireNotNull(request.planMdOutputPath) {
+            "planMdOutputPath required for PLANNER role"
         }
 
-        val sections = buildPlannerSections(request)
-        return writeInstructionsFile(request.outputDir, sections)
-    }
-
-    private fun buildPlannerSections(request: PlannerInstructionRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Ticket
@@ -148,9 +144,9 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
         }
         // 7. plan.json output path
-        add(planJsonOutputPathSection(request.planJsonOutputPath))
+        add(planJsonOutputPathSection(planJsonOutputPath))
         // 8. PLAN.md output path
-        add(planMdOutputPathSection(request.planMdOutputPath))
+        add(planMdOutputPathSection(planMdOutputPath))
         // 9. PUBLIC.md output path
         add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
         // 10. PUBLIC.md writing guidelines
@@ -166,30 +162,29 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     // ── Plan Reviewer ─────────────────────────────────────────────────────────
 
-    override suspend fun assemblePlanReviewerInstructions(
-        request: PlanReviewerInstructionRequest,
-    ): Path {
-        out.debug("assembling_plan_reviewer_instructions") {
-            listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
+    private fun buildPlanReviewerSections(request: UnifiedInstructionRequest): List<String> = buildList {
+        val planJsonContent = requireNotNull(request.planJsonContent) {
+            "planJsonContent required for PLAN_REVIEWER role"
+        }
+        val planMdContent = requireNotNull(request.planMdContent) {
+            "planMdContent required for PLAN_REVIEWER role"
+        }
+        val plannerPublicMdPath = requireNotNull(request.plannerPublicMdPath) {
+            "plannerPublicMdPath required for PLAN_REVIEWER role"
         }
 
-        val sections = buildPlanReviewerSections(request)
-        return writeInstructionsFile(request.outputDir, sections)
-    }
-
-    private fun buildPlanReviewerSections(request: PlanReviewerInstructionRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Ticket
         add(ticketSection(request.ticketContent))
         // 3. plan.json content
-        add(planJsonContentSection(request.planJsonContent))
+        add(planJsonContentSection(planJsonContent))
         // 4. PLAN.md content
-        add(planMdContentSection(request.planMdContent))
+        add(planMdContentSection(planMdContent))
         // 5. Available agent types & models
         add(InstructionSections.AGENT_TYPES_AND_MODELS)
         // 6. Planner's PUBLIC.md
-        add(plannerPublicMdSection(request.plannerPublicMdPath))
+        add(plannerPublicMdSection(plannerPublicMdPath))
         // 7. Iteration feedback (iteration > 1)
         if (request.iterationNumber > 1 && request.priorPlanReviewerPublicMdPath != null) {
             add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))

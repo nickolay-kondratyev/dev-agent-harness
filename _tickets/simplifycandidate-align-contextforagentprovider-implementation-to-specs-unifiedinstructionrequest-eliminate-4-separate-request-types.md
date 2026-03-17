@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:15:56Z
 id: nid_hg10syj90dgmoavzoflbm1nhj_E
 title: "SIMPLIFY_CANDIDATE: Align ContextForAgentProvider implementation to spec's UnifiedInstructionRequest — eliminate 4 separate request types"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:02Z
-status_updated_iso: 2026-03-17T22:59:23Z
+status_updated_iso: 2026-03-17T23:15:56Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -45,3 +46,16 @@ Align to the spec:
 - All instruction assembly tests pass
 - Callers updated to use the new unified interface
 
+
+## Notes
+
+**2026-03-17T23:16:03Z**
+
+RESOLVED. Implementation aligned to spec:
+- Added AgentRole enum (DOER, REVIEWER, PLANNER, PLAN_REVIEWER) to ContextForAgentProvider.kt
+- Created UnifiedInstructionRequest data class matching spec exactly (all role-specific fields nullable/defaulted)
+- Replaced 4 interface methods with single assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest): Path
+- ContextForAgentProviderImpl dispatches via exhaustive when(role) to private builders
+- Extracted RoleCatalogEntry from InstructionSections to top-level data class (fixing layering violation caught in review)
+- All 4 test files + fixtures updated; 4 new requireNotNull guard tests added
+- All tests pass (BUILD SUCCESSFUL)
