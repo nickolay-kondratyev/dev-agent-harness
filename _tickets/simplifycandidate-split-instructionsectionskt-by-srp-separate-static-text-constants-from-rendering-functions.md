@@ -1,11 +1,11 @@
 ---
 id: nid_fpi6tyz0ab5i3ll3ka96l7mbr_E
 title: "SIMPLIFY_CANDIDATE: Split InstructionSections.kt by SRP — separate static text constants from rendering functions"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:14Z
-status_updated_iso: 2026-03-17T22:47:14Z
+status_updated_iso: 2026-03-17T23:05:07Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
