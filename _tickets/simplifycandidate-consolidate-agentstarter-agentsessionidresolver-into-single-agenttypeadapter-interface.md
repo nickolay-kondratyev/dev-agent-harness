@@ -1,11 +1,11 @@
 ---
 id: nid_3nuvvjenh4oa5g37m7tx09vj5_E
 title: "SIMPLIFY_CANDIDATE: Consolidate AgentStarter + AgentSessionIdResolver into single AgentTypeAdapter interface"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:41:20Z
-status_updated_iso: 2026-03-17T23:41:20Z
+status_updated_iso: 2026-03-17T23:45:00Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
