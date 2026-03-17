@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T20:35:53Z
 id: nid_erchjt8uu1ghg03z57lrg5fqp_E
 title: "SIMPLIFY_CANDIDATE: Replace Payload Delivery ACK protocol with file-based inbox"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:25Z
-status_updated_iso: 2026-03-15T01:08:25Z
+status_updated_iso: 2026-03-17T20:35:53Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

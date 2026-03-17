@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T20:35:10Z
 id: nid_mjcvyadvwtzs8noa6iyqq9edm_E
 title: "SIMPLIFY_CANDIDATE: Replace AutoRecoveryByAgentUseCase with retry+fail-hard for git ops"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:16Z
-status_updated_iso: 2026-03-15T01:08:16Z
+status_updated_iso: 2026-03-17T20:35:10Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -36,3 +37,5 @@ Files affected:
 - doc/use-case/AutoRecoveryByAgentUseCase.md (narrow scope or defer)
 - GitOperationFailureUseCase implementation (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E)
 
+--------------------------------------------------------------------------------
+NO le
