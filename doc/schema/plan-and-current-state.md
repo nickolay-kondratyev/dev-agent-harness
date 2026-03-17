@@ -277,8 +277,7 @@ This means:
           "sessionIds": [
             {
               "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-              "agentSessionId": "77d5b7ea-cf04-453b-8867-162404763e18",
-              "agentSessionPath": null,
+              "agentSession": { "id": "77d5b7ea-cf04-453b-8867-162404763e18" },
               "agentType": "ClaudeCode",
               "model": "sonnet",
               "timestamp": "2026-03-10T15:30:00Z"
@@ -295,8 +294,7 @@ This means:
           "sessionIds": [
             {
               "handshakeGuid": "handshake.b2c3d4e5-f6a7-8901-bcde-f12345678901",
-              "agentSessionId": "88e6c8fb-df15-564c-9978-273515874f29",
-              "agentSessionPath": null,
+              "agentSession": { "id": "88e6c8fb-df15-564c-9978-273515874f29" },
               "agentType": "ClaudeCode",
               "model": "sonnet",
               "timestamp": "2026-03-10T15:45:00Z"
@@ -350,8 +348,7 @@ one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
         "sessionIds": [
           {
             "handshakeGuid": "handshake.c3d4e5f6-a7b8-9012-cdef-123456789012",
-            "agentSessionId": "99f7d9gc-eg26-675d-aa89-384626985g30",
-            "agentSessionPath": null,
+            "agentSession": { "id": "99f7d9gc-eg26-675d-aa89-384626985g30" },
             "agentType": "ClaudeCode",
             "model": "opus",
             "timestamp": "2026-03-10T14:00:00Z"
@@ -368,8 +365,7 @@ one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
         "sessionIds": [
           {
             "handshakeGuid": "handshake.d4e5f6a7-b8c9-0123-defa-234567890123",
-            "agentSessionId": "aag8eahd-fh37-786e-bb90-495737a96h41",
-            "agentSessionPath": null,
+            "agentSession": { "id": "aag8eahd-fh37-786e-bb90-495737a96h41" },
             "agentType": "ClaudeCode",
             "model": "opus",
             "timestamp": "2026-03-10T14:30:00Z"
@@ -483,16 +479,14 @@ created. The last element is the current session. Each entry follows the
   "sessionIds": [
     {
       "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "agentSessionId": "77d5b7ea-cf04-453b-8867-162404763e18",
-      "agentSessionPath": null,
+      "agentSession": { "id": "77d5b7ea-cf04-453b-8867-162404763e18" },
       "agentType": "ClaudeCode",
       "model": "sonnet",
       "timestamp": "2026-03-10T15:30:00Z"
     },
     {
       "handshakeGuid": "handshake.f9e8d7c6-b5a4-3210-fedc-ba9876543210",
-      "agentSessionId": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "agentSessionPath": null,
+      "agentSession": { "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890" },
       "agentType": "ClaudeCode",
       "model": "sonnet",
       "timestamp": "2026-03-10T16:45:00Z"
@@ -510,13 +504,16 @@ Each entry in the `sessionIds` array has the following structure:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `handshakeGuid` | yes | The harness-generated GUID for this session (`handshake.${UUID}`). Our identifier — used in all communication. |
-| `agentSessionId` | no | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Null when `agentSessionPath` is used instead. Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
-| `agentSessionPath` | no | Alternative to `agentSessionId` for agents that use paths (e.g., PI). Null when not applicable. |
-| `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`, `"PI"`). |
+| `agentSession` | yes | Sub-object containing the agent's session identity. |
+| `agentSession.id` | yes | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
+| `agentType` | yes | Which agent implementation (e.g., `"ClaudeCode"`). |
 | `model` | yes | The **actual model name** used for this session (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Must match the sub-part's `model` field. Never a tier name like `"BudgetHigh"` — critical for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `timestamp` | yes | ISO-8601 timestamp of session creation. |
 
-**Exactly one** of `agentSessionId` or `agentSessionPath` must be non-null.
+<!-- V2+ NOTE: When additional agent types are supported, the `agentSession` sub-object can be
+     extended with additional fields (e.g., `agentSession.path` for path-based agents). This is
+     a trivial additive change — no existing field removal or OR-branch needed. -->
+
 The last element in the `sessionIds` array is the current session.
 
 ### Sub-Parts Without Iteration
