@@ -159,7 +159,7 @@ high-level.md for the full testing approach.
 |---|---|---|
 | `AgentUnresponsiveUseCase` | Agent fails to respond — see `DetectionContext` below | Parameterized by `DetectionContext`. Logs structured context (detection reason, session name, durations). Action depends on context — see table below. Single class, single failure-handling path for all unresponsive-agent scenarios. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See `doc_v2/FailedToExecutePlanUseCaseV2.md` for V2 automated cleanup. |
-| `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Summarize state via BudgetHigh DirectLLM (ref.ap.hnbdrLkRtNSDFArDFd9I2.E), present to user, user decides whether to grant more iterations |
+| `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Present raw reviewer PUBLIC.md + doer PUBLIC.md to user, user decides whether to grant more iterations |
 
 ### AgentUnresponsiveUseCase — DetectionContext
 
@@ -216,9 +216,8 @@ the state and decides what to do. V2 will add automated cleanup — see
 ## FailedToConvergeUseCase Detail
 
 When the reviewer sends `needs_iteration` but the iteration counter exceeds `iteration.max`:
-1. Harness uses **BudgetHigh DirectLLM** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md)
-2. Presents summary to user with the iteration history
-3. User decides:
+1. Harness presents the **raw reviewer PUBLIC.md + doer PUBLIC.md** directly to the user, along with the iteration history. No LLM summarization — the user sees the actual, unfiltered agent output.
+2. User decides:
    - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
    - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
 
