@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:35:05Z
 id: nid_ldztnvmnyg6lt6wjud2eeps8i_E
 title: "SIMPLIFY_CANDIDATE: Eliminate optional severity in granular feedback loop — reduce to two severities"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:13:16Z
-status_updated_iso: 2026-03-17T23:31:30Z
+status_updated_iso: 2026-03-17T23:35:05Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -42,3 +43,24 @@ Affected specs:
 DECISION: KEEP optional, adjust justification writing to be
 "This is OPTIONAL. Address if worthwhile, or write SKIPPED noting you chose to skip"
 We want to have a chance to address optional feedback otherwise smaller improvements will either be left behind completely, or require human to deep dive into it. Lets 1) adjust to add SKIPPED state not just ADDRESSED for optional feedback. 2) document the importance of optional feedback in the flow.
+## Notes
+
+**2026-03-17T23:35:21Z**
+
+## Resolution
+
+Decision: KEEP optional severity. Two spec changes made:
+
+### 1. Added SKIPPED resolution marker
+- New `## Resolution: SKIPPED` marker for optional items (alongside ADDRESSED and REJECTED)
+- Valid only for `optional__` prefixed files
+- Harness moves SKIPPED files to `addressed/` (same destination, different semantics)
+- Doer intent is now explicit: "I saw this and chose not to act" vs "I addressed this"
+
+### 2. Documented importance of optional feedback
+- Added "Why optional feedback is kept" paragraph in D4 (blocking rules) of granular-feedback-loop.md
+- Explains the middle ground between `important__` (forced) and PUBLIC.md-only (lost)
+
+### Files changed
+- `doc/plan/granular-feedback-loop.md` — Resolution marker format, inner loop guidance, D4 documentation, R3, R6
+- `doc/core/ContextForAgentProvider.md` — Structured feedback contract, FeedbackItem section type, fixed "at most 2" to "at most 1" disagreement round
