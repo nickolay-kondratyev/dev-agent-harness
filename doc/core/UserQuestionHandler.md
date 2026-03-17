@@ -79,9 +79,26 @@ How should I handle the responsive layout for mobile devices?
 |--------|-------------|
 | Input mechanism | `stdin` — `readLine()` in a suspend-friendly wrapper |
 | Submission | Two consecutive newlines (empty line) terminates input. Supports multi-line answers. |
-| Timeout | None — blocks indefinitely until human responds |
+| Timeout | **None — intentionally blocks indefinitely.** See design note below. |
 | Context shown | Part name, sub-part name, sub-part role, HandshakeGuid |
-| If human is away | Blocks forever. Acceptable for V1 (attended-only). |
+| If human is away | Blocks indefinitely. The workflow pauses and resumes when the human returns. |
+
+### Design Decision: No Timeout on Stdin Q&A
+
+`StdinUserQuestionHandler` **intentionally has no timeout** and will block indefinitely waiting for
+human input. This is a deliberate product decision:
+
+- The harness is designed for semi-attended workflows. A human operator may be in a meeting,
+  on a walk, or simply away from the keyboard for an extended period.
+- Failing or terminating the workflow due to inactivity would be **worse than waiting** — the
+  operator returns to find the work destroyed rather than paused.
+- The correct mental model is: **the workflow stops and waits**, just like a human colleague
+  holding on a question would wait however long it takes.
+
+**Consequence:** Do not run the harness with `StdinUserQuestionHandler` in fully unattended
+environments (e.g., CI with no interactive terminal). For those use cases, a future
+`LlmUserQuestionHandler` or `TimeoutWithFallbackHandler` (see V2+ table below) is the right
+choice — they are explicitly designed for autonomous operation.
 
 ---
 
