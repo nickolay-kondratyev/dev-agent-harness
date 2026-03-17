@@ -46,7 +46,10 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
   passed to all `PartExecutor` instances.
 - Wires `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for instruction assembly
 - Sets up `.ai_out/` directory structure for the branch (depends on branch name from previous steps)
-- Creates `current_state.json` (V2 adds resume-from-existing — ref.ap.LX1GCIjv6LgmM7AJFas20.E)
+- Creates `current_state.json` with `parts` array — for `with-planning` workflows, the
+  planning part (`phase: "planning"`) from the workflow JSON's `planningParts`; for
+  `straightforward` workflows, the execution parts (`phase: "execution"`) directly.
+  (V2 adds resume-from-existing — ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 - Constructs `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — production `SystemClock`; tests
   inject `TestClock` for virtual time
 - Constructs `TicketShepherd` with `ShepherdContext` + ticket-scoped state

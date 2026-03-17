@@ -537,7 +537,8 @@ If they somehow leak through, treat as a bug — fail with `IllegalStateExceptio
 ## Ownership and Lifecycle
 
 - **Created by**: `TicketShepherd` (for execution parts) or `DetailedPlanningUseCase`
-  (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) (for the planning part)
+  (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) (for the planning part — the `phase: "planning"` entry
+  in the `parts` array)
 - **Run by**: `TicketShepherd` — always controls which executor is active
 - **Lifecycle**: one executor per part, created just before execution, discarded after `execute()` returns
 - `TicketShepherd` holds an `activeExecutor` reference — the currently running `PartExecutor`.

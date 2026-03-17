@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:41:08Z
 id: nid_cfhhx7k6cid7dugz6wv760c7p_E
 title: "SIMPLIFY_CANDIDATE: Unify planningPart into parts array — eliminate dual-path handling in current_state.json"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:14:06Z
-status_updated_iso: 2026-03-17T23:36:12Z
+status_updated_iso: 2026-03-17T23:41:08Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -56,3 +57,25 @@ Affected specs:
 --------------------------------------------------------------------------------
 
 YES let's simplify BUT also KEEP in mind that planning is special in that it will be called before we even have a plan. Hence, keep that in mind throughout the spec.
+
+## Resolution
+
+**Completed.** Unified `planningPart` into the `parts` array across 5 spec files.
+
+### What changed:
+
+1. **New `phase` field on Part** (`"planning"` | `"execution"`) — added to Part Fields table in schema spec
+2. **`current_state.json`**: Planning part is now the first entry in the `parts` array with `phase: "planning"` instead of a separate top-level `planningPart` field
+3. **Workflow JSON**: `planningSubParts` (flat sub-parts list) → `planningParts` (array of parts with same schema, including `phase: "planning"`)
+4. **`convertPlanToExecutionParts`**: Appends execution parts to existing array instead of populating a separate field
+5. **All JSON examples** updated with `phase` field throughout
+
+### Planning remains special (as requested):
+The spec explicitly calls out that the planning part is special because it runs **before a plan exists** — it is the part that *creates* the plan. This is highlighted in the "Planning Part in the Parts Array" section.
+
+### Files modified:
+- `doc/schema/plan-and-current-state.md` — main schema changes, examples, lifecycle
+- `doc/core/TicketShepherdCreator.md` — workflow init description
+- `doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md` — plan conversion step
+- `doc/core/PartExecutor.md` — ownership description
+- `doc/core/SessionsState.md` — removeAllForPart description
