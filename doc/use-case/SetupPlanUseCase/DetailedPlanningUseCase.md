@@ -1,25 +1,33 @@
 ## DetailedPlanningUseCase / ap.cJhuVZTkwfrWUzTmaMbR3.E
 
-Creates the planning executor and plan-conversion function for `with-planning` workflows.
-Returns a `SetupPlanResult.NeedsPlanning` (ref.ap.evYmpQfliHCHUTdK2QRgS.E) containing
-a `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E, configured with reviewer) for the
-PLANNER↔PLAN_REVIEWER iteration loop, plus a `convertPlanToExecutionParts` function that
-transforms the approved
-plan into executable parts.
+Owns the full planning lifecycle for `with-planning` workflows. Creates a planning executor,
+runs it, converts the approved plan to execution parts, and returns `List<Part>`.
+
+```kotlin
+suspend fun execute(): List<Part>
+```
+
+The caller (`SetupPlanUseCase` ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) receives execution-ready parts
+with no knowledge of the two-phase protocol (run executor → convert plan).
 
 ---
 
-### What It Returns
+### What It Does
 
-```kotlin
-SetupPlanResult.NeedsPlanning(
-    planningExecutor = partExecutorImpl,    // PLANNER↔PLAN_REVIEWER loop (with reviewer)
-    convertPlanToExecutionParts = ::convertPlan,     // plan.json → List<Part>
-)
-```
-
-The use case does **not** run the planning loop itself — it creates the executor and hands it
-back to `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E), which runs it via `execute()`.
+1. Creates a `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E, configured with reviewer)
+   for the PLANNER↔PLAN_REVIEWER iteration loop.
+2. Runs `planningExecutor.execute()` → `PartResult`.
+3. Handles `PartResult`:
+   - `Completed` → proceeds to plan conversion (step 4).
+   - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
+     delegates to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
+     When they happen, the human is the right handler — no special recovery logic.
+4. Kills TMUX sessions for the planning part (`removeAllForPart`).
+5. Calls `convertPlanToExecutionParts()` → `List<Part>`.
+   - On `PlanConversionException`: logs WARN, **restarts the planning loop** with
+     validation errors injected as planner context. Counts against the planning
+     iteration budget. If budget exhausted, halts via `FailedToExecutePlanUseCase`.
+6. Returns the execution parts.
 
 ---
 
@@ -49,7 +57,7 @@ the sub-part role:
 
 ### convertPlanToExecutionParts
 
-Called by `TicketShepherd` **after** the planning executor completes successfully
+Called internally **after** the planning executor completes successfully
 (`PartResult.Completed`). Transforms the approved plan into executable parts.
 
 ```
@@ -68,13 +76,13 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
 ```
 
 If `plan.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws
-a `PlanConversionException` (extends `AsgardBaseException`). `TicketShepherd` catches
-`PlanConversionException` at the call site, logs a **WARN** with the validation errors, and
-**restarts the planning loop** — injecting the validation errors as context for the planner
-on the next attempt. This counts against the planning iteration budget. If the budget is
-exhausted, `TicketShepherd` halts via `FailedToExecutePlanUseCase` (red error). This is the
-**single validation point** — harness-side validation is the source of truth, eliminating
-drift between what agents validate and what the harness validates.
+a `PlanConversionException` (extends `AsgardBaseException`). `DetailedPlanningUseCase` catches
+`PlanConversionException`, logs a **WARN** with the validation errors, and **restarts the
+planning loop** — injecting the validation errors as context for the planner on the next
+attempt. This counts against the planning iteration budget. If the budget is exhausted,
+halts via `FailedToExecutePlanUseCase` (red error). This is the **single validation point** —
+harness-side validation is the source of truth, eliminating drift between what agents
+validate and what the harness validates.
 
 ---
 
