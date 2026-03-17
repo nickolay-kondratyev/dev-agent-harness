@@ -248,7 +248,30 @@ agent in `--print` mode with `$AI_MODEL__ZAI__FAST`.
 
 ### GitOperationFailureUseCase
 
-A git-specific use case that packages context and delegates to `AutoRecoveryByAgentUseCase`:
+A git-specific use case that attempts a deterministic quick-fix before falling back to
+the full agent recovery path.
+
+#### Fast-path: index.lock detection
+
+The most common git failure in a CI/agent environment is a stale `.git/index.lock` file
+left by a crashed process. This is fully deterministic to fix (`rm -f .git/index.lock`)
+and requires no LLM agent. Before escalating, `GitOperationFailureUseCase` checks:
+
+1. Error output contains `index.lock` **or** `unable to lock`
+2. `.git/index.lock` file exists
+
+If **both** conditions are true:
+1. Delete `.git/index.lock`
+2. Retry the original git operation immediately
+3. **If retry succeeds** → continue workflow normally (no agent invoked)
+4. **If retry fails** → fall through to the standard agent recovery path below
+
+**Why-not just delete blindly**: Only delete when the error confirms a lock problem — avoids
+masking unrelated failures where a lock file happens to be present.
+
+#### Standard agent recovery path
+
+If the fast-path is not applicable (different error) or the retry after lock removal fails:
 
 1. **Captures failure context**:
    - The git command that failed (e.g., `git add -A && git commit ...`)
@@ -274,8 +297,8 @@ The executor calls `onSubPartDone` and either gets a successful commit or a
 
 | Git Operation | Where It Happens | Recovery Via |
 |---|---|---|
-| `git add -A` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
-| `git commit` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` |
+| `git add -A` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → `AutoRecoveryByAgentUseCase` |
+| `git commit` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → `AutoRecoveryByAgentUseCase` |
 | `git checkout -b` | `TicketShepherdCreator` (startup) | **Not covered** — startup failures fail hard (no recovery agent). The working tree is validated clean at this point, so `checkout -b` failures indicate a more fundamental issue. |
 
 ---
@@ -287,5 +310,5 @@ The harness performs these git operations during a workflow:
 | When | Operation |
 |---|---|
 | Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (`.ai_out/` directory scan) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
-| `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
+| `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E): index.lock fast-path first, then `AutoRecoveryByAgentUseCase` for other/unresolved failures. |
 | Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): agent (ClaudeCode `--print`, sonnet) reads `.ai_out/` artifacts and produces failure summary on stdout. **Harness** appends `### TRY-{N}` section to ticket, commits on try branch (`git add {ticketPath} && git commit`), and attempts best-effort propagation to originating branch. Non-fatal — all failures logged and skipped. |
