@@ -1,11 +1,11 @@
 ---
 id: nid_1kt2gs66q4k2aoy16bywtaq9m_E
 title: "SIMPLIFY_CANDIDATE: Merge ContextInitializer's two near-identical GLM factory methods into one parameterized method"
-status: open
+status: in_progress
 deps: [nid_5mtpb9669k6kpwd7qzfhru6lx_E]
 links: []
 created_iso: 2026-03-17T21:39:41Z
-status_updated_iso: 2026-03-17T21:39:41Z
+status_updated_iso: 2026-03-17T22:41:49Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
