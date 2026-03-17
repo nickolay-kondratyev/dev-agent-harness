@@ -12,6 +12,9 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, yagni, schema, v1]
 ---
 
+
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Problem
 The `SessionRecord` schema (doc/schema/plan-and-current-state.md) defines an OR-branch:
 
@@ -49,3 +52,18 @@ This is a V1-scoped simplification. V2 can reintroduce the OR-branch when PI age
 - All SessionRecord readers/writers simplified (no conditional branch)
 - Existing tests pass
 
+--------------------------------------------------------------------------------
+
+DECISION: we actually only use `agentSessionId` for Claude Code lets re-align the documentation to state that `agentSessionId` is used for Claude Code. Now what i am thinking to make it clear is to have a sub-object:
+```json
+{
+  "handshakeGuid": "...",
+  "agentSession": {
+    "id":"" 
+  },
+  "agentType": "ClaudeCode",
+  "model": "...",
+  "timestamp": "..."
+}
+```
+And we can start with only having `agentSession.id` to start out with.
