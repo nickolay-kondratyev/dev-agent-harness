@@ -1,11 +1,11 @@
 ---
 id: nid_u8aapa26bmut3hob8g85438lo_E
 title: "SIMPLIFY_CANDIDATE: Merge /started handshake into first done signal — eliminate two-phase agent startup"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:32Z
-status_updated_iso: 2026-03-17T22:01:32Z
+status_updated_iso: 2026-03-17T22:23:02Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
