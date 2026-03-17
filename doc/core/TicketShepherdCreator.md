@@ -35,8 +35,8 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
   `originatingBranch`, passed to `TicketFailureLearningUseCase`
   (ref.ap.cI3odkAZACqDst82HtxKa.E) as part of agent instructions for best-effort
   propagation. `tryNumber` is also passed through to `TicketShepherd`.
-- **Resolves try-N** — scans both local branches and `.ai_out/` directories to find the first
-  N where neither exists (see [Try-N Resolution](git.md#try-n-resolution)
+- **Resolves try-N** — scans `.ai_out/` directories (single source of truth) to find the first
+  N where no `.ai_out/` directory exists (see [Try-N Resolution](git.md#try-n-resolution)
   ref.ap.THL21SyZzJhzInG2m4zl2.E)
 - **Creates feature branch** (`git checkout -b`) from current HEAD
 - Initializes `SessionsState` (internal to `AgentFacadeImpl`)

@@ -55,18 +55,18 @@ Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-
 
 ### Try-N Resolution
 
-Try-N is determined by checking **both** local branches and `.ai_out/` directories. N is the
-first value where **neither** exists:
+Try-N is determined by scanning `.ai_out/` directories — the **single source of truth**.
+N is the first value where the corresponding `.ai_out/` directory does not exist:
 
 1. Build candidate branch name via `BranchNameBuilder.build(ticket, candidateN)`
-2. Check: does a local branch with that name exist? (`git branch --list '{candidate}'`)
-3. Check: does `.ai_out/{candidate}/` directory exist?
-4. If **either** exists → increment candidateN, repeat
-5. If **neither** exists → use candidateN
+2. Check: does `.ai_out/{candidate}/` directory exist?
+3. If exists → increment candidateN, repeat
+4. If not → use candidateN
 
-Dual check prevents collisions when a branch was deleted but `.ai_out/` artifacts remain,
-or `.ai_out/` was cleaned up but the branch still exists. Failed try branches and their
-`.ai_out/` directories are left in place — the next run naturally skips past them.
+**Rationale**: `.ai_out/` directories are always created as part of initialization
+(ref.ap.BXQlLDTec7cVVOrzXWfR7.E). If a try ran far enough to matter, it created its
+`.ai_out/` directory. If it didn't even get that far, there's nothing to conflict with.
+No git operations needed — reduces failure surface and eliminates the dual-scan complexity.
 
 ---
 
@@ -253,6 +253,6 @@ The harness performs these git operations during a workflow:
 
 | When | Operation |
 |---|---|
-| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (dual check: `git branch --list` + `.ai_out/` directory) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
+| Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (`.ai_out/` directory scan) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
 | `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E). |
 | Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): delegates to `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — ClaudeCode `--print` with sonnet. Agent reads `.ai_out/` artifacts, generates failure summary, appends to ticket, commits on try branch, and attempts best-effort propagation to originating branch. Non-fatal — agent failure is logged and skipped. |
