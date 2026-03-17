@@ -23,6 +23,32 @@ data class FrontmatterParseResult(
 )
 
 /**
+ * Thin wrapper over a parsed YAML frontmatter field map that provides
+ * consistent required/optional field access with uniform error messages.
+ *
+ * Shared by [TicketParser] and [RoleCatalogLoader] to eliminate per-parser
+ * field-extraction boilerplate.
+ *
+ * @param fields The YAML key→value map from [FrontmatterParseResult.yamlFields].
+ * @param sourceContext Optional human-readable label (e.g. a filename) included in
+ *   error messages for missing required fields to aid debugging.
+ */
+class FrontmatterFields(
+    private val fields: Map<String, String>,
+    private val sourceContext: String? = null,
+) {
+    /** Returns the value for [key], or throws [IllegalArgumentException] if absent. */
+    fun require(key: String): String =
+        fields[key] ?: throw IllegalArgumentException(
+            if (sourceContext != null) "[$sourceContext] missing required field: $key"
+            else "Missing required field: $key"
+        )
+
+    /** Returns the value for [key], or `null` if absent. */
+    fun optional(key: String): String? = fields[key]
+}
+
+/**
  * Stateless utility that parses a markdown string with YAML frontmatter into fields and body.
  *
  * Reused by both the ticket parser and the role catalog loader — any markdown file using
