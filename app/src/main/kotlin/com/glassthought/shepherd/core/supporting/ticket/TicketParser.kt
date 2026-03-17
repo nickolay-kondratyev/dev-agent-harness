@@ -52,14 +52,11 @@ class TicketParserImpl(outFactory: OutFactory) : TicketParser {
         val content = withContext(Dispatchers.IO) { path.readText() }
 
         val result = YamlFrontmatterParser.parse(content)
+        val fields = FrontmatterFields(result.yamlFields)
 
-        val id = result.yamlFields["id"]
-            ?: throw IllegalArgumentException("Ticket is missing required field: id")
-
-        val title = result.yamlFields["title"]
-            ?: throw IllegalArgumentException("Ticket is missing required field: title")
-
-        val status = result.yamlFields["status"]
+        val id = fields.require("id")
+        val title = fields.require("title")
+        val status = fields.optional("status")
 
         val additionalFields = result.yamlFields
             .filterKeys { it !in RESERVED_KEYS }

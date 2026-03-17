@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.agent.rolecatalog
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.supporting.ticket.FrontmatterFields
 import com.glassthought.shepherd.core.supporting.ticket.YamlFrontmatterParser
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -72,13 +73,10 @@ class RoleCatalogLoaderImpl(outFactory: OutFactory) : RoleCatalogLoader {
             mdFiles.map { file ->
                 val content = file.readText()
                 val result = YamlFrontmatterParser.parse(content)
+                val fields = FrontmatterFields(result.yamlFields, sourceContext = file.fileName.toString())
 
-                val description = result.yamlFields["description"]
-                    ?: throw IllegalArgumentException(
-                        "Role file [${file.fileName}] is missing required frontmatter field: description"
-                    )
-
-                val descriptionLong = result.yamlFields["description_long"]
+                val description = fields.require("description")
+                val descriptionLong = fields.optional("description_long")
 
                 RoleDefinition(
                     name = file.nameWithoutExtension,
