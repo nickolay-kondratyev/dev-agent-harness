@@ -28,9 +28,13 @@ When the server receives `/callback-shepherd/signal/done` with a `handshakeGuid`
 The server does **not** route `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
-`/callback-shepherd/signal/user-question` is still handled as a side-channel — server delegates to
-`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
-The executor stays suspended.
+`/callback-shepherd/signal/user-question` is handled as a side-channel: server enqueues the question
+into `SessionEntry.pendingQA` (creating `QAPendingState` if this is the first question) and launches
+the **Q&A coordinator** — a dedicated per-session coroutine that collects answers via
+`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E) and batch-delivers all answers via
+`AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) once the full queue is answered.
+The executor stays suspended; health pings, compaction, and noActivityTimeout are suppressed while
+`isQAPending` is true.
 
 ---
 
@@ -50,6 +54,7 @@ server-side validation and shepherd-side decision making.
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (signal or query). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
+| `pendingQA` | `QAPendingState?` | Non-null when Q&A is in progress for this session. Set by the server when `/signal/user-question` arrives (creates `QAPendingState` if first question, appends to existing queue if subsequent questions). Cleared (set to `null`) by the Q&A coordinator after all answers are batch-delivered and ACK received. The derived property `isQAPending` (`pendingQA != null`) gates health ping firing, context window compaction, and noActivityTimeout — all are **suppressed** while Q&A is pending (ref.ap.NE4puAzULta4xlOLh5kfD.E). |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Role is derived on-the-fly from
 `subPartIndex` via `SubPartRole.fromIndex(subPartIndex)` — position 0 maps to `DOER`,
@@ -73,6 +78,35 @@ only require updating `fromIndex()`, not session records or any persisted state.
 4. **Not exposed** to `PartExecutor` — the executor receives the resolved `AgentSignal`
    directly as the return value of `sendPayloadAndAwaitSignal`; it never holds a raw
    `Deferred<AgentSignal>` reference
+
+### QAPendingState
+
+Holds the ordered question queue and collected answers for a session's pending Q&A interaction.
+
+```kotlin
+data class QAPendingState(
+    /** Ordered queue of questions from the agent. Questions are appended as they arrive. */
+    val questions: List<PendingQuestion>,
+    /** Answers collected so far, in question order. Size grows as human answers each question. */
+    val answers: List<String>,
+)
+
+data class PendingQuestion(
+    val question: String,
+    val context: UserQuestionContext,
+)
+```
+
+**Derived property:** `isQAPending = pendingQA != null`
+
+The Q&A coordinator processes questions sequentially (one stdin prompt per question). When
+`answers.size == questions.size`, all questions are answered — the coordinator batch-delivers
+all answers together via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E), then clears
+`pendingQA` to `null`.
+
+**Multiple questions:** If a second `/signal/user-question` arrives while the first is still
+unanswered, the server appends to `questions` on the existing `QAPendingState`. The Q&A
+coordinator sees the growing queue and processes each question in order.
 
 ---
 

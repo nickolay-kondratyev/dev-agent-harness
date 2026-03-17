@@ -66,10 +66,15 @@ enum class CompactionTrigger {
 
 ### Trigger Detection
 
-| Trigger | Where detected | Condition |
-|---------|---------------|-----------|
-| `DONE_BOUNDARY` | After `AgentSignal.Done` + PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35) |
-| `EMERGENCY_INTERRUPT` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E), every ~1 second | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20) |
+| Trigger | Where detected | Condition | Q&A gate |
+|---------|---------------|-----------|----------|
+| `DONE_BOUNDARY` | After `AgentSignal.Done` + PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35) | N/A — done boundary implies no Q&A pending |
+| `EMERGENCY_INTERRUPT` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E), every ~1 second | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20) | **Skipped** when `SessionEntry.isQAPending` is true (ref.ap.NE4puAzULta4xlOLh5kfD.E) |
+
+**Q&A suppression:** When Q&A is pending (`isQAPending == true`), the agent is idle awaiting
+a TMUX answer — its context window is not growing. Emergency compaction is unnecessary and
+would interfere with the Q&A coordinator's answer delivery. The health-aware await loop skips
+the entire compaction + health check block while `isQAPending` is true.
 
 ### Unified Compaction Flow — `performCompaction(handle, trigger)`
 
@@ -477,6 +482,13 @@ while (true) {
 
     if (signal != null) {
         return signal  // Done, FailWorkflow, SelfCompacted
+    }
+
+    // --- Q&A pending gate: skip compaction + health checks while Q&A is active ---
+    // Agent is known-idle awaiting TMUX answer — context not growing, pings waste context.
+    // See UserQuestionHandler (ref.ap.NE4puAzULta4xlOLh5kfD.E).
+    if (sessionEntry.isQAPending) {
+        continue
     }
 
     // --- Context window check for compaction (every iteration = every ~1 second) ---

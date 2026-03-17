@@ -87,7 +87,7 @@ enum class DoneResult {
 | Callback | Why not | Handler |
 |----------|---------|---------|
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
-| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server delegates to `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), delivers answer via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E). |
+| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server enqueues question into `SessionEntry.pendingQA`, launches Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Executor detects `isQAPending` and **suppresses** health pings, compaction, and noActivityTimeout. Answers batch-delivered via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) by the Q&A coordinator (outside executor scope). |
 | `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this inside `sendPayloadAndAwaitSignal` |
 | `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; facade's ACK-await phase reads this |
 
@@ -172,6 +172,11 @@ while (sessionEntry.pendingPayloadAck != null) {
 // Compaction: determined by context_window_slim.json (remaining_percentage).
 // These are independent concerns — see HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E).
 //
+// Q&A GATE: When sessionEntry.isQAPending is true, health pings, compaction triggers,
+// and noActivityTimeout are ALL SUPPRESSED. The agent is known-idle awaiting a TMUX
+// answer from the Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Pinging would
+// waste context window; timeout would kill a healthy idle agent.
+//
 lastHealthCheck = now()
 while (true) {
     signal = awaitSignalWithTimeout(1.second)
@@ -179,6 +184,12 @@ while (true) {
     if (signal != null) {
         // Agent sent Done / FailWorkflow / SelfCompacted via server → deferred completed
         return signal
+    }
+
+    // --- Q&A pending gate: skip compaction + health checks while Q&A is active ---
+    if (sessionEntry.isQAPending) {
+        log.debug { "qa_pending — skipping compaction and health checks" }
+        continue
     }
 
     // --- Read context window state for compaction decisions (every ~1 second) ---

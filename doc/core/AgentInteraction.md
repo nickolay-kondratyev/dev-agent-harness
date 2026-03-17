@@ -314,16 +314,23 @@ again with the new instructions payload. Forgetting to reset the deferred is no 
 — the method owns that lifecycle unconditionally. Eliminates the silent-hang class of bugs
 noted in ticket `nid_0o3dqyqe9tlwpi9uroe9tdqpn_E`.
 
-### R2: `UserQuestionHandler`
+### R2: `UserQuestionHandler` — Decoupled Q&A Coordinator
 
-User questions are side-channel: the HTTP server handles them via `UserQuestionHandler` and
-delivers answers via `AckedPayloadSender`. This flow currently goes through `SessionsState`.
-With AgentFacade absorbing SessionsState, the HTTP server needs access to
-AgentFacadeImpl for question handling.
+User questions are side-channel: the HTTP server enqueues questions into
+`SessionEntry.pendingQA` and launches a dedicated **Q&A coordinator** coroutine per session
+(ref.ap.NE4puAzULta4xlOLh5kfD.E). The coordinator collects answers via `UserQuestionHandler`
+strategy and batch-delivers all answers via `AckedPayloadSender`. This flow goes through
+`SessionsState` (for `pendingQA` state) but runs **outside the executor's coroutine scope**.
 
-**Impact:** The HTTP server's relationship to AgentFacade needs to be clarified. The server
-is a **collaborator** of AgentFacadeImpl (it triggers deferred completion and question
-handling), not a user of the `AgentFacade` interface.
+The Q&A coordinator is independent of `AgentFacade` — it is launched by the server and uses
+`AckedPayloadSender` directly for answer delivery. The executor's health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) only reads `SessionEntry.isQAPending` to suppress health
+pings, compaction, and noActivityTimeout during Q&A.
+
+**Impact:** The HTTP server's relationship to AgentFacade is clarified: the server is a
+**collaborator** of AgentFacadeImpl (it triggers deferred completion via `SessionsState`) and
+the **owner** of the Q&A coordinator coroutine. The Q&A coordinator does not use the
+`AgentFacade` interface — it accesses `SessionEntry` and `AckedPayloadSender` directly.
 
 **Must resolve at Gate 1.**
 
