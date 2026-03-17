@@ -1,11 +1,11 @@
 ---
 id: nid_qwz2s1lswafde3phqwst6fom6_E
 title: "SIMPLIFY_CANDIDATE: Consolidate ContextForAgentProvider's 4 role-specific methods into one unified assembleInstructions(role, request)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:45Z
-status_updated_iso: 2026-03-17T22:01:45Z
+status_updated_iso: 2026-03-17T22:05:41Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
