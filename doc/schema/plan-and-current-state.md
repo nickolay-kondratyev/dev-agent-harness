@@ -400,7 +400,7 @@ each iteration — the reviewer always sees the **current** version, not previou
 History is tracked via `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — prior versions
 are recoverable from git log.
 See [ai-out-directory.md](ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) for
-PUBLIC.md vs SHARED_CONTEXT.md semantics.
+PUBLIC.md writing guidelines and visibility rules.
 
 ---
 

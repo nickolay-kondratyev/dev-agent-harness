@@ -62,7 +62,6 @@ interface ContextForAgentProvider {
  * @param partName Name of the current part in the workflow
  * @param partDescription Description of what this part accomplishes
  * @param ticketContent Full ticket markdown content (including frontmatter)
- * @param sharedContextPath Path to `.ai_out/${branch}/shared/SHARED_CONTEXT.md`
  * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
  * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
  * @param iterationNumber Current iteration (1-based)
@@ -75,7 +74,6 @@ data class DoerInstructionRequest(
     val partName: String,
     val partDescription: String,
     val ticketContent: String,
-    val sharedContextPath: Path,
     val planMdPath: Path?,
     val priorPublicMdPaths: List<Path>,
     val iterationNumber: Int,
@@ -91,7 +89,6 @@ data class DoerInstructionRequest(
  * @param partName Name of the current part in the workflow
  * @param partDescription Description of what this part accomplishes
  * @param ticketContent Full ticket markdown content (including frontmatter)
- * @param sharedContextPath Path to `.ai_out/${branch}/shared/SHARED_CONTEXT.md`
  * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
  * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
  * @param iterationNumber Current iteration (1-based)
@@ -105,7 +102,6 @@ data class ReviewerInstructionRequest(
     val partName: String,
     val partDescription: String,
     val ticketContent: String,
-    val sharedContextPath: Path,
     val planMdPath: Path?,
     val priorPublicMdPaths: List<Path>,
     val iterationNumber: Int,
@@ -120,7 +116,6 @@ data class ReviewerInstructionRequest(
  *
  * @param roleDefinition The PLANNER role definition
  * @param ticketContent Full ticket markdown content
- * @param sharedContextPath Path to SHARED_CONTEXT.md
  * @param roleCatalogEntries All available roles (for assignment)
  * @param iterationNumber Current iteration (1-based)
  * @param planReviewerPublicMdPath Plan reviewer's PUBLIC.md from prior iteration (null on first)
@@ -132,7 +127,6 @@ data class ReviewerInstructionRequest(
 data class PlannerInstructionRequest(
     val roleDefinition: RoleDefinition,
     val ticketContent: String,
-    val sharedContextPath: Path,
     val roleCatalogEntries: List<InstructionSections.RoleCatalogEntry>,
     val iterationNumber: Int,
     val planReviewerPublicMdPath: Path?,

@@ -44,7 +44,7 @@ or the ping-ack handshake timed out.
 2. Start a **new** agent session for the same sub-part (full spawn flow —
    ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
 3. Append the new session record to the sub-part's `sessionIds` array
-4. Agent starts fresh but with the same instruction context (role + ticket + SHARED_CONTEXT.md +
+4. Agent starts fresh but with the same instruction context (role + ticket + PLAN.md +
    prior PUBLIC.md files)
 
 **Trade-off:** The agent loses its conversation history from the previous session. But it has

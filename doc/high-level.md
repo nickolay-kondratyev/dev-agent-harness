@@ -68,7 +68,7 @@ coordinator that drives the entire workflow. It:
 - Creates a [`PartExecutor`](core/PartExecutor.md) (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) for each part and calls `execute()`
 - Delegates the agent spawn → wait → iterate cycle to the executor (no inline iteration loop)
 - Server callbacks wake executors via `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E)
-- Manages file-based communication (`comm/in/instructions.md`, `comm/out/PUBLIC.md`, `SHARED_CONTEXT.md`)
+- Manages file-based communication (`comm/in/instructions.md`, `comm/out/PUBLIC.md`)
 - Handles git commits via pluggable `GitCommitStrategy` — see [Git Commit Strategy](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E)
 - Monitors agent health via timeout + ping mechanism (see Agent Health Monitoring)
 
@@ -372,7 +372,7 @@ See:
 
 A [`ContextForAgentProvider`](core/ContextForAgentProvider.md) (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
 interface is responsible for assembling instruction files for agents:
-- Execution agent instructions (role def + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage)
+- Execution agent instructions (role def + ticket + PLAN.md + prior PUBLIC.md files + callback script usage)
 - Planner instructions (ticket + role catalog + plan format instructions)
 - PLAN_REVIEWER instructions (includes `plan.json` from `harness_private/`)
 

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T19:30:40Z
 id: nid_u0app7d6os21lhmcuxqoc1qoo_E
 title: "SIMPLIFY_CANDIDATE: Remove SHARED_CONTEXT.md — fold shared context into plan.json or planning-phase PUBLIC.md"
-status: in_progress
+status: closed
 deps: [nid_orpcmdfj1m06lyajssewwn1k9_E]
 links: []
 created_iso: 2026-03-15T01:31:41Z
-status_updated_iso: 2026-03-17T19:19:27Z
+status_updated_iso: 2026-03-17T19:30:40Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -44,4 +45,39 @@ If architectural decisions or shared context need to persist, they go into the p
 --------------------------------------------------------------------------------
 OK lets simplify. 
 
-BUT let's make sure the agents are properly instructed to capture the reasoning within the code files and persistent documentation (CLAUDE.md, deep memory, md notes) they create/edit so that the reasoning survives beyond the current iteration. 
+BUT let's make sure the agents are properly instructed to capture the reasoning within the code files and persistent documentation (CLAUDE.md, deep memory, md notes) they create/edit so that the reasoning survives beyond the current iteration.
+
+## Resolution
+
+**Completed.** SHARED_CONTEXT.md removed from all specs (8 doc files) and all code (4 Kotlin files).
+
+### What changed
+
+**Specs updated (8 files):**
+- `doc/schema/ai-out-directory.md`: Removed from directory tree, key files table, replaced "PUBLIC.md vs SHARED_CONTEXT.md" comparison with "PUBLIC.md vs PLAN.md", updated initial creation section
+- `doc/core/ContextForAgentProvider.md`: Removed section 4 and section 11 from all 4 agent instruction tables (doer, reviewer, planner, plan-reviewer)
+- `doc/high-level.md`: Removed from harness communication list and context assembly
+- `doc/core/PartExecutor.md`: Removed from SubPartInstructionProvider table
+- `doc/schema/plan-and-current-state.md`: Removed cross-reference
+- `doc/use-case/HealthMonitoring.md`: Removed from FailedToConvergeUseCase summary inputs
+- `doc/use-case/TicketFailureLearningUseCase.md`: Removed from agent reads list
+- `doc_v2/resume.md`: Removed from instruction context description
+
+**Code updated (4 files):**
+- `ContextForAgentProvider.kt`: Removed `sharedContextPath` from `DoerInstructionRequest`, `ReviewerInstructionRequest`, `PlannerInstructionRequest`
+- `ContextForAgentProviderImpl.kt`: Removed `sharedContextSection()` calls and `SHARED_CONTEXT_MD_GUIDELINES` from all builders
+- `InstructionSections.kt`: Removed `sharedContextMdPath()`, `SHARED_CONTEXT_MD_GUIDELINES`. Updated `PUBLIC_MD_WRITING_GUIDELINES` to absorb shared knowledge guidance
+- `ContextTestFixtures.kt`: Removed SHARED_CONTEXT.md file creation and `sharedContextPath` parameters
+
+### Where shared knowledge goes now
+
+1. **PUBLIC.md** — updated writing guidelines now include codebase discoveries, anchor points, cross-cutting constraints, and patterns
+2. **PLAN.md** — architectural decisions and cross-cutting plan context (unchanged)
+3. **Code itself** — WHY-NOT comments for durable reasoning (emphasized in updated guidelines)
+4. **Persistent docs** — CLAUDE.md, deep memory, .md notes for reasoning that must survive beyond the workflow run (new guidance added)
+
+### Net result
+- 3 fewer parameters on request data classes
+- 2 fewer sections assembled per agent instruction file (doer/reviewer/planner)
+- 1 fewer file concept for agents to know about
+- No ambiguity about SHARED_CONTEXT.md vs PUBLIC.md vs PLAN.md

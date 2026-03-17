@@ -283,7 +283,7 @@ interface SubPartInstructionProvider {
 
 | Context | Wraps | Notes |
 |---------|-------|-------|
-| Execution parts | `ContextForAgentProvider.assembleExecutionAgentInstructions()` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) | Role def + ticket + SHARED_CONTEXT.md + prior PUBLIC.md files + callback script usage |
+| Execution parts | `ContextForAgentProvider.assembleDoerInstructions()` / `assembleReviewerInstructions()` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) | Role def + ticket + PLAN.md + prior PUBLIC.md files + callback script usage |
 | Planning phase | `ContextForAgentProvider` planner/plan-reviewer methods | Ticket + role catalog for planner; includes `plan.json` for plan-reviewer |
 
 ---
