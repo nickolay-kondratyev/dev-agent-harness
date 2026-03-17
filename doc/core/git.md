@@ -42,9 +42,31 @@ at startup prevents this.
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
 - `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
-- `slugified_title`: the ticket `title` slugified (lowercase, hyphens); compressed via `DirectQuickCheapLLM` (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) if too long
+- `slugified_title`: the ticket `title` slugified (lowercase, hyphens); deterministically truncated if too long (see [Slug Truncation](#slug-truncation) below)
 - `try-{N}`: starts at 1, incremented on each manual retry (V1: human creates a new run after failure)
 - Delimiter between components: `__` (double underscore)
+
+### Slug Truncation
+
+When the slugified title exceeds `MAX_SLUG_LENGTH` (50 characters), it is truncated deterministically:
+
+1. Slugify the full title (lowercase, spaces → hyphens, strip non-alphanumeric except hyphens)
+2. If the slug length ≤ `MAX_SLUG_LENGTH` → use as-is
+3. If longer → take the first K whole hyphen-delimited words that fit within `MAX_SLUG_LENGTH - 7`
+   (reserving 7 chars for `-` separator + 6-char hash suffix), then append `-{hash6}`
+   where `{hash6}` is the first 6 hex characters of the SHA-1 of the **full** slug
+
+**Example**: `"implement-user-authentication-flow-with-oauth-and-session"` (57 chars)
+→ words that fit in 43 chars: `"implement-user-authentication-flow-with"`
+→ hash of full slug: `a1b2c3...`
+→ result: `"implement-user-authentication-flow-with-a1b2c3"` (46 chars ≤ 50)
+
+**Why deterministic truncation instead of LLM compression**:
+- No LLM call at startup → no LLM-related startup failure mode
+- Same ticket always produces the same branch name (idempotent)
+- Zero latency overhead
+- The hash suffix preserves uniqueness across tickets with similar prefixes
+- Removes `DirectQuickCheapLLM` from the startup critical path
 
 ### Branch Creation
 
