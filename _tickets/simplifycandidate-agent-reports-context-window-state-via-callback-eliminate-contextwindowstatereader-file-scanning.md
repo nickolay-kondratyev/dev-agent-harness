@@ -49,3 +49,11 @@ Depends on whether the agent can reliably self-report context window state. If n
 - `doc/core/agent-to-server-communication-protocol.md`
 - `doc/core/PartExecutor.md` (health-aware await loop uses context window state)
 
+## WHY-NOT
+Agents do not have access to the context percentage
+
+> ❯ I mean the percentage of context that is already used up for this session
+> ● No, I don't have visibility into context window usage percentages. CC with GLM-5 convo
+
+Even if they did that doesn't help with interruption example as monitoring the file that is updated through a hook is more reliable.
+
