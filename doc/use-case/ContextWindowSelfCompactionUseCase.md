@@ -414,16 +414,11 @@ Two mechanisms are required (belt and suspenders):
 **1. Config file: `~/.claude.json`** (the **app-state** file) must contain
 `"autoCompactEnabled": false`.
 
-Write logic (same as what `ClaudeCodeAgentStarter` must do on every spawn):
-
-```bash
-# If file doesn't exist, create it:
-echo '{"autoCompactEnabled":false}' > ~/.claude.json
-
-# If file exists, update via jq:
-jq '.autoCompactEnabled = false' ~/.claude.json > ~/.claude.json.tmp \
-    && mv ~/.claude.json.tmp ~/.claude.json
-```
+Written **once at harness startup** by `EnvironmentValidator` using Kotlin/Jackson JSON
+handling (no jq dependency). The logic:
+- If `~/.claude.json` does not exist → create it with `{"autoCompactEnabled":false}`
+- If it exists → parse as JSON (Jackson `ObjectMapper`), set `autoCompactEnabled = false`,
+  write back atomically (write to temp file, rename)
 
 <!-- WHY-NOT(2026-03-14): Do NOT use ~/.claude/settings.json for autoCompactEnabled —
      it silently ignores this key. Only ~/.claude.json (the app-state file) works.
@@ -433,6 +428,12 @@ jq '.autoCompactEnabled = false' ~/.claude.json > ~/.claude.json.tmp \
 > works. This is a known Claude Code behavior
 > (ref: https://github.com/anthropics/claude-code/issues/6689).
 
+<!-- WHY-NOT(2026-03-17): Do NOT use jq for ~/.claude.json manipulation — the harness is
+     a Kotlin/JVM application and already has Jackson on the classpath. Using jq would add
+     an external binary dependency to the spawn path, introduce file I/O failure modes on
+     every spawn, and create race conditions when concurrent agents spawn simultaneously.
+     Jackson handles JSON natively, runs in-process, and the write happens once at startup. -->
+
 **2. Env var: `DISABLE_AUTO_COMPACT=true`** must be exported in the TMUX session
 environment.
 
@@ -441,19 +442,24 @@ export DISABLE_AUTO_COMPACT=true
 ```
 
 Both are required. The config file persists the setting; the env var is the runtime
-enforcement.
+enforcement per session.
 
-### Harness Responsibilities — On Each Agent Start
-
-Auto-compaction must be confirmed disabled **every time** an agent is started — not just
-at harness startup. This guards against external processes re-enabling compaction between
-agent spawns.
+### Harness Responsibilities — Startup + Per-Spawn
 
 | When | What | Where |
 |------|------|-------|
-| **Harness startup** | `EnvironmentValidator` (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) reads `~/.claude.json`, parses JSON, verifies `autoCompactEnabled == false`. Hard fail with clear error if the file is missing, unparseable, or `autoCompactEnabled` is not `false`. | `EnvironmentValidator.validate()` |
-| **Every agent spawn** | `ClaudeCodeAgentStarter` (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) does **both**: (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present — see bash above), and (2) exports `DISABLE_AUTO_COMPACT=true` in the TMUX session env (alongside `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT`). | `ClaudeCodeAgentStarter.buildStartCommand()` |
-| **Every session rotation** | Same as above — a rotated session is a new spawn. The `ClaudeCodeAgentStarter.buildStartCommand()` call inherently re-applies both mechanisms. | Implicit — covered by spawn flow |
+| **Harness startup** | `EnvironmentValidator` (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) reads `~/.claude.json`, ensures `autoCompactEnabled == false` is set. If the key is missing or `true`, writes the correct value using Jackson (read → merge → atomic write). Hard fail if the file is unparseable. This is the **only place** that writes `~/.claude.json`. | `EnvironmentValidator.validate()` |
+| **Every agent spawn** | `ClaudeCodeAgentStarter` (ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E) exports `DISABLE_AUTO_COMPACT=true` in the TMUX session env (alongside `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT`). No config file write — that was done once at startup. | `ClaudeCodeAgentStarter.buildStartCommand()` |
+| **Every session rotation** | Same as "Every agent spawn" — env var export is inherent in the spawn command. | Implicit — covered by spawn flow |
+
+<!-- WHY(2026-03-17): Config file write moved from per-spawn to startup-only.
+     Rationale:
+     - The harness is the sole manager of Claude Code sessions; no external process
+       re-enables auto-compaction mid-run.
+     - The env var (DISABLE_AUTO_COMPACT=true) is the per-session runtime guarantee.
+     - Writing once at startup eliminates: jq dependency, per-spawn file I/O failure modes,
+       race conditions on concurrent spawns.
+     - If somehow the file is modified externally, the env var still prevents auto-compaction. -->
 
 ---
 
@@ -701,12 +707,12 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Callers (done-boundary check, emergency-interrupt poll): skip compaction trigger when `remainingPercentage == null`, log warning instead
 - Verifiable: unit test with fake file (fresh timestamp → value returned); unit test (stale timestamp → null returned + warning logged); unit test (file missing → exception); integration test confirming file presence after real Claude Code session
 
-### R2: Auto-Compaction Disabled On Each Agent Start
+### R2: Auto-Compaction Disabled — Startup Write + Per-Spawn Env Var
 - Full mechanism spec: ref.ap.7bD0uLeoQQSFS16TQeCRF.E
-- `EnvironmentValidator` validates `~/.claude.json` contains `"autoCompactEnabled": false` at harness startup — hard fail if not
-- `ClaudeCodeAgentStarter` on **every spawn** (including session rotations): (1) writes `~/.claude.json` with `autoCompactEnabled: false` via `jq` (create if absent, update if present), (2) exports `DISABLE_AUTO_COMPACT=true` in TMUX session env
+- `EnvironmentValidator` at harness startup: reads `~/.claude.json`, ensures `autoCompactEnabled == false` using Jackson (Kotlin/JVM JSON — no jq dependency). If missing or wrong, writes the correct value (read → merge → atomic write). Hard fail if unparseable.
+- `ClaudeCodeAgentStarter` on **every spawn** (including session rotations): exports `DISABLE_AUTO_COMPACT=true` in TMUX session env. No config file write — that was done once at startup.
 - NOT `~/.claude/settings.json` — that file silently ignores `autoCompactEnabled` (ref: github.com/anthropics/claude-code/issues/6689)
-- Verifiable: startup validation test; integration test confirming Claude Code does not auto-compact
+- Verifiable: startup validation test (write + verify); unit test: starter command includes `DISABLE_AUTO_COMPACT=true`; integration test confirming Claude Code does not auto-compact
 
 ### R3: context_window_slim.json Validation After Session ID Resolution
 - After `AgentSessionIdResolver` resolves session ID, call `contextWindowStateReader.validatePresence()`
@@ -778,7 +784,8 @@ Single method handling both triggers via `CompactionTrigger` enum:
 ### Gate 1: Foundation — Reader + Validation + Auto-Compaction Off
 **Scope:** R1, R2, R3
 **What:** ContextWindowStateReader interface + ClaudeCode impl. EnvironmentValidator
-checks auto-compaction off. ClaudeCodeAgentStarter exports env var + writes config.
+writes `~/.claude.json` with `autoCompactEnabled: false` at startup (Jackson, no jq).
+ClaudeCodeAgentStarter exports `DISABLE_AUTO_COMPACT=true` env var per spawn.
 context_window_slim.json validated after session ID resolution.
 **Verify:**
 - Unit tests: reader parses valid/invalid/missing JSON
