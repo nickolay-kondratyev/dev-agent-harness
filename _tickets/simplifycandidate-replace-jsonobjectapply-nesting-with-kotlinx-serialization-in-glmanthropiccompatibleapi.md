@@ -1,11 +1,11 @@
 ---
 id: nid_ijwf9bbptrogesnrp1h2kbkhq_E
 title: "SIMPLIFY_CANDIDATE: Replace JSONObject.apply nesting with Kotlinx Serialization in GlmAnthropicCompatibleApi"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:46:49Z
-status_updated_iso: 2026-03-17T22:46:49Z
+status_updated_iso: 2026-03-17T23:02:47Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
