@@ -16,7 +16,8 @@ import java.nio.file.Path
  *
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
- * @see InstructionSections for all static text sections
+ * @see InstructionText for static text constants
+ * @see InstructionRenderers for dynamic rendering functions
  * @see ProtocolVocabulary for protocol keyword constants
  */
 interface ContextForAgentProvider {
@@ -127,7 +128,7 @@ data class ReviewerInstructionRequest(
 data class PlannerInstructionRequest(
     val roleDefinition: RoleDefinition,
     val ticketContent: String,
-    val roleCatalogEntries: List<InstructionSections.RoleCatalogEntry>,
+    val roleCatalogEntries: List<InstructionRenderers.RoleCatalogEntry>,
     val iterationNumber: Int,
     val planReviewerPublicMdPath: Path?,
     val planJsonOutputPath: Path,
