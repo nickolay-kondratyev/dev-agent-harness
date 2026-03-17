@@ -1,11 +1,11 @@
 ---
 id: nid_zt4yszk5f92t7q1pawy93x6ms_E
 title: "SIMPLIFY_CANDIDATE: Reduce rejection negotiation from 2 rounds to 1"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:02:46Z
-status_updated_iso: 2026-03-15T01:02:46Z
+status_updated_iso: 2026-03-17T19:16:52Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
