@@ -257,35 +257,6 @@ while (true) {
 
 ---
 
-## SubPartInstructionProvider / ap.4c6Fpv6NjecTyEQ3qayO5.E
-
-Decouples instruction assembly from the executor. The executor does not know whether it is
-running a planning part or an execution part — it delegates instruction assembly to this
-interface.
-
-```kotlin
-interface SubPartInstructionProvider {
-    /** Assemble instructions for the doer sub-part */
-    suspend fun assembleDoerInstructions(
-        iterationNumber: Int,
-        reviewerFeedbackPath: Path?,  // null on first iteration
-    ): Path
-
-    /** Assemble instructions for the reviewer sub-part */
-    suspend fun assembleReviewerInstructions(
-        iterationNumber: Int,
-        doerOutputPath: Path,
-    ): Path
-}
-```
-
-### Implementations
-
-| Context | Wraps | Notes |
-|---------|-------|-------|
-| Execution parts | `ContextForAgentProvider.assembleDoerInstructions()` / `assembleReviewerInstructions()` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) | Role def + ticket + PLAN.md + prior PUBLIC.md files + callback script usage |
-| Planning phase | `ContextForAgentProvider` planner/plan-reviewer methods | Ticket + role catalog for planner; includes `plan.json` for plan-reviewer |
-
 ---
 
 ## PartExecutorImpl / ap.mxIc5IOj6qYI7vgLcpQn5.E
@@ -431,7 +402,7 @@ On iteration > 1, both agents already have live TMUX sessions. The executor does
 kill/respawn — it:
 1. Creates a **fresh** `CompletableDeferred<AgentSignal>`
 2. Re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
-3. Assembles new instructions via `SubPartInstructionProvider`
+3. Assembles new instructions via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
 4. Delivers the instruction file path via `AckedPayloadSender`
    (ref.ap.tbtBcVN2iCl1xfHJthllP.E) to the existing TMUX session
 5. On ACK received, enters health-aware signal-await loop
@@ -471,7 +442,7 @@ strategy produces one commit per sub-part signal.
   `TmuxCommunicator`, and `ContextWindowStateReader`. Signal delivery flows through
   `SpawnedAgentHandle.signal` (a `Deferred<AgentSignal>`). See
   [`AgentFacade`](AgentFacade.md) for the full interface spec.
-- `SubPartInstructionProvider` (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) — assemble instructions
+- `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) — assemble instruction files for agents (doer, reviewer, planner, plan-reviewer)
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
   in the health-aware await loop. Production: `SystemClock`. Tests: `TestClock` with virtual time.
