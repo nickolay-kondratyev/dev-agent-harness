@@ -3,7 +3,7 @@ package com.glassthought.directLLMApi.glm
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.shepherd.core.Constants
 import com.glassthought.shepherd.core.supporting.directLLMApi.ChatRequest
-import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
+import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GlmDirectLlmFactory
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.string.shouldNotBeBlank
 import okhttp3.OkHttpClient
@@ -11,7 +11,7 @@ import com.glassthought.bucket.isIntegTestEnabled
 import java.util.concurrent.TimeUnit
 
 /**
- * Integration test for [GLMHighestTierApi] against the real Z.AI API.
+ * Integration test for the budget-high GLM API tier against the real Z.AI API.
  *
  * Requires:
  * - `-PrunIntegTests=true` Gradle property
@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit
 @OptIn(ExperimentalKotest::class)
 class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
 
-    describe("GIVEN GLMHighestTierApi with real API").config(isIntegTestEnabled()) {
+    describe("GIVEN budget-high GLM API with real API").config(isIntegTestEnabled()) {
         val apiToken = System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
             ?: throw IllegalStateException(
                 "Integration test requires [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] environment variable to be set"
@@ -30,7 +30,7 @@ class GLMHighestTierApiIntegTest : AsgardDescribeSpec({
             .readTimeout(60, TimeUnit.SECONDS)
             .build()
 
-        val api = GLMHighestTierApi(
+        val api = GlmDirectLlmFactory.createBudgetHighLLM(
           outFactory = outFactory,
           httpClient = httpClient,
           modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,

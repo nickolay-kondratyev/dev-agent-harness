@@ -7,8 +7,7 @@ import com.asgard.core.out.time
 import com.glassthought.shepherd.core.Constants
 import com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
 import com.glassthought.shepherd.core.supporting.directLLMApi.DirectQuickCheapLLM
-import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GLMHighestTierApi
-import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GLMQuickCheapApi
+import com.glassthought.shepherd.core.supporting.directLLMApi.glm.GlmDirectLlmFactory
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
@@ -155,7 +154,7 @@ class ContextInitializerImpl : ContextInitializer {
   }
 
   private fun createGLMQuickCheapLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectQuickCheapLLM =
-    GLMQuickCheapApi(
+    GlmDirectLlmFactory.createQuickCheapLLM(
       outFactory = outFactory,
       httpClient = httpClient,
       modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_QUICK_CHEAP,
@@ -165,7 +164,7 @@ class ContextInitializerImpl : ContextInitializer {
     )
 
   private fun createGLMBudgetHighLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectBudgetHighLLM =
-    GLMHighestTierApi(
+    GlmDirectLlmFactory.createBudgetHighLLM(
       outFactory = outFactory,
       httpClient = httpClient,
       modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,

@@ -18,10 +18,11 @@ import org.json.JSONObject
 /**
  * Internal HTTP implementation for the Z.AI Anthropic-compatible API.
  *
- * All GLM tier classes ([GLMHighestTierApi], [GLMQuickCheapApi]) delegate their [call]
- * implementation here. This class encapsulates the shared HTTP logic — request construction,
- * response parsing, and error handling — so that adding a new tier requires only creating a
- * thin wrapper class that implements the appropriate tier interface.
+ * Instances are created via [GlmDirectLlmFactory], which returns anonymous objects implementing
+ * the appropriate tier interface ([com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM]
+ * or [com.glassthought.shepherd.core.supporting.directLLMApi.DirectQuickCheapLLM]) that delegate
+ * to this class. This class encapsulates the shared HTTP logic — request construction,
+ * response parsing, and error handling.
  *
  * V1: single user message, no streaming, no retry logic.
  */
