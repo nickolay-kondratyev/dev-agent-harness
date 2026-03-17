@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:43:31Z
 id: nid_12eb788ddd9frhmdob4s3bxoh_E
 title: "SIMPLIFY_CANDIDATE: Collapse ContextForAgentProvider instruction assembly into data-driven sections"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:31:50Z
-status_updated_iso: 2026-03-17T21:40:51Z
+status_updated_iso: 2026-03-17T21:43:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -29,3 +30,19 @@ Benefits:
 - Makes the instruction structure legible as a data structure, not scattered across methods
 - Easier to unit-test section assembly in isolation
 
+
+## Notes
+
+**2026-03-17T21:43:27Z**
+
+Spec updated: doc/core/ContextForAgentProvider.md
+
+Changes:
+- Replaced 'dedicated template method per role' intro with InstructionPlan/InstructionSection/assembleFromPlan description
+- Added 'Internal Design: Data-Driven Assembly' section with:
+  - InstructionSection sealed class type table (23 section types)
+  - InstructionPlan lists per role matching the existing section tables
+  - assembleFromPlan signature + InstructionRequest sealed interface note
+  - Benefits (DRY, legible, extensible, testable)
+- Public interface and per-role content tables unchanged
+- Committed: 6642f01
