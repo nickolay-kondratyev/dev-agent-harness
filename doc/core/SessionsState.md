@@ -50,7 +50,7 @@ server-side validation and shepherd-side decision making.
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (signal or query). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
-| `lateFailWorkflow` | `LateFailWorkflow?` | Set by the server when `/signal/fail-workflow` arrives for a deferred already completed with `Done` (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E). Contains `reason: String` and `receivedAt: Instant`. Read by the executor at checkpoints and by `TicketShepherd` between parts. `null` means no late fail-workflow received. Once set, never cleared — the workflow must halt. |
+
 | `pendingQuestions` | `MutableMap<String, CompletableDeferred<String>>` | Deduplication map for in-flight user questions (ref.ap.Girgb4gaq2aecYTHjUj8a.E). Key = question text, value = deferred that resolves to the answer. Entry added when a new question arrives; removed after the answer is obtained. If a duplicate question arrives while an entry exists, the server returns 200 but does not invoke `UserQuestionHandler` again. Empty when no questions are pending. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/signal/done`
@@ -77,8 +77,6 @@ send `pass` or `needs_iteration`.
 | `register(guid, entry)` | `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) (during spawn, and on each signal reset for iteration) | Adds or updates a session in the registry |
 | `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
 | `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning phase, `partName = "planning"` (constant — see ref.ap.P3po8Obvcjw4IXsSUSU91.E). |
-| `recordLateFailWorkflow(guid, reason)` | `ShepherdServer` (when `/signal/fail-workflow` arrives for a deferred already completed with `Done` — ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E) | Sets `lateFailWorkflow` on the `SessionEntry`. Idempotent — if already set, keeps the first (earliest) reason. |
-| `checkLateFailWorkflow(partName)` | `PartExecutor`, `TicketShepherd` (at checkpoints) | Returns the first `LateFailWorkflow` found for any session in the given part, or `null`. Used to detect late retractions that arrived after the deferred was completed with `Done`. |
 
 ---
 

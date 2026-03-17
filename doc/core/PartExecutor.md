@@ -354,9 +354,7 @@ the executor to send it new instructions.
 2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
-   Then **late fail-workflow checkpoint** (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E):
-   check `SessionsState.checkLateFailWorkflow(partName)`. If set → return
-   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → start reviewer:
+   Then → start reviewer:
    a. First iteration: **spawn** reviewer TMUX session → create `CompletableDeferred` →
       register `SessionEntry` → send instructions (includes doer's `PUBLIC.md`) → enter
       health-aware await loop
@@ -367,18 +365,14 @@ the executor to send it new instructions.
       session → enter health-aware await loop
 3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
-   re-instruction. Then **late fail-workflow checkpoint**: check
-   `SessionsState.checkLateFailWorkflow(partName)`. If set → return
-   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Then **feedback completion guard**
+   re-instruction. Then **feedback completion guard**
    (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/pending/` contains no `critical__*`
    or `important__*` files. If found → re-instruct reviewer (one retry, then `AgentCrashed`).
    Remaining `optional__*` files do not block — harness moves them to `addressed/` on
    completion. Otherwise → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
-   re-instruction. Then **late fail-workflow checkpoint**: check
-   `SessionsState.checkLateFailWorkflow(partName)`. If set → return
-   `PartResult.FailedWorkflow(lateFailWorkflow.reason)`. Otherwise → check budget:
+   re-instruction. Then → check budget:
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
      **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E):
      - **Feedback files presence guard**: validate reviewer wrote feedback files to
@@ -399,25 +393,11 @@ the executor to send it new instructions.
      decides continue or abort
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
 
-### Late Fail-Workflow Checkpoints
-
-The executor checks `SessionsState.checkLateFailWorkflow(partName)` at every transition
-point — after the doer completes, after the reviewer completes, and before each iteration
-restart. This catches the scenario where an agent signals `done` but then discovers a
-critical error and signals `fail-workflow` (ref.ap.Bm7kXwVn3pRtLfYdJ9cQz.E). The server
-records the late `fail-workflow` on the `SessionEntry` because the `CompletableDeferred` is
-already completed with `Done`. The executor detects it at the next checkpoint and returns
-`PartResult.FailedWorkflow(reason)` — halting the workflow.
-
-Without these checkpoints, a late `fail-workflow` would be silently swallowed and the
-workflow would proceed with potentially corrupt output.
-
 ### PUBLIC.md Validation After Done / ap.THDW9SHzs1x2JN9YP9OYU.E
 
 After every `AgentSignal.Done` (any result: `COMPLETED`, `PASS`, `NEEDS_ITERATION`), the
 executor verifies that the signaling agent's `comm/out/PUBLIC.md` exists and is non-empty
-**before** proceeding to the next step (late fail-workflow checkpoint, reviewer start,
-iteration restart, or part completion).
+**before** proceeding to the next step (reviewer start, iteration restart, or part completion).
 
 **Why this matters:** `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) assembles
 the next agent's instructions including prior `PUBLIC.md` files. If the doer signals `done`
@@ -430,7 +410,7 @@ after `done` prevents downstream corruption.
 1. Resolve the expected path: `comm/out/PUBLIC.md` for the sub-part that just signaled `done`
    (path resolved via the `.ai_out/` directory schema — ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 2. Check: file exists AND file size > 0 bytes
-3. If **valid** → proceed to next step (late fail-workflow checkpoint, etc.)
+3. If **valid** → proceed to next step (reviewer start, iteration restart, etc.)
 4. If **missing or empty** → re-instruction attempt (one retry):
    a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
    b. Create fresh `CompletableDeferred<AgentSignal>` → re-register `SessionEntry`

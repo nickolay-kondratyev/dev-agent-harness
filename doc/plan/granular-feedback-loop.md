@@ -229,8 +229,7 @@ NEEDS_ITERATION) gains an inner loop:
 ```
 4. On reviewer NEEDS_ITERATION:
    a. PUBLIC.md validation (existing)
-   b. Late fail-workflow checkpoint (existing)
-   c. Check budget: iteration.current >= iteration.max → FailedToConvergeUseCase (existing)
+   b. Check budget: iteration.current >= iteration.max → FailedToConvergeUseCase (existing)
    d. GitCommitStrategy.onSubPartDone (existing — captures reviewer's output + feedback files)
    e. Increment iteration.current (existing)
    e2. ── FEEDBACK FILES PRESENCE GUARD ──
@@ -425,10 +424,9 @@ The harness enforces a **hard constraint** before allowing `PartResult.Completed
 ```
 On reviewer PASS:
   1. PUBLIC.md validation (existing)
-  2. Late fail-workflow checkpoint (existing)
-  3. Validate __feedback/pending/ contains no critical__* files
-  4. Validate __feedback/pending/ contains no important__* files
-  5. If 3 or 4 fails → do NOT complete. Log ERROR.
+  2. Validate __feedback/pending/ contains no critical__* files
+  3. Validate __feedback/pending/ contains no important__* files
+  4. If 2 or 3 fails → do NOT complete. Log ERROR.
      Re-instruct reviewer: "You signaled pass but there are unaddressed critical/important
      feedback items in pending/. Write new feedback files for any remaining issues or
      signal needs_iteration."
