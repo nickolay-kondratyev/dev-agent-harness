@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:00:48Z
 id: nid_s6jsgj1f3zuifzyh726d7su95_E
 title: "SIMPLIFY_CANDIDATE: Drop dual-signal liveness model — use HTTP callbacks only"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:05Z
-status_updated_iso: 2026-03-15T01:08:05Z
+status_updated_iso: 2026-03-17T17:00:48Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
