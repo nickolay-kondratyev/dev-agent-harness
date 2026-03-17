@@ -63,13 +63,14 @@ Called internally **after** the planning executor completes successfully
 ```
 1. Read plan_flow.json from harness_private/plan_flow.json
 2. Validate plan_flow.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E):
-   a. Valid JSON conforming to schema (required fields, types)
+   a. Valid JSON conforming to schema (required fields, types, phase = "execution")
    b. At least one execution part exists
    c. Every agentType is a supported type (V1: ClaudeCode)
    d. Every model is valid for the given agentType
    e. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
       non-existent role assignments before execution starts)
-3. Convert plan_flow.json → current_state.json (write to harness_private/)
+3. Append execution parts (phase: "execution") to the existing parts array in
+   current_state.json (planning part at index 0 is preserved)
 4. Delete plan_flow.json (current_state.json is now the single source of truth)
 5. Return List<Part> — the execution parts extracted from current_state.json
 ```

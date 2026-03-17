@@ -116,7 +116,7 @@ coordinator sees the growing queue and processes each question in order.
 |-----------|--------|-------------|
 | `register(guid, entry)` | `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — called on initial spawn (`spawnAgent`) **and** at the start of every `sendPayloadAndAwaitSignal` call (fresh deferred, same GUID) | Adds or updates a session in the registry |
 | `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
-| `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning phase, `partName = "planning"` (constant — see ref.ap.P3po8Obvcjw4IXsSUSU91.E). |
+| `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning part, `partName = "planning"` (the part's `name` field — same as any other part). |
 
 ---
 
