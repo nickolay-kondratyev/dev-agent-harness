@@ -6,6 +6,7 @@ import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
+import com.glassthought.shepherd.core.agent.tmux.util.orThrow
 
 /**
  * Manages the lifecycle of tmux sessions: creation, existence checks, and cleanup.
@@ -35,12 +36,8 @@ class TmuxSessionManager(
             Val(startCommand.command, ValType.SHELL_COMMAND),
         )
 
-        val result = commandRunner.run("new-session", "-d", "-s", sessionName, startCommand.command)
-        if (result.exitCode != 0) {
-            throw IllegalStateException(
-                "Failed to create tmux session [${sessionName}] with command [${startCommand.command}]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
-            )
-        }
+        commandRunner.run("new-session", "-d", "-s", sessionName, startCommand.command)
+            .orThrow("create tmux session [$sessionName] with command [${startCommand.command}]")
 
         out.info(
             "tmux_session_created",
@@ -71,12 +68,8 @@ class TmuxSessionManager(
             Val(session.name.sessionName, ValType.STRING_USER_AGNOSTIC),
         )
 
-        val result = commandRunner.run("kill-session", "-t", session.name.sessionName)
-        if (result.exitCode != 0) {
-            throw IllegalStateException(
-                "Failed to kill tmux session [${session.name.sessionName}]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
-            )
-        }
+        commandRunner.run("kill-session", "-t", session.name.sessionName)
+            .orThrow("kill tmux session [${session.name.sessionName}]")
 
         out.info(
             "tmux_session_killed",
