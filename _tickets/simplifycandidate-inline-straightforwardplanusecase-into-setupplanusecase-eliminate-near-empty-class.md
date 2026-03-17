@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, spec, setup-plan]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Problem
 
 `StraightforwardPlanUseCase` (ref.ap.6iySKY6iakspLNi3WenRO.E) is a near-empty class. The spec says it "just gives out a predefined schema" — it reads parts from the static workflow JSON and returns them. This is a single-expression operation.
@@ -50,4 +52,5 @@ The `with-planning` path legitimately needs a separate class (`DetailedPlanningU
 ## Why This Improves Robustness
 
 - Less code to maintain — trivial operations don't need their own class\n- Easier to understand the routing: one `when` branch instead of following a delegation chain\n- Follows YAGNI — if the straightforward path grows complex, it can be extracted back out\n\n## Affected Specs\n\n- `doc/use-case/SetupPlanUseCase/__this.md` — routing table\n- `doc/use-case/SetupPlanUseCase/StraightforwardPlanUseCase.md` — would be removed or merged
-
+--------------------------------------------------------------------------------
+DECISION: keep this separate class for the sake of navigation even.
