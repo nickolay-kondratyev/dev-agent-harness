@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:14:19Z
 id: nid_hjyxrijwqy4h164jzuw8r6y91_E
 title: "SIMPLIFY_CANDIDATE: Collapse two-phase agent spawn into single-phase for V1"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:31:03Z
-status_updated_iso: 2026-03-15T01:31:03Z
+status_updated_iso: 2026-03-17T17:14:19Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
