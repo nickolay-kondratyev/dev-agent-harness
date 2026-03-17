@@ -22,8 +22,8 @@ every guard check inside `PartExecutorImpl`:
 | 7 | `RejectionNegotiationUseCase` (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E) retry path | Inline re-instruction when doer must comply after reviewer insistence |
 
 Each caller previously hand-rolled **~15–20 lines of identical plumbing** per site:
-fresh `CompletableDeferred` creation, `SessionEntry` re-registration, `AckedPayloadSender`
-delivery, health-aware await loop, crash propagation.
+calling `agentFacade.sendPayloadAndAwaitSignal`, mapping the raw `AgentSignal` variants
+to caller-appropriate outcomes, and crash propagation.
 
 `ReInstructAndAwait` collapses that boilerplate into **one call** — leaving only the
 message content and condition re-check at each call site.
@@ -58,15 +58,13 @@ sealed class ReInstructOutcome {
 interface ReInstructAndAwait {
     /**
      * Delivers a re-instruction message to an existing agent session and awaits
-     * the next signal via the health-aware await loop
-     * (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
+     * the next signal.
      *
-     * Encapsulates:
-     * - Fresh CompletableDeferred creation
-     * - SessionEntry re-registration (same HandshakeGuid, new deferred)
-     * - Payload delivery via AckedPayloadSender (ref.ap.tbtBcVN2iCl1xfHJthllP.E)
-     * - Health-aware signal await with compaction check
+     * Internally delegates to `agentFacade.sendPayloadAndAwaitSignal(handle, message)` —
+     * the facade owns fresh deferred creation, SessionEntry re-registration, ACK delivery,
+     * and the health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
      *
+     * Maps the raw `AgentSignal` to `ReInstructOutcome` for cleaner call-site `when` branches.
      * Returns Responded, FailedWorkflow, or Crashed.
      * The caller is responsible for re-checking its condition on Responded.
      */
@@ -84,15 +82,12 @@ interface ReInstructAndAwait {
 **Before (hand-rolled at each of the 7+ sites):**
 
 ```
-val freshDeferred = createFreshDeferred()
-reRegisterSessionEntry(handle.guid, freshDeferred)
-agentFacade.sendPayloadWithAck(handle, message)
-val signal = healthAwareAwaitLoop(freshDeferred, timeoutConfig, clock)
+val signal = agentFacade.sendPayloadAndAwaitSignal(handle, message)
 when (signal) {
-    is AgentSignal.Crashed     -> return PartResult.AgentCrashed(signal.details)
+    is AgentSignal.Crashed      -> return PartResult.AgentCrashed(signal.details)
     is AgentSignal.FailWorkflow -> return PartResult.FailedWorkflow(signal.reason)
-    is AgentSignal.Done        -> { /* continue */ }
-    ...
+    is AgentSignal.Done         -> { /* continue */ }
+    is AgentSignal.SelfCompacted -> { /* handle */ }
 }
 // re-check condition ...
 ```
@@ -141,9 +136,10 @@ per site (file existence, non-empty content, marker presence, etc.).
 
 | Dependency | Purpose |
 |------------|---------|
-| `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Payload delivery (`sendPayloadWithAck`) and signal deferred management (fresh deferred + re-registration) |
-| `HarnessTimeoutConfig` | Timeout values used in the health-aware await loop |
-| `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) | Wall-clock for health monitoring timestamp comparisons |
+| `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single entry point via `sendPayloadAndAwaitSignal(handle, message)` — the facade owns deferred lifecycle, ACK, and health-aware await loop internally |
+
+`HarnessTimeoutConfig` and `Clock` are constructor dependencies of `AgentFacadeImpl`, not
+`ReInstructAndAwait` — the facade handles all timing internally.
 
 ---
 
@@ -160,7 +156,7 @@ Key test scenarios:
 | Agent responds normally | `ReInstructOutcome.Responded` with the expected `AgentSignal.Done` |
 | Agent crashes during re-instruction await | `ReInstructOutcome.Crashed` with crash details |
 | Agent signals fail-workflow | `ReInstructOutcome.FailedWorkflow` with reason |
-| ACK delivery exhausted | `ReInstructOutcome.Crashed` (surfaced by `sendPayloadWithAck` failure) |
+| Agent self-compacts during re-instruction | `ReInstructOutcome.Responded` with `SelfCompacted` wrapped as continued-await (handled inside facade) |
 
 Tests for `PartExecutorImpl` use this abstraction as a seam — the full guard logic
 (condition check → re-instruct → re-check → AgentCrashed if still fails) is tested
@@ -176,25 +172,8 @@ at the `PartExecutorImpl` level with a programmable `FakeReInstructAndAwait`.
   PartExecutorImpl.
 - **RejectionNegotiationUseCase** (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E): Uses
   `ReInstructAndAwait` for the "doer must comply" step (reviewer insistence path).
-- **AgentFacade** (ref.ap.9h0KS4EOK5yumssRCJdbq.E): Provides `sendPayloadWithAck`
-  and deferred management. `ReInstructAndAwait` sits between `PartExecutorImpl` and
-  `AgentFacade` — orchestration layer calls the abstraction, abstraction calls the facade.
-- **Health-Aware Await Loop** (ref.ap.QCjutDexa2UBDaKB3jTcF.E): Used internally by
-  `ReInstructAndAwait` — the same loop that `PartExecutorImpl` uses for initial await.
-  `ReInstructAndAwait` delegates to a shared `HealthAwareAwaitLoop` helper so the
-  loop definition is not duplicated.
-
----
-
-## HealthAwareAwaitLoop Extraction (Required Precondition)
-
-Since `ReInstructAndAwait` reuses the health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E),
-and `PartExecutorImpl` already owns the loop inline, the loop must be extracted as a
-**shared helper** before `ReInstructAndAwait` can be implemented. This is not a new
-abstraction — the health-aware await logic is already fully spec'd; it just needs to
-be accessible outside `PartExecutorImpl`.
-
-**Extraction boundary:** A package-internal function (or companion method on a utility
-class) that runs the health-aware await given a `SpawnedAgentHandle`, `AgentFacade`,
-`HarnessTimeoutConfig`, and `Clock`. Both `PartExecutorImpl` and `ReInstructAndAwait`
-call this shared helper. No behaviour change — only a structural move.
+- **AgentFacade** (ref.ap.9h0KS4EOK5yumssRCJdbq.E): Provides `sendPayloadAndAwaitSignal`
+  — the single entry point that owns deferred lifecycle, ACK, and the health-aware await
+  loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) internally. `ReInstructAndAwait` sits between
+  `PartExecutorImpl` and `AgentFacade` — orchestration layer calls the abstraction,
+  abstraction calls the facade method, maps `AgentSignal` to `ReInstructOutcome`.

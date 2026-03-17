@@ -75,14 +75,17 @@ Explicit enumeration decouples role from position.
 
 ### signalDeferred Lifecycle
 
-1. **Created by** `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) during `spawnAgent()`
-2. **Registered** on the `SessionEntry` in `SessionsState`
-3. **Completed by** the server (on `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`)
-   or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection
-4. **Exposed to** the executor via `SpawnedAgentHandle.signal` — a `Deferred<AgentSignal>` that
-   the executor suspends on
-5. **Replaced** on iteration: `AgentFacadeImpl` creates a fresh `CompletableDeferred` and
-   re-registers the `SessionEntry` (same HandshakeGuid, new deferred)
+1. **Created by** `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — once on initial
+   `spawnAgent()`, then again at the start of every `sendPayloadAndAwaitSignal()` call
+2. **Registered** on the `SessionEntry` in `SessionsState` (same HandshakeGuid, new deferred
+   each time — both on initial spawn and on every iteration/re-instruction)
+3. **Completed by** the server (on `/callback-shepherd/signal/done` or
+   `/callback-shepherd/signal/fail-workflow`) or by the facade's health-aware await loop
+   (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection — both paths live inside
+   `AgentFacadeImpl.sendPayloadAndAwaitSignal`
+4. **Not exposed** to `PartExecutor` — the executor receives the resolved `AgentSignal`
+   directly as the return value of `sendPayloadAndAwaitSignal`; it never holds a raw
+   `Deferred<AgentSignal>` reference
 
 ---
 
@@ -90,7 +93,7 @@ Explicit enumeration decouples role from position.
 
 | Operation | Caller | Description |
 |-----------|--------|-------------|
-| `register(guid, entry)` | `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) (during spawn, and on each signal reset for iteration) | Adds or updates a session in the registry |
+| `register(guid, entry)` | `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — called on initial spawn (`spawnAgent`) **and** at the start of every `sendPayloadAndAwaitSignal` call (fresh deferred, same GUID) | Adds or updates a session in the registry |
 | `lookup(guid)` | `ShepherdServer` (on every callback) | Returns `SessionEntry` or null. Read-only (except `signalDeferred.complete()` and `lastActivityTimestamp` update). |
 | `removeAllForPart(partName)` | `TicketShepherd` (when part completes) | Removes all sessions belonging to a part. For the planning phase, `partName = "planning"` (constant — see ref.ap.P3po8Obvcjw4IXsSUSU91.E). |
 
