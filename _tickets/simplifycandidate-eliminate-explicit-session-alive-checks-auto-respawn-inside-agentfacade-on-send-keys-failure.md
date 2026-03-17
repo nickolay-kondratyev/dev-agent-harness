@@ -1,11 +1,11 @@
 ---
 id: nid_vutc5ggsha72m7rhrbiyrsb28_E
 title: "SIMPLIFY_CANDIDATE: Eliminate explicit session-alive checks — auto-respawn inside AgentFacade on send-keys failure"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:23:23Z
-status_updated_iso: 2026-03-17T21:23:23Z
+status_updated_iso: 2026-03-17T21:29:52Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
