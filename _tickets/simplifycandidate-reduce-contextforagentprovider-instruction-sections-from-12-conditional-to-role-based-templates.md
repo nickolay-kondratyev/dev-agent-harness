@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T18:03:31Z
 id: nid_orpcmdfj1m06lyajssewwn1k9_E
 title: "SIMPLIFY_CANDIDATE: Reduce ContextForAgentProvider instruction sections from 12 conditional to role-based templates"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:31:13Z
-status_updated_iso: 2026-03-15T01:31:13Z
+status_updated_iso: 2026-03-17T18:03:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
