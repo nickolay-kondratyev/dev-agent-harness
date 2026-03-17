@@ -1,11 +1,11 @@
 ---
 id: nid_x3083dbww7sokx19bfltj81of_E
 title: "SIMPLIFY_CANDIDATE: EnvironmentValidator should collect all failures before failing — not fail-fast on first error"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:56Z
-status_updated_iso: 2026-03-17T21:32:56Z
+status_updated_iso: 2026-03-17T21:58:19Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
