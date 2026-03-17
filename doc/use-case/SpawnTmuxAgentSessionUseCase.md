@@ -93,7 +93,7 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 4. Harness creates TMUX session running the command — agent starts in **interactive mode**
    and immediately receives the bootstrap message as its first input (no separate `send-keys`
    step needed)
-5. Harness awaits `/callback-shepherd/signal/started` within `noStartupAckTimeout`
+5. Harness awaits `/callback-shepherd/signal/started` within `healthTimeouts.startup`
    (default 3 min) — see ref.ap.xVsVi2TgoOJ2eubmoABIC.E
 6. On `/signal/started` received:
    a. **`AgentSessionIdResolver`** polls for the GUID in agent session artifacts
@@ -102,7 +102,7 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
    b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
       in `current_state.json` under the sub-part's `sessionIds` array
    c. Agent is confirmed alive, env is correct, server is reachable → proceed to Phase 2
-7. On timeout (no `/signal/started` within `noStartupAckTimeout`) → `AgentUnresponsiveUseCase`
+7. On timeout (no `/signal/started` within `healthTimeouts.startup`) → `AgentUnresponsiveUseCase`
    (`STARTUP_TIMEOUT`) → `PartResult.AgentCrashed`
 
 ### Phase 2: Work — Full Instructions
@@ -384,7 +384,7 @@ and all its windows/panes. Used by:
 **Resolved:** The agent is spawned in **interactive mode** (no `-p`). The bootstrap message
 (GUID + `callback_shepherd.signal.sh started` instruction) is delivered as an **initial
 prompt argument** in the CLI command — no separate `send-keys` step, no timing guesswork.
-The harness awaits `/callback-shepherd/signal/started` within `noStartupAckTimeout`
+The harness awaits `/callback-shepherd/signal/started` within `healthTimeouts.startup`
 (default 3 min) — no fixed delay. Same handshake for new and resumed agents. See
 [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice)
 (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).

@@ -195,10 +195,10 @@ while (true) {
         lastHealthCheck = now()
         callbackAge = now() - sessionEntry.lastActivityTimestamp
 
-        if (callbackAge >= noActivityTimeout) {
+        if (callbackAge >= healthTimeouts.normalActivity) {
             log.warn("last_activity_stale — triggering ping",
                 Val(callbackAge, STALE_DURATION),
-                Val(noActivityTimeout, NO_ACTIVITY_TIMEOUT))
+                Val(healthTimeouts.normalActivity, NO_ACTIVITY_TIMEOUT))
 
             // --- Send ping and check for proof of life ---
             prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
@@ -208,8 +208,8 @@ while (true) {
                 Val(callbackAge, STALE_DURATION))
             AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.NO_ACTIVITY_TIMEOUT)  // sends ping via TMUX
 
-            // Wait for ping timeout, then re-check
-            signal = awaitSignalWithTimeout(pingTimeout)
+            // Wait for ping response timeout, then re-check
+            signal = awaitSignalWithTimeout(healthTimeouts.pingResponse)
 
             if (signal != null) {
                 return signal  // Agent responded with Done/FailWorkflow during ping window

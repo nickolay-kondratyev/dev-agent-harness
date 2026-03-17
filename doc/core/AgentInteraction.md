@@ -151,7 +151,7 @@ runTest {
 
     launch { signal = facade.sendPayloadAndAwaitSignal(handle, payload) }
 
-    // Advance 31 minutes past noActivityTimeout — no callback
+    // Advance 31 minutes — past healthTimeouts.normalActivity (30 min)
     clock.advance(31.minutes)
     advanceTimeBy(31.minutes)
 

@@ -245,7 +245,7 @@ signals immediately.
 
 **Problem:** There is a large observability gap between agent spawn and the first
 `/callback-shepherd/signal/done` call. If the agent fails to start (bad env, agent binary crash,
-TMUX session issue, malformed instructions), the harness won't know until `noActivityTimeout`
+TMUX session issue, malformed instructions), the harness won't know until `healthTimeouts.normalActivity`
 fires — 30 minutes later.
 
 **Solution:** `/callback-shepherd/signal/started` — a lightweight signal endpoint that is
@@ -303,11 +303,11 @@ for the abstraction design. Full spawn flow: see [SpawnTmuxAgentSessionUseCase](
 
 ### Startup Timeout
 
-The executor uses a dedicated **`noStartupAckTimeout`** (default: **3 minutes**) for the
-window between spawn and first callback. This is significantly shorter than the general
-`noActivityTimeout` (30 min) because startup failures should be caught fast.
+The executor uses the **`healthTimeouts.startup`** window (default: **3 minutes**) between
+spawn and first callback. This is significantly shorter than the steady-state
+`healthTimeouts.normalActivity` (30 min) because startup failures should be caught fast.
 
-If no callback of any kind arrives within `noStartupAckTimeout` after spawn, the executor
+If no callback of any kind arrives within `healthTimeouts.startup` after spawn, the executor
 triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error identifying the spawn failure → returns
 `PartResult.AgentCrashed`. See [Health Monitoring](../use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
@@ -328,8 +328,8 @@ triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error i
 - If env vars are misconfigured, the `/started` call either fails or never fires —
   both caught by the 3-minute timeout
 
-After the first callback arrives, the executor switches to the normal `noActivityTimeout`
-(30 min) for the remainder of the agent's work.
+After the first callback arrives, the executor switches to the `healthTimeouts.normalActivity`
+window (30 min) for the remainder of the agent's work.
 
 ### WHY-NOT: Eliminating Phase 1 (Merging `/started` Into First `done`)
 
@@ -529,7 +529,7 @@ processed. Without delivery confirmation, the harness cannot distinguish "agent 
 on the instruction" from "agent never received the instruction."
 
 This creates a specific failure mode: instruction delivered via `send-keys` → agent never
-processes it → agent stays idle → 30 min `noActivityTimeout` → health ping → agent responds
+processes it → agent stays idle → `healthTimeouts.normalActivity` (30 min) → health ping → agent responds
 with `ping-ack` (it IS alive, just never got the instruction) → timeout resets → repeat
 indefinitely. Health monitoring cannot break this loop because the agent is demonstrably
 alive.
