@@ -17,7 +17,8 @@ import java.nio.file.Path
  *
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
- * @see InstructionSections for all static text sections
+ * @see InstructionText for static text constants
+ * @see InstructionRenderers for dynamic rendering functions
  * @see ProtocolVocabulary for protocol keyword constants
  */
 interface ContextForAgentProvider {
@@ -84,7 +85,7 @@ data class UnifiedInstructionRequest(
 /**
  * Minimal role info for the planner's role catalog section.
  *
- * A top-level data model type — independent of [InstructionSections] (the rendering layer).
+ * A top-level data model type — independent of [InstructionRenderers] (the rendering layer).
  * Avoids coupling to [com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition] which
  * carries heavy implementation details the planner does not need.
  */
