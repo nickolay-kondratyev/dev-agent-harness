@@ -1,11 +1,11 @@
 ---
 id: nid_4awf8wopl41nje4demfjsijn8_E
 title: "SIMPLIFY_CANDIDATE: Eliminate model-versions.json — drop version from commit author"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:40:01Z
-status_updated_iso: 2026-03-17T23:40:01Z
+status_updated_iso: 2026-03-17T23:47:04Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
