@@ -316,11 +316,12 @@ noted in ticket `nid_0o3dqyqe9tlwpi9uroe9tdqpn_E`.
 
 ### R2: `UserQuestionHandler` — Decoupled Q&A Coordinator
 
-User questions are side-channel: the HTTP server enqueues questions into
-`SessionEntry.pendingQA` and launches a dedicated **Q&A coordinator** coroutine per session
-(ref.ap.NE4puAzULta4xlOLh5kfD.E). The coordinator collects answers via `UserQuestionHandler`
-strategy and batch-delivers all answers via `AckedPayloadSender`. This flow goes through
-`SessionsState` (for `pendingQA` state) but runs **outside the executor's coroutine scope**.
+User questions are side-channel: the HTTP server sets `SessionEntry.isQAPending = true` and
+forwards questions to a dedicated **Q&A coordinator** coroutine per session
+(ref.ap.NE4puAzULta4xlOLh5kfD.E). The coordinator owns the structured question/answer queue
+(`QAPendingState`) internally, collects answers via `UserQuestionHandler` strategy, and
+batch-delivers all answers via `AckedPayloadSender`. This flow runs **outside the executor's
+coroutine scope**.
 
 The Q&A coordinator is independent of `AgentFacade` — it is launched by the server and uses
 `AckedPayloadSender` directly for answer delivery. The executor's health-aware await loop

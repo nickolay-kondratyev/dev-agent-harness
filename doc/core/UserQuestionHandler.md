@@ -56,10 +56,10 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
 2. Script POSTs to `/callback-shepherd/signal/user-question` with `handshakeGuid` + question text
 3. Server returns **200 immediately** — no blocking
 4. Server updates `SessionEntry.lastActivityTimestamp` (resets health timer)
-5. Server enqueues question into `SessionEntry.pendingQA`
-   (creates `QAPendingState` if first question, appends if subsequent —
-   ref.ap.igClEuLMC0bn7mDrK41jQ.E)
-6. Server launches (or notifies) the **Q&A coordinator** for this session
+5. Server sets `SessionEntry.isQAPending = true`
+   (ref.ap.igClEuLMC0bn7mDrK41jQ.E) and forwards the question to the **Q&A coordinator**
+6. Q&A coordinator enqueues the question into its internal `QAPendingState`
+   (creates state if first question, appends if subsequent)
 7. **Agent waits** for the answer to arrive via TMUX (does not proceed)
 8. Executor's health-aware await loop detects `isQAPending == true` →
    **skips** health pings, context window compaction, and noActivityTimeout
@@ -70,7 +70,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
 11. Coordinator batch-delivers the answer file path to the agent via `AckedPayloadSender`
     (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML
     (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
-12. After delivery ACK received: coordinator clears `SessionEntry.pendingQA` to `null` →
+12. After delivery ACK received: coordinator sets `SessionEntry.isQAPending = false` →
     health monitoring and compaction resume normally
 13. Agent reads the XML wrapper, ACKs the payload, reads the answer file, and continues
 
@@ -84,9 +84,10 @@ Delivery confirmation follows the same protocol as all other `send-keys` payload
 
 ## Question + Answer Queuing (Batch Delivery)
 
-Multiple questions may arrive before any are answered. Both questions AND answers are queued:
+Multiple questions may arrive before any are answered. The Q&A coordinator owns the internal
+question/answer queue (`QAPendingState`). Both questions AND answers are queued:
 
-- Questions enqueued as they arrive (one stdin prompt per question, sequentially)
+- Questions forwarded by server to coordinator, which enqueues them as they arrive (one stdin prompt per question, sequentially)
 - Answers collected as humans provide them
 - **ALL answers delivered together** after the full queue is answered — prevents the agent
   from resuming mid-flight while additional answers are still pending
@@ -120,10 +121,10 @@ scope.
 | Aspect | Behavior |
 |--------|----------|
 | **Scope** | Scoped to the session. If the session/executor terminates for any reason (noActivityTimeout, `/fail-workflow`, harness restart), the Q&A coroutine is **cancelled silently** — no answer delivered, no error. |
-| **Concurrency** | One coordinator per session. A second `/user-question` does not launch a second coordinator — it appends to the existing queue, and the coordinator processes it when it reaches that item. |
+| **Concurrency** | One coordinator per session. A second `/user-question` does not launch a second coordinator — the server forwards the question to the existing coordinator, which appends to its internal queue and processes it when it reaches that item. |
 | **Sequential processing** | Questions are presented to the human one at a time, in arrival order. The coordinator awaits the answer for question N before prompting for question N+1. |
 | **Batch delivery** | Only after `answers.size == questions.size` (all queued questions answered) does the coordinator deliver. If a new question arrives while the coordinator is collecting answers, the queue grows and delivery waits until the new question is also answered. |
-| **Post-delivery** | After `AckedPayloadSender` confirms delivery (ACK received), the coordinator sets `pendingQA = null` on the `SessionEntry`. |
+| **Post-delivery** | After `AckedPayloadSender` confirms delivery (ACK received), the coordinator sets `SessionEntry.isQAPending = false`. |
 
 ### noActivityTimeout During Q&A
 
