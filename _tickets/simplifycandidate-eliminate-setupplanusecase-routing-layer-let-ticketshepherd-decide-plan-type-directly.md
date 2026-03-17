@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:30:46Z
 id: nid_l8qzlu902rjbs0riis8xlwtti_E
 title: "SIMPLIFY_CANDIDATE: Eliminate SetupPlanUseCase routing layer — let TicketShepherd decide plan type directly"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:23:10Z
-status_updated_iso: 2026-03-17T21:23:10Z
+status_updated_iso: 2026-03-17T21:30:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
