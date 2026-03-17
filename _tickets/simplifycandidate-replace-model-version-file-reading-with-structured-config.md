@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T20:51:17Z
 id: nid_a8n55s2p9qiz4xwkea7tg1baa_E
 title: "SIMPLIFY_CANDIDATE: Replace model version file-reading with structured config"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:34Z
-status_updated_iso: 2026-03-17T20:47:59Z
+status_updated_iso: 2026-03-17T20:51:17Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -50,3 +51,21 @@ Option 1 is preferred because it co-locates model version with model selection (
 --------------------------------------------------------------------------------
 
 OK lets refactor to have JSON structure. But it should be a file as JSON not a map hardcoded. WHY: to be able to update the configuration without recompilation.
+
+## Resolution
+
+**Completed.** Replaced file-per-model directory resolution with a single `config/model-versions.json` config file (Option 2 from proposal, per engineer's direction to use JSON file not hardcoded map).
+
+### Changes made (spec-only):
+1. **Created `config/model-versions.json`** — structured JSON mapping model names to version strings
+2. **Updated `doc/core/git.md`**:
+   - "Commit Author" table: `VERSION_OF_MODEL` source now references `config/model-versions.json`
+   - "Model Version Resolution" section: replaced file-per-model directory approach with JSON config
+   - "Required Environment Variables" table: removed `MODEL_VERSION_DIR` row
+3. **No changes to `doc/schema/plan-and-current-state.md`** — model version is not part of the plan/current-state schema (it's a git commit-time concern only)
+
+### Code changes still needed:
+- `Constants.kt`: Remove `MODEL_VERSION_DIR` from `REQUIRED_ENV_VARS.ALL`
+- `EnvironmentValidatorTest.kt`: Remove `MODEL_VERSION_DIR` from test fixtures
+- Implement `ModelVersionConfig` class to load and parse `config/model-versions.json` at initialization
+- Update `GitCommitStrategy` (or wherever `MODEL_VERSION_DIR` is consumed) to use the new config
