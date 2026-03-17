@@ -191,10 +191,10 @@ while (true) {
         lastHealthCheck = now()
         callbackAge = now() - sessionEntry.lastActivityTimestamp
 
-        if (callbackAge >= noActivityTimeout) {
+        if (callbackAge >= healthTimeouts.normalActivity) {
             log.warn("last_activity_stale — triggering ping",
                 Val(callbackAge, STALE_DURATION),
-                Val(noActivityTimeout, NO_ACTIVITY_TIMEOUT))
+                Val(healthTimeouts.normalActivity, NO_ACTIVITY_TIMEOUT))
 
             // --- Send ping and check for proof of life ---
             prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
@@ -204,8 +204,8 @@ while (true) {
                 Val(callbackAge, STALE_DURATION))
             AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.NO_ACTIVITY_TIMEOUT)  // sends ping via TMUX
 
-            // Wait for ping timeout, then re-check
-            signal = awaitSignalWithTimeout(pingTimeout)
+            // Wait for ping response timeout, then re-check
+            signal = awaitSignalWithTimeout(healthTimeouts.pingResponse)
 
             if (signal != null) {
                 return signal  // Agent responded with Done/FailWorkflow during ping window
@@ -440,10 +440,12 @@ strategy produces one commit per sub-part signal.
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
   in the health-aware await loop. Production: `SystemClock`. Tests: `TestClock` with virtual time.
 - `HarnessTimeoutConfig` (`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — all
-  timeout and threshold constants (`startupAckTimeout`, `healthCheckInterval`, `noActivityTimeout`,
-  `pingTimeout`, `payloadAckTimeout`, `payloadAckRetries`, `selfCompactionTimeout`,
-  `contextWindowSoftThresholdPct`, `contextWindowHardThresholdPct`). Injected from
-  `ShepherdContext.timeoutConfig`; tests pass `HarnessTimeoutConfig.forTests()` for fast timeouts.
+  timeout and threshold constants. Health timeouts are grouped as
+  `healthTimeouts: HealthTimeoutLadder` (`startup`, `normalActivity`, `pingResponse`). Other
+  fields: `healthCheckInterval`, `payloadAckTimeout`, `payloadAckRetries`,
+  `selfCompactionTimeout`, `contextWindowSoftThresholdPct`, `contextWindowHardThresholdPct`.
+  Injected from `ShepherdContext.timeoutConfig`; tests pass `HarnessTimeoutConfig.forTests()`
+  for fast timeouts.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 - **`ReInstructAndAwait`** (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E) — shared use-case encapsulating

@@ -28,11 +28,11 @@ This logging requirement applies to all health monitoring logic described below.
 
 ## Flow
 
-0. **Startup acknowledgment** (default: 3 min): After spawn, the executor uses a shorter `noStartupAckTimeout` window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.STARTUP_TIMEOUT`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the normal `noActivityTimeout`. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
+0. **Startup acknowledgment** (`healthTimeouts.startup`, default: 3 min): After spawn, the executor uses a shorter startup window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.STARTUP_TIMEOUT`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the executor switches to the `normalActivity` window. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
 0b. **Payload delivery ACK** (default: 3 min per attempt, 3 attempts max): After sending instructions via `send-keys`, the executor awaits `/signal/ack-payload` before entering the signal-await loop. If no ACK → retry `send-keys` (up to 2 retries). All retries exhausted → `AgentCrashed`. This catches the "alive but never received instruction" failure mode. See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
-1. **No activity timeout** (default: 30 min): If no HTTP callback of any kind arrives within configured timeout → triggers `AgentUnresponsiveUseCase` with `DetectionContext.NO_ACTIVITY_TIMEOUT`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
+1. **No activity timeout** (`healthTimeouts.normalActivity`, default: 30 min): If no HTTP callback of any kind arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.NO_ACTIVITY_TIMEOUT`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
-3. **Ping timeout** (default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `AgentUnresponsiveUseCase` with `DetectionContext.PING_TIMEOUT`.
+3. **Ping response timeout** (`healthTimeouts.pingResponse`, default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `AgentUnresponsiveUseCase` with `DetectionContext.PING_TIMEOUT`.
 4. **Crash handling (V1)**: `AgentUnresponsiveUseCase` (with `PING_TIMEOUT` context) kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
@@ -93,25 +93,47 @@ A previous design used a dual-signal liveness model combining HTTP callbacks and
 
 ### Configuration
 
-All parameters are fields of `HarnessTimeoutConfig` (see `com.glassthought.shepherd.core.data.HarnessTimeoutConfig`).
-Injected via `ShepherdContext.timeoutConfig`; tests use `HarnessTimeoutConfig.forTests()` for fast timeouts.
+Health timeout configuration is managed through `HarnessTimeoutConfig`
+(`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`), injected via
+`ShepherdContext.timeoutConfig`; tests use `HarnessTimeoutConfig.forTests()` for fast timeouts.
 
-| Parameter | `HarnessTimeoutConfig` field | Default | Description |
-|-----------|------------------------------|---------|-------------|
-| `noStartupAckTimeout` | `startupAckTimeout` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `noActivityTimeout`. |
-| `healthCheckInterval` | `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
-| `noActivityTimeout` | `noActivityTimeout` | 30 min | Elapsed time since last HTTP callback before triggering a ping. Single global value — applies to all sub-parts. |
-| `pingTimeout` | `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any callback activity resets) |
+#### HealthTimeoutLadder
+
+The three health-check timeouts form a conceptual ladder — startup → steady-state → ping-response.
+They are grouped into a single data class so operators see the full sequence in one place:
+
+```kotlin
+data class HealthTimeoutLadder(
+    val startup: Duration = 3.minutes,          // catch spawn failures before first callback
+    val normalActivity: Duration = 30.minutes,  // steady-state liveness window
+    val pingResponse: Duration = 3.minutes      // proof-of-life window after ping
+)
+```
+
+The ordering is intentional: `startup` should be ≤ `normalActivity`; `pingResponse` is typically
+≤ `startup`. Test configurations use a short ladder, e.g.
+`HealthTimeoutLadder(startup = 1.second, normalActivity = 5.seconds, pingResponse = 1.second)`.
+
+Accessed as `HarnessTimeoutConfig.healthTimeouts: HealthTimeoutLadder`.
+
+#### All Health Parameters
+
+| Parameter | Source | Default | Description |
+|-----------|--------|---------|-------------|
+| `startup` | `healthTimeouts.startup` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `normalActivity`. |
+| `healthCheckInterval` | `HarnessTimeoutConfig.healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
+| `normalActivity` | `healthTimeouts.normalActivity` | 30 min | Elapsed time since last HTTP callback before triggering a ping. Single global value — applies to all sub-parts. |
+| `pingResponse` | `healthTimeouts.pingResponse` | 3 min | Time to wait after ping before declaring crash (any callback activity resets) |
 
 ### What Runs Where
 
 | Concern | Owner | Mechanism |
 |---------|-------|-----------|
 | Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback (including `/started`) |
-| Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `noStartupAckTimeout` until first callback arrives |
-| Check `lastActivityTimestamp` staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `lastActivityTimestamp` stale > `noActivityTimeout` |
+| Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `healthTimeouts.startup` until first callback arrives |
+| Check `lastActivityTimestamp` staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `lastActivityTimestamp` stale > `healthTimeouts.normalActivity` |
 | Send ping message via TMUX | `PartExecutor` | Via `AgentFacade.sendHealthPing()` — delegates internally to `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT` context) |
-| Post-ping check | `PartExecutor` | After ping timeout: check `lastActivityTimestamp` for advancement |
+| Post-ping check | `PartExecutor` | After `healthTimeouts.pingResponse` window: check `lastActivityTimestamp` for advancement |
 | Declare crash, kill TMUX | `PartExecutor` | Via `AgentFacade.killSession()` — delegates internally to `AgentUnresponsiveUseCase` (`PING_TIMEOUT` context) |
 | Complete deferred with `Crashed` | `PartExecutor` | After kill session executes |
 | Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback (via `SessionsState` internal to `AgentFacadeImpl`) |
@@ -148,9 +170,9 @@ in the same outcome (kill TMUX session, return `AgentCrashed`) with context-spec
 
 | `DetectionContext` | Trigger | Log context | Action |
 |---|---|---|---|
-| `STARTUP_TIMEOUT` | No callback of any kind within `noStartupAckTimeout` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Session name, HandshakeGuid, env vars, timeout duration | Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `noActivityTimeout`. |
-| `NO_ACTIVITY_TIMEOUT` | `lastActivityTimestamp` stale beyond `noActivityTimeout` | Session name, stale duration, `noActivityTimeout` value | Ping agent via TMUX send-keys. (If ping also times out → `PING_TIMEOUT`.) |
-| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after ping timeout | Session name, ping timeout duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+| `STARTUP_TIMEOUT` | No callback of any kind within `healthTimeouts.startup` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Session name, HandshakeGuid, env vars, timeout duration | Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `normalActivity`. |
+| `NO_ACTIVITY_TIMEOUT` | `lastActivityTimestamp` stale beyond `healthTimeouts.normalActivity` | Session name, stale duration, `normalActivity` value | Ping agent via TMUX send-keys. (If ping also times out → `PING_TIMEOUT`.) |
+| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after `healthTimeouts.pingResponse` window | Session name, ping response duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
 
 **Design rationale**: The three detection contexts share the same conceptual event (agent
 is unresponsive) and the same outcome (kill session, return crashed). A single class with
@@ -255,6 +277,6 @@ a dedicated ping would duplicate what ACK already does.
 
 ### Health Ping During User-Question
 When an agent sends a `/user-question` and the human is thinking, `lastActivityTimestamp` was
-reset when the question callback arrived. If the human takes longer than `noActivityTimeout`
+reset when the question callback arrived. If the human takes longer than `healthTimeouts.normalActivity`
 to respond, the health loop sends a ping — this is **harmless**: the agent can respond with
 `ping-ack` while waiting for the Q&A answer delivery via TMUX `send-keys`.

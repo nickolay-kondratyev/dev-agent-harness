@@ -209,8 +209,8 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 Timeout + ping mechanism to detect crashed/hung agents. Liveness is determined **solely by
 HTTP callback timestamps** (`SessionEntry.lastActivityTimestamp`
 ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — updated on every agent → server callback. When no callback
-arrives within `noActivityTimeout` (30 min default), the harness
-pings the agent; if no reply within `pingTimeout` (3 min), the agent is declared crashed.
+arrives within `healthTimeouts.normalActivity` (30 min default), the harness
+pings the agent; if no reply within `healthTimeouts.pingResponse` (3 min), the agent is declared crashed.
 
 Three UseCase classes handle distinct failure scenarios (`AgentUnresponsiveUseCase`,
 `FailedToExecutePlanUseCase`, `FailedToConvergeUseCase`). `AgentUnresponsiveUseCase` is
@@ -488,7 +488,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Payload delivery ACK | **ACK-before-proceed wrapper on all `send-keys` payloads** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Every `send-keys` payload (except pings) wrapped in XML with PayloadId (21-char `[a-zA-Z0-9]`). Agent must `ack-payload` before processing. 3 min ACK timeout, 2 retries. Prevents "alive but never got instruction" loop that health monitoring alone cannot break. |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration`: harness enforces PUBLIC.md exists + non-empty (ref.ap.THDW9SHzs1x2JN9YP9OYU.E); structured format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) is instruction guidance, not harness-validated |
 | Pitfall documentation | **Code comments** | Agents document non-obvious decisions and pitfalls in code comments. No structured protocol — just "write good comments." |
-| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
+| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. `healthTimeouts.startup` (3 min) catches spawn failures 10x faster than `normalActivity` (30 min). Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
 | Callback scripts | **`callback_shepherd.signal.sh`** | Single script for all agent-to-harness communication (fire-and-forget signals) |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |

@@ -146,7 +146,7 @@ runTest {
     // Spawn doer — fake returns handle immediately
     launch { executor.execute() }
 
-    // Advance 31 minutes — past noActivityTimeout (30 min)
+    // Advance 31 minutes — past healthTimeouts.normalActivity (30 min)
     clock.advance(31.minutes)
     advanceTimeBy(31.minutes)
 
