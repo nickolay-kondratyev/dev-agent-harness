@@ -1,11 +1,11 @@
 ---
 id: nid_03j42oxwqnrqlcqfdbeyohox4_E
 title: "SIMPLIFY_CANDIDATE: Remove SubPartInstructionProvider indirection — PartExecutor calls ContextForAgentProvider directly"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:24:13Z
-status_updated_iso: 2026-03-15T01:24:13Z
+status_updated_iso: 2026-03-17T19:25:27Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
