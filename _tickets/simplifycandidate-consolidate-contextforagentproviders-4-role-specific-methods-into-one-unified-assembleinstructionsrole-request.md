@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:08:56Z
 id: nid_qwz2s1lswafde3phqwst6fom6_E
 title: "SIMPLIFY_CANDIDATE: Consolidate ContextForAgentProvider's 4 role-specific methods into one unified assembleInstructions(role, request)"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:45Z
-status_updated_iso: 2026-03-17T22:05:41Z
+status_updated_iso: 2026-03-17T22:08:56Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -40,3 +41,18 @@ Relevant code:
 - app/src/main/kotlin/com/glassthought/shepherd/core/context/ContextForAgentProviderImpl.kt
 - PartExecutor (calls to provider)
 
+
+## Notes
+
+**2026-03-17T22:08:53Z**
+
+Spec updated. Replaced 4 role-specific methods with single assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest) in doc/core/ContextForAgentProvider.md.
+
+Changes:
+- Interface section: AgentRole enum + single method
+- New UnifiedInstructionRequest section with grouped optional fields
+- Updated assembleFromPlan internal signature reference
+- Updated table headers for Doer and Reviewer sections
+- Updated Benefits bullet
+
+Code implementation not touched (spec-only task).
