@@ -1,11 +1,11 @@
 ---
 id: nid_hzyl1737cj1dn919ndbn0gln3_E
 title: "Clean up stale WHY-NOT protocol references in code"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T19:31:51Z
-status_updated_iso: 2026-03-17T19:31:51Z
+status_updated_iso: 2026-03-17T21:25:50Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
