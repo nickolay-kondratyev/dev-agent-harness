@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:06:14Z
 id: nid_x3083dbww7sokx19bfltj81of_E
 title: "SIMPLIFY_CANDIDATE: EnvironmentValidator should collect all failures before failing — not fail-fast on first error"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:56Z
-status_updated_iso: 2026-03-17T21:58:19Z
+status_updated_iso: 2026-03-17T22:06:14Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -36,3 +37,13 @@ Benefits:
 
 Implementation: Collect List<String> of error messages. If non-empty, throw with formatted multi-line error. Each check becomes a pure function returning a String? (null = ok, non-null = error message).
 
+
+## Notes
+
+**2026-03-17T22:06:20Z**
+
+Resolved (spec-only). Updated doc/high-level.md section for EnvironmentValidator (ap.A8WqG9oplNTpsW7YqoIyX.E):
+- Changed description from fail-fast to collect-all-failures pattern
+- Spec now shows consolidated error format example
+- Documents implementation pattern: each check returns String? (null=ok, non-null=error); validate() collects into List<String> and throws once at end if non-empty
+- Code update is a separate follow-up (this ticket was spec-only per instructions)
