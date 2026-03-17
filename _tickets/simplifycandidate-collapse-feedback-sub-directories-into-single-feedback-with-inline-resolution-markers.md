@@ -13,8 +13,15 @@ tags: [simplification, feedback-loop, robustness, file-io]
 ---
 
 
+FEEDBACK:
+
+--------------------------------------------------------------------------------
 ## Notes
 
 **2026-03-17T21:23:50Z**
 
 The granular feedback loop (doc/plan/granular-feedback-loop.md) uses three sub-directories: __feedback/pending/, __feedback/addressed/, __feedback/rejected/. This requires harness-side file movement on every state transition and scanning multiple directories to determine state. Simpler approach: keep ALL feedback files in a single __feedback/ directory. State is derived from an inline ## Resolution: marker in the file content (no marker=pending, ADDRESSED or REJECTED marker=resolved). Benefits: eliminates file-movement logic in harness, state detection = single file read instead of directory scan, cleaner git history, simpler executor logic. See also: doc/core/PartExecutor.md step 4 (inner feedback loop).
+
+--------------------------------------------------------------------------------
+DECISION:
+We want to keep the separate files, encoding harness to move the files is straightforward task. While it very much improves the glanceability of what is happening (for engineer checking the flow) and makes it easy to see rejected feedback. Add the justification of why we want the harness to move the files. 
