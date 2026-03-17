@@ -60,6 +60,8 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
    c. At least one sub-part has loadsPlan: true
    d. Every agentType is a supported type (V1: ClaudeCode)
    e. Every model is valid for the given agentType
+   f. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
+      non-existent role assignments before execution starts)
 3. Convert plan.json → current_state.json (write to harness_private/)
 4. Delete plan.json (current_state.json is now the single source of truth)
 5. Return List<Part> — the execution parts extracted from current_state.json
@@ -67,11 +69,12 @@ Called by `TicketShepherd` **after** the planning executor completes successfull
 
 If `plan.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws
 a `PlanConversionException` (extends `AsgardBaseException`). `TicketShepherd` catches
-`PlanConversionException` at the call site and delegates to `FailedToExecutePlanUseCase` —
-prints red error, halts. This should not happen in practice: both the planner and plan
-reviewer are instructed to validate `plan.json` via `callback_shepherd.query.sh validate-plan`
-(ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) before signaling `done`/`pass`. A validation failure here
-indicates a bug in the planning agents.
+`PlanConversionException` at the call site, logs a **WARN** with the validation errors, and
+**restarts the planning loop** — injecting the validation errors as context for the planner
+on the next attempt. This counts against the planning iteration budget. If the budget is
+exhausted, `TicketShepherd` halts via `FailedToExecutePlanUseCase` (red error). This is the
+**single validation point** — harness-side validation is the source of truth, eliminating
+drift between what agents validate and what the harness validates.
 
 ---
 

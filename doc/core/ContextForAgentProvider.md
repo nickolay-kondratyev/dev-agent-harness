@@ -103,7 +103,7 @@ Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRe
 | 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
 | 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 11 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 11 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done completed` |
 
 ### Plan Reviewer
 
@@ -118,7 +118,7 @@ Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRe
 | 7 | **Iteration feedback** (iteration > 1) | Plan reviewer's own prior `PUBLIC.md` | What it previously flagged |
 | 8 | **PUBLIC.md output path** | Computed by provider | `planning/${plan_review_sub_part}/comm/out/PUBLIC.md` — tells the reviewer where to write its output |
 | 9 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 10 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before signaling `pass`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 10 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done pass` / `needs_iteration` |
 
 ---
 
@@ -356,9 +356,7 @@ The callback script usage block is wrapped in `<critical_to_keep_through_compact
 <critical_to_keep_through_compaction>
 ## Communicating with the Harness
 
-Two scripts on your $PATH — one for fire-and-forget signals, one for queries that return data.
-
-### Signals (fire-and-forget — ignore stdout):
+`callback_shepherd.signal.sh` on your $PATH — fire-and-forget signals to the harness.
 
 **Payload ACK — MUST do first when you receive a wrapped payload:**
 When you receive input wrapped in `<payload_from_shepherd_must_ack>` XML tags, you MUST
@@ -381,25 +379,12 @@ If you hit an unrecoverable error:
 
 Health ping acknowledgment (when asked):
 `callback_shepherd.signal.sh ping-ack`
-
-### Queries (read the response from stdout):
-
-Validate plan before signaling done:
-`callback_shepherd.query.sh validate-plan /absolute/path/to/plan.json`
 </critical_to_keep_through_compaction>
 ```
 
 The provider inserts the **correct result value** for the agent's role (doer vs. reviewer)
-so the agent doesn't have to figure out which values apply to it.
-
-**Planning-phase agents** (PLANNER and PLAN_REVIEWER) receive the full compaction-survival
-block above, which includes the `callback_shepherd.query.sh validate-plan` instruction in the
-Queries section. This ensures both the planner (after writing `plan.json`) and the plan
-reviewer (before approving) validate the plan schema, catching structural errors before
-`convertPlanToExecutionParts` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) runs.
-
-**Execution-phase agents** receive the same block but the provider **omits the Queries
-section** — execution agents have no query endpoints to call.
+so the agent doesn't have to figure out which values apply to it. All agents (planning and
+execution phase) receive the same compaction-survival block above.
 
 ---
 
