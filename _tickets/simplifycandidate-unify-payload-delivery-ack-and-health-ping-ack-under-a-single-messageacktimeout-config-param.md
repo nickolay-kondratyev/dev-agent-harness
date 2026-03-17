@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:41:26Z
 id: nid_lhcx5kzmnj6sbogccpf5ff4a1_E
 title: "SIMPLIFY_CANDIDATE: Unify payload-delivery ACK and health-ping ACK under a single messageAckTimeout config param"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:15:17Z
-status_updated_iso: 2026-03-17T22:15:17Z
+status_updated_iso: 2026-03-17T22:41:26Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
