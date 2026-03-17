@@ -13,9 +13,9 @@ import kotlin.io.path.readText
 /**
  * Default implementation of [ContextForAgentProvider].
  *
- * Each `assemble*()` method uses `buildList` to show the concatenation order as a readable
- * linear sequence. Each section is a private method call with a descriptive name. The
- * `buildList` IS the documentation of the concatenation order — no abstraction hides it.
+ * Each `assemble*()` method delegates to a private `build*Sections()` template method. Each
+ * template uses `buildList` to show the concatenation order as a readable linear sequence — no
+ * role-dispatching conditionals. The `buildList` IS the documentation of the concatenation order.
  *
  * See ContextForAgentProvider.md (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for the authoritative
  * concatenation tables.
@@ -24,72 +24,114 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
 
-    override suspend fun assembleExecutionAgentInstructions(
-        request: ExecutionAgentInstructionRequest,
+    // ── Doer ──────────────────────────────────────────────────────────────────
+
+    override suspend fun assembleDoerInstructions(
+        request: DoerInstructionRequest,
     ): Path {
-        out.debug("assembling_execution_agent_instructions") {
+        out.debug("assembling_doer_instructions") {
             listOf(
                 Val(request.partName, ValType.STRING_USER_AGNOSTIC),
-                Val(if (request.isReviewer) "reviewer" else "doer", ValType.STRING_USER_AGNOSTIC),
                 Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
             )
         }
 
-        val sections = buildList {
-            // 1. Role definition
-            add(roleDefinitionSection(request.roleDefinition))
-            // 2. Part context
-            add(InstructionSections.partContext(request.partName, request.partDescription))
-            // 3. Ticket
-            add(ticketSection(request.ticketContent))
-            // 4. SHARED_CONTEXT.md
-            add(sharedContextSection(request.sharedContextPath))
-            // 5. PLAN.md (with-planning only)
-            request.planMdPath?.let { add(planSection(it)) }
-            // 6. Prior PUBLIC.md files
-            addAll(priorPublicMdSections(request.priorPublicMdPaths))
+        val sections = buildDoerSections(request)
+        return writeInstructionsFile(request.outputDir, sections)
+    }
 
-            if (request.isReviewer) {
-                // 7. Reviewer iteration context: doer's PUBLIC.md + structured feedback format
-                request.peerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
-                add(InstructionSections.REVIEWER_FEEDBACK_FORMAT)
-                // 7a–7c. Feedback state (reviewer, iteration > 1)
-                if (request.iterationNumber > 1 && request.feedbackDir != null) {
-                    addAll(feedbackStateSections(request.feedbackDir))
-                }
-                // 7d. Feedback writing instructions
-                add(InstructionSections.FEEDBACK_WRITING_INSTRUCTIONS)
-            } else {
-                // 8. Doer iteration feedback (iteration > 1)
-                if (request.iterationNumber > 1 && request.peerPublicMdPath != null) {
-                    add(reviewerFeedbackForDoerSection(request.peerPublicMdPath))
-                    add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
-                }
-            }
+    private fun buildDoerSections(request: DoerInstructionRequest): List<String> = buildList {
+        // 1. Role definition
+        add(roleDefinitionSection(request.roleDefinition))
+        // 2. Part context
+        add(InstructionSections.partContext(request.partName, request.partDescription))
+        // 3. Ticket
+        add(ticketSection(request.ticketContent))
+        // 4. SHARED_CONTEXT.md
+        add(sharedContextSection(request.sharedContextPath))
+        // 5. PLAN.md (with-planning only)
+        request.planMdPath?.let { add(planSection(it)) }
+        // 6. Prior PUBLIC.md files
+        addAll(priorPublicMdSections(request.priorPublicMdPaths))
+        // 8. Iteration feedback (iteration > 1): reviewer's PUBLIC.md + pushback guidance
+        if (request.iterationNumber > 1 && request.reviewerPublicMdPath != null) {
+            add(reviewerFeedbackForDoerSection(request.reviewerPublicMdPath))
+            add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
+        }
+        // 8b. WHY-NOT reminder (all iterations)
+        add(InstructionSections.WHY_NOT_REMINDER)
+        // 9. Output paths
+        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
+        // 10. PUBLIC.md writing guidelines
+        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        // 11. SHARED_CONTEXT.md writing guidelines
+        add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
+        // 12. Callback script usage
+        add(
+            InstructionSections.callbackScriptUsage(
+                forReviewer = false,
+                includePlanValidation = false,
+            )
+        )
+    }
 
-            // 8b. WHY-NOT reminder (doer, all iterations)
-            if (!request.isReviewer) {
-                add(InstructionSections.WHY_NOT_REMINDER)
-            }
+    // ── Reviewer ──────────────────────────────────────────────────────────────
 
-            // 9. Output paths
-            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-            add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
-            // 10. PUBLIC.md writing guidelines
-            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-            // 11. SHARED_CONTEXT.md writing guidelines
-            add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
-            // 12. Callback script usage
-            add(
-                InstructionSections.callbackScriptUsage(
-                    forReviewer = request.isReviewer,
-                    includePlanValidation = false,
-                )
+    override suspend fun assembleReviewerInstructions(
+        request: ReviewerInstructionRequest,
+    ): Path {
+        out.debug("assembling_reviewer_instructions") {
+            listOf(
+                Val(request.partName, ValType.STRING_USER_AGNOSTIC),
+                Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC),
             )
         }
 
+        val sections = buildReviewerSections(request)
         return writeInstructionsFile(request.outputDir, sections)
     }
+
+    private fun buildReviewerSections(request: ReviewerInstructionRequest): List<String> = buildList {
+        // 1. Role definition
+        add(roleDefinitionSection(request.roleDefinition))
+        // 2. Part context
+        add(InstructionSections.partContext(request.partName, request.partDescription))
+        // 3. Ticket
+        add(ticketSection(request.ticketContent))
+        // 4. SHARED_CONTEXT.md
+        add(sharedContextSection(request.sharedContextPath))
+        // 5. PLAN.md (with-planning only)
+        request.planMdPath?.let { add(planSection(it)) }
+        // 6. Prior PUBLIC.md files
+        addAll(priorPublicMdSections(request.priorPublicMdPaths))
+        // 7. Doer's PUBLIC.md for review
+        request.doerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
+        // 7 (cont). Structured feedback format
+        add(InstructionSections.REVIEWER_FEEDBACK_FORMAT)
+        // 7a–7c. Feedback state (iteration > 1)
+        if (request.iterationNumber > 1 && request.feedbackDir != null) {
+            addAll(feedbackStateSections(request.feedbackDir))
+        }
+        // 7d. Feedback writing instructions
+        add(InstructionSections.FEEDBACK_WRITING_INSTRUCTIONS)
+        // 9. Output paths
+        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        add(InstructionSections.sharedContextMdPath(request.sharedContextPath))
+        // 10. PUBLIC.md writing guidelines
+        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        // 11. SHARED_CONTEXT.md writing guidelines
+        add(InstructionSections.SHARED_CONTEXT_MD_GUIDELINES)
+        // 12. Callback script usage
+        add(
+            InstructionSections.callbackScriptUsage(
+                forReviewer = true,
+                includePlanValidation = false,
+            )
+        )
+    }
+
+    // ── Planner ───────────────────────────────────────────────────────────────
 
     override suspend fun assemblePlannerInstructions(
         request: PlannerInstructionRequest,
@@ -98,42 +140,45 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
         }
 
-        val sections = buildList {
-            // 1. Role definition
-            add(roleDefinitionSection(request.roleDefinition))
-            // 2. Ticket
-            add(ticketSection(request.ticketContent))
-            // 3. SHARED_CONTEXT.md
-            add(sharedContextSection(request.sharedContextPath))
-            // 4. Role catalog
-            add(InstructionSections.roleCatalog(request.roleCatalogEntries))
-            // 5. Available agent types & models
-            add(InstructionSections.AGENT_TYPES_AND_MODELS)
-            // 6. Plan format instructions
-            add(InstructionSections.PLAN_FORMAT_INSTRUCTIONS)
-            // 7. Reviewer feedback (iteration > 1)
-            if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
-                add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
-            }
-            // 8. plan.json output path
-            add(planJsonOutputPathSection(request.planJsonOutputPath))
-            // 9. PLAN.md output path
-            add(planMdOutputPathSection(request.planMdOutputPath))
-            // 10. PUBLIC.md output path
-            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-            // 11. PUBLIC.md writing guidelines
-            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-            // 12. Callback script usage (includes validate-plan query)
-            add(
-                InstructionSections.callbackScriptUsage(
-                    forReviewer = false,
-                    includePlanValidation = true,
-                )
-            )
-        }
-
+        val sections = buildPlannerSections(request)
         return writeInstructionsFile(request.outputDir, sections)
     }
+
+    private fun buildPlannerSections(request: PlannerInstructionRequest): List<String> = buildList {
+        // 1. Role definition
+        add(roleDefinitionSection(request.roleDefinition))
+        // 2. Ticket
+        add(ticketSection(request.ticketContent))
+        // 3. SHARED_CONTEXT.md
+        add(sharedContextSection(request.sharedContextPath))
+        // 4. Role catalog
+        add(InstructionSections.roleCatalog(request.roleCatalogEntries))
+        // 5. Available agent types & models
+        add(InstructionSections.AGENT_TYPES_AND_MODELS)
+        // 6. Plan format instructions
+        add(InstructionSections.PLAN_FORMAT_INSTRUCTIONS)
+        // 7. Reviewer feedback (iteration > 1)
+        if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
+            add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
+        }
+        // 8. plan.json output path
+        add(planJsonOutputPathSection(request.planJsonOutputPath))
+        // 9. PLAN.md output path
+        add(planMdOutputPathSection(request.planMdOutputPath))
+        // 10. PUBLIC.md output path
+        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        // 11. PUBLIC.md writing guidelines
+        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        // 12. Callback script usage (includes validate-plan query)
+        add(
+            InstructionSections.callbackScriptUsage(
+                forReviewer = false,
+                includePlanValidation = true,
+            )
+        )
+    }
+
+    // ── Plan Reviewer ─────────────────────────────────────────────────────────
 
     override suspend fun assemblePlanReviewerInstructions(
         request: PlanReviewerInstructionRequest,
@@ -142,37 +187,38 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             listOf(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
         }
 
-        val sections = buildList {
-            // 1. Role definition
-            add(roleDefinitionSection(request.roleDefinition))
-            // 2. Ticket
-            add(ticketSection(request.ticketContent))
-            // 3. plan.json content
-            add(planJsonContentSection(request.planJsonContent))
-            // 4. PLAN.md content
-            add(planMdContentSection(request.planMdContent))
-            // 5. Available agent types & models
-            add(InstructionSections.AGENT_TYPES_AND_MODELS)
-            // 6. Planner's PUBLIC.md
-            add(plannerPublicMdSection(request.plannerPublicMdPath))
-            // 7. Iteration feedback (iteration > 1)
-            if (request.iterationNumber > 1 && request.priorPlanReviewerPublicMdPath != null) {
-                add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))
-            }
-            // 8. PUBLIC.md output path
-            add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
-            // 9. PUBLIC.md writing guidelines
-            add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
-            // 10. Callback script usage (includes validate-plan query)
-            add(
-                InstructionSections.callbackScriptUsage(
-                    forReviewer = true,
-                    includePlanValidation = true,
-                )
-            )
-        }
-
+        val sections = buildPlanReviewerSections(request)
         return writeInstructionsFile(request.outputDir, sections)
+    }
+
+    private fun buildPlanReviewerSections(request: PlanReviewerInstructionRequest): List<String> = buildList {
+        // 1. Role definition
+        add(roleDefinitionSection(request.roleDefinition))
+        // 2. Ticket
+        add(ticketSection(request.ticketContent))
+        // 3. plan.json content
+        add(planJsonContentSection(request.planJsonContent))
+        // 4. PLAN.md content
+        add(planMdContentSection(request.planMdContent))
+        // 5. Available agent types & models
+        add(InstructionSections.AGENT_TYPES_AND_MODELS)
+        // 6. Planner's PUBLIC.md
+        add(plannerPublicMdSection(request.plannerPublicMdPath))
+        // 7. Iteration feedback (iteration > 1)
+        if (request.iterationNumber > 1 && request.priorPlanReviewerPublicMdPath != null) {
+            add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))
+        }
+        // 8. PUBLIC.md output path
+        add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
+        // 9. PUBLIC.md writing guidelines
+        add(InstructionSections.PUBLIC_MD_WRITING_GUIDELINES)
+        // 10. Callback script usage (includes validate-plan query)
+        add(
+            InstructionSections.callbackScriptUsage(
+                forReviewer = true,
+                includePlanValidation = true,
+            )
+        )
     }
 
     // ── Per-section private methods ──────────────────────────────────────────
