@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T16:26:03Z
 id: nid_26k7z10myi22rryyosg59vu55_E
 title: "SIMPLIFY_CANDIDATE: Agent reports session ID in /started callback — eliminate JSONL file scanning"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:24:09Z
-status_updated_iso: 2026-03-15T01:24:09Z
+status_updated_iso: 2026-03-17T16:26:03Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
