@@ -1,11 +1,11 @@
 ---
 id: nid_5mtpb9669k6kpwd7qzfhru6lx_E
 title: "SIMPLIFY_CANDIDATE: Replace GLMHighestTierApi/GLMQuickCheapApi wrapper classes with factory functions"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:38:55Z
-status_updated_iso: 2026-03-17T21:38:55Z
+status_updated_iso: 2026-03-17T21:52:45Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
