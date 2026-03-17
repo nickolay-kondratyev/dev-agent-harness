@@ -1,11 +1,11 @@
 ---
 id: nid_cfhhx7k6cid7dugz6wv760c7p_E
 title: "SIMPLIFY_CANDIDATE: Unify planningPart into parts array — eliminate dual-path handling in current_state.json"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:14:06Z
-status_updated_iso: 2026-03-17T23:14:06Z
+status_updated_iso: 2026-03-17T23:36:12Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
