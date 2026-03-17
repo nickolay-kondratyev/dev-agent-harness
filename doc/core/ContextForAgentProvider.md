@@ -184,7 +184,7 @@ Each logical content block is one `InstructionSection` subtype:
 | `RemainingOptionalFeedback` | `__feedback/pending/optional__*.md` — reviewer, iteration > 1 |
 | `FeedbackWritingInstructions` | Static instructions for writing feedback files — reviewer only |
 | `IterationFeedback` | Reviewer's PUBLIC.md + pushback guidance — doer, iteration > 1 |
-| `FeedbackItem` | Single feedback file + resolution instructions — doer inner-loop only (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
+| `FeedbackItem` | Single feedback file + resolution instructions (ADDRESSED/REJECTED/SKIPPED) — doer inner-loop only (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
 | `RoleCatalog` | All role definitions (name + description) — planner only |
 | `AvailableAgentTypes` | Supported agent types + models — planner and plan-reviewer |
 | `PlanFormatInstructions` | JSON schema for `plan_flow.json` — planner only |
@@ -301,10 +301,13 @@ enforced socially: the doer's instructions reference it, creating a feedback loo
 actionable issues as separate markdown files to `__feedback/pending/` with severity filename
 prefixes (`critical__`, `important__`, `optional__`)
 (ref.ap.3Hskx3JzhDlixTnvYxclk.E). The harness feeds these to the doer one at a time via
-the inner feedback loop. The doer writes a `## Resolution: ADDRESSED` or
-`## Resolution: REJECTED` marker; the harness reads it and moves the file accordingly.
-Rejections trigger a bounded per-item negotiation with the reviewer (at most 2 disagreement
-rounds). Full spec: [`granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
+the inner feedback loop. The doer writes a `## Resolution: ADDRESSED`,
+`## Resolution: REJECTED`, or `## Resolution: SKIPPED` (optional items only) marker; the
+harness reads it and moves the file accordingly. `SKIPPED` is valid only for `optional__`
+items — it signals the doer reviewed the item and chose not to act; the harness moves it
+to `addressed/`. Rejections trigger a bounded per-item negotiation with the reviewer (at
+most 1 round of disagreement). Full spec:
+[`granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E).
 
 ### Required PUBLIC.md Format on `needs_iteration`

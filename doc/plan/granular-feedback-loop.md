@@ -79,9 +79,20 @@ the doer's first pass.
 
 **Decided: Critical + Important block. Optional does not.**
 - `critical` and `important` items in `pending/` MUST be processed before the inner loop ends.
-- `optional` items can be skipped by the doer.
+- `optional` items can be skipped by the doer (via `## Resolution: SKIPPED`).
 - Harness enforces: part cannot complete while `pending/` contains `critical__*` or
   `important__*` files. This is a hard constraint, not reviewer guidance.
+
+**Why optional feedback is kept (not eliminated):**
+Optional feedback gives smaller improvements a chance to be addressed without blocking the
+workflow. Without optional severity, the reviewer faces a binary choice: file an `important__`
+item (forcing the doer to address it) or silently note it in PUBLIC.md (where it is never
+individually surfaced to the doer). Optional severity occupies the middle ground — the item
+enters the per-item processing loop where the doer sees it with full focus, but the doer may
+choose to skip it if the cost outweighs the benefit. This preserves a lightweight path for
+incremental quality improvements that would otherwise be lost entirely. The `SKIPPED` resolution
+marker (vs. `ADDRESSED`) makes the doer's intent explicit — "I saw this and chose not to act"
+is a clear, auditable decision distinct from "I addressed this."
 
 ### D5: Iteration counter semantics
 
