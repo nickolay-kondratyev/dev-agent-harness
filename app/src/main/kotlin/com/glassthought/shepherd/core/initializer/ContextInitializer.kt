@@ -129,8 +129,8 @@ class ContextInitializerImpl : ContextInitializer {
       .build()
 
     val directLlmInfra = DirectLlmInfra(
-      quickCheap = createGLMQuickCheapLLM(outFactory, httpClient),
-      budgetHigh = createGLMBudgetHighLLM(outFactory, httpClient),
+      quickCheap = createGlmApi(Constants.DIRECT_LLM_API_MODEL_NAME.GLM_QUICK_CHEAP, outFactory, httpClient),
+      budgetHigh = createGlmApi(Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER, outFactory, httpClient),
       httpClient = httpClient,
     )
 
@@ -153,25 +153,18 @@ class ContextInitializerImpl : ContextInitializer {
     )
   }
 
-  private fun createGLMQuickCheapLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectQuickCheapLLM =
-    GlmDirectLlmFactory.createQuickCheapLLM(
-      outFactory = outFactory,
-      httpClient = httpClient,
-      modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_QUICK_CHEAP,
-      maxTokens = Constants.resolveMaxTokens(),
-      apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
-      apiToken = resolveApiToken(),
-    )
-
-  private fun createGLMBudgetHighLLM(outFactory: OutFactory, httpClient: OkHttpClient): DirectBudgetHighLLM =
-    GlmDirectLlmFactory.createBudgetHighLLM(
-      outFactory = outFactory,
-      httpClient = httpClient,
-      modelName = Constants.DIRECT_LLM_API_MODEL_NAME.GLM_HIGHEST_TIER,
-      maxTokens = Constants.resolveMaxTokens(),
-      apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
-      apiToken = resolveApiToken(),
-    )
+  private fun createGlmApi(
+    model: String,
+    outFactory: OutFactory,
+    httpClient: OkHttpClient,
+  ) = GlmDirectLlmFactory.create(
+    outFactory = outFactory,
+    httpClient = httpClient,
+    modelName = model,
+    maxTokens = Constants.resolveMaxTokens(),
+    apiEndpoint = Constants.Z_AI_API.CHAT_COMPLETIONS_ENDPOINT,
+    apiToken = resolveApiToken(),
+  )
 
   private fun resolveApiToken(): String =
     System.getenv(Constants.Z_AI_API.API_TOKEN_ENV_VAR)
