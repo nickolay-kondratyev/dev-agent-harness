@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:02:37Z
 id: nid_agxosk4u7c6kwe7eoi9ke32rw_E
 title: "SIMPLIFY_CANDIDATE: Unify soft/hard context window compaction into single flow"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:03:01Z
-status_updated_iso: 2026-03-17T20:49:28Z
+status_updated_iso: 2026-03-17T21:02:37Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -37,3 +38,9 @@ Extract a single `performCompaction(session, trigger: CompactionTrigger)` flow. 
 ## Risk
 - Low: The core compaction logic is identical. The pre-compaction steps (interrupt vs no-op) remain distinct and small.
 
+
+## Notes
+
+**2026-03-17T21:02:34Z**
+
+Completed. Replaced two divergent flows (Flow 1 / Flow 2) with single performCompaction(sessionEntry, trigger: CompactionTrigger) method. CompactionTrigger.DONE_BOUNDARY (soft) and EMERGENCY_INTERRUPT (hard) share all core steps; only pre-compaction (no-op vs Ctrl+C+race-guard) and post-compaction (lazy vs immediate respawn) differ by trigger. Affected specs: ContextWindowSelfCompactionUseCase.md, PartExecutor.md, high-level.md.
