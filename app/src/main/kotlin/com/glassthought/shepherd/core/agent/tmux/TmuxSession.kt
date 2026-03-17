@@ -19,8 +19,7 @@ class TmuxSession(
     /** TMUX pane target for send-keys (e.g., `shepherd_main_impl:0.0`). */
     val paneTarget: String,
     private val communicator: TmuxCommunicator,
-    // The [existsChecker] lambda avoids a circular dependency with [TmuxSessionManager].
-    private val existsChecker: suspend () -> Boolean,
+    private val existsChecker: SessionExistenceChecker,
 ) {
     /**
      * Sends text followed by the Enter key to this tmux session pane.
@@ -39,5 +38,5 @@ class TmuxSession(
     /**
      * Returns true if this session currently exists in tmux.
      */
-    suspend fun exists(): Boolean = existsChecker()
+    suspend fun exists(): Boolean = existsChecker.exists(name)
 }

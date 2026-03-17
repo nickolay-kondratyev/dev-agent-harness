@@ -17,7 +17,7 @@ class TmuxSessionManager(
     outFactory: OutFactory,
     private val commandRunner: TmuxCommandRunner,
     private val communicator: TmuxCommunicator,
-) {
+) : SessionExistenceChecker {
     private val out = outFactory.getOutForClass(TmuxSessionManager::class)
 
     /**
@@ -55,7 +55,7 @@ class TmuxSessionManager(
             name = TmuxSessionName(sessionName),
             paneTarget = paneTarget,
             communicator = communicator,
-            existsChecker = { sessionExists(sessionName) },
+            existsChecker = this,
         )
     }
 
@@ -84,12 +84,14 @@ class TmuxSessionManager(
         )
     }
 
+    /** Implements [SessionExistenceChecker] — delegates to internal [sessionExists]. */
+    override suspend fun exists(sessionName: TmuxSessionName): Boolean =
+        sessionExists(sessionName.sessionName)
+
     /**
      * Checks whether a tmux session with the given name currently exists.
      *
-     * Internal logic — exposed to callers via [TmuxSession.exists].
-     *
-     * @param sessionName The session name to check.
+     * @param sessionName The session name string to check.
      * @return true if the session exists, false otherwise.
      */
     private suspend fun sessionExists(sessionName: String): Boolean {
