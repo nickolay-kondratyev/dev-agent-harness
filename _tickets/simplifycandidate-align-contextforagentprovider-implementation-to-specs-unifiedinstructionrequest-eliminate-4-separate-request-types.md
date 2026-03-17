@@ -1,11 +1,11 @@
 ---
 id: nid_hg10syj90dgmoavzoflbm1nhj_E
 title: "SIMPLIFY_CANDIDATE: Align ContextForAgentProvider implementation to spec's UnifiedInstructionRequest — eliminate 4 separate request types"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:47:02Z
-status_updated_iso: 2026-03-17T22:47:02Z
+status_updated_iso: 2026-03-17T22:59:23Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
