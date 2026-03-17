@@ -83,18 +83,18 @@ class TmuxCommunicatorImpl(
 
         // [-l]: send text literally so words like "Space", "Enter", "Escape" are NOT
         // interpreted as tmux key names.
-        val literalExitCode = commandRunner.run("send-keys", "-t", paneTarget, "-l", text)
-        if (literalExitCode != 0) {
+        val literalResult = commandRunner.run("send-keys", "-t", paneTarget, "-l", text)
+        if (literalResult.exitCode != 0) {
             throw IllegalStateException(
-                "Failed to send literal keys to tmux pane [$paneTarget]. Exit code: [$literalExitCode]"
+                "Failed to send literal keys to tmux pane [$paneTarget]. Exit code: [${literalResult.exitCode}]. Stderr: [${literalResult.stdErr}]"
             )
         }
 
         // Send Enter as a separate command (NOT literal — we want the actual key press).
-        val enterExitCode = commandRunner.run("send-keys", "-t", paneTarget, "Enter")
-        if (enterExitCode != 0) {
+        val enterResult = commandRunner.run("send-keys", "-t", paneTarget, "Enter")
+        if (enterResult.exitCode != 0) {
             throw IllegalStateException(
-                "Failed to send Enter to tmux pane [$paneTarget]. Exit code: [$enterExitCode]"
+                "Failed to send Enter to tmux pane [$paneTarget]. Exit code: [${enterResult.exitCode}]. Stderr: [${enterResult.stdErr}]"
             )
         }
     }
@@ -106,10 +106,10 @@ class TmuxCommunicatorImpl(
             Val(keys, ValType.SHELL_COMMAND),
         )
 
-        val exitCode = commandRunner.run("send-keys", "-t", paneTarget, keys)
-        if (exitCode != 0) {
+        val result = commandRunner.run("send-keys", "-t", paneTarget, keys)
+        if (result.exitCode != 0) {
             throw IllegalStateException(
-                "Failed to send raw keys to tmux pane [$paneTarget]. Exit code: [$exitCode]"
+                "Failed to send raw keys to tmux pane [$paneTarget]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
             )
         }
     }

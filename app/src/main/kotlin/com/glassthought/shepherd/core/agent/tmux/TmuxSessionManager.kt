@@ -35,10 +35,10 @@ class TmuxSessionManager(
             Val(startCommand.command, ValType.SHELL_COMMAND),
         )
 
-        val exitCode = commandRunner.run("new-session", "-d", "-s", sessionName, startCommand.command)
-        if (exitCode != 0) {
+        val result = commandRunner.run("new-session", "-d", "-s", sessionName, startCommand.command)
+        if (result.exitCode != 0) {
             throw IllegalStateException(
-                "Failed to create tmux session [${sessionName}] with command [${startCommand.command}]. Exit code: [${exitCode}]"
+                "Failed to create tmux session [${sessionName}] with command [${startCommand.command}]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
             )
         }
 
@@ -71,10 +71,10 @@ class TmuxSessionManager(
             Val(session.name.sessionName, ValType.STRING_USER_AGNOSTIC),
         )
 
-        val exitCode = commandRunner.run("kill-session", "-t", session.name.sessionName)
-        if (exitCode != 0) {
+        val result = commandRunner.run("kill-session", "-t", session.name.sessionName)
+        if (result.exitCode != 0) {
             throw IllegalStateException(
-                "Failed to kill tmux session [${session.name.sessionName}]. Exit code: [${exitCode}]"
+                "Failed to kill tmux session [${session.name.sessionName}]. Exit code: [${result.exitCode}]. Stderr: [${result.stdErr}]"
             )
         }
 
@@ -97,7 +97,7 @@ class TmuxSessionManager(
             listOf(Val(sessionName, ValType.STRING_USER_AGNOSTIC))
         }
 
-        val exitCode = commandRunner.run("has-session", "-t", sessionName)
-        return exitCode == 0
+        val result = commandRunner.run("has-session", "-t", sessionName)
+        return result.exitCode == 0
     }
 }
