@@ -275,8 +275,24 @@ time. The executor sends new instructions directly via `AckedPayloadSender`
 (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) already handles this exact failure mode generically —
 a dedicated ping would duplicate what ACK already does.
 
-### Health Ping During User-Question
-When an agent sends a `/user-question` and the human is thinking, `lastActivityTimestamp` was
-reset when the question callback arrived. If the human takes longer than `healthTimeouts.normalActivity`
-to respond, the health loop sends a ping — this is **harmless**: the agent can respond with
-`ping-ack` while waiting for the Q&A answer delivery via TMUX `send-keys`.
+### Health Ping During User-Question — Suppressed
+
+When an agent sends a `/user-question`, the server sets `SessionEntry.pendingQA` (non-null),
+making `isQAPending == true`. While Q&A is pending, the health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) **skips all health checks** — no pings, no noActivityTimeout,
+no compaction triggers.
+
+**Why suppressed (not "harmless"):** Previously, pings during Q&A were considered harmless
+because the agent could respond with `ping-ack`. However, each ping is a TMUX `send-keys`
+message that consumes context window capacity. If the human is away for hours (meetings,
+walks, overnight), dozens of pings accumulate — pure context-window waste that degrades
+the agent's ability to work on the actual task after Q&A completes.
+
+With Q&A-aware suppression, the executor knows the agent is in a **known-idle state** (waiting
+for Q&A answer via TMUX). No liveness uncertainty exists — the Q&A coordinator
+(ref.ap.NE4puAzULta4xlOLh5kfD.E) owns the session's Q&A lifecycle independently. If the
+TMUX session dies during Q&A, the coordinator detects this when `AckedPayloadSender` fails
+on answer delivery.
+
+After Q&A completes (all answers batch-delivered, ACK received), the coordinator clears
+`pendingQA` → `isQAPending` becomes false → health monitoring and compaction resume normally.
