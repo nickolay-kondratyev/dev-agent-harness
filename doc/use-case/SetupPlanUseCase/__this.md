@@ -36,6 +36,6 @@ sealed class SetupPlanResult {
 - `Ready`: straightforward workflows — parts are already defined in the workflow JSON.
   `TicketShepherd` can proceed directly to execution.
 - `NeedsPlanning`: `with-planning` workflows — the `planningExecutor` is a
-  `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the
+  `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E, configured with reviewer) for the
   PLANNER↔PLAN_REVIEWER loop. `TicketShepherd` runs `planningExecutor.execute()`, then
   calls `convertPlanToExecutionParts()` to get the execution parts from the approved plan.

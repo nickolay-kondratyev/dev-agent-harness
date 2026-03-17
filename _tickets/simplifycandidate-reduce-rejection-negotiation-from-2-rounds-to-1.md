@@ -27,7 +27,7 @@ Reduce rejection negotiation to 1 round (reviewer insists once → accepted as a
 
 ## Affected Specs
 - doc/plan/granular-feedback-loop.md (RejectionNegotiationUseCase, D7)
-- doc/core/PartExecutor.md (DoerReviewerPartExecutor step 4f REJECTION_NEGOTIATION sub-flow)
+- doc/core/PartExecutor.md (PartExecutorImpl step 4f REJECTION_NEGOTIATION sub-flow)
 
 ## Risk
 - Low: The doer still gets one chance to push back. Legitimate disagreements are captured. The only thing lost is a second round that almost never changes the outcome.

@@ -453,7 +453,7 @@ is negligible — the file is a single-line JSON on local filesystem.
 
 ### Current Assumption
 
-`DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) distinguishes first run
+`PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) distinguishes first run
 (step 1a/2a: spawn) from subsequent iterations (step 1b/2b: send-keys to existing session)
 by whether a live `SpawnedAgentHandle` exists for the sub-part.
 

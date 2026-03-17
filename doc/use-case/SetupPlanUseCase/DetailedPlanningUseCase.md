@@ -2,8 +2,9 @@
 
 Creates the planning executor and plan-conversion function for `with-planning` workflows.
 Returns a `SetupPlanResult.NeedsPlanning` (ref.ap.evYmpQfliHCHUTdK2QRgS.E) containing
-a `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the PLANNER↔PLAN_REVIEWER
-iteration loop, plus a `convertPlanToExecutionParts` function that transforms the approved
+a `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E, configured with reviewer) for the
+PLANNER↔PLAN_REVIEWER iteration loop, plus a `convertPlanToExecutionParts` function that
+transforms the approved
 plan into executable parts.
 
 ---
@@ -12,7 +13,7 @@ plan into executable parts.
 
 ```kotlin
 SetupPlanResult.NeedsPlanning(
-    planningExecutor = doerReviewerPartExecutor,    // PLANNER↔PLAN_REVIEWER loop
+    planningExecutor = partExecutorImpl,    // PLANNER↔PLAN_REVIEWER loop (with reviewer)
     convertPlanToExecutionParts = ::convertPlan,     // plan.json → List<Part>
 )
 ```
@@ -24,7 +25,7 @@ back to `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E), which runs it via `ex
 
 ### Planning Executor Setup
 
-Creates a `DoerReviewerPartExecutor` configured for the planning phase:
+Creates a `PartExecutorImpl` (with reviewer) configured for the planning phase:
 
 | Aspect | Value |
 |--------|-------|
@@ -76,7 +77,7 @@ indicates a bug in the planning agents.
 
 ### Planning Sub-Parts Follow Execution Semantics
 
-The planning phase uses the exact same `DoerReviewerPartExecutor` as execution parts.
+The planning phase uses the exact same `PartExecutorImpl` as execution parts.
 This means:
 
 - Same `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) callback bridge

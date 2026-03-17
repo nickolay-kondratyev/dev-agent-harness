@@ -122,7 +122,7 @@ doesn't control `delay()` suspension. Together, they give full control over the 
 runTest {
     val clock = TestClock(startTime)
     val fake = FakeAgentFacade()
-    val executor = DoerReviewerPartExecutor(agentFacade = fake, clock = clock, ...)
+    val executor = PartExecutorImpl(agentFacade = fake, clock = clock, ...)
 
     // Spawn doer — fake returns handle immediately
     launch { executor.execute() }
@@ -245,8 +245,8 @@ before building PartExecutor on top of them.
 
 ### Gate 3: PartExecutor unit tests (happy path + edge cases)
 
-**What:** `DoerReviewerPartExecutor` and `SingleDoerPartExecutor` implemented with unit tests
-covering:
+**What:** `PartExecutorImpl` implemented with unit tests covering both doer-only and
+doer+reviewer paths:
 - Happy path (spawn → work → done → completed)
 - Timeout / crash detection (no activity → ping → no reply → crashed)
 - Iteration loop (doer → reviewer → needs_iteration → doer → reviewer → pass)

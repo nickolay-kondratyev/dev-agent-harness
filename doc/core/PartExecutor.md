@@ -42,8 +42,8 @@ sealed class PartResult {
 `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly.
 All failure variants (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) delegate to
 `FailedToExecutePlanUseCase` — prints red error, halts. V1 has no automatic crash recovery.
-Note: `FailedToConvergeUseCase` runs inside the executor (see DoerReviewerPartExecutor step 9c),
-not in TicketShepherd.
+Note: `FailedToConvergeUseCase` runs inside the executor (see PartExecutorImpl step 4, iteration
+budget exceeded), not in TicketShepherd.
 
 ---
 
@@ -288,14 +288,26 @@ interface SubPartInstructionProvider {
 
 ---
 
-## DoerReviewerPartExecutor / ap.mxIc5IOj6qYI7vgLcpQn5.E
+## PartExecutorImpl / ap.mxIc5IOj6qYI7vgLcpQn5.E
 
-Handles parts with two sub-parts (doer + reviewer). Implements the full iteration loop.
-The executor coordinates the two agents — at any point during iteration, **only one agent
-is actively working** while the other is alive but idle in its TMUX session, waiting for
-the executor to send it new instructions.
+The single `PartExecutor` implementation. Handles both doer-only and doer+reviewer parts
+through an **optional reviewer**. When `reviewerConfig` is null, the executor completes after
+the doer's `COMPLETED` signal. When `reviewerConfig` is present, the executor runs the full
+doer/reviewer iteration loop.
 
-### Flow
+```kotlin
+class PartExecutorImpl(
+    private val doerConfig: SubPartConfig,
+    private val reviewerConfig: SubPartConfig?,  // null = no reviewer, no iteration
+    ...
+) : PartExecutor
+```
+
+For doer+reviewer parts, the executor coordinates the two agents — at any point during
+iteration, **only one agent is actively working** while the other is alive but idle in its
+TMUX session, waiting for the executor to send it new instructions.
+
+### Flow (doer+reviewer path — `reviewerConfig != null`)
 
 1. **Start doer**:
    a. First iteration: **spawn** doer TMUX session → create `CompletableDeferred` → register
@@ -395,11 +407,10 @@ before signaling done. Write PUBLIC.md now, then re-signal:
 callback_shepherd.signal.sh done <result>
 ```
 
-**Applies to all executor types:** Both `DoerReviewerPartExecutor` and
-`SingleDoerPartExecutor` perform this validation. The check is identical — only the
-sub-part path differs.
+**Applies to all paths:** `PartExecutorImpl` performs this validation for both doer-only
+and doer+reviewer parts. The check is identical — only the sub-part path differs.
 
-### Key: Both Sessions Alive, One Active
+### Key: Both Sessions Alive, One Active (doer+reviewer path)
 
 **Both TMUX sessions stay alive for the entire part lifecycle.** When the doer is working,
 the reviewer's TMUX session is alive but idle — waiting for the executor to send new
@@ -469,23 +480,24 @@ strategy produces one commit per sub-part signal.
 
 ### Testability
 
-Both executor implementations are unit-tested via `FakeAgentFacade` + virtual time
-(`TestClock` + `kotlinx-coroutines-test`). This enables deterministic testing of the full
-state machine — including timing-sensitive health monitoring, timeout/crash detection, and
-iteration edge cases — without real TMUX sessions or real agents. See
-[Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage) in high-level.md.
+`PartExecutorImpl` is unit-tested via `FakeAgentFacade` + virtual time
+(`TestClock` + `kotlinx-coroutines-test`). This enables deterministic testing of both
+the doer-only and doer+reviewer paths — including timing-sensitive health monitoring,
+timeout/crash detection, and iteration edge cases — without real TMUX sessions or real
+agents. See [Testing Strategy](../high-level.md#testing-strategy--fake-driven-unit-coverage)
+in high-level.md.
 
 ---
 
-## SingleDoerPartExecutor
+### Doer-Only Path (`reviewerConfig == null`)
 
-Spawn doer → register → send instructions → enter health-aware await loop
+When `reviewerConfig` is null, the executor runs the trivial subset of the full flow:
+spawn doer → register → send instructions → enter health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E) → **PUBLIC.md validation**
 (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) → map `AgentSignal` to `PartResult`. No reviewer, no
-iteration. Uses the same health-aware await loop as `DoerReviewerPartExecutor` — a single
-doer can crash/hang just like a doer-reviewer pair.
+iteration. A single doer can still crash/hang — the same health-aware await loop applies.
 
-### Signal-to-PartResult Mapping
+#### Signal-to-PartResult Mapping (doer-only)
 
 | `AgentSignal` | `PartResult` |
 |---------------|-------------|
@@ -493,21 +505,9 @@ doer can crash/hang just like a doer-reviewer pair.
 | `FailWorkflow(reason)` | `PartResult.FailedWorkflow(reason)` |
 | `Crashed(details)` | `PartResult.AgentCrashed(details)` |
 
-`Done(PASS)` and `Done(NEEDS_ITERATION)` **cannot** reach `SingleDoerPartExecutor` —
+`Done(PASS)` and `Done(NEEDS_ITERATION)` **cannot** reach the doer-only path —
 the server validates that doers can only send `completed` (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
 If they somehow leak through, treat as a bug — fail with `IllegalStateException`.
-
-### Git Commits
-
-Same as `DoerReviewerPartExecutor` — calls `GitCommitStrategy.onSubPartDone`
-(ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) after the doer signals completion.
-
-### Dependencies
-
-Same as `DoerReviewerPartExecutor`: `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E),
-`GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E), `Clock`
-(ref.ap.whDS8M5aD2iggmIjDIgV9.E). No `SubPartInstructionProvider` for reviewer, no
-`FailedToConvergeUseCase` (no iteration).
 
 ---
 

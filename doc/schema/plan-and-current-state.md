@@ -330,7 +330,7 @@ A workflow is either **straightforward** (has `parts`) or **with-planning** (has
 
 ## Iteration Semantics
 
-See `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the full iteration loop.
+See `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the full iteration loop.
 The schema fields that support iteration (`iteration.max`, `iteration.current`,
 `SubPartStatus` transitions) are defined in [SubPart Fields](#subpart-fields) above.
 
