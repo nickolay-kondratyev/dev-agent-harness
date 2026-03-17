@@ -19,7 +19,7 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.plannerRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assemblePlannerInstructions(request)
+            val instructionsPath = provider.assembleInstructions(AgentRole.PLANNER, request)
             val text = instructionsPath.readText()
 
             // ── Callback scripts ─────────────────────────────────────────
@@ -61,11 +61,11 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains plan.json output path") {
-                text shouldContain request.planJsonOutputPath.toString()
+                text shouldContain request.planJsonOutputPath!!.toString()
             }
 
             it("THEN contains PLAN.md output path") {
-                text shouldContain request.planMdOutputPath.toString()
+                text shouldContain request.planMdOutputPath!!.toString()
             }
 
             // ── Role and ticket ──────────────────────────────────────────

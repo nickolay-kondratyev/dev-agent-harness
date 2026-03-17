@@ -27,7 +27,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = baseRequest.copy(planMdPath = planMdPath)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleDoerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
 
             it("THEN includes PLAN.md content") {
                 text shouldContain "Step 1: Do the thing"
@@ -41,7 +41,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleDoerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
 
             it("THEN does NOT include plan section header") {
                 text shouldNotContain "# Plan\n"
@@ -55,7 +55,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleDoerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
 
             it("THEN does NOT include pushback guidance (first iteration)") {
                 text shouldNotContain "Handling Reviewer Feedback"
@@ -82,7 +82,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         )
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleDoerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
 
             it("THEN includes pushback guidance") {
                 text shouldContain "Handling Reviewer Feedback"
@@ -100,7 +100,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleReviewerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.REVIEWER, request).readText()
 
             it("THEN includes structured feedback format guidance") {
                 text shouldContain "Structured Feedback Format"
@@ -126,7 +126,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleReviewerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.REVIEWER, request).readText()
 
             it("THEN includes addressed feedback header") {
                 text shouldContain "Addressed Feedback"
@@ -150,7 +150,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = baseRequest.copy(priorPublicMdPaths = listOf(priorPublicMd))
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleDoerInstructions(request).readText()
+            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
 
             it("THEN includes prior PUBLIC.md content") {
                 text shouldContain "Set up database schema"
@@ -168,7 +168,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN the file is written") {
-            val path = provider.assembleDoerInstructions(request)
+            val path = provider.assembleInstructions(AgentRole.DOER, request)
 
             it("THEN the file is named instructions.md") {
                 path.fileName.toString() shouldContain "instructions.md"

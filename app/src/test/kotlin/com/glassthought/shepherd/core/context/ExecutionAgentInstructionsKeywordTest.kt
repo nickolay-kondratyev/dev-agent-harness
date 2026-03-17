@@ -21,7 +21,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleDoerInstructions(request)
+            val instructionsPath = provider.assembleInstructions(AgentRole.DOER, request)
             val text = instructionsPath.readText()
 
             // ── Callback signal script ───────────────────────────────────
@@ -72,7 +72,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains part name") {
-                text shouldContain request.partName
+                text shouldContain request.partName!!
             }
 
             // ── Doer callback shows 'completed', not reviewer results ─────
@@ -96,7 +96,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleReviewerInstructions(request)
+            val instructionsPath = provider.assembleInstructions(AgentRole.REVIEWER, request)
             val text = instructionsPath.readText()
 
             // ── Reviewer-specific done results ───────────────────────────

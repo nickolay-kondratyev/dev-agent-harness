@@ -11,8 +11,9 @@ import java.nio.file.Path
  * ticket, shared context, prior agent outputs, and communication tooling. The provider is the
  * **single place** that decides what each agent sees.
  *
- * Four methods — one per role. Each agent type has different content needs, and the type system
- * makes that explicit. No `when(agentKind)` branching inside a single method, no boolean flags.
+ * Single public method: `assembleInstructions(role, request)`. The caller passes `role` — the
+ * provider dispatches to the correct internal section plan. Adding a new agent role requires only
+ * a new `AgentRole` variant and a plan list, not a new interface method + request type.
  *
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
@@ -22,32 +23,11 @@ import java.nio.file.Path
 interface ContextForAgentProvider {
 
     /**
-     * Assembles instruction file for a doer execution agent.
-     * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
-     * Returns the path to the written file.
+     * Assembles the instruction file for an agent.
+     * `role` selects the section plan; `request` supplies all data needed by any role.
+     * Writes to `request.outputDir/instructions.md`. Returns the written path.
      */
-    suspend fun assembleDoerInstructions(request: DoerInstructionRequest): Path
-
-    /**
-     * Assembles instruction file for a reviewer execution agent.
-     * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
-     * Returns the path to the written file.
-     */
-    suspend fun assembleReviewerInstructions(request: ReviewerInstructionRequest): Path
-
-    /**
-     * Assembles instruction file for the PLANNER agent.
-     * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
-     * Returns the path to the written file.
-     */
-    suspend fun assemblePlannerInstructions(request: PlannerInstructionRequest): Path
-
-    /**
-     * Assembles instruction file for the PLAN_REVIEWER agent.
-     * Writes to the sub-part's `comm/in/instructions.md` in `.ai_out/`.
-     * Returns the path to the written file.
-     */
-    suspend fun assemblePlanReviewerInstructions(request: PlanReviewerInstructionRequest): Path
+    suspend fun assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest): Path
 
     companion object {
         fun standard(outFactory: OutFactory): ContextForAgentProvider =
@@ -55,108 +35,48 @@ interface ContextForAgentProvider {
     }
 }
 
-/**
- * Request for assembling doer execution agent instructions.
- *
- * @param roleDefinition The agent's role definition (loaded from catalog)
- * @param partName Name of the current part in the workflow
- * @param partDescription Description of what this part accomplishes
- * @param ticketContent Full ticket markdown content (including frontmatter)
- * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
- * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
- * @param iterationNumber Current iteration (1-based)
- * @param reviewerPublicMdPath Path to reviewer's PUBLIC.md from prior iteration — null on iteration 1
- * @param outputDir Directory where `instructions.md` will be written
- * @param publicMdOutputPath Where the agent should write its PUBLIC.md
- */
-data class DoerInstructionRequest(
-    val roleDefinition: RoleDefinition,
-    val partName: String,
-    val partDescription: String,
-    val ticketContent: String,
-    val planMdPath: Path?,
-    val priorPublicMdPaths: List<Path>,
-    val iterationNumber: Int,
-    val reviewerPublicMdPath: Path?,
-    val outputDir: Path,
-    val publicMdOutputPath: Path,
-)
+/** Discriminates which agent role is being assembled for. Drives section plan selection. */
+enum class AgentRole { DOER, REVIEWER, PLANNER, PLAN_REVIEWER }
 
 /**
- * Request for assembling reviewer execution agent instructions.
+ * Single request type for all agent roles.
  *
- * @param roleDefinition The agent's role definition (loaded from catalog)
- * @param partName Name of the current part in the workflow
- * @param partDescription Description of what this part accomplishes
- * @param ticketContent Full ticket markdown content (including frontmatter)
- * @param planMdPath Path to `shared/plan/PLAN.md` — null for no-planning workflows
- * @param priorPublicMdPaths Paths to all visible prior PUBLIC.md files (completed parts + peer)
- * @param iterationNumber Current iteration (1-based)
- * @param doerPublicMdPath Path to doer's PUBLIC.md for this part — null if doer hasn't run yet
- * @param feedbackDir Path to `__feedback/` directory at part level (for iteration > 1)
- * @param outputDir Directory where `instructions.md` will be written
- * @param publicMdOutputPath Where the agent should write its PUBLIC.md
+ * Common fields are required for all roles. Role-specific fields are nullable (or empty list)
+ * when not applicable. The `role` parameter passed to `assembleInstructions` is the discriminator
+ * — the provider accesses only the fields relevant to the given role.
+ *
+ * Field grouping comments document which roles use each field.
  */
-data class ReviewerInstructionRequest(
+data class UnifiedInstructionRequest(
+    // ── common (all roles) ──────────────────────────────────────────────────
     val roleDefinition: RoleDefinition,
-    val partName: String,
-    val partDescription: String,
     val ticketContent: String,
-    val planMdPath: Path?,
-    val priorPublicMdPaths: List<Path>,
     val iterationNumber: Int,
-    val doerPublicMdPath: Path?,
-    val feedbackDir: Path?,
     val outputDir: Path,
     val publicMdOutputPath: Path,
-)
 
-/**
- * Request for assembling planner instructions.
- *
- * @param roleDefinition The PLANNER role definition
- * @param ticketContent Full ticket markdown content
- * @param roleCatalogEntries All available roles (for assignment)
- * @param iterationNumber Current iteration (1-based)
- * @param planReviewerPublicMdPath Plan reviewer's PUBLIC.md from prior iteration (null on first)
- * @param planJsonOutputPath Where the planner writes plan.json
- * @param planMdOutputPath Where the planner writes PLAN.md
- * @param outputDir Directory where instructions.md will be written
- * @param publicMdOutputPath Where the planner writes PUBLIC.md
- */
-data class PlannerInstructionRequest(
-    val roleDefinition: RoleDefinition,
-    val ticketContent: String,
-    val roleCatalogEntries: List<InstructionSections.RoleCatalogEntry>,
-    val iterationNumber: Int,
-    val planReviewerPublicMdPath: Path?,
-    val planJsonOutputPath: Path,
-    val planMdOutputPath: Path,
-    val outputDir: Path,
-    val publicMdOutputPath: Path,
-)
+    // ── execution agents (DOER + REVIEWER) ──────────────────────────────────
+    val partName: String? = null,
+    val partDescription: String? = null,
+    val planMdPath: Path? = null,              // null → no-planning workflow
+    val priorPublicMdPaths: List<Path> = emptyList(),
 
-/**
- * Request for assembling plan reviewer instructions.
- *
- * @param roleDefinition The PLAN_REVIEWER role definition
- * @param ticketContent Full ticket markdown content
- * @param planJsonContent Content of plan.json (read by caller — not a path)
- * @param planMdContent Content of PLAN.md (read by caller — not a path)
- * @param plannerPublicMdPath Path to planner's PUBLIC.md
- * @param iterationNumber Current iteration (1-based)
- * @param priorPlanReviewerPublicMdPath Plan reviewer's own prior PUBLIC.md (null on first)
- * @param outputDir Directory where instructions.md will be written
- * @param publicMdOutputPath Where the plan reviewer writes PUBLIC.md
- */
-data class PlanReviewerInstructionRequest(
-    val roleDefinition: RoleDefinition,
-    val ticketContent: String,
-    val planJsonContent: String,
-    val planMdContent: String,
-    val plannerPublicMdPath: Path,
-    val iterationNumber: Int,
-    val priorPlanReviewerPublicMdPath: Path?,
-    val outputDir: Path,
-    val publicMdOutputPath: Path,
+    // ── DOER-only ───────────────────────────────────────────────────────────
+    val reviewerPublicMdPath: Path? = null,    // null on iteration 1
+
+    // ── REVIEWER-only ───────────────────────────────────────────────────────
+    val doerPublicMdPath: Path? = null,
+    val feedbackDir: Path? = null,
+
+    // ── PLANNER-only ────────────────────────────────────────────────────────
+    val roleCatalogEntries: List<InstructionSections.RoleCatalogEntry> = emptyList(),
+    val planReviewerPublicMdPath: Path? = null, // null on iteration 1
+    val planJsonOutputPath: Path? = null,
+    val planMdOutputPath: Path? = null,
+
+    // ── PLAN_REVIEWER-only ──────────────────────────────────────────────────
+    val planJsonContent: String? = null,
+    val planMdContent: String? = null,
+    val plannerPublicMdPath: Path? = null,
+    val priorPlanReviewerPublicMdPath: Path? = null, // null on iteration 1
 )
