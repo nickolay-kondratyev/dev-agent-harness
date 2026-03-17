@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 The granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E in doc/plan/granular-feedback-loop.md) has three severity levels: critical, important, optional. The optional severity creates special handling throughout:
 
 1. **Inner loop**: optional items get different instructions with skip guidance ("This is OPTIONAL. Address if worthwhile, or write ADDRESSED noting you chose to skip")
@@ -35,3 +37,8 @@ Affected specs:
 - doc/plan/granular-feedback-loop.md (D4, inner loop, completion guard, reviewer instructions)
 - doc/core/ContextForAgentProvider.md (sections 6c-6e, InstructionSection sealed class)
 
+
+--------------------------------------------------------------------------------
+DECISION: KEEP optional, adjust justification writing to be
+"This is OPTIONAL. Address if worthwhile, or write SKIPPED noting you chose to skip"
+We want to have a chance to address optional feedback otherwise smaller improvements will either be left behind completely, or require human to deep dive into it. Lets 1) adjust to add SKIPPED state not just ADDRESSED for optional feedback. 2) document the importance of optional feedback in the flow.
