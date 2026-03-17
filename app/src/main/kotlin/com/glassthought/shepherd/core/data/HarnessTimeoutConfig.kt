@@ -54,6 +54,12 @@ data class HarnessTimeoutConfig(
    *  a self-compaction instruction is issued.  Expiry → `AgentCrashed`. */
   val selfCompactionTimeout: Duration = 5.minutes,
 
+  /** Maximum age of `file_updated_timestamp` inside `context_window_slim.json` before
+   *  the value is treated as stale.  When stale, `remainingPercentage` is returned as null —
+   *  no compaction is triggered and a warning is logged instead.
+   *  Ref: ref.ap.ufavF1Ztk6vm74dLAgANY.E (ContextWindowStateReader) */
+  val contextFileStaleTimeout: Duration = 5.minutes,
+
   /** Remaining-context percentage at or below which soft (proactive) compaction triggers.
    *  Checked at `done` boundaries.  Default 35 means 65% of context has been used. */
   val contextWindowSoftThresholdPct: Int = 35,
@@ -82,6 +88,7 @@ data class HarnessTimeoutConfig(
       pingTimeout = 2.seconds,
       payloadAckTimeout = 2.seconds,
       selfCompactionTimeout = 3.seconds,
+      contextFileStaleTimeout = 2.seconds,
     )
   }
 }
