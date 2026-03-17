@@ -2,7 +2,7 @@
 id: nid_u0app7d6os21lhmcuxqoc1qoo_E
 title: "SIMPLIFY_CANDIDATE: Remove SHARED_CONTEXT.md — fold shared context into plan.json or planning-phase PUBLIC.md"
 status: open
-deps: []
+deps: [nid_orpcmdfj1m06lyajssewwn1k9_E]
 links: []
 created_iso: 2026-03-15T01:31:41Z
 status_updated_iso: 2026-03-15T01:31:41Z
