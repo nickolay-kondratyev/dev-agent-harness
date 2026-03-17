@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T17:41:42Z
 id: nid_5higjz0yuy18qffhm4eiisjio_E
 title: "SIMPLIFY_CANDIDATE: Remove per-sub-part noActivityTimeout override — use single global timeout"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:31:22Z
-status_updated_iso: 2026-03-15T01:31:22Z
+status_updated_iso: 2026-03-17T17:41:42Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

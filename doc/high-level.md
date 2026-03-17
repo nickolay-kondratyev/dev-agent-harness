@@ -212,7 +212,7 @@ See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) f
 Timeout + ping mechanism to detect crashed/hung agents. Liveness is determined **solely by
 HTTP callback timestamps** (`SessionEntry.lastActivityTimestamp`
 ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — updated on every agent → server callback. When no callback
-arrives within `noActivityTimeout` (30 min default, configurable per sub-part), the harness
+arrives within `noActivityTimeout` (30 min default), the harness
 pings the agent; if no reply within `pingTimeout` (3 min), the agent is declared crashed.
 
 Five UseCase classes handle distinct failure scenarios (`NoStartupAckUseCase`,
