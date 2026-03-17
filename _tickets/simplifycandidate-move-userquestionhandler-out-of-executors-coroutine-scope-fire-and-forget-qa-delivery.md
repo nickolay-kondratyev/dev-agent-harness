@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, user-question, coroutines]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 Currently user questions suspend the executor coroutine:
 1. Agent calls /callback-shepherd/signal/user-question
 2. Server delegates to UserQuestionHandler (blocks waiting for human input)
@@ -44,3 +46,6 @@ Relevant code:
 - PartExecutor interaction with UserQuestionHandler
 - SessionEntry state
 
+--------------------------------------------------------------------------------
+
+NEXT_STEPS: let's clarify. when we go into user waiting questions we know that we can be in this state for a while (could be HOURS). During this time there is no reason to ping the agent UNTIL user has answered the questions since we would be just using up the context of the agent for no reason. Hence, let's make sure to adjust the above approach to take this into account. 
