@@ -101,7 +101,7 @@ With `runTest {}` and `TestCoroutineScheduler`, these advance instantly via `adv
 
 ### 2. Wall-clock reads → `Clock` interface
 
-The loop compares timestamps: `now() - contextState.fileUpdatedTimestamp`. A `Clock` (or
+The loop compares timestamps: `now() - sessionEntry.lastActivityTimestamp`. A `Clock` (or
 `TimeSource`) abstraction injected into the executor allows tests to control "now."
 
 ```kotlin

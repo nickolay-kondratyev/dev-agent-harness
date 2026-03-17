@@ -37,7 +37,7 @@ a clean context window with compressed but complete prior knowledge.
 | Term | Definition |
 |------|------------|
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
-| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"remaining_percentage": N, "file_updated_timestamp": "ISO8601"}` where N is 0–100 (100 = fresh, 0 = exhausted) and `file_updated_timestamp` is the ISO 8601 timestamp of when the hook last wrote this file. |
+| **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). |
 | **Soft threshold** | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35). Triggers when the agent has **used 65%** of its context (35% remaining). Checked at `done` boundaries — proactive compaction while the agent still has room to produce a quality summary. |
 | **Hard threshold** | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20). Triggers when the agent has **used 80%** of its context (20% remaining). Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
 | **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
@@ -136,7 +136,6 @@ interface ContextWindowStateReader {
 
 data class ContextWindowState(
     val remainingPercentage: Int,          // 0–100, 100 = fresh
-    val fileUpdatedTimestamp: Instant       // When the hook last wrote this file (ISO 8601)
 )
 ```
 
@@ -392,7 +391,7 @@ The loop now polls every **1 second** for context window state while maintaining
 existing health check intervals:
 
 ```
-// Phase B (updated): Signal-Await with Context Window Monitoring
+// Phase B (updated): Signal-Await with Context Window Monitoring + Health Checks
 lastHealthCheck = now()
 while (true) {
     signal = awaitSignalWithTimeout(1.second)
@@ -401,37 +400,25 @@ while (true) {
         return signal  // Done, FailWorkflow, SelfCompacted
     }
 
-    // --- Context window check (every iteration = every ~1 second) ---
+    // --- Context window check for compaction (every iteration = every ~1 second) ---
     contextState = agentFacade.readContextWindowState(handle)
-
-    // Stale context guard: don't trust remaining_percentage if the hook hasn't
-    // updated recently — the agent may have died and the percentage is frozen.
-    // See HealthMonitoring.md Dual-Signal Liveness Model (ref.ap.dnc1m7qKXVw2zJP8yFRE.E).
-    contextFileAge = now() - contextState.fileUpdatedTimestamp
-    if (contextFileAge <= contextFileStaleTimeout) {
-        // Context state is fresh — safe to trust remaining_percentage
-        if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-            // Check if done already arrived (race condition guard)
-            if (signalDeferred.isCompleted) {
-                return signalDeferred.await()
-            }
-            // Emergency compaction
-            return handleEmergencyCompaction(sessionEntry)
+    if (contextState.remainingPercentage <= HARD_THRESHOLD) {
+        // Check if done already arrived (race condition guard)
+        if (signalDeferred.isCompleted) {
+            return signalDeferred.await()
         }
-    } else {
-        // Context state is stale — remaining_percentage unreliable.
-        // Log warning and skip compaction threshold checks.
-        // The dual-signal liveness check (below) will handle detection.
-        log.warn("file_updated_timestamp_stale — remaining_percentage unreliable",
-            Val(contextFileAge, CONTEXT_FILE_AGE),
-            Val(contextFileStaleTimeout, STALENESS_THRESHOLD))
+        // Emergency compaction
+        return handleEmergencyCompaction(sessionEntry)
     }
 
-    // --- Regular health checks (at normal intervals) ---
+    // --- Health checks: lastActivityTimestamp only (at normal intervals) ---
+    // Liveness is determined solely by HTTP callbacks — see HealthMonitoring.md
+    // (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). context_window_slim.json is used for
+    // compaction decisions (above) only, NOT for liveness.
     elapsed = now() - lastHealthCheck
     if (elapsed >= healthCheckInterval) {
         lastHealthCheck = now()
-        // existing health check logic (lastActivityTimestamp, ping, etc.)
+        // health check logic: lastActivityTimestamp staleness, ping, crash detection
         ...
     }
 }
@@ -439,8 +426,8 @@ while (true) {
 
 **Key:** The 1-second poll interval applies to `awaitSignalWithTimeout`, NOT to health
 checks. Health checks still fire at their normal intervals (5 min default). Context window
-state is checked every iteration (~1 second). File I/O overhead is negligible — the file
-is a single-line JSON on local filesystem.
+state is checked every iteration (~1 second) for compaction purposes. File I/O overhead
+is negligible — the file is a single-line JSON on local filesystem.
 
 ---
 
@@ -596,7 +583,7 @@ strategies:
 | `SELF_COMPACTION_SOFT_THRESHOLD` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
 | `SELF_COMPACTION_HARD_THRESHOLD` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
 | `SELF_COMPACTION_TIMEOUT` | 5 min | Max time for agent to write PRIVATE.md and signal |
-| `contextFileStaleTimeout` | 5 min | How old `file_updated_timestamp` can be before `remaining_percentage` is considered unreliable. When stale, compaction threshold checks are skipped and the dual-signal liveness model takes over. **Same parameter** as in HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) — defined once, used for both stale context guard and dual-signal early ping trigger. |
+| ~~`contextFileStaleTimeout`~~ | ~~5 min~~ | **Removed.** Previously gated `remaining_percentage` freshness and dual-signal early ping. With the simplified liveness model (HTTP callbacks only — ref.ap.dnc1m7qKXVw2zJP8yFRE.E), `remaining_percentage` is always trusted when the file is present. The `validatePresence()` call after spawn (see below) catches hook misconfiguration. If the hook stops mid-session, `remaining_percentage` freezes — worst case, the compaction check acts on stale data, which is a benign failure mode (either compaction triggers on an already-dead agent, which is harmless, or it doesn't trigger and the agent runs out of context, which health monitoring eventually catches via callback staleness). |
 
 **Centralized constants:** All threshold values MUST be defined as named constants in a single
 location (e.g., `CompactionThresholds` object) — never as magic numbers in the codebase. This
