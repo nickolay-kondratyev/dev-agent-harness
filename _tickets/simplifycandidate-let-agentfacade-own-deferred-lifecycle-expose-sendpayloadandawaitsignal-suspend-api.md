@@ -1,11 +1,11 @@
 ---
 id: nid_0o3dqyqe9tlwpi9uroe9tdqpn_E
 title: "SIMPLIFY_CANDIDATE: Let AgentFacade own deferred lifecycle — expose sendPayloadAndAwaitSignal suspend API"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:23:21Z
-status_updated_iso: 2026-03-17T21:23:21Z
+status_updated_iso: 2026-03-17T21:36:23Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
