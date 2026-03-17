@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 In doc/schema/plan-and-current-state.md, `current_state.json` has two separate locations for parts:
 - `planningPart` (singular, top-level field) for the planning phase
 - `parts` (array) for execution phases
@@ -51,4 +53,6 @@ Affected specs:
 - doc/schema/plan-and-current-state.md (planningPart field, lifecycle description, examples)
 - doc/core/TicketShepherdCreator.md (workflow init)
 - doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md (plan conversion)
+--------------------------------------------------------------------------------
 
+YES let's simplify BUT also KEEP in mind that planning is special in that it will be called before we even have a plan. Hence, keep that in mind throughout the spec.
