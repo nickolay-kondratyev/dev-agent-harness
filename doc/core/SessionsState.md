@@ -55,6 +55,24 @@ server-side validation and shepherd-side decision making.
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers
 send `pass` or `needs_iteration`.
 
+**Why an enum rather than deriving from position index:** In V1 the role *is* deterministic
+from sub-part position — position 0 is always `DOER`, position 1 is always `REVIEWER` (see
+Hard Constraints in `high-level.md`). The `SubPartRole` enum is kept explicitly for two reasons:
+
+1. **Self-documentation:** An explicit role is a named semantic concept (`DOER`, `REVIEWER`)
+   rather than an implicit positional convention. The validation table in
+   ref.ap.wLpW8YbvqpRdxDplnN7Vh.E reads "if role is DOER, accept `completed`" — not "if
+   index is 0, accept `completed`". This makes the contract immediately obvious.
+2. **Evolvability:** Future sub-part roles (e.g., `FIXER`, or reviewer/fixer combinations)
+   would be purely additive — add an enum variant and handle it. With positional derivation,
+   adding a third role would require rethinking the convention itself. We are **not** building
+   for these cases now, but keeping the door propped open costs nothing.
+
+**Why NOT derive from position:** Deriving role from array index buries a critical semantic
+distinction (what an agent is *allowed* to signal) inside positional convention. Any future
+schema evolution that changes sub-part ordering would silently corrupt role semantics.
+Explicit enumeration decouples role from position.
+
 ### signalDeferred Lifecycle
 
 1. **Created by** `AgentFacadeImpl` (ref.ap.9h0KS4EOK5yumssRCJdbq.E) during `spawnAgent()`

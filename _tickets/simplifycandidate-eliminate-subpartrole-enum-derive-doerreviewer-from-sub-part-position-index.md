@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:51:43Z
 id: nid_njvc0721iruumnk99k2wqmqbx_E
 title: "SIMPLIFY_CANDIDATE: Eliminate SubPartRole enum — derive doer/reviewer from sub-part position index"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:05Z
-status_updated_iso: 2026-03-17T21:49:33Z
+status_updated_iso: 2026-03-17T21:51:43Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -21,3 +22,16 @@ Problem: The role is always deterministic from sub-part position — position 0 
 
 DECISION:
 We want to keep the enumeration as we could have reviewer/doer combinations potentially in the future. We would rather be explicit. Update spec to capture this so that we have clear justification and keep evolution in mind, we arent building for reviewer/fixer right now but we want to be EXPLICIT to make the door for evolution more propped open.
+## Notes
+
+**2026-03-17T21:51:39Z**
+
+Resolution: Spec updated to document the decision to keep SubPartRole enum.
+
+Changed files:
+- doc/core/SessionsState.md: Expanded SubPartRole description with explicit rationale:
+  (1) self-documentation — named role concept vs positional convention;
+  (2) evolvability — future roles (FIXER etc.) are additive enum variants.
+- doc/high-level.md: Added "Sub-part role tracking" row to Key Technology Decisions table.
+
+No code changes — spec-only update as directed by ticket DECISION.
