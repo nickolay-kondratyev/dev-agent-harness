@@ -51,7 +51,7 @@ the sub-part role:
 | Sub-Part | Provider Method | Content |
 |----------|----------------|---------|
 | PLANNER (doer) | `assemblePlannerInstructions()` | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
-| PLAN_REVIEWER (reviewer) | `assemblePlanReviewerInstructions()` | Ticket + `plan.json` from `harness_private/` + review criteria |
+| PLAN_REVIEWER (reviewer) | `assemblePlanReviewerInstructions()` | Ticket + `plan_flow.json` from `harness_private/` + review criteria |
 
 ---
 
@@ -61,8 +61,8 @@ Called internally **after** the planning executor completes successfully
 (`PartResult.Completed`). Transforms the approved plan into executable parts.
 
 ```
-1. Read plan.json from harness_private/plan.json
-2. Validate plan.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E):
+1. Read plan_flow.json from harness_private/plan_flow.json
+2. Validate plan_flow.json against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E):
    a. Valid JSON conforming to schema (required fields, types)
    b. At least one execution part exists
    c. At least one sub-part has loadsPlan: true
@@ -70,12 +70,12 @@ Called internally **after** the planning executor completes successfully
    e. Every model is valid for the given agentType
    f. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
       non-existent role assignments before execution starts)
-3. Convert plan.json → current_state.json (write to harness_private/)
-4. Delete plan.json (current_state.json is now the single source of truth)
+3. Convert plan_flow.json → current_state.json (write to harness_private/)
+4. Delete plan_flow.json (current_state.json is now the single source of truth)
 5. Return List<Part> — the execution parts extracted from current_state.json
 ```
 
-If `plan.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws
+If `plan_flow.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws
 a `PlanConversionException` (extends `AsgardBaseException`). `DetailedPlanningUseCase` catches
 `PlanConversionException`, logs a **WARN** with the validation errors, and **restarts the
 planning loop** — injecting the validation errors as context for the planner on the next

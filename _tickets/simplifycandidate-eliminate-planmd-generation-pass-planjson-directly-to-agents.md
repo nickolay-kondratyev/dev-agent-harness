@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:14:21Z
 id: nid_heb1lnwki8npbiotbm5h80pdy_E
 title: "SIMPLIFY_CANDIDATE: Eliminate PLAN.md generation — pass plan.json directly to agents"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:19Z
-status_updated_iso: 2026-03-17T22:10:12Z
+status_updated_iso: 2026-03-17T22:14:21Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -43,3 +44,8 @@ Relevant code:
 DECISION: NO lets keep PLAN.md lets document the reasoning. `plan.json` are the steps to execute the flow. Lets rename it to `plan_flow.json`. While PLAN.md goes over more of the details that we want to implement. It includes things like further clarified requirements and acceptance that didnt exist in the ticket. It includes details on tradeoffs that was decided in the planning. The relevant file paths and what we want to do in those files paths. It could include architecture constraints that led us to this plan. Its the PLAN to make implementers life easy and straighforward. This PLAN.md will be passed to implementation and reviewers. WHILE the plan_flow.json is the strict-formatted creation on what steps the harness should follow, which agents it should spin up. Different responsibilities. 
 
 Lets succinctly adjust the spec to clarify the above.
+## Notes
+
+**2026-03-17T22:14:39Z**
+
+RESOLUTION: Decided NOT to eliminate PLAN.md. Instead renamed plan.json → plan_flow.json to clarify the distinct responsibilities. Updated all 5 spec files: doc/schema/ai-out-directory.md, doc/core/ContextForAgentProvider.md, doc/schema/plan-and-current-state.md, doc/high-level.md, doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md. Added explicit documentation section 'plan_flow.json vs PLAN.md — Two Distinct Planner Outputs' in plan-and-current-state.md and 'What Goes Where — plan_flow.json vs PLAN.md' in ai-out-directory.md explaining that plan_flow.json is harness-consumed (which agents, models, order) while PLAN.md is agent-consumed (clarified requirements, tradeoffs, architecture constraints, file paths).
