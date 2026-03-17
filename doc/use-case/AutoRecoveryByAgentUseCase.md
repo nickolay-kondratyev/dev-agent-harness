@@ -32,8 +32,12 @@ tasks are short-lived and don't need the full interactive session machinery.
 ## Interface
 
 ```kotlin
+/**
+ * Constructed with [maxRecoveryAttempts] (default 2) — the maximum number of times
+ * the recovery agent will be spawned per [attemptRecovery] call before giving up.
+ */
 interface AutoRecoveryByAgentUseCase {
-    suspend fun attemptRecovery(request: RecoveryRequest): RecoveryResult
+    suspend fun attemptRecovery(request: RecoveryRequest): RecoveryOutcome
 }
 
 data class RecoveryRequest(
@@ -53,18 +57,31 @@ data class RecoveryRequest(
     val constraints: List<String>,
 )
 
-sealed class RecoveryResult {
-    /** Recovery agent completed successfully — retry the original operation */
-    object Success : RecoveryResult()
+sealed class RecoveryOutcome {
+    /** Recovery succeeded — caller should retry the original operation once */
+    object Resolved : RecoveryOutcome()
 
-    /** Recovery agent failed or timed out */
-    data class Failed(val details: String) : RecoveryResult()
+    /**
+     * All [maxRecoveryAttempts] attempts exhausted without success.
+     * The use case emits a FAIL signal with reason "recovery_exhausted".
+     * Caller should delegate to FailedToExecutePlanUseCase.
+     */
+    object Unresolvable : RecoveryOutcome()
+
+    /**
+     * Recovery agent explicitly signals the issue requires human intervention.
+     * Returned immediately (without consuming further attempts).
+     * Caller should halt and escalate with the given [reason].
+     */
+    data class NeedsEscalation(val reason: String) : RecoveryOutcome()
 }
 ```
 
 ---
 
 ## Flow
+
+The use case runs an internal bounded loop of at most `maxRecoveryAttempts` (default 2) iterations:
 
 1. **Assemble recovery instructions** — combine `RecoveryRequest` fields into a focused
    instruction string for the agent. The instructions include:
@@ -82,9 +99,13 @@ sealed class RecoveryResult {
      work (scanning logs, running git commands) may take time.
 
 3. **Interpret result**:
-   - `NonInteractiveAgentResult.Success` → `RecoveryResult.Success`
-   - `NonInteractiveAgentResult.Failed(exitCode, output)` → `RecoveryResult.Failed(output)`
-   - `NonInteractiveAgentResult.TimedOut(output)` → `RecoveryResult.Failed("Recovery timed out after 20 minutes: $output")`
+   - `NonInteractiveAgentResult.Success` → return `RecoveryOutcome.Resolved` immediately.
+   - Agent output contains an escalation marker → return `RecoveryOutcome.NeedsEscalation(reason)`
+     immediately, without consuming further attempts.
+   - `NonInteractiveAgentResult.Failed` or `TimedOut` → increment failure count:
+     - If attempts remain → go back to step 1 and spawn the recovery agent again.
+     - If `maxRecoveryAttempts` exhausted → log FAIL with reason `"recovery_exhausted"` and
+       return `RecoveryOutcome.Unresolvable`.
 
 ---
 
@@ -94,13 +115,15 @@ Callers (e.g., `GitOperationFailureUseCase`) follow this pattern:
 
 1. Package failure context into `RecoveryRequest`
 2. Call `AutoRecoveryByAgentUseCase.attemptRecovery(request)`
-3. On `RecoveryResult.Success` → **retry the original operation once**
-4. On retry success → continue workflow as normal
-5. On retry failure or `RecoveryResult.Failed` → delegate to `FailedToExecutePlanUseCase`
+3. On `RecoveryOutcome.Resolved` → **retry the original operation once**, then continue workflow
+4. On `RecoveryOutcome.Unresolvable` → delegate to `FailedToExecutePlanUseCase`
    (prints red error, halts — waits for human intervention)
+5. On `RecoveryOutcome.NeedsEscalation(reason)` → delegate to `FailedToExecutePlanUseCase`
+   with the escalation reason
 
-**Single recovery attempt**: The harness attempts recovery **at most once** per failure.
-No retry loops. If the recovery agent cannot fix it, a human needs to intervene.
+**Bounded recovery**: The use case internally retries the recovery agent up to `maxRecoveryAttempts`
+(default 2) times before returning `Unresolvable`. Callers do not implement retry logic — the
+use case owns the retry loop and all exit paths are explicit via `RecoveryOutcome`.
 
 ---
 
