@@ -6,6 +6,8 @@ import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.Constants
 import com.glassthought.shepherd.core.supporting.directLLMApi.ChatRequest
 import com.glassthought.shepherd.core.supporting.directLLMApi.ChatResponse
+import com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM
+import com.glassthought.shepherd.core.supporting.directLLMApi.DirectQuickCheapLLM
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -18,11 +20,12 @@ import org.json.JSONObject
 /**
  * Internal HTTP implementation for the Z.AI Anthropic-compatible API.
  *
- * Instances are created via [GlmDirectLlmFactory], which returns anonymous objects implementing
- * the appropriate tier interface ([com.glassthought.shepherd.core.supporting.directLLMApi.DirectBudgetHighLLM]
- * or [com.glassthought.shepherd.core.supporting.directLLMApi.DirectQuickCheapLLM]) that delegate
- * to this class. This class encapsulates the shared HTTP logic — request construction,
- * response parsing, and error handling.
+ * Implements both [DirectBudgetHighLLM] and [DirectQuickCheapLLM] so a single instance
+ * can satisfy either tier at the wiring site — the tier is captured by the model name
+ * passed at construction time, not by the type itself.
+ *
+ * Instances are created via [GlmDirectLlmFactory]. This class encapsulates the shared
+ * HTTP logic — request construction, response parsing, and error handling.
  *
  * V1: single user message, no streaming, no retry logic.
  */
@@ -33,10 +36,10 @@ internal class GlmAnthropicCompatibleApi(
     private val maxTokens: Int,
     private val apiEndpoint: String,
     private val apiToken: String,
-) {
+) : DirectBudgetHighLLM, DirectQuickCheapLLM {
     private val out = outFactory.getOutForClass(GlmAnthropicCompatibleApi::class)
 
-    suspend fun call(request: ChatRequest): ChatResponse {
+    override suspend fun call(request: ChatRequest): ChatResponse {
         out.info(
             "calling_direct_llm_api",
             Val(modelName, ValType.STRING_USER_AGNOSTIC),
