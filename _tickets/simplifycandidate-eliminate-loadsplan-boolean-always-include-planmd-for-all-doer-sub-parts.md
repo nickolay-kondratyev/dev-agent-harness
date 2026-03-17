@@ -1,11 +1,11 @@
 ---
 id: nid_f2qmgl7d5u803hhiks4hd7fkt_E
 title: "SIMPLIFY_CANDIDATE: Eliminate loadsPlan boolean — always include PLAN.md for all doer sub-parts"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:13:28Z
-status_updated_iso: 2026-03-17T23:13:28Z
+status_updated_iso: 2026-03-17T23:26:50Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
