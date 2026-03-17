@@ -485,8 +485,8 @@ On reviewer PASS:
   resolution marker read correctly, files moved by harness
 
 ### R4: Doer Per-Item Instructions via ContextForAgentProvider
-- New method or parameterization in `SubPartInstructionProvider`
-  (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E): assemble instructions for a single feedback item
+- New method or parameterization in `ContextForAgentProvider`
+  (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E): assemble instructions for a single feedback item
 - Includes: feedback file content, resolution marker instructions, feedback file path,
   PUBLIC.md one-liner guidance
 - Optional items include skip guidance
