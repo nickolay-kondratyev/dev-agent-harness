@@ -1,11 +1,11 @@
 ---
 id: nid_7wb6rh7rsz2el1n72x3un3fhg_E
 title: "SIMPLIFY_CANDIDATE: Model health monitoring timeouts as a TimeoutLadder data class"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:39Z
-status_updated_iso: 2026-03-17T21:32:39Z
+status_updated_iso: 2026-03-17T21:59:06Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
