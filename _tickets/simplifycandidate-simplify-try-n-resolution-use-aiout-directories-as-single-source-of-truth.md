@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T19:29:24Z
 id: nid_vhurz5s8p23lbyhrzfdq3gp1x_E
 title: "SIMPLIFY_CANDIDATE: Simplify try-N resolution — use .ai_out/ directories as single source of truth"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:24:11Z
-status_updated_iso: 2026-03-17T19:27:14Z
+status_updated_iso: 2026-03-17T19:29:24Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -39,4 +40,14 @@ Use `.ai_out/` directories as the **single source of truth** for try-N resolutio
 ## Spec files affected
 - `doc/core/git.md`
 - `doc/core/TicketShepherdCreator.md`
+
+## Resolution
+
+**Completed.** Updated both spec files to remove dual-scan strategy and use `.ai_out/` directories as single source of truth.
+
+### Changes made
+1. **`doc/core/git.md` — Try-N Resolution section**: Replaced 5-step dual-check algorithm with 4-step `.ai_out/`-only scan. Added rationale paragraph explaining why this is equally robust.
+2. **`doc/core/git.md` — Git Operations Summary table**: Updated "Workflow start" row to say "`.ai_out/` directory scan" instead of "dual check: `git branch --list` + `.ai_out/` directory".
+3. **`doc/core/TicketShepherdCreator.md`**: Updated the "Resolves try-N" bullet to describe `.ai_out/`-only scan instead of dual scan.
+4. **`doc_v2/resume.md`**: No change needed — only references the anchor point, doesn't describe the algorithm.
 
