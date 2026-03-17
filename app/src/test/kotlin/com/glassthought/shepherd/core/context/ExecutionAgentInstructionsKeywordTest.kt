@@ -57,8 +57,8 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.PAYLOAD_ACK_TAG
             }
 
-            // ── WHY-NOT protocol ─────────────────────────────────────────
-            it("THEN contains WHY-NOT protocol reference") {
+            // ── WHY-NOT keyword ──────────────────────────────────────────
+            it("THEN contains WHY-NOT keyword") {
                 text shouldContain ProtocolVocabulary.WHY_NOT
             }
 

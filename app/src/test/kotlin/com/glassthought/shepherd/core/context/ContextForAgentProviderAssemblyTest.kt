@@ -61,7 +61,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
                 text shouldNotContain "Handling Reviewer Feedback"
             }
 
-            it("THEN includes WHY-NOT reminder (all iterations)") {
+            it("THEN contains WHY-NOT keyword") {
                 text shouldContain ProtocolVocabulary.WHY_NOT
             }
         }

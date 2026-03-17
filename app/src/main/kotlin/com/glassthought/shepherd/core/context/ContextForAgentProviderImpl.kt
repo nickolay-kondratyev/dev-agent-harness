@@ -56,8 +56,6 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             add(reviewerFeedbackForDoerSection(request.reviewerPublicMdPath))
             add(InstructionSections.DOER_PUSHBACK_GUIDANCE)
         }
-        // 7b. WHY-NOT reminder (all iterations)
-        add(InstructionSections.WHY_NOT_REMINDER)
         // 8. Output paths
         add(InstructionSections.publicMdOutputPath(request.publicMdOutputPath))
         // 9. PUBLIC.md writing guidelines

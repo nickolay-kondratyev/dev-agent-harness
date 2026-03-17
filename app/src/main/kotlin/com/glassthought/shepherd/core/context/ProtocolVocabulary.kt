@@ -62,7 +62,7 @@ object ProtocolVocabulary {
         const val PING_ACK = "ping-ack"
     }
 
-    /** WHY-NOT comment protocol marker. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. */
+    /** WHY-NOT comment protocol marker used in agent instructions and feedback. */
     const val WHY_NOT = "WHY-NOT"
 
     /** Movement log section header in feedback files. See ref.ap.3Hskx3JzhDlixTnvYxclk.E. */
