@@ -63,7 +63,6 @@ Concatenation order (via `assembleDoerInstructions` / `DoerInstructionRequest`):
 | 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
 | 7 | **Iteration feedback** (iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback). |
 | 7a | **Per-feedback-item instructions** (inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
-| 7b | **WHY-NOT reminder** (all iterations) | Static text | Brief reminder to place WHY-NOT comments. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
 | 8 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
 | 9 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, codebase discoveries. |
 | 10 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done completed` for doers |
@@ -194,9 +193,6 @@ The reviewer's `PUBLIC.md` should include these sections when the verdict is `ne
 - [ ] <issue-1>: <description> | Severity: must-fix | File(s): <path>
 - [ ] <issue-2>: <description> | Severity: should-fix | File(s): <path>
 
-## WHY-NOT Pitfalls to Document
-<any approaches the doer tried that should get WHY-NOT comments — see ref.ap.kmiKk7vECiNSpJjAXYMyE.E>
-
 ## Acceptance Criteria for Next Iteration
 <concrete checklist the doer must satisfy to get a `pass`>
 
@@ -256,95 +252,19 @@ You have received feedback from the reviewer. Address each point:
 
 - **If you agree**: implement the requested changes.
 - **If you disagree**: you are empowered to push back, but you MUST defend your decision
-  **in the code** using a WHY-NOT comment (see below). This comment is NOT for the
-  reviewer — it is for any future reader of this code who might have the same question.
+  with clear reasoning in the code comments and PUBLIC.md.
 - **Do NOT push back for the sake of pushing back.** Only reject feedback when you
   genuinely believe the reviewer is incorrect or missing context.
 - **Document your reasoning in PUBLIC.md**: for each reviewer point, state whether you
   accepted or rejected it and why. This helps the reviewer on the next pass understand
   your decisions without re-reviewing unchanged code.
-
-## WHY-NOT Comments — Durable Pitfall Documentation
-
-When you reject a reviewer suggestion, discover a dead-end approach, or fix a rejected
-approach, place a `WHY-NOT` comment at the code location where someone might naturally
-attempt the wrong approach:
-
-  // WHY-NOT(YYYY-MM-DD): Don't use <approach> here — <concise reason>.
-  // <what constraint or failure makes it wrong>. Revisit if <conditions change>.
-
-The date stamp keeps the comment honest — a stale WHY-NOT with changed circumstances
-invites scrutiny rather than blind obedience.
-
-WHY-NOT comments are NOT carved in stone. They represent the best understanding of
-constraints at the time they were written. A future agent or human may legitimately
-override one if circumstances change. The comment gives them context to make that
-decision consciously rather than blindly.
-
-Three sources trigger WHY-NOT comments:
-1. Reviewer rejects an approach → doer documents why it was wrong at the code site
-2. Doer pushes back on reviewer feedback → doer places WHY-NOT to make reasoning
-   visible to the reviewer and future readers
-3. Doer self-discovers a dead end → doer documents the pitfall inline at the
-   point where someone would naturally try the failed approach
+- **Document non-obvious decisions and pitfalls in code comments.** When you reject an
+  approach or discover a dead end, leave a comment at the code site so future readers
+  understand why.
 ```
 
 This guidance is wrapped in `<critical_to_keep_through_compaction>` tags alongside the
 callback script usage to survive context compaction.
-
----
-
-## WHY-NOT Comments Protocol / ap.kmiKk7vECiNSpJjAXYMyE.E
-
-WHY-NOT comments are **durable pitfall documentation** placed inline at code locations where
-someone might naturally attempt a wrong approach. They survive beyond the current run —
-future agents, future tries, and future humans all benefit. They live exactly where someone
-would make the mistake.
-
-### Format
-
-```kotlin
-// WHY-NOT(2026-03-13): Don't use Ktor's WebSocket here — the agent TMUX
-// session doesn't support persistent connections; HTTP POST + TMUX send-keys
-// is the only reliable delivery path. Revisit if agent protocol changes.
-withTmuxDelivery(paneTarget, content)
-```
-
-The date stamp keeps comments honest — a WHY-NOT from months ago with changed circumstances
-invites re-evaluation rather than blind obedience.
-
-### Three Sources
-
-| Source | When | Example |
-|--------|------|---------|
-| **Reviewer → Doer** | Reviewer rejects an approach, doer fixes and documents why it was wrong | Reviewer flags `runBlocking` misuse → doer switches to `withContext` and adds WHY-NOT explaining the deadlock risk |
-| **Doer → Reviewer** (pushback) | Doer disagrees with reviewer suggestion, places WHY-NOT to make reasoning visible | Doer keeps `delay()` over `select{}` for a specific edge case and explains why at the call site |
-| **Doer self-discovered** | Doer hits a dead end during implementation, pivots, and documents the pitfall | Doer tried temp-file-based port discovery, hit race conditions, switched to env var — documents at the port resolution code |
-
-### Not Immutable
-
-WHY-NOT comments represent the **best understanding of constraints at the time they were
-written**. A future agent or human may legitimately override one if circumstances change
-(new dependency version, different runtime, relaxed constraint). The comment gives them the
-context to make that decision **consciously** rather than blindly repeating a past mistake.
-
-### Reviewer Responsibility
-
-When a reviewer signals `needs_iteration`, its structured feedback
-(ref.ap.EslyJMFQq8BBrFXCzYw5P.E) includes a `## WHY-NOT Pitfalls to Document` section
-listing approaches that should receive WHY-NOT comments. On the next review pass, the
-reviewer validates that WHY-NOT comments were placed for previously rejected approaches.
-Missing WHY-NOT for a rejected approach is a valid `should-fix` issue.
-
-### Integration with Agent Instructions
-
-The WHY-NOT protocol guidance is included in:
-- **Doer instructions** (iteration > 1) — as part of the pushback guidance text
-  (see [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback))
-- **Doer instructions** (all iterations) — brief reminder to place WHY-NOT comments when
-  discovering dead-end approaches during implementation
-- **Reviewer instructions** — guidance to suggest WHY-NOT placements in the structured
-  feedback and validate them on subsequent passes
 
 ---
 
