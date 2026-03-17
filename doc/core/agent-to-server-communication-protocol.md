@@ -14,7 +14,7 @@ Defines the full communication protocol between agents running in TMUX sessions 
 ┌────────────┐  HTTP POST (curl)      ┌──────────────────┐
 │  Agent      │ ──────────────────→   │  Harness Server   │
 │  (in TMUX)  │  callback_shepherd.   │  (Ktor CIO)       │
-│             │  {signal|query}.sh    │                    │
+│             │  signal.sh            │                    │
 │             │ ←──────────────────   │                    │
 │             │   TMUX send-keys      │                    │
 └────────────┘                        └──────────────────┘
@@ -22,30 +22,18 @@ Defines the full communication protocol between agents running in TMUX sessions 
 
 Communication is **bidirectional** through two distinct channels:
 
-- **Agent → Harness**: HTTP POST via two callback scripts (`callback_shepherd.signal.sh` and `callback_shepherd.query.sh`). Each script handles port discovery and GUID injection transparently.
+- **Agent → Harness**: HTTP POST via `callback_shepherd.signal.sh`. The script handles port discovery and GUID injection transparently.
 - **Harness → Agent**: Two channels. **Bootstrap** is delivered as an initial prompt argument in the CLI start command (atomically on startup). All **post-bootstrap** communication uses TMUX `send-keys` — instructions, Q&A answers, health pings, and iteration feedback.
 
 ---
 
-## Two-Tier Endpoint Design
+## Signal Endpoint Design
 
-Agent-to-harness HTTP endpoints are split into **two explicit tiers** based on their response contract. This makes the communication pattern self-documenting — the tier name tells the agent (and the developer) whether to read the HTTP response.
-
-### Tier 1 — Signals (`/callback-shepherd/signal/*`)
+Agent-to-harness HTTP endpoints are **fire-and-forget signals** (`/callback-shepherd/signal/*`).
 
 **Fire-and-forget.** The agent POSTs, gets a bare `200 OK`, and moves on. If the harness needs to deliver content back (Q&A answers, iteration feedback, pings), it uses TMUX `send-keys`. Agents that need a response after a signal (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
 
 Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ping-ack`, `ack-payload`). The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
-
-### Tier 2 — Queries (`/callback-shepherd/query/*`)
-
-**Synchronous request/response.** The agent POSTs, reads the meaningful HTTP response body, and acts on it immediately. No TMUX involved, no deferred completion. Queries are utility calls — they do not affect agent lifecycle or flow through `AgentSignal`.
-
-### Why Two Tiers
-
-- **Agent authors can't accidentally block on a signal** or ignore a query response — the tier name in the URL and script makes the contract obvious
-- **New endpoints have a clear home** — "does the agent need the response?" → query; otherwise → signal
-- **Server implementation is cleanly separated** — signal handlers complete deferreds / update timestamps; query handlers return data. No mixed concerns
 
 ---
 
@@ -122,12 +110,6 @@ The server starts once at harness startup and stays alive across all sub-parts.
 | `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
 | `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
 
-### Query Endpoints (synchronous — meaningful response body)
-
-| Endpoint | Purpose |
-|---|---|
-| `POST /callback-shepherd/query/validate-plan` | Validates a `plan.json` file against the parts/sub-parts schema (ref.ap.56azZbk7lAMll0D4Ot2G0.E). Returns validation result in the response body. Planning-phase only. |
-
 ---
 
 ## Agent Callback Contract + Request Payloads
@@ -164,13 +146,6 @@ GUID-to-sub-part registry.
 { "handshakeGuid": "handshake.a1b2c3d4-...", "payloadId": "aB3xK9mR2pL7nQ4wY6jHt" }
 ```
 
-### Query Request Payloads
-
-```json
-// POST /callback-shepherd/query/validate-plan — returns validation result in response body
-{ "handshakeGuid": "handshake.a1b2c3d4-...", "planFilePath": "/abs/path/to/.ai_out/branch/harness_private/plan.json" }
-```
-
 ### Result Validation on `/callback-shepherd/signal/done`
 
 The `result` field is **required** on every `/callback-shepherd/signal/done` request. The server
@@ -203,17 +178,14 @@ On callback arrival, server looks up HandshakeGuid in `SessionsState`
 the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 [SessionsState](SessionsState.md) for the full bridge design.
 
-### Routing by Tier
+### Routing
 
-- **Signal endpoints** (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
-  `lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
-  `signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`, `ack-payload`)
-  do **not** complete the deferred — executor stays suspended. `ack-payload` additionally
-  clears `pendingPayloadAck` on the `SessionEntry` when the PayloadId matches
-  (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
-- **Query endpoints** (`/callback-shepherd/query/*`): Look up `SessionEntry`, update
-  `lastActivityTimestamp`, process the request, return meaningful response body. Do **not**
-  complete `signalDeferred` — queries are utility calls, not lifecycle events.
+Signal endpoints (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
+`lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
+`signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`, `ack-payload`)
+do **not** complete the deferred — executor stays suspended. `ack-payload` additionally
+clears `pendingPayloadAck` on the `SessionEntry` when the PayloadId matches
+(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ### Unknown HandshakeGuid
 
@@ -268,43 +240,6 @@ signals immediately.
 
 ---
 
-## Plan Validation Query
-<!-- ap.R8mNvKx3wQ5pLfYtJ7dZe.E -->
-
-`/callback-shepherd/query/validate-plan` is a **Tier 2 (Query)** endpoint — it returns
-meaningful content in the HTTP response body. The agent reads the response to determine
-whether the plan is valid. This is a **synchronous utility call**, not a lifecycle signal —
-it does not flow through `AgentSignal` or `CompletableDeferred`.
-
-Always returns HTTP 200. The response body carries the validation result:
-
-```json
-// Validation passed
-{ "valid": true }
-
-// Validation failed — errors describe what's wrong
-{ "valid": false, "errors": ["subParts[0] missing required field: agentType", "..."] }
-```
-
-The server reads the file at the **absolute path** provided by the agent (the agent sends
-the full filesystem path). Parses it against the parts/sub-parts schema
-(ref.ap.56azZbk7lAMll0D4Ot2G0.E) and returns structured validation results.
-
-**Validation rules** (for `with-planning` workflows):
-1. Valid JSON conforming to the parts/sub-parts schema
-2. At least one execution part exists
-3. At least one sub-part has `loadsPlan: true`
-4. Every `agentType` value is a supported type (V1: `ClaudeCode`)
-5. Every `model` value is valid for the given `agentType`
-6. Every `role` value matches an existing `.md` file in `$TICKET_SHEPHERD_AGENTS_DIR`
-   (ticket: `nid_m5e0q3oslsihsxsz1h6no6nwr_E` — role catalog design). Catches non-existent
-   role assignments at plan validation time rather than failing late during execution when
-   `ContextForAgentProvider` tries to load the role definition.
-
-Both the **planner** and **plan reviewer** are instructed to call this before signaling
-`done` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
-
----
 
 ## Agent Startup Acknowledgment / ap.xVsVi2TgoOJ2eubmoABIC.E
 
@@ -427,11 +362,10 @@ Payload Delivery ACK XML, not via HTTP response.
 
 ## Callback Scripts
 
-Two scripts — one per tier — are the sole mechanism agents use to communicate back to the
-harness. The tier split mirrors the endpoint design: signals are fire-and-forget, queries
-return meaningful responses.
+`callback_shepherd.signal.sh` is the sole mechanism agents use to communicate back to the
+harness.
 
-**Shared behavior across both scripts:**
+**Behavior:**
 
 - Lives on `$PATH` of the started agent
 - Reads port from `$TICKET_SHEPHERD_SERVER_PORT` environment variable
@@ -462,22 +396,9 @@ validation is a second layer of defense.
 **Argument validation on `ack-payload`:** The script requires exactly one argument (the
 PayloadId). Missing or empty PayloadId → error and non-zero exit.
 
-### `callback_shepherd.query.sh` — Synchronous Request/Response
-
-Posts to `/callback-shepherd/query/<action>`. The HTTP response body is **meaningful** —
-the script prints it to stdout for the agent to read and act on.
-
-```bash
-callback_shepherd.query.sh validate-plan <abs-path>       # required: absolute path to plan.json — prints validation result to stdout
-```
-
-**Contract:** Agents calling `callback_shepherd.query.sh` must read stdout. The response
-is the whole point — unlike signals, the HTTP body carries the result.
-
 ### Retry on Transient Failures / ap.yzc3Q5TEh2EYCN03J7ZuL.E
 
-Both callback scripts (`callback_shepherd.signal.sh` and `callback_shepherd.query.sh`) **retry
-on transient failures** before exiting non-zero. This prevents the most common class of silent
+`callback_shepherd.signal.sh` **retries on transient failures** before exiting non-zero. This prevents the most common class of silent
 deadlock — a single server GC pause, momentary TCP reset, or connection blip causing a lost
 signal that the agent will never re-send.
 
@@ -507,15 +428,13 @@ signal that the agent will never re-send.
 | HTTP 404 | Unknown HandshakeGuid — retrying won't fix it |
 | Missing env vars | Configuration error — fail-fast before any HTTP call |
 
-**Why retry is safe for all endpoints:**
+**Why retry is safe:**
 
-- **Signal endpoints** are inherently idempotent. Retry only fires when the prior attempt
-  failed (no 200 received), meaning the server likely never processed the request. Even if the
-  server did process it but the response was lost, the server handles duplicate signal callbacks
-  gracefully (see [Idempotent Signal Callbacks](#idempotent-signal-callbacks) — returns 200,
-  logs WARN).
-- **Query endpoints** are pure read operations (no state mutation) — safe to call multiple
-  times.
+Signal endpoints are inherently idempotent. Retry only fires when the prior attempt
+failed (no 200 received), meaning the server likely never processed the request. Even if the
+server did process it but the response was lost, the server handles duplicate signal callbacks
+gracefully (see [Idempotent Signal Callbacks](#idempotent-signal-callbacks) — returns 200,
+logs WARN).
 
 **The deadlock this prevents:**
 

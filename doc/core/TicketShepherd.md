@@ -22,13 +22,13 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `Completed` → proceed to 3d
       - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
         delegate to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
-        Planning failures are rare (plan validated via `/callback-shepherd/query/validate-plan`
-        ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E before agents signal done). When they happen,
-        the human is the right handler — no special recovery logic.
+        When they happen, the human is the right handler — no special recovery logic.
    d. Kill TMUX sessions for the planning part (`removeAllForPart`)
    e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`.
-      Throws `PlanConversionException` on malformed/invalid plan; `TicketShepherd` catches it
-      and delegates to `FailedToExecutePlanUseCase(planConversionException)`.
+      Validates plan harness-side (single source of truth). Throws `PlanConversionException`
+      on malformed/invalid plan; `TicketShepherd` catches it, logs WARN, and restarts the
+      planning loop with the validation errors injected as planner context. If the planning
+      budget is exhausted, delegates to `FailedToExecutePlanUseCase`.
 4. For each execution Part:
    a. Create `PartExecutorImpl` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
       - 2 sub-parts → `PartExecutorImpl(reviewerConfig = reviewerSubPart)`

@@ -92,9 +92,7 @@ enum class DoneResult {
 
 All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
 (ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the executor's health-aware await loop knows the agent
-is alive. `/callback-shepherd/query/validate-plan` (ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E) is also
-a non-lifecycle endpoint (Tier 2 query) — planning-phase only, returns validation result in
-response body. It also updates `lastActivityTimestamp`.
+is alive.
 
 ### How the Bridge Works
 

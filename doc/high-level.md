@@ -183,18 +183,15 @@ awaits — see [`PartExecutor`](core/PartExecutor.md) for the state machine desi
 <!-- ap.NAVMACFCbnE7L6Geutwyk.E — HarnessServer implementation -->
 
 Communication between agents and the harness is bidirectional through two distinct channels:
-**Agent → Harness** via HTTP POST (two callback scripts: `callback_shepherd.signal.sh` for
-fire-and-forget signals, `callback_shepherd.query.sh` for synchronous request/response queries),
+**Agent → Harness** via HTTP POST (`callback_shepherd.signal.sh` — fire-and-forget signals),
 and **Harness → Agent** via TMUX `send-keys` (the only way to push content to a running agent).
 The harness runs a Ktor CIO server (on the port from `TICKET_SHEPHERD_SERVER_PORT` env var) that stays alive for the entire run.
 
-**Two-tier endpoint design**: Signal endpoints (`/callback-shepherd/signal/*`) are fire-and-forget —
-every signal script call expects bare 200 and returns immediately. Query endpoints
-(`/callback-shepherd/query/*`) return meaningful response bodies for the agent to act on.
-When the harness needs to deliver content back to the agent (Q&A answers, iteration instructions),
-it uses TMUX `send-keys` wrapped with the **Payload Delivery ACK Protocol**
-(ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK receipt before processing, ensuring
-every instruction is confirmed delivered. No long-lived HTTP connections.
+**Signal endpoint design**: All agent-to-harness endpoints (`/callback-shepherd/signal/*`) are fire-and-forget —
+the signal script call expects bare 200 and returns immediately. Any harness-to-agent content
+(Q&A answers, iteration instructions) comes via TMUX `send-keys` wrapped with the
+**Payload Delivery ACK Protocol** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK
+receipt before processing, ensuring every instruction is confirmed delivered. No long-lived HTTP connections.
 
 See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the full protocol specification: endpoints, payloads, HandshakeGuid identity, port discovery, user-question flow, and callback scripts.
 
@@ -482,12 +479,12 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter; roles define behavior only — no `agentType`/`model` |
 | Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
 | Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, halt) |
-| Callback protocol | **Two-tier: signals (fire-and-forget) + queries (synchronous response)** | Signal endpoints return bare 200; query endpoints return meaningful response body; harness-to-agent delivery via TMUX send-keys |
+| Callback protocol | **Fire-and-forget signals only** | Signal endpoints return bare 200; harness-to-agent delivery via TMUX send-keys |
 | Payload delivery ACK | **ACK-before-proceed wrapper on all `send-keys` payloads** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Every `send-keys` payload (except pings) wrapped in XML with PayloadId (21-char `[a-zA-Z0-9]`). Agent must `ack-payload` before processing. 3 min ACK timeout, 2 retries. Prevents "alive but never got instruction" loop that health monitoring alone cannot break. |
 | Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration`: harness enforces PUBLIC.md exists + non-empty (ref.ap.THDW9SHzs1x2JN9YP9OYU.E); structured format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) is instruction guidance, not harness-validated |
 | Durable pitfall docs | **WHY-NOT comments** (ref.ap.kmiKk7vECiNSpJjAXYMyE.E) | Date-stamped inline comments at code locations where wrong approaches are tempting. Three sources: reviewer→doer, doer pushback, doer self-discovered. Not immutable — best understanding at that time. |
 | Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. 3-min `noStartupAckTimeout` catches spawn failures 10x faster than general 30-min timeout. Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
-| Callback scripts | **One script per tier** | `callback_shepherd.signal.sh` (fire-and-forget) + `callback_shepherd.query.sh` (synchronous response) — tier name makes contract obvious |
+| Callback scripts | **`callback_shepherd.signal.sh`** | Single script for all agent-to-harness communication (fire-and-forget signals) |
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |

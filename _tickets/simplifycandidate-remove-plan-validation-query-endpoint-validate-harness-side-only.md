@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T19:57:11Z
 id: nid_0v5md2o3evkrt31x57eapl0yc_E
 title: "SIMPLIFY_CANDIDATE: Remove plan validation query endpoint — validate harness-side only"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:14:29Z
-status_updated_iso: 2026-03-17T19:50:27Z
+status_updated_iso: 2026-03-17T19:57:11Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -32,3 +33,25 @@ The query endpoint adds:
 
 **Spec files affected:** doc/core/agent-to-server-communication-protocol.md (remove validate-plan section), doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md (simplify validation description), doc/core/ContextForAgentProvider.md (remove validate-plan from agent instructions).
 
+
+## Notes
+
+**2026-03-17T19:57:07Z**
+
+Resolved by updating spec files only (ticket says focus on spec, not code). Changes made:
+
+1. doc/core/agent-to-server-communication-protocol.md: Removed /validate-plan query endpoint from tables, removed entire 'Plan Validation Query' section, removed callback_shepherd.query.sh script/section, simplified Two-Tier design to signal-only design, updated architecture diagram and all cross-references.
+
+2. doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md: Added rule (f) to convertPlanToExecutionParts validation (role file existence check). Updated failure behavior from 'halt immediately' to 'log WARN, restart planning loop with error injected as planner context, halt only on budget exhaustion'.
+
+3. doc/core/ContextForAgentProvider.md: Removed validate-plan query instruction from Planner (row 11) and Plan Reviewer (row 10) sections. Removed Queries block from the compaction-survival callback help text. Updated footer.
+
+4. doc/high-level.md: Updated architecture description, removed query tier from design decisions table, updated callback scripts row.
+
+5. doc/use-case/HealthMonitoring.md: Removed validate-plan from liveness callback list.
+
+6. doc/schema/plan-and-current-state.md: Updated loadsPlan field doc to reference harness-side validation instead of validate-plan endpoint.
+
+7. doc/core/PartExecutor.md: Removed paragraph describing validate-plan as Tier 2 query endpoint.
+
+8. doc/core/TicketShepherd.md: Updated convertPlanToExecutionParts description to reflect new retry-on-failure behavior.

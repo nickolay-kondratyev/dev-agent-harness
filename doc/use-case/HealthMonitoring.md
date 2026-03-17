@@ -60,7 +60,7 @@ ref.ap.QCjutDexa2UBDaKB3jTcF.E.
 
 After sending a ping, the executor does **not** require a specific `/ping-ack` response.
 Instead, it re-checks `lastActivityTimestamp` after the ping timeout window. If **any**
-callback arrived during that window (`user-question`, `validate-plan`, `done`, `ping-ack`,
+callback arrived during that window (`user-question`, `done`, `ping-ack`,
 etc.), the agent is demonstrably alive. `/ping-ack` exists as a fallback for agents that
 are alive but idle (no other callbacks to send) — which is exactly the scenario health
 monitoring aims to detect.
@@ -73,7 +73,7 @@ The `context_window_slim.json` file is used for **context window compaction deci
 
 | Signal | Source | Purpose |
 |--------|--------|---------|
-| `lastActivityTimestamp` | Agent → Server HTTP callbacks | **Liveness detection** — updated on every callback (started, done, ping-ack, ack-payload, user-question, validate-plan, self-compacted) |
+| `lastActivityTimestamp` | Agent → Server HTTP callbacks | **Liveness detection** — updated on every callback (started, done, ping-ack, ack-payload, user-question, self-compacted) |
 | `context_window_slim.json` | External hook (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | **Compaction decisions only** — remaining_percentage drives self-compaction thresholds (ref.ap.8nwz2AHf503xwq8fKuLcl.E). NOT used for liveness. |
 
 #### Simplification Tradeoff
