@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:02:11Z
 id: nid_xqmr7spyvat0g24ax7o22lepm_E
 title: "SIMPLIFY_CANDIDATE: Replace DirectQuickCheapLLM branch-slug compression with deterministic truncation"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:21Z
-status_updated_iso: 2026-03-17T22:00:40Z
+status_updated_iso: 2026-03-17T22:02:11Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -37,3 +38,9 @@ Benefits:
 
 Note: This does not affect branch name uniqueness — try-N collision avoidance is already handled by the .ai_out/ directory scan.
 
+
+## Notes
+
+**2026-03-17T22:02:07Z**
+
+Resolved by updating doc/core/git.md Branch Naming section. Replaced the DirectQuickCheapLLM compression approach with a deterministic truncation algorithm: first K whole hyphen-delimited words that fit within MAX_SLUG_LENGTH-7 (50-7=43 chars), then append a hyphen and 6-char SHA-1 hash of the full slug. This removes the LLM call from startup, makes branch names deterministic, and eliminates the startup failure mode. Committed as 0def8b6.
