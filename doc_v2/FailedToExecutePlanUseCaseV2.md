@@ -14,7 +14,7 @@ the codebase and re-opens the ticket for retry.
 
 When plan execution fails:
 
-1. Spawn a **`CLEANUP_AGENT`** using `SingleDoerPartExecutor` (single sub-part, no reviewer).
+1. Spawn a **`CLEANUP_AGENT`** using `PartExecutorImpl` (with `reviewerConfig = null` — single sub-part, no reviewer).
    The `CLEANUP_AGENT` role is expected in the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR`).
    Uses the standard TMUX spawn flow and callback protocol.
 2. Cleanup agent analyzes the approach taken and why it failed
@@ -56,7 +56,7 @@ default branch ref."_
 
 | When | Operation |
 |---|---|
-| `FailedToExecutePlanUseCase` cleanup | `CLEANUP_AGENT` (via `SingleDoerPartExecutor`): `git add -A && git commit` all work → `git merge-base HEAD origin/$(default.branch)` → `git checkout <merge-base>` → set ticket `status: open` in frontmatter directly. Default branch resolved via `GitBranchManager.getDefaultBranch()`. |
+| `FailedToExecutePlanUseCase` cleanup | `CLEANUP_AGENT` (via `PartExecutorImpl` with `reviewerConfig = null`): `git add -A && git commit` all work → `git merge-base HEAD origin/$(default.branch)` → `git checkout <merge-base>` → set ticket `status: open` in frontmatter directly. Default branch resolved via `GitBranchManager.getDefaultBranch()`. |
 
 ## Try-N Auto-Increment (V2)
 

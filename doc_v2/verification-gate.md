@@ -70,7 +70,7 @@ When the reviewer starts, its instructions include verification results:
 
 ### Fits Existing Architecture
 
-The gate is a step inside `DoerReviewerPartExecutor.execute()`
+The gate is a step inside `PartExecutorImpl.execute()`
 (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) between doer-done and reviewer-spawn.
 No new communication channels, no architectural disruption. Uses existing `send-keys`
 re-instruction for doer retries.

@@ -123,7 +123,7 @@ Resolving immediately preserves focus and produces higher-quality outcomes.
 
 **Encapsulation:** This flow is extracted as `RejectionNegotiationUseCase`
 (ap.fvpIuw4Yeeq1IXDvLC3mL.E) — a self-contained sub use case called by
-`DoerReviewerPartExecutor` during the inner feedback loop. It receives the
+`PartExecutorImpl` during the inner feedback loop. It receives the
 `AgentFacade`, both agent handles (doer + reviewer), and the feedback file. It returns
 a `RejectionResult` (`Accepted` → file to `rejected/`, `AddressedAfterInsistence` →
 file to `addressed/`, `AgentCrashed` → propagate). Fully testable via `FakeAgentFacade`
@@ -219,11 +219,11 @@ on the keyword after `## Resolution:`). Any other value or missing marker → re
 
 ---
 
-## Inner Feedback Loop — DoerReviewerPartExecutor Change
+## Inner Feedback Loop — PartExecutorImpl Change
 
 ### Updated Flow (extends ref.ap.mxIc5IOj6qYI7vgLcpQn5.E)
 
-The existing DoerReviewerPartExecutor steps 1–3 are unchanged. Step 4 (On reviewer
+The existing PartExecutorImpl steps 1–3 are unchanged. Step 4 (On reviewer
 NEEDS_ITERATION) gains an inner loop:
 
 ```
@@ -442,7 +442,7 @@ On reviewer PASS:
 | Document | Change | Scope |
 |----------|--------|-------|
 | `doc/schema/ai-out-directory.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) | Add `__feedback/` directory tree (3 dirs: pending/, addressed/, rejected/) at part level. Add feedback file format with severity prefix. Update directory tree diagram. | Directory schema |
-| `doc/core/PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Add inner feedback loop to DoerReviewerPartExecutor flow (step 4). Add PROCESS_FEEDBACK_ITEM and REJECTION_NEGOTIATION flows. Add part completion guard. Reference self-compaction synergy. | Executor logic |
+| `doc/core/PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Add inner feedback loop to PartExecutorImpl flow (step 4). Add PROCESS_FEEDBACK_ITEM and REJECTION_NEGOTIATION flows. Add part completion guard. Reference self-compaction synergy. | Executor logic |
 | `doc/core/ContextForAgentProvider.md` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) | Add per-feedback-item doer instruction assembly. Add rejection judgment reviewer instruction. Update reviewer instruction concatenation table (sections 7a–7d). Update structured feedback contract (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) — reviewer now writes individual files instead of inline issues in PUBLIC.md. | Instruction assembly |
 | `doc/use-case/ContextWindowSelfCompactionUseCase.md` (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Add section on inner feedback loop as frequent done-boundary source. Note that granular feedback loop reduces emergency compaction frequency. Cross-reference ref.ap.5Y5s8gqykzGN1TVK5MZdS.E. | Self-compaction synergy |
 | `doc/high-level.md` | Update "Sub-Part Transitions" section — reviewer-driven iteration now includes inner feedback loop with rejection negotiation. Add link to this spec. | High-level overview |
@@ -469,7 +469,7 @@ On reviewer PASS:
   individual files, not inline in PUBLIC.md
 - Verifiable: reviewer instructions contain `__feedback/pending/` path and severity prefix guidance
 
-### R3: Inner Feedback Loop in DoerReviewerPartExecutor
+### R3: Inner Feedback Loop in PartExecutorImpl
 - After reviewer `needs_iteration`: list files in `pending/`, process in severity order
   (critical → important → optional, sorted by filename within severity)
 - Feed ONE feedback file at a time to the doer via re-instruction pattern
@@ -495,7 +495,7 @@ On reviewer PASS:
 
 ### R5: Per-Item Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
 - **Encapsulated as `RejectionNegotiationUseCase`** — self-contained sub use case, called by
-  `DoerReviewerPartExecutor` from within the inner feedback loop
+  `PartExecutorImpl` from within the inner feedback loop
 - **Why inline:** Focus. Both agents have the specific item in context at the point of
   contention. Deferring loses context and breaks the reasoning chain (see D7).
 - **Interface:** Receives `AgentFacade`, both agent handles, feedback file path.
@@ -509,7 +509,7 @@ On reviewer PASS:
 - Reuses existing signal semantics (no protocol extension)
 - **Testability:** Fully unit-testable via `FakeAgentFacade` + virtual time. Each negotiation
   scenario (accept, insist→address, insist→reject→insist→forced, crash) is an independent test.
-  The use case is tested in isolation from `DoerReviewerPartExecutor` — clean boundary.
+  The use case is tested in isolation from `PartExecutorImpl` — clean boundary.
 - Verifiable: unit test — full negotiation flow: reject → insist → address;
   reject → accept; reject → insist → reject → insist → forced compliance
 
@@ -589,7 +589,7 @@ prior iteration's results.
 
 ### Gate 3: Inner Feedback Loop + Doer Instructions + Guards
 **Scope:** R3, R4, R9, R10, R11
-**What:** Inner loop in DoerReviewerPartExecutor. Per-item doer instructions via
+**What:** Inner loop in PartExecutorImpl. Per-item doer instructions via
 ContextForAgentProvider. Harness-owned file movement. Iteration counter unchanged.
 **Verify:**
 - Unit test: inner loop processes critical → important → optional in order
@@ -604,7 +604,7 @@ ContextForAgentProvider. Harness-owned file movement. Iteration counter unchange
 ### Gate 4: Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
 **Scope:** R5
 **What:** `RejectionNegotiationUseCase` — self-contained sub use case extracted from
-`DoerReviewerPartExecutor`. Per-item rejection negotiation flow. Bounded at 2 disagreement
+`PartExecutorImpl`. Per-item rejection negotiation flow. Bounded at 2 disagreement
 rounds. Tested in isolation via `FakeAgentFacade` + virtual time.
 **Verify:**
 - Unit test: REJECTED → reviewer accepts (pass) → `RejectionResult.Accepted` → file moved to rejected/
@@ -614,7 +614,7 @@ rounds. Tested in isolation via `FakeAgentFacade` + virtual time.
 - Unit test: reviewer uses existing session (re-instruction to idle session)
 - Unit test: self-compaction check between negotiation rounds
 **Proceed when:** Full negotiation flow works including all boundary cases. Use case tests
-pass independently of `DoerReviewerPartExecutor` tests.
+pass independently of `PartExecutorImpl` tests.
 
 ### Gate 5: Part Completion Guard
 **Scope:** R8

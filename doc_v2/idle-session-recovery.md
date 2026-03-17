@@ -2,7 +2,7 @@
 
 ## Problem
 
-In `DoerReviewerPartExecutor` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E), both TMUX sessions stay
+In `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E), both TMUX sessions stay
 alive for the entire part lifecycle. While one agent is actively working, the other is idle.
 If the idle session dies (OOM, external `tmux kill-session`, terminal crash), the executor
 discovers it only when it tries to `send-keys` for the next turn.

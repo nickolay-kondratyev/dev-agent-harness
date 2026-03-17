@@ -276,7 +276,7 @@ context window state looks like, whether ACKs succeed.
 | **Integration tests (sanity checks)** | Real infra works — TMUX sessions spawn, send-keys delivers, HTTP callbacks arrive, session ID resolves | Real `AgentFacadeImpl` + real agent (one or few sessions) | Minutes |
 
 **Unit tests are the primary coverage layer.** Every edge case in the health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E), every branch of the DoerReviewer iteration flow
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E), every branch of the PartExecutorImpl iteration flow
 (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E), every failure mode — tested with deterministic fakes and
 virtual time. No flakiness from real infrastructure.
 
@@ -507,7 +507,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type, structured reviewer feedback contract, WHY-NOT comments protocol |
 | [`doc/core/AgentFacade.md`](core/AgentFacade.md) | AgentFacade facade — testability seam, signal ownership, FakeAgentFacade, virtual time strategy |
-| [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, DoerReviewerPartExecutor iteration loop, SubPartInstructionProvider |
+| [`doc/core/PartExecutor.md`](core/PartExecutor.md) | PartExecutor abstraction — AgentSignal callback bridge, PartExecutorImpl iteration loop (optional reviewer), SubPartInstructionProvider |
 | [`doc/core/SessionsState.md`](core/SessionsState.md) | In-memory GUID→session registry, CompletableDeferred callback bridge (internal to `AgentFacadeImpl`) |
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — owns SessionsState, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |

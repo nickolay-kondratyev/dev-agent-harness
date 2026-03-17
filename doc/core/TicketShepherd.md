@@ -11,8 +11,8 @@ creates executors for each part, runs them in sequence, and handles the results.
 2. `SetupPlanUseCase` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `SetupPlanResult`
    (ref.ap.evYmpQfliHCHUTdK2QRgS.E)
 3. If `SetupPlanResult.NeedsPlanning`:
-   a. `activeExecutor` = planning executor (a `DoerReviewerPartExecutor`
-      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E for PLANNER↔PLAN_REVIEWER).
+   a. `activeExecutor` = planning executor (a `PartExecutorImpl`
+      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E configured with reviewer for PLANNER↔PLAN_REVIEWER).
       Planning sub-parts use the constant `partName = "planning"` for `SessionsState`
       registration, `removeAllForPart` cleanup, and commit messages
       (e.g., `[shepherd] planning/plan — completed`). This is a synthetic name — it does
@@ -30,9 +30,9 @@ creates executors for each part, runs them in sequence, and handles the results.
       Throws `PlanConversionException` on malformed/invalid plan; `TicketShepherd` catches it
       and delegates to `FailedToExecutePlanUseCase(planConversionException)`.
 4. For each execution Part:
-   a. Create `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
-      - 2 sub-parts → `DoerReviewerPartExecutor`
-      - 1 sub-part → `SingleDoerPartExecutor`
+   a. Create `PartExecutorImpl` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
+      - 2 sub-parts → `PartExecutorImpl(reviewerConfig = reviewerSubPart)`
+      - 1 sub-part → `PartExecutorImpl(reviewerConfig = null)`
    b. `activeExecutor` = executor
    c. `executor.execute()` → `PartResult`
    d. Handle `PartResult`:
@@ -95,7 +95,7 @@ information needed for different cleanup strategies.
 - Does **not** assemble agent instructions — delegates to `SubPartInstructionProvider`
   (ref.ap.4c6Fpv6NjecTyEQ3qayO5.E) via the executor.
 - Does **not** run the planning iteration loop itself — delegates to a planning
-  `DoerReviewerPartExecutor` created by `DetailedPlanningUseCase`
+  `PartExecutorImpl` (with reviewer) created by `DetailedPlanningUseCase`
   (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E).
 
 ## Dependencies
