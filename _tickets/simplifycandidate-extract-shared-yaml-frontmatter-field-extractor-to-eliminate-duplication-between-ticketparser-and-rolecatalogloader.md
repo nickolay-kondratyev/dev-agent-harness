@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:54:38Z
 id: nid_u07t1r4y0ymqgdxk47rdggjj3_E
 title: "SIMPLIFY_CANDIDATE: Extract shared YAML frontmatter field extractor to eliminate duplication between TicketParser and RoleCatalogLoader"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:39:16Z
-status_updated_iso: 2026-03-17T21:51:45Z
+status_updated_iso: 2026-03-17T21:54:38Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -34,3 +35,9 @@ This reduces each parser to its essential logic (field names + domain object con
 
 **Robustness improvement:** A future third frontmatter-based parser (e.g., for plan.json YAML headers) would automatically use consistent error messages and validation behavior instead of triplicating the pattern again.
 
+
+## Notes
+
+**2026-03-17T21:54:44Z**
+
+Completed. Added FrontmatterFields class to YamlFrontmatterParser.kt with require(key)/optional(key) and an optional sourceContext for file-context error messages. TicketParser and RoleCatalogLoader both refactored to use it. All existing tests pass including the RoleCatalogLoaderTest assertion that error messages contain the filename.
