@@ -1,11 +1,11 @@
 ---
 id: nid_ysgpuu6eo09h0skpvrbwfefok_E
 title: "SIMPLIFY_CANDIDATE: Make SubPart state transitions explicit via SubPartStateTransition enum — eliminate scattered implicit transition validation"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T22:15:45Z
-status_updated_iso: 2026-03-17T22:15:45Z
+status_updated_iso: 2026-03-17T22:40:26Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
