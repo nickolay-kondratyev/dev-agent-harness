@@ -1,11 +1,11 @@
 ---
 id: nid_42opcvts7o5uhqux83dqoh9t1_E
 title: "SIMPLIFY_CANDIDATE: Remove feedback file movement — use in-file markers as sole source of truth"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-15T01:08:44Z
-status_updated_iso: 2026-03-15T01:08:44Z
+status_updated_iso: 2026-03-17T20:32:30Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
