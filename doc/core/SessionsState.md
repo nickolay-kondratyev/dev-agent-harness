@@ -46,32 +46,19 @@ server-side validation and shepherd-side decision making.
 | `tmuxAgentSession` | `TmuxAgentSession` (ref.ap.DAwDPidjM0HMClPDSldXt.E — defined in code at `TmuxAgentSession.kt`) | Live session handle (TMUX + resumable session ID with HandshakeGuid) |
 | `partName` | `String` | Which part this session belongs to (e.g., `"ui_design"`, `"main"`) |
 | `subPartName` | `String` | Sub-part name (e.g., `"impl"`, `"review"`) |
-| `subPartRole` | `SubPartRole` | `DOER` or `REVIEWER` — derived from position in sub-parts array (first = DOER, second = REVIEWER) |
+| `subPartIndex` | `Int` | Position of this sub-part in the sub-parts array (0 = DOER, 1 = REVIEWER). Role is derived on-the-fly via `SubPartRole.fromIndex(subPartIndex)` — single source of truth, no sync needed. |
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (signal or query). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
 
-`SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Used for `/callback-shepherd/signal/done`
+`SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Role is derived on-the-fly from
+`subPartIndex` via `SubPartRole.fromIndex(subPartIndex)` — position 0 maps to `DOER`,
+position 1 maps to `REVIEWER`. Used for `/callback-shepherd/signal/done`
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers
 send `pass` or `needs_iteration`.
 
-**Why an enum rather than deriving from position index:** In V1 the role *is* deterministic
-from sub-part position — position 0 is always `DOER`, position 1 is always `REVIEWER` (see
-Hard Constraints in `high-level.md`). The `SubPartRole` enum is kept explicitly for two reasons:
-
-1. **Self-documentation:** An explicit role is a named semantic concept (`DOER`, `REVIEWER`)
-   rather than an implicit positional convention. The validation table in
-   ref.ap.wLpW8YbvqpRdxDplnN7Vh.E reads "if role is DOER, accept `completed`" — not "if
-   index is 0, accept `completed`". This makes the contract immediately obvious.
-2. **Evolvability:** Future sub-part roles (e.g., `FIXER`, or reviewer/fixer combinations)
-   would be purely additive — add an enum variant and handle it. With positional derivation,
-   adding a third role would require rethinking the convention itself. We are **not** building
-   for these cases now, but keeping the door propped open costs nothing.
-
-**Why NOT derive from position:** Deriving role from array index buries a critical semantic
-distinction (what an agent is *allowed* to signal) inside positional convention. Any future
-schema evolution that changes sub-part ordering would silently corrupt role semantics.
-Explicit enumeration decouples role from position.
+`fromIndex` is the single source of truth for position→role mapping. Future role additions
+only require updating `fromIndex()`, not session records or any persisted state.
 
 ### signalDeferred Lifecycle
 

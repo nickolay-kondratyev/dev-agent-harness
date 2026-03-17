@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:29:57Z
 id: nid_k78p6ln09ffxywfaq5r0dqimh_E
 title: "SIMPLIFY_CANDIDATE: Eliminate SubPartRole enum — derive role deterministically from sub-part array position"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:15:00Z
-status_updated_iso: 2026-03-17T22:28:22Z
+status_updated_iso: 2026-03-17T22:29:57Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -36,3 +37,8 @@ Relevant specs: doc/core/SessionsState.md, doc/schema/plan-and-current-state.md
 --------------------------------------------------------------------------------
 
 OK let's simplify. Array position would be doer and reviwer. Perform the simplification.
+## Notes
+
+**2026-03-17T22:29:54Z**
+
+Completed. Updated doc/core/SessionsState.md: removed subPartRole field from SessionEntry table, added subPartIndex: Int instead. Role is now derived on-the-fly via SubPartRole.fromIndex(subPartIndex). Removed the lengthy 'Why an enum / Why NOT derive' justification paragraphs. doc/schema/plan-and-current-state.md has no subPartRole in session record schema — no changes needed there.
