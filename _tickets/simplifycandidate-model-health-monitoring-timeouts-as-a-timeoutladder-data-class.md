@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:09:36Z
 id: nid_7wb6rh7rsz2el1n72x3un3fhg_E
 title: "SIMPLIFY_CANDIDATE: Model health monitoring timeouts as a TimeoutLadder data class"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:32:39Z
-status_updated_iso: 2026-03-17T21:59:06Z
+status_updated_iso: 2026-03-17T22:09:36Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -38,3 +39,16 @@ Benefits:
 
 This is distinct from (and complementary to) the broader HarnessTimeoutConfig centralization ticket, which handles context window thresholds and other constants.
 
+
+## Notes
+
+**2026-03-17T22:09:32Z**
+
+Resolution: Updated spec (doc/ tree only, no code changes) to introduce HealthTimeoutLadder data class grouping the three health monitoring timeouts. Changed 6 files:
+- doc/use-case/HealthMonitoring.md: Added HealthTimeoutLadder section with Kotlin data class definition (startup=3min, normalActivity=30min, pingResponse=3min), updated Configuration table, DetectionContext table, What Runs Where table, Flow section, and edge case section to use healthTimeouts.* fields.
+- doc/core/PartExecutor.md: Updated pseudocode to use healthTimeouts.normalActivity and healthTimeouts.pingResponse; Dependencies section now describes HealthTimeoutLadder nesting within HarnessTimeoutConfig.
+- doc/core/agent-to-server-communication-protocol.md: Updated Startup Timeout section and inline references.
+- doc/high-level.md: Updated summary descriptions.
+- doc/use-case/SpawnTmuxAgentSessionUseCase.md: Updated startup handshake description.
+- doc/core/AgentInteraction.md: Updated test pseudocode comment.
+No old field names (noStartupAckTimeout, noActivityTimeout, pingTimeout, startupAckTimeout) remain in doc/.
