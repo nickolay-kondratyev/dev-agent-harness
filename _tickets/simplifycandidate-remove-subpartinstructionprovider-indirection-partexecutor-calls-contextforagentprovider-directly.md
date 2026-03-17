@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T19:29:29Z
 id: nid_03j42oxwqnrqlcqfdbeyohox4_E
 title: "SIMPLIFY_CANDIDATE: Remove SubPartInstructionProvider indirection — PartExecutor calls ContextForAgentProvider directly"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:24:13Z
-status_updated_iso: 2026-03-17T19:25:54Z
+status_updated_iso: 2026-03-17T19:29:29Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -30,3 +31,21 @@ However:
 - This adds an extra interface + implementation to maintain, test, and wire in `TicketShepherdCreator`.
 - The mapping logic is trivial — it doesn't justify a separate abstraction layer.\n\n## Proposed Simplification\n\nHave `PartExecutor` call `ContextForAgentProvider` directly. The provider already knows about parts, sub-parts, roles, and iteration context (since it reads `current_state.json`).\n\nIf the mapping from executor concepts to provider concepts is non-trivial, it can be a private method inside the executor — no separate interface needed.\n\n## Benefits\n- **One fewer interface** to maintain and test.\n- **One fewer class** in the dependency wiring (`TicketShepherdCreator`).\n- **Simpler dependency graph** — executor depends on provider directly, not through an intermediary.\n- **No loss of testability** — `ContextForAgentProvider` itself can be faked/mocked in tests.\n- **More explicit** — reading the code, you see exactly what's being called without tracing through another layer.\n\n## Risk\nLow. The indirection was designed for decoupling, but the coupling between executor and instruction assembly is inherent (executors NEED instructions). An extra interface layer doesn't reduce this coupling meaningfully.\n\n## Spec files affected\n- `doc/core/PartExecutor.md`\n- `doc/core/ContextForAgentProvider.md`
 
+
+## Notes
+
+**2026-03-17T19:29:23Z**
+
+## Resolution
+
+Completed. Removed SubPartInstructionProvider indirection from all spec files. PartExecutor now calls ContextForAgentProvider directly.
+
+### Changes made (spec-only, 6 files):
+1. doc/core/PartExecutor.md: Removed entire SubPartInstructionProvider section. Updated dependency list and re-instruction pattern.
+2. doc/core/ContextForAgentProvider.md: Updated caller from SubPartInstructionProvider to PartExecutor.
+3. doc/core/TicketShepherd.md: Updated "does not" section reference.
+4. doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md: Replaced planning SubPartInstructionProvider with direct provider calls.
+5. doc/plan/granular-feedback-loop.md: Updated R4 reference.
+6. doc/high-level.md: Updated spec table description.
+
+Anchor point ap.4c6Fpv6NjecTyEQ3qayO5.E removed.
