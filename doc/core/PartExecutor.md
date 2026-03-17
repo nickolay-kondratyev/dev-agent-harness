@@ -337,19 +337,19 @@ after `done` prevents downstream corruption.
    (path resolved via the `.ai_out/` directory schema — ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 2. Check: file exists AND file size > 0 bytes
 3. If **valid** → proceed to next step (reviewer start, iteration restart, etc.)
-4. If **missing or empty** → re-instruction attempt (one retry):
+4. If **missing or empty** → re-instruction attempt via **`ReInstructAndAwait`**
+   (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E) (one retry):
    a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
-   b. Create fresh `CompletableDeferred<AgentSignal>` → re-register `SessionEntry`
-      (same HandshakeGuid, new deferred)
-   c. Deliver a re-instruction message via `AckedPayloadSender`
-      (ref.ap.tbtBcVN2iCl1xfHJthllP.E) telling the agent:
+   b. Invoke `ReInstructAndAwait.execute(handle, message)` with the re-instruction message
+      telling the agent:
       - Its `PUBLIC.md` at `<path>` is missing or empty
       - It must write `PUBLIC.md` with its work log (decisions, rationale, what was done)
       - It must re-signal `done` with the same result value
-   d. Enter health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) waiting for the
-      re-signal
-   e. On re-signal received → re-validate `PUBLIC.md`
-   f. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
+      (`ReInstructAndAwait` owns: fresh deferred creation, SessionEntry re-registration,
+      AckedPayloadSender delivery, health-aware await loop)
+   c. On `Responded` → re-validate `PUBLIC.md`
+   d. On `Crashed` or `FailedWorkflow` → propagate immediately (skip re-validation)
+   e. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
       message: `"Agent failed to produce PUBLIC.md after explicit re-instruction"`.
       `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, halt).
 
@@ -446,6 +446,10 @@ strategy produces one commit per sub-part signal.
   `ShepherdContext.timeoutConfig`; tests pass `HarnessTimeoutConfig.forTests()` for fast timeouts.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
+- **`ReInstructAndAwait`** (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E) — shared use-case encapsulating
+  the "send re-instruction to existing session, await next signal" pattern used in every guard
+  location (PUBLIC.md missing, PRIVATE.md missing, feedback files missing, resolution marker
+  missing, part completion guard). Full spec: [`doc/use-case/ReInstructAndAwait.md`](../use-case/ReInstructAndAwait.md)
 
 ### Testability
 

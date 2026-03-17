@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T21:50:30Z
 id: nid_r1mfznwnpynbq5t9rksza5q4h_E
 title: "SIMPLIFY_CANDIDATE: Extract shared ReInstructWithRetry abstraction from PartExecutorImpl"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T21:04:44Z
-status_updated_iso: 2026-03-17T21:43:54Z
+status_updated_iso: 2026-03-17T21:50:30Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -33,3 +34,23 @@ This simplifies PartExecutorImpl (the most complex component per doc/core/PartEx
 
 Spec reference: doc/core/PartExecutor.md, doc/plan/granular-feedback-loop.md
 
+
+## Notes
+
+**2026-03-17T21:50:39Z**
+
+Resolved by introducing ReInstructAndAwait abstraction (ap.QZYYZ2gTi1D2SQ5IYxOU6.E) as a spec-only change.
+
+New file: doc/use-case/ReInstructAndAwait.md
+- Defines the interface: ReInstructAndAwait.execute(handle, message): ReInstructOutcome
+- ReInstructOutcome: Responded(signal), FailedWorkflow(reason), Crashed(details)
+- Documents all 7 call sites, testability via FakeAgentFacade, and the HealthAwareAwaitLoop extraction requirement
+
+Updated: doc/core/PartExecutor.md
+- Added ReInstructAndAwait to Dependencies section
+- Replaced hand-rolled steps in PUBLIC.md Validation (ap.THDW9SHzs1x2JN9YP9OYU.E) with reference to the abstraction
+
+Updated: doc/plan/granular-feedback-loop.md
+- R8 (part completion guard), R9 (feedback files presence guard), PROCESS_FEEDBACK_ITEM, REJECTION_NEGOTIATION, and R5 now all reference ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E instead of describing inline retry logic.
+
+Commit: 17846ad
