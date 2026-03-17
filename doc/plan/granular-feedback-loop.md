@@ -353,8 +353,7 @@ The doer receives a focused instruction per item:
 2. Write a `## Resolution: ADDRESSED` section at the bottom of the feedback file at
    `<absolute path to feedback file>` describing what you did and why.
 3. If you disagree with this feedback, write `## Resolution: REJECTED` instead with
-   a clear justification explaining WHY the feedback should not be applied
-   (ref.ap.kmiKk7vECiNSpJjAXYMyE.E).
+   a clear justification explaining WHY the feedback should not be applied.
 4. Update your PUBLIC.md with a brief one-liner noting this item was addressed/rejected.
 5. Signal done: `callback_shepherd.signal.sh done completed`
 
@@ -502,7 +501,7 @@ On reviewer PASS:
 ### R6: Resolution Marker in Feedback Files
 - Doer appends `## Resolution: ADDRESSED` or `## Resolution: REJECTED` to the feedback file
 - `ADDRESSED` includes brief implementation notes
-- `REJECTED` includes clear justification (WHY-NOT — ref.ap.kmiKk7vECiNSpJjAXYMyE.E)
+- `REJECTED` includes clear justification
 - Harness reads the marker: scan for `## Resolution:` line, extract keyword
 - Harness does NOT validate the reasoning content (same KISS principle as PUBLIC.md format —
   ref.ap.EslyJMFQq8BBrFXCzYw5P.E enforcement boundary)
