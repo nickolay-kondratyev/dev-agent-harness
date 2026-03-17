@@ -1,11 +1,11 @@
 ---
 id: nid_u07t1r4y0ymqgdxk47rdggjj3_E
 title: "SIMPLIFY_CANDIDATE: Extract shared YAML frontmatter field extractor to eliminate duplication between TicketParser and RoleCatalogLoader"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:39:16Z
-status_updated_iso: 2026-03-17T21:39:16Z
+status_updated_iso: 2026-03-17T21:51:45Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
