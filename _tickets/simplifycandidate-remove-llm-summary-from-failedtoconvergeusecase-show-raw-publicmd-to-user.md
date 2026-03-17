@@ -1,11 +1,11 @@
 ---
 id: nid_vjwbfu6yug70h62ao9skd36mr_E
 title: "SIMPLIFY_CANDIDATE: Remove LLM summary from FailedToConvergeUseCase — show raw PUBLIC.md to user"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:13:44Z
-status_updated_iso: 2026-03-17T23:13:44Z
+status_updated_iso: 2026-03-17T23:27:33Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
