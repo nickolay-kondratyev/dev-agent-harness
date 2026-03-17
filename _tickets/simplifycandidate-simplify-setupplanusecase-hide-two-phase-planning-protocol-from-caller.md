@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T20:47:33Z
 id: nid_uevaeba713u1muroracpxh22j_E
 title: "SIMPLIFY_CANDIDATE: Simplify SetupPlanUseCase — hide two-phase planning protocol from caller"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-15T01:14:17Z
-status_updated_iso: 2026-03-17T20:42:42Z
+status_updated_iso: 2026-03-17T20:47:33Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -23,4 +24,16 @@ The caller (TicketShepherd) must then orchestrate two steps: (1) run planningExe
 **Robustness improvement:** The caller cannot misuse the two-phase protocol (e.g., calling convertPlanToExecutionParts without running the executor first, or forgetting to handle planning failures). Single responsibility: SetupPlanUseCase owns the full planning lifecycle.
 
 **Spec files affected:** doc/use-case/SetupPlanUseCase/__this.md (simplify interface), doc/core/TicketShepherd.md (simplify planning section).
+
+---
+
+## Resolution
+
+### Changes Made (spec-only, 3 files)
+
+1. **`doc/use-case/SetupPlanUseCase/__this.md`**: Replaced `SetupPlanResult` sealed class interface with `suspend fun setup(): List<Part>`. Both routing table entries now return `List<Part>`. Marked `SetupPlanResult` (ap.evYmpQfliHCHUTdK2QRgS.E) as REMOVED.
+
+2. **`doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md`**: Changed from "creates executor and hands back to caller" to "owns full planning lifecycle". Now documents: create executor → run it → handle PartResult → kill TMUX sessions → convert plan → return List<Part>. PlanConversionException retry loop is now internal to DetailedPlanningUseCase (was TicketShepherd's responsibility).
+
+3. **`doc/core/TicketShepherd.md`**: Removed old steps 3a-3e (the two-phase NeedsPlanning protocol). Step 2 now simply calls `SetupPlanUseCase.setup()` → `List<Part>`. Updated "What TicketShepherd Does NOT Do" section. Updated FailedToExecutePlanUseCase paragraph (planning failures are now internal to DetailedPlanningUseCase). Renumbered steps.
 

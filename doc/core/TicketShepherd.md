@@ -8,28 +8,12 @@ creates executors for each part, runs them in sequence, and handles the results.
 
 1. Initial setup (`current_state.json` initialization — branch already created by
    `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
-2. `SetupPlanUseCase` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `SetupPlanResult`
-   (ref.ap.evYmpQfliHCHUTdK2QRgS.E)
-3. If `SetupPlanResult.NeedsPlanning`:
-   a. `activeExecutor` = planning executor (a `PartExecutorImpl`
-      ref.ap.mxIc5IOj6qYI7vgLcpQn5.E configured with reviewer for PLANNER↔PLAN_REVIEWER).
-      Planning sub-parts use the constant `partName = "planning"` for `SessionsState`
-      registration, `removeAllForPart` cleanup, and commit messages
-      (e.g., `[shepherd] planning/plan — completed`). This is a synthetic name — it does
-      not come from `plan.json` (which doesn't exist yet during planning).
-   b. `planningExecutor.execute()` → `PartResult`
-   c. Handle `PartResult` — **same logic as execution parts** (step 4d):
-      - `Completed` → proceed to 3d
-      - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
-        delegate to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
-        When they happen, the human is the right handler — no special recovery logic.
-   d. Kill TMUX sessions for the planning part (`removeAllForPart`)
-   e. `convertPlanToExecutionParts()` — `plan.json` → `current_state.json` → `List<Part>`.
-      Validates plan harness-side (single source of truth). Throws `PlanConversionException`
-      on malformed/invalid plan; `TicketShepherd` catches it, logs WARN, and restarts the
-      planning loop with the validation errors injected as planner context. If the planning
-      budget is exhausted, delegates to `FailedToExecutePlanUseCase`.
-4. For each execution Part:
+2. `SetupPlanUseCase.setup()` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `List<Part>`.
+   Returns execution-ready parts regardless of workflow mode. For `with-planning`
+   workflows, the planning lifecycle (executor, plan conversion, retry on validation
+   failure) is fully handled by `DetailedPlanningUseCase`
+   (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) internally — `TicketShepherd` is not involved.
+3. For each execution Part:
    a. Create `PartExecutorImpl` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E):
       - 2 sub-parts → `PartExecutorImpl(reviewerConfig = reviewerSubPart)`
       - 1 sub-part → `PartExecutorImpl(reviewerConfig = null)`
@@ -43,11 +27,11 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, halts — waits for human intervention). V1: no automatic recovery.
 
-`FailedToExecutePlanUseCase` receives either a `PartResult` sealed class (for execution and
-planning executor failures) or a `PlanConversionException` (for plan conversion failures in
-step 3e). Both carry enough context for formatted error messages and give V2 the type
-information needed for different cleanup strategies.
-5. On all parts completed — **workflow success**:
+`FailedToExecutePlanUseCase` receives a `PartResult` sealed class carrying enough context
+for formatted error messages and gives V2 the type information needed for different
+cleanup strategies. Planning failures (executor failures, plan conversion failures) are
+handled internally by `DetailedPlanningUseCase` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E).
+4. On all parts completed — **workflow success**:
    a. **Final commit** — `GitCommitStrategy.onSubPartDone` was already called for the last
       sub-part, but the shepherd performs one final `git add -A && git commit` to capture
       any remaining state (e.g., final `current_state.json` updates). Skipped if working
@@ -94,9 +78,10 @@ information needed for different cleanup strategies.
   the `signalDeferred` on `SessionEntry`, and the executor reads the `AgentSignal`.
 - Does **not** assemble agent instructions — delegates to `ContextForAgentProvider`
   (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) via the executor.
-- Does **not** run the planning iteration loop itself — delegates to a planning
-  `PartExecutorImpl` (with reviewer) created by `DetailedPlanningUseCase`
-  (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E).
+- Does **not** run or orchestrate the planning phase — `SetupPlanUseCase`
+  (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) returns execution-ready `List<Part>`;
+  `DetailedPlanningUseCase` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) owns the full
+  planning lifecycle internally.
 
 ## Dependencies
 
