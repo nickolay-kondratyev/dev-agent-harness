@@ -50,6 +50,124 @@ COMPLETED   → IN_PROGRESS    (doer on re-iteration: reviewer signaled "needs_i
 - Any sub-part `FAILED` → part failed
 - First non-`COMPLETED` sub-part → resume point
 
+### SubPartStateTransition / ap.EHY557yZ39aJ0lV00gPGF.E
+
+Sealed class encoding every legal SubPartStatus transition. The KDoc on each entry **is** the
+state machine diagram — one authoritative place to audit the state machine.
+
+`PartExecutorImpl` calls the validator before every status mutation: no status field update
+without a validated transition. Invalid (status, trigger) combinations throw immediately at the
+transition site — silent acceptance of invalid transitions is impossible.
+
+```kotlin
+sealed class SubPartStateTransition {
+
+    /**
+     * NOT_STARTED → IN_PROGRESS
+     * Trigger: harness spawns the agent for this sub-part (no AgentSignal involved).
+     * Validated by: SubPartStatus.validateCanSpawn() — throws if status != NOT_STARTED.
+     */
+    object Spawn : SubPartStateTransition()
+
+    /**
+     * IN_PROGRESS → COMPLETED
+     * Triggers:
+     *   - doer:     AgentSignal.Done(DoneResult.COMPLETED)
+     *   - reviewer: AgentSignal.Done(DoneResult.PASS)
+     */
+    object Complete : SubPartStateTransition()
+
+    /**
+     * IN_PROGRESS → FAILED
+     * Triggers:
+     *   - AgentSignal.FailWorkflow(reason)
+     *   - AgentSignal.Crashed(details)
+     */
+    object Fail : SubPartStateTransition()
+
+    /**
+     * IN_PROGRESS → IN_PROGRESS  (reviewer sub-part only; status value unchanged)
+     * Trigger: reviewer AgentSignal.Done(DoneResult.NEEDS_ITERATION).
+     * Side-effect handled by executor (not the validator): iteration.current is incremented.
+     */
+    object IterateContinue : SubPartStateTransition()
+
+    /**
+     * COMPLETED → IN_PROGRESS  (doer sub-part only)
+     * Trigger: harness resumes the doer after reviewer signaled NEEDS_ITERATION.
+     * No AgentSignal is involved; the executor calls validateCanResumeForIteration()
+     * explicitly before re-instructing the idle doer session.
+     */
+    object ResumeForIteration : SubPartStateTransition()
+}
+```
+
+#### Validator Functions
+
+Three validator functions cover all five transitions. All throw `IllegalStateException` on an
+invalid (status, trigger) combination — crash fast, no silent fallback.
+
+```kotlin
+/**
+ * Maps an AgentSignal to the corresponding SubPartStateTransition for this status.
+ * Covers transitions: Complete, Fail, IterateContinue.
+ *
+ * @throws IllegalStateException if the (status, signal) pair is not a valid transition.
+ * Note: AgentSignal.SelfCompacted does NOT trigger a SubPart status change — it is handled
+ *       inside the facade's health-aware await loop and is invisible to PartExecutorImpl.
+ */
+fun SubPartStatus.transitionTo(signal: AgentSignal): SubPartStateTransition {
+    return when (this) {
+        IN_PROGRESS -> when (signal) {
+            is AgentSignal.Done -> when (signal.result) {
+                DoneResult.COMPLETED, DoneResult.PASS -> SubPartStateTransition.Complete
+                DoneResult.NEEDS_ITERATION            -> SubPartStateTransition.IterateContinue
+            }
+            is AgentSignal.FailWorkflow -> SubPartStateTransition.Fail
+            is AgentSignal.Crashed      -> SubPartStateTransition.Fail
+            AgentSignal.SelfCompacted   ->
+                error("SelfCompacted is transparent to SubPart status; handle inside facade, not executor")
+        }
+        NOT_STARTED ->
+            error("Cannot apply AgentSignal to NOT_STARTED; call validateCanSpawn() before spawning")
+        COMPLETED ->
+            error("Cannot apply AgentSignal to COMPLETED; call validateCanResumeForIteration() for doer resume")
+        FAILED ->
+            error("FAILED is terminal — no further transitions allowed")
+    }
+}
+
+/**
+ * Validates that this sub-part is NOT_STARTED before the harness spawns an agent.
+ * Returns SubPartStateTransition.Spawn on success.
+ * @throws IllegalStateException if status != NOT_STARTED.
+ */
+fun SubPartStatus.validateCanSpawn(): SubPartStateTransition.Spawn {
+    check(this == NOT_STARTED) { "spawn requires NOT_STARTED, got $this" }
+    return SubPartStateTransition.Spawn
+}
+
+/**
+ * Validates that this sub-part is COMPLETED before the harness resumes it for another iteration.
+ * Returns SubPartStateTransition.ResumeForIteration on success.
+ * @throws IllegalStateException if status != COMPLETED.
+ */
+fun SubPartStatus.validateCanResumeForIteration(): SubPartStateTransition.ResumeForIteration {
+    check(this == COMPLETED) { "resume-for-iteration requires COMPLETED, got $this" }
+    return SubPartStateTransition.ResumeForIteration
+}
+```
+
+#### Adding New Transitions
+
+Adding a new state or trigger is purely additive:
+1. Add the new `SubPartStatus` value (if needed) — compiler enforces exhaustive `when`.
+2. Add the new `SubPartStateTransition` entry with KDoc.
+3. Handle the new entry in `transitionTo` (or add a new validator for non-signal triggers).
+4. Update `PartExecutorImpl` to react to the new transition.
+
+No hunting for scattered validation sites — the sealed `when` branch is the sole site.
+
 ### Iteration Counter
 
 The `iteration.current` counter lives on the **reviewer sub-part** alongside `iteration.max`.

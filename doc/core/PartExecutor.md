@@ -446,6 +446,21 @@ but before the next sub-part starts or iteration resumes. This ordering ensures 
 captures a validated `PUBLIC.md`. This is the mechanism by which V1's `CommitPerSubPart`
 strategy produces one commit per sub-part signal.
 
+### Status Mutation Protocol
+
+**No sub-part status field is updated without a validated `SubPartStateTransition`**
+(ref.ap.EHY557yZ39aJ0lV00gPGF.E). Every status change calls the appropriate validator first:
+
+| Transition | Validator call |
+|------------|----------------|
+| NOT_STARTED → IN_PROGRESS (spawn) | `subPartStatus.validateCanSpawn()` |
+| IN_PROGRESS → COMPLETED / FAILED / IN_PROGRESS (signal-based) | `subPartStatus.transitionTo(agentSignal)` |
+| COMPLETED → IN_PROGRESS (doer resume) | `subPartStatus.validateCanResumeForIteration()` |
+
+Validators throw `IllegalStateException` on invalid input — invalid transitions are caught at
+the mutation site, not silently accepted. The sealed `SubPartStateTransition` `when` expression
+makes new-transition coverage compiler-enforced.
+
 ### Dependencies
 
 - **`AgentFacade`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
