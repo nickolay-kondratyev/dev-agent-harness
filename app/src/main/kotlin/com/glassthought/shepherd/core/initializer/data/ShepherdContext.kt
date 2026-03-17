@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.initializer.data
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.AsgardCloseable
+import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.initializer.Infra
 
 /**
@@ -19,6 +20,7 @@ import com.glassthought.shepherd.core.initializer.Infra
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
 class ShepherdContext(
   val infra: Infra,
+  val timeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
 ) : AsgardCloseable {
 
   override suspend fun close() {

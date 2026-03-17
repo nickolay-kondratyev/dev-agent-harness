@@ -93,12 +93,15 @@ A previous design used a dual-signal liveness model combining HTTP callbacks and
 
 ### Configuration
 
-| Parameter | Default | Description |
-|-----------|---------|-------------|
-| `noStartupAckTimeout` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `noActivityTimeout`. |
-| `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
-| `noActivityTimeout` | 30 min | Elapsed time since last HTTP callback before triggering a ping. Single global value — applies to all sub-parts. |
-| `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any callback activity resets) |
+All parameters are fields of `HarnessTimeoutConfig` (see `com.glassthought.shepherd.core.data.HarnessTimeoutConfig`).
+Injected via `ShepherdContext.timeoutConfig`; tests use `HarnessTimeoutConfig.forTests()` for fast timeouts.
+
+| Parameter | `HarnessTimeoutConfig` field | Default | Description |
+|-----------|------------------------------|---------|-------------|
+| `noStartupAckTimeout` | `startupAckTimeout` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `noActivityTimeout`. |
+| `healthCheckInterval` | `healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
+| `noActivityTimeout` | `noActivityTimeout` | 30 min | Elapsed time since last HTTP callback before triggering a ping. Single global value — applies to all sub-parts. |
+| `pingTimeout` | `pingTimeout` | 3 min | Time to wait after ping before declaring crash (any callback activity resets) |
 
 ### What Runs Where
 
