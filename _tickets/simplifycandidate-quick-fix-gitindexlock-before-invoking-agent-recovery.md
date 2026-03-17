@@ -1,11 +1,11 @@
 ---
 id: nid_tr3hj37mz5t4hubzap775jj36_E
 title: "SIMPLIFY_CANDIDATE: Quick-fix .git/index.lock before invoking agent recovery"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:04:56Z
-status_updated_iso: 2026-03-17T21:04:56Z
+status_updated_iso: 2026-03-17T22:04:37Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
