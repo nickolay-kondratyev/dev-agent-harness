@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T22:24:24Z
 id: nid_u8aapa26bmut3hob8g85438lo_E
 title: "SIMPLIFY_CANDIDATE: Merge /started handshake into first done signal — eliminate two-phase agent startup"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T22:01:32Z
-status_updated_iso: 2026-03-17T22:23:02Z
+status_updated_iso: 2026-03-17T22:24:24Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -46,3 +47,18 @@ Relevant code:
 
 DECISION: KEEP two phase
 We have the two phase handshake since getting the ACK back with a GUID is FAST. While the instructions could take a LONG time (over half an hour could be valid). Hence, to know the state of the agent we want to have this 2 phase handshake. Lets have spec document the WHY.
+## Notes
+
+**2026-03-17T22:24:31Z**
+
+DECISION: KEEP two-phase handshake. Documented WHY-NOT in spec.
+
+Added 'WHY-NOT: Eliminating Phase 1 (Merging /started Into First done)' section to
+doc/core/agent-to-server-communication-protocol.md under the Agent Startup Acknowledgment
+section (ap.xVsVi2TgoOJ2eubmoABIC.E).
+
+Key rationale documented:
+- /started fires in seconds; first /done can take 30+ minutes
+- Two phases give precise state observability: startup window (3 min) vs. work window (30 min)
+- Single-phase would collapse noStartupAckTimeout to 30+ min, eliminating fast startup failure detection
+- Cannot distinguish 'agent crashed on startup' from 'agent working on long task' without Phase 1
