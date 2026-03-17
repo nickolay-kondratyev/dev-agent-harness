@@ -1,0 +1,37 @@
+---
+id: nid_ldztnvmnyg6lt6wjud2eeps8i_E
+title: "SIMPLIFY_CANDIDATE: Eliminate optional severity in granular feedback loop — reduce to two severities"
+status: open
+deps: []
+links: []
+created_iso: 2026-03-17T23:13:16Z
+status_updated_iso: 2026-03-17T23:13:16Z
+type: task
+priority: 3
+assignee: CC_opus-v4.6_WITH-nickolaykondratyev
+tags: [SIMPLIFY_CANDIDATE]
+---
+
+The granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E in doc/plan/granular-feedback-loop.md) has three severity levels: critical, important, optional. The optional severity creates special handling throughout:
+
+1. **Inner loop**: optional items get different instructions with skip guidance ("This is OPTIONAL. Address if worthwhile, or write ADDRESSED noting you chose to skip")
+2. **Part completion guard** (line 441-448): remaining optional__* files are acceptable and moved to addressed/ on completion — special-case logic
+3. **Reviewer instructions** (section 7c in doc/core/ContextForAgentProvider.md): remaining optional feedback shown separately
+4. **Blocking rules** (D4 in the spec): optional items have different blocking semantics than critical/important
+
+**Proposed simplification:** Eliminate the `optional__` severity prefix entirely. Use only `critical__` and `important__`.
+
+**Why this works just as well:**
+- If feedback is truly optional, the reviewer should note it in PUBLIC.md (the work log) rather than creating a dedicated feedback file that enters the per-item processing loop
+- Processing optional items one at a time through the inner loop is overhead for items that may be skipped anyway
+- The reviewer already controls what to file — choosing not to file optional items is simpler than filing them with special skip semantics
+
+**Robustness improvement:**
+- Fewer code paths = fewer edge cases. The inner loop, completion guard, instruction assembly, and reviewer instructions all become simpler
+- Eliminates the ambiguous "should I skip this?" decision for the doer
+- Two clear severities: must-address (critical) and should-address (important). Binary decision, no gray area
+
+Affected specs:
+- doc/plan/granular-feedback-loop.md (D4, inner loop, completion guard, reviewer instructions)
+- doc/core/ContextForAgentProvider.md (sections 6c-6e, InstructionSection sealed class)
+
