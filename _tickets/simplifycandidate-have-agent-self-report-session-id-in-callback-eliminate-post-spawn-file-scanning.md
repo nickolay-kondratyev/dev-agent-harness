@@ -12,6 +12,9 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, robustness, session-id, agent-startup]
 ---
 
+
+FEEDBACK:
+--------------------------------------------------------------------------------
 Currently session ID discovery is decoupled from agent spawn:
 1. Harness spawns TMUX session (gets TMUX session name)
 2. Harness calls AgentSessionIdResolver.resolve() to scan external artifacts (e.g., JSONL files written by Claude Code)
@@ -45,3 +48,6 @@ Relevant code:
 - Server callback handler (session registration)
 - SessionEntry (state where sessionId is stored)
 
+
+--------------------------------------------------------------------------------
+DECISION: NO. lets document that agents do NOT have their session id in their context. Hence, we need scanning with GUID handshake to find out their session id. This needs to be documented to avoid running into such advice for "simplification"
