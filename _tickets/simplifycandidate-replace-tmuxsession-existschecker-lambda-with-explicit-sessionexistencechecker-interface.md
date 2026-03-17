@@ -1,11 +1,11 @@
 ---
 id: nid_ghx184m7b6s7w0e2hla3kq6gr_E
 title: "SIMPLIFY_CANDIDATE: Replace TmuxSession existsChecker lambda with explicit SessionExistenceChecker interface"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T21:39:28Z
-status_updated_iso: 2026-03-17T21:39:28Z
+status_updated_iso: 2026-03-17T21:53:32Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
