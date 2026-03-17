@@ -5,7 +5,7 @@ everything it needs — role definition, ticket, shared context, prior agent out
 communication tooling. The provider is the **single place** that decides what each agent sees.
 
 Renamed from `ContextProvider` to `ContextForAgentProvider` to avoid ambiguity — "context" is
-overloaded in this codebase (`ShepherdContext`, `SHARED_CONTEXT.md`, etc.).
+overloaded in this codebase (`ShepherdContext`, etc.).
 
 ---
 
@@ -59,16 +59,14 @@ Concatenation order (via `assembleDoerInstructions` / `DoerInstructionRequest`):
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
 | 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
 | 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
-| 4 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | May be empty on first agent. Agent can modify it. |
-| 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
-| 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
-| 8 | **Iteration feedback** (iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback). |
-| 8a | **Per-feedback-item instructions** (inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
-| 8b | **WHY-NOT reminder** (all iterations) | Static text | Brief reminder to place WHY-NOT comments. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
-| 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
-| 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done. |
-| 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
-| 12 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done completed` for doers |
+| 4 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
+| 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
+| 7 | **Iteration feedback** (iteration > 1) | Reviewer's `PUBLIC.md` for this part + pushback guidance | What the reviewer found lacking. See [Doer Pushback Guidance](#doer-pushback-guidance--iteration-feedback). |
+| 7a | **Per-feedback-item instructions** (inner loop) | Single feedback file content + resolution marker instructions + feedback file path | Assembled per feedback item during the inner feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
+| 7b | **WHY-NOT reminder** (all iterations) | Static text | Brief reminder to place WHY-NOT comments. See ref.ap.kmiKk7vECiNSpJjAXYMyE.E. |
+| 8 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
+| 9 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, what was done, codebase discoveries. |
+| 10 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done completed` for doers |
 
 ### Reviewer
 
@@ -79,19 +77,17 @@ Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRe
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
 | 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
 | 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
-| 4 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | May be empty on first agent. Agent can modify it. |
-| 5 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
-| 6 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
-| 7 | **Doer output for review** | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
-| 7 | **Structured feedback format** | Static text | Reviewer must follow structured feedback format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) on `needs_iteration` |
-| 7a | **Addressed feedback** (iteration > 1) | `__feedback/addressed/*.md` | What the doer addressed. Verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
-| 7b | **Rejected feedback** (iteration > 1) | `__feedback/rejected/*.md` | Items where the reviewer previously accepted rejection reasoning. |
-| 7c | **Remaining optional feedback** (iteration > 1) | `__feedback/pending/optional__*.md` | Optional items the doer chose to skip. |
-| 7d | **Feedback writing instructions** | Static text | How to write new feedback files to `__feedback/pending/` with severity filename prefix. |
-| 9 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
-| 10 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, review verdicts. |
-| 11 | **SHARED_CONTEXT.md writing guidelines** | Static text | Shared knowledge base. See [ai-out-directory.md](../schema/ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E). |
-| 12 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done pass` and `done needs_iteration` for reviewers |
+| 4 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
+| 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
+| 6 | **Doer output for review** | Doer's current `PUBLIC.md` for this part | The artifact being reviewed |
+| 6a | **Structured feedback format** | Static text | Reviewer must follow structured feedback format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) on `needs_iteration` |
+| 6b | **Addressed feedback** (iteration > 1) | `__feedback/addressed/*.md` | What the doer addressed. Verify fixes are correct. See Granular Feedback Loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). |
+| 6c | **Rejected feedback** (iteration > 1) | `__feedback/rejected/*.md` | Items where the reviewer previously accepted rejection reasoning. |
+| 6d | **Remaining optional feedback** (iteration > 1) | `__feedback/pending/optional__*.md` | Optional items the doer chose to skip. |
+| 6e | **Feedback writing instructions** | Static text | How to write new feedback files to `__feedback/pending/` with severity filename prefix. |
+| 7 | **PUBLIC.md output path** | Computed by provider | Tells the agent where to write its output |
+| 8 | **PUBLIC.md writing guidelines** | Static text | Agent work log: decisions + rationale, review verdicts, codebase discoveries. |
+| 9 | **Callback script usage** | Static help text (signal scripts), wrapped in compaction-survival tags | Shows `done pass` and `done needs_iteration` for reviewers |
 
 ### Planner
 
@@ -99,16 +95,15 @@ Concatenation order (via `assembleReviewerInstructions` / `ReviewerInstructionRe
 |---|---------|--------|-------|
 | 1 | **Role definition** | PLANNER role file from `$TICKET_SHEPHERD_AGENTS_DIR` | |
 | 2 | **Ticket** | The ticket markdown file | |
-| 3 | **SHARED_CONTEXT.md** | `.ai_out/${branch}/shared/SHARED_CONTEXT.md` | Always included (may be empty on first iteration). Planner can read and modify it. |
-| 4 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
-| 5 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
-| 6 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
-| 7 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
-| 8 | **plan.json output path** | `harness_private/plan.json` (absolute path) | |
-| 9 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
-| 10 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
-| 11 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
-| 12 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
+| 3 | **Role catalog** | All `RoleDefinition` entries — name + description + description_long | So planner can assign roles to sub-parts |
+| 4 | **Available agent types & models** | Static text — lists supported `agentType` values and `model` options per type | Planner must assign `agentType` + `model` per sub-part (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E). V1: `ClaudeCode` only, models: `opus` (high), `sonnet` (budget-high). |
+| 5 | **Plan format instructions** | Static text — JSON schema for `plan.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. Planner must set `loadsPlan: true` on at least one implementor sub-part. |
+| 6 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
+| 7 | **plan.json output path** | `harness_private/plan.json` (absolute path) | |
+| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable plan — fed to implementor sub-parts with `loadsPlan: true` |
+| 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
+| 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
+| 11 | **Callback script usage** | Same as execution agent + `validate-plan` query | Includes `callback_shepherd.query.sh validate-plan` with instruction to validate `plan.json` before calling `done`. See ref.ap.R8mNvKx3wQ5pLfYtJ7dZe.E. |
 
 ### Plan Reviewer
 
@@ -440,4 +435,3 @@ The provider writes the file and returns its `Path`. The caller
 - **Does not decide which agent to spawn** — that's TicketShepherd walking the workflow
 - **Does not send the file to the agent** — that's the `PartExecutor` via TMUX `send-keys`
 - **Does not validate PUBLIC.md existence** — guaranteed by executor's upstream validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E)
-- **Does not manage SHARED_CONTEXT.md lifecycle** — agents modify it directly

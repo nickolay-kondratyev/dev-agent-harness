@@ -107,8 +107,7 @@ The agent receives instructions to:
 1. **Read agent artifacts** from `.ai_out/`:
    - `current_state.json` — workflow progress, session records
    - All `PUBLIC.md` files across sub-parts (agent outputs)
-   - `SHARED_CONTEXT.md` if present
-   - `PLAN.md` (from `harness_private/`) if present
+   - `PLAN.md` (from `shared/plan/`) if present
 
 2. **Generate a structured summary**:
    - **Approach**: what was attempted

@@ -13,7 +13,6 @@ The git branches will include ticket ids which guarantees not clashing.
 │   ├── current_state.json              # Plan blueprint + execution progress + session IDs (single source of truth)
 │   └── plan.json                       # Planner output (with-planning only); becomes current_state.json after convergence
 ├── shared/
-│   ├── SHARED_CONTEXT.md               # Cross-cutting context for ALL agents (agents can modify)
 │   └── plan/
 │       └── PLAN.md                     # Human-readable plan (with-planning only)
 ├── planning/                           # Planning loop (with-planning workflow only)
@@ -49,7 +48,6 @@ The git branches will include ticket ids which guarantees not clashing.
 | `PUBLIC.md` | Per sub-part (`comm/out/`) | **Agent work log** — decisions made + rationale, what was implemented/reviewed, review verdicts. Overwritten each iteration; history preserved in git. **Required**: the harness validates existence and non-emptiness after every `done` signal (ref.ap.THDW9SHzs1x2JN9YP9OYU.E). |
 | `PRIVATE.md` | Per sub-part (`private/`) | **Self-compaction context summary** — written by an agent during harness-controlled self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Contains compressed but context-rich summary of the agent's work, decisions, challenges, and codebase discoveries. Only present after a session rotation triggered by context window exhaustion. Overwritten on subsequent self-compactions; history preserved in git. Fed to the next session via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). |
 | `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
-| `SHARED_CONTEXT.md` | Branch-wide | **Shared knowledge base** about the codebase — discoveries, anchor points of interest, cross-cutting constraints, patterns/conventions observed. Mutable by all agents, accumulated across the workflow. |
 | `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan.json` | harness_private/ | Planner's raw output (with-planning only). Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Genuinely useful for any agent to understand the big picture. |
@@ -104,23 +102,26 @@ at a commit, you see the instruction (input) and the agent's work (output) toget
 providing a complete picture of each communication round without maintaining separate history
 files.
 
-### What Goes Where — PUBLIC.md vs SHARED_CONTEXT.md
+### What Goes Where — PUBLIC.md vs PLAN.md
 
-| PUBLIC.md (agent work log) | SHARED_CONTEXT.md (shared knowledge base) |
+| PUBLIC.md (agent work log) | PLAN.md (plan document) |
 |---|---|
-| Decisions this agent made + succinct rationale | Codebase discoveries (e.g., "project uses X library v2.3") |
-| What was implemented or reviewed | Anchor points of interest found (e.g., ref.ap.XXX) |
-| Review verdicts + feedback | Cross-cutting constraints (e.g., "CI requires flag Y") |
-| Part-specific trade-offs | Patterns/conventions observed in the codebase |
+| Decisions this agent made + succinct rationale | Architectural decisions from planning phase |
+| What was implemented or reviewed | Cross-cutting constraints and approach |
+| Review verdicts + feedback | Part decomposition and sequencing rationale |
+| Codebase discoveries, anchor points, patterns observed | Big-picture plan for all agents |
 
-**Principle**: PUBLIC.md answers "what did I do and why." SHARED_CONTEXT.md answers "what did
-I learn about the codebase that others need to know." PRIVATE.md answers "what do I need
-to remember to continue my work in a fresh session."
+**Principle**: PUBLIC.md answers "what did I do, what did I learn, and why." PLAN.md answers
+"what is the overall plan and approach." PRIVATE.md answers "what do I need to remember to
+continue my work in a fresh session."
 
-- PUBLIC.md should NOT duplicate decisions already captured in the plan or SHARED_CONTEXT.md.
-- SHARED_CONTEXT.md is **mutable** — later agents refine what earlier agents wrote (e.g.,
-  agent A discovers a library, agent B discovers the workaround for its bug, updates in place).
-  This avoids forcing downstream agents to reconcile contradictory PUBLIC.md files.
+- PUBLIC.md should NOT duplicate content already in the plan.
+- Cross-cutting knowledge (codebase discoveries, anchor points, patterns) goes in PUBLIC.md
+  — `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) includes prior PUBLIC.md files
+  in downstream agents' instructions, so discoveries propagate naturally.
+- **Durable reasoning** should be captured in the code itself (WHY-NOT comments), persistent
+  documentation (`CLAUDE.md`, deep memory, `.md` notes), and the ticket — not just in
+  PUBLIC.md. This ensures reasoning survives beyond the current workflow iteration.
 - These writing guidelines are given to agents in their instruction files
   (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
 
@@ -154,13 +155,12 @@ ref.ap.wLpW8YbvqpRdxDplnN7Vh.E).
 ## Initial Creation
 
 `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) creates the full `.ai_out/${branch}/`
-directory structure as part of ticket setup, including an **empty `SHARED_CONTEXT.md`** file
-and the `private/` directory under each sub-part. This ensures the directory structure
-exists before the first agent runs — `ContextForAgentProvider`
-(ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) can always check for `PRIVATE.md` without worrying
-about the parent directory. `PRIVATE.md` itself is **not** created at initialization — it
-is only written by agents during self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
-Agents modify `SHARED_CONTEXT.md` in place.
+directory structure as part of ticket setup, including the `private/` directory under each
+sub-part. This ensures the directory structure exists before the first agent runs —
+`ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) can always check for
+`PRIVATE.md` without worrying about the parent directory. `PRIVATE.md` itself is **not**
+created at initialization — it is only written by agents during self-compaction
+(ref.ap.8nwz2AHf503xwq8fKuLcl.E).
 
 ## Codified In
 

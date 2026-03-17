@@ -191,7 +191,7 @@ the state and decides what to do. V2 will add automated cleanup — see
 ## FailedToConvergeUseCase Detail
 
 When the reviewer sends `needs_iteration` but the iteration counter exceeds `iteration.max`:
-1. Harness uses **BudgetHigh DirectLLM** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md + SHARED_CONTEXT.md)
+1. Harness uses **BudgetHigh DirectLLM** (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) to summarize the current state (reviewer's PUBLIC.md + doer's PUBLIC.md)
 2. Presents summary to user with the iteration history
 3. User decides:
    - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
