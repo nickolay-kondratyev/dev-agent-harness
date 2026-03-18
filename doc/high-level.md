@@ -91,7 +91,7 @@ shepherd run --workflow <name> --ticket <path> --iteration-max <N>
   - `status` must be `in_progress` — fail hard otherwise (see Hard Constraints).
   - The ticket `id` is used for branch naming and state tracking.
 - `--workflow`: workflow definition name (e.g., `straightforward`, `with-planning`)
-- `--iteration-max` **(required)**: default iteration budget for reviewer sub-parts. The planner uses this value when generating `plan_flow.json`. For `straightforward` workflows, this overrides `iteration.max` in the static workflow JSON. The user can further override at runtime via `FailedToConvergeUseCase`.
+- `--iteration-max` **(required)**: default iteration budget for reviewer sub-parts. The planner uses this value when generating `plan_flow.json`. For `straightforward` workflows, this overrides `iteration.max` in the static workflow JSON. The user can extend the budget in fixed increments at runtime via `FailedToConvergeUseCase` (y/N prompt).
 
 ### Startup — Initializer
 

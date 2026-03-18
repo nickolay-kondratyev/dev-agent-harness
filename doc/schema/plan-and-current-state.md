@@ -28,7 +28,7 @@ parts/sub-parts schema. One parser handles everything.
 | `model` | yes | Actual model name (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Same assignment source as `agentType`. Must be the **actual model name**, never a tier name like `"BudgetHigh"` — required for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
 | `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
-| `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can override via `FailedToConvergeUseCase`. |
+| `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can extend in fixed increments (+2) at runtime via `FailedToConvergeUseCase` (y/N prompt). |
 | `iteration.current` | runtime | Current iteration count. Added by harness. Starts at `0`, incremented each time the reviewer signals `needs_iteration`. See [Iteration Counter](#iteration-counter). |
 | `sessionIds` | no | Array of session records (runtime, added by harness). Last element = current/resumable session. See [Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e). |
 

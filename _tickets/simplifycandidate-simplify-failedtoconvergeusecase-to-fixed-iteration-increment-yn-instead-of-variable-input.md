@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:12:15Z
 id: nid_vaqvylypsr1xoz8j03fhkut3a_E
 title: "SIMPLIFY_CANDIDATE: Simplify FailedToConvergeUseCase to fixed iteration increment — y/N instead of variable input"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:40:52Z
-status_updated_iso: 2026-03-18T14:09:54Z
+status_updated_iso: 2026-03-18T14:12:15Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -33,3 +34,12 @@ Iteration budget exhausted (3/3). Grant 2 more iterations? [y/N]
 
 The user can always re-run the workflow if 2 more iterations aren't enough.\n\n### What this eliminates\n- Variable input parsing (no \"how many?\" prompt, no integer validation)\n- The fixed increment (2) is a reasonable default for most cases\n- Simpler interaction reduces cognitive load on the operator during a failure scenario\n\n### What it preserves\n- User still decides whether to continue or abort (y/N)\n- Raw PUBLIC.md files can still be displayed as context\n- The fixed increment value (2) can be a constant in `HarnessTimeoutConfig` for easy tuning\n\n## Why This Improves Robustness\n\n- Eliminates input parsing edge cases (non-numeric input, negative numbers, zero)\n- Faster decision for the operator — binary choice under pressure is easier than open-ended input\n- Fixed increment prevents \"user types 999\" and burning resources on a fundamentally broken part\n\n## Affected Specs\n\n- `doc/use-case/HealthMonitoring.md` — FailedToConvergeUseCase Detail section\n- `doc/core/PartExecutor.md` — step 4 budget check
 
+
+## Notes
+
+**2026-03-18T14:12:09Z**
+
+Completed. Updated two spec files:
+- doc/use-case/HealthMonitoring.md: UseCase table entry updated; FailedToConvergeUseCase Detail section rewritten to describe y/N binary prompt with fixed increment (HarnessTimeoutConfig.failedToConvergeIterationIncrement, default: 2) instead of variable user-specified count. Added rationale for simplification.
+- doc/core/PartExecutor.md: step 4 'Exceeds budget' branch updated to describe y/N prompt with fixed increment.
+No code changes — spec-only task.

@@ -158,7 +158,7 @@ high-level.md for the full testing approach.
 |---|---|---|
 | `AgentUnresponsiveUseCase` | Agent fails to respond — see `DetectionContext` below | Parameterized by `DetectionContext`. Logs structured context (detection reason, session name, durations). Action depends on context — see table below. Single class, single failure-handling path for all unresponsive-agent scenarios. |
 | `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console, kill all TMUX sessions, run `TicketFailureLearningUseCase` (best-effort), exit non-zero. |
-| `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Present raw reviewer PUBLIC.md + doer PUBLIC.md to user, user decides whether to grant more iterations |
+| `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Display y/N prompt: `y` grants fixed increment (`HarnessTimeoutConfig.failedToConvergeIterationIncrement`, default: 2), `N` or timeout → `PartResult.FailedToConverge` |
 
 ### AgentUnresponsiveUseCase — DetectionContext
 
@@ -210,12 +210,22 @@ an opt-in flag in the future.
 ## FailedToConvergeUseCase Detail
 
 When the reviewer sends `needs_iteration` but the iteration counter exceeds `iteration.max`:
-1. Harness presents the **raw reviewer PUBLIC.md + doer PUBLIC.md** directly to the user, along with the iteration history. No LLM summarization — the user sees the actual, unfiltered agent output.
-2. User decides:
-   - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
-   - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero)
 
-Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
+1. Harness displays a binary y/N prompt to the user. No LLM summarization — the user can examine raw agent output in `.ai_out/` if needed:
+   ```
+   Iteration budget exhausted (N/M). Grant 2 more iterations? [y/N]
+   ```
+2. User decides:
+   - **`y`**: `iteration.max += HarnessTimeoutConfig.failedToConvergeIterationIncrement` (default: 2). Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
+   - **`N` or timeout**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero)
+
+**Why fixed increment instead of variable input:**
+- Eliminates input parsing edge cases (non-numeric input, negative numbers, zero)
+- Binary choice under pressure is faster for the operator than open-ended input
+- Fixed increment prevents runaway resource consumption (e.g., accidental large number)
+- The increment (2) is a named constant in `HarnessTimeoutConfig` for easy tuning
+
+Note: `iteration.max` is a **budget**, not a hard limit. The user can extend it via `FailedToConvergeUseCase` in fixed increments of 2.
 
 ---
 
