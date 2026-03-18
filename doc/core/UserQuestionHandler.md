@@ -62,7 +62,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
    (creates state if first question, appends if subsequent)
 7. **Agent waits** for the answer to arrive via TMUX (does not proceed)
 8. Executor's health-aware await loop detects `isQAPending == true` →
-   **skips** health pings, context window compaction, and noActivityTimeout
+   **skips** health pings and noActivityTimeout
 9. Q&A coordinator calls `UserQuestionHandler.handleQuestion()` for each queued question
    sequentially (V1: stdin prompt per question)
 10. When **all queued questions are answered**, coordinator writes all answers to
@@ -71,7 +71,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
     (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML
     (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
 12. After delivery ACK received: coordinator sets `SessionEntry.isQAPending = false` →
-    health monitoring and compaction resume normally
+    health monitoring resumes normally
 13. Agent reads the XML wrapper, ACKs the payload, reads the answer file, and continues
 
 **No long-lived HTTP connections.** The answer is delivered via TMUX, not via the HTTP response.

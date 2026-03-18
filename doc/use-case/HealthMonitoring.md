@@ -278,8 +278,7 @@ a dedicated ping would duplicate what ACK already does.
 
 When an agent sends a `/user-question`, the server sets `SessionEntry.isQAPending = true`.
 While Q&A is pending, the health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) **skips all health checks** — no pings, no noActivityTimeout,
-no compaction triggers.
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) **skips all health checks** — no pings, no noActivityTimeout.
 
 **Why suppressed (not "harmless"):** Previously, pings during Q&A were considered harmless
 because the agent could respond with `ping-ack`. However, each ping is a TMUX `send-keys`
@@ -294,4 +293,4 @@ TMUX session dies during Q&A, the coordinator detects this when `AckedPayloadSen
 on answer delivery.
 
 After Q&A completes (all answers batch-delivered, ACK received), the coordinator sets
-`SessionEntry.isQAPending = false` → health monitoring and compaction resume normally.
+`SessionEntry.isQAPending = false` → health monitoring resumes normally.

@@ -326,7 +326,7 @@ coroutine scope**.
 The Q&A coordinator is independent of `AgentFacade` — it is launched by the server and uses
 `AckedPayloadSender` directly for answer delivery. The executor's health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E) only reads `SessionEntry.isQAPending` to suppress health
-pings, compaction, and noActivityTimeout during Q&A.
+pings and noActivityTimeout during Q&A.
 
 **Impact:** The HTTP server's relationship to AgentFacade is clarified: the server is a
 **collaborator** of AgentFacadeImpl (it triggers deferred completion via `SessionsState`) and
