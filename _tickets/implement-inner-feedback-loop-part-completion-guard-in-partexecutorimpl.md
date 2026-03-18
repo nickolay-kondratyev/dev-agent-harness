@@ -105,3 +105,7 @@ PROCESS_FEEDBACK_ITEM:
 **2026-03-18T22:53:25Z**
 
 Split out Part Completion Guard (R8, Gate 5) into separate ticket nid_yzmwosyazxksnr1hafmw87x1m_E to keep this ticket focused on the inner loop orchestration (R3, R9, R10, R11). This ticket no longer covers R8 — the PASS branch guard.
+
+**2026-03-18T23:14:18Z**
+
+Spec doc updates (PartExecutor.md, high-level.md, ContextWindowSelfCompactionUseCase.md, etc.) are tracked in a separate ticket: nid_i5se9ful3qgnq1s0ccifoauve_E. Do NOT update spec docs in this ticket — focus on implementation and tests only.
