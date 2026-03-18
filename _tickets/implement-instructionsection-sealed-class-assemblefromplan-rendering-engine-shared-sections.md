@@ -87,3 +87,13 @@ Each InstructionSection subtype must have a render method/function that produces
 **PrivateMd path sourcing (from review):** The PrivateMd renderer needs to derive the PRIVATE.md path. The spec says `${sub_part}/private/PRIVATE.md`. Since `outputDir` is `comm/in/`, the sub-part root is `outputDir.parent.parent`. Design decision: PrivateMd derives path from `outputDir` via `outputDir.parent.parent.resolve("private/PRIVATE.md")`. No extra field needed on AgentInstructionRequest — the outputDir already encodes the sub-part location.
 
 **CallbackHelp role-signal parameterization (from review):** CallbackHelp should be a single parameterized subtype: `CallbackHelp(doneSignals: List<String>)` where doers get `["done completed"]`, reviewers get `["done pass", "done needs_iteration"]`, planners get `["done completed"]`. The role plan determines what signal list to pass. Add AC: "CallbackHelp is parameterized with role-specific done signal variants — verified via unit test."
+
+**2026-03-18T19:03:07Z**
+
+## AC clarification: PartContext must NOT appear in Planner/PlanReviewer plans
+
+PartContext requires ExecutionContext (partName, partDescription) which PlannerRequest and PlanReviewerRequest do not have. Ensure PartContext either:
+- Is absent from Planner/PlanReviewer plan lists entirely (preferred — matches spec plan lists), or
+- Renders nothing when the request is PlannerRequest/PlanReviewerRequest
+
+Add test: verify Planner instructions do NOT contain PartContext content.

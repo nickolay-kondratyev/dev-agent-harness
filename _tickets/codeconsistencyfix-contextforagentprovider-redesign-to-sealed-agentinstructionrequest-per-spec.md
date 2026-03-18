@@ -98,3 +98,15 @@ The caller (PartExecutor) knows if compaction happened and sets this field accor
 The PrivateMd InstructionSection (ticket nid_7vpbal1qdmrvt23g44vpq6hgv_E) reads from this path if non-null, skips silently if null.
 
 This field belongs in the abstract base of AgentInstructionRequest (all roles can be compacted).
+
+**2026-03-18T19:03:04Z**
+
+## IMPORTANT: DoerRequest needs feedback-loop fields
+
+DoerRequest must include two nullable fields for the inner feedback loop (decided in nid_gp9rduvxoqf14m95z9bttnaxq_E notes):
+- `feedbackItemPath: Path?` — non-null during inner feedback loop, null during outer iteration
+- `feedbackItemIsOptional: Boolean?` — whether the current feedback item is optional__ (enables SKIPPED resolution)
+
+These fields determine which conditional sections render (FeedbackItem vs IterationFeedback). Add them now to avoid re-opening this ticket later.
+
+Source: doc/core/ContextForAgentProvider.md row 7a + doc/plan/granular-feedback-loop.md (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E)

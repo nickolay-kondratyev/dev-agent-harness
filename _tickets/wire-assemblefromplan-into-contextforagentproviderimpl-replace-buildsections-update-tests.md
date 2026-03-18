@@ -125,3 +125,11 @@ After this ticket, the context/ package should contain:
 
 Deleted:
 - InstructionRenderers.kt (absorbed into sections)
+
+**2026-03-18T19:03:11Z**
+
+## AC additions from review
+
+1. **Section ordering verification (promote from note to AC):** For each of the 4 roles, add an integration-style test that assembles a full instructions.md and verifies sections appear in spec-defined order (Doer: RoleDefinition→PrivateMd→PartContext→Ticket→..., etc).
+
+2. **FeedbackDirectorySection wiring:** Verify that ReviewerRequest.feedbackDir is correctly used to construct FeedbackDirectorySection instances for addressed/, rejected/, and pending/optional__* globs during reviewer plan assembly.
