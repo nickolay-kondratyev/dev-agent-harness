@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:54:27Z
 id: nid_zm78ycz9pqfty7rzg066dwgyx_E
 title: "SIMPLIFY_CANDIDATE: Remove doer COMPLETED→IN_PROGRESS back-transition — keep doer IN_PROGRESS until part completes"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T00:07:43Z
-status_updated_iso: 2026-03-18T13:45:26Z
+status_updated_iso: 2026-03-18T13:54:27Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -63,3 +64,22 @@ Doer's per-round completion is an internal event (agentSignal.Done with result=C
 - `doc/schema/plan-and-current-state.md` (SubPartStatus transitions)
 - `doc/high-level.md` (if state transitions are summarized there)
 
+
+## Notes
+
+**2026-03-18T13:54:40Z**
+
+Spec updated successfully. Changes made to doc/schema/plan-and-current-state.md and doc/core/PartExecutor.md:
+
+1. Removed COMPLETED → IN_PROGRESS back-transition from SubPartStatus state machine — now strictly forward-only.
+2. Removed SubPartStateTransition.ResumeForIteration entry from sealed class.
+3. Removed validateCanResumeForIteration() validator function.
+4. Updated Complete KDoc to describe doer-in-doer+reviewer completion triggered by executor on reviewer PASS.
+5. Updated transitionTo() KDoc with note about doer+reviewer semantics.
+6. Validator count updated: Three/five → Two/four.
+7. COMPLETED error message now says 'terminal — no further transitions allowed' (removed stale ref to validateCanResumeForIteration).
+8. Both current_state.json examples updated: doer/planner status changed from COMPLETED to IN_PROGRESS during mid-iteration state.
+9. Updated example comments to explain the new semantics.
+10. Updated persistence timing table row for 'Agent signals done'.
+11. PartExecutor.md flow step 2 notes doer stays IN_PROGRESS; step 3 notes executor marks both COMPLETED on reviewer PASS.
+12. Status Mutation Protocol table: removed COMPLETED→IN_PROGRESS row, added doer part-completion row.

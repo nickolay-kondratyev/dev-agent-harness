@@ -166,7 +166,7 @@ This is strict validation — catches misconfigured agents immediately.
 
 | Result | Who | Harness Action |
 |--------|-----|---------------|
-| `completed` | Doer | Move to reviewer sub-part (or complete part if no reviewer) |
+| `completed` | Doer | Move to reviewer sub-part (doer stays `IN_PROGRESS`); or complete part if no reviewer (doer → `COMPLETED`) |
 | `pass` | Reviewer | Part complete → move to next part |
 | `needs_iteration` | Reviewer | Check iteration counter: within budget → send new instructions to doer via TMUX `send-keys`, doer works, then on doer completion send new instructions to reviewer. Exceeds `iteration.max` → `FailedToConvergeUseCase` |
 

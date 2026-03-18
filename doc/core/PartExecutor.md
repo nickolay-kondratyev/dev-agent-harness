@@ -76,7 +76,7 @@ sealed class AgentSignal {
 
 ```kotlin
 enum class DoneResult {
-    COMPLETED,        // doer finished work
+    COMPLETED,        // doer finished this round's work (SubPartStatus only transitions to COMPLETED when the part completes)
     PASS,             // reviewer approves
     NEEDS_ITERATION,  // reviewer requests changes
 }
@@ -295,10 +295,11 @@ TMUX session, waiting for the executor to send it new instructions.
       The facade internally creates a fresh `CompletableDeferred`, re-registers the
       `SessionEntry`, and runs the full health-aware await loop
       (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
-2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
+2. **On doer Done(COMPLETED)** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
-   Then → start reviewer:
+   The doer's `SubPartStatus` **remains IN_PROGRESS** — the doer is not marked `COMPLETED`
+   until the entire part completes (reviewer PASS). Then → start reviewer:
    a. First iteration: **spawn** reviewer TMUX session (via `agentFacade.spawnAgent()`) →
       assemble instructions (includes doer's `PUBLIC.md`) →
       `agentFacade.sendPayloadAndAwaitSignal(reviewerHandle, instructions)` → receive `AgentSignal`
@@ -312,7 +313,9 @@ TMUX session, waiting for the executor to send it new instructions.
    (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/pending/` contains no `critical__*`
    or `important__*` files. If found → re-instruct reviewer (one retry, then `AgentCrashed`).
    Remaining `optional__*` files do not block — harness moves them to `addressed/` on
-   completion. Otherwise → return `PartResult.Completed`
+   completion. Otherwise → mark both reviewer and doer `COMPLETED` (the doer was `IN_PROGRESS`
+   throughout all iterations; the executor applies `SubPartStateTransition.Complete` to both
+   simultaneously) → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
    verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
    re-instruction. Then → check budget:
@@ -455,7 +458,7 @@ strategy produces one commit per sub-part signal.
 |------------|----------------|
 | NOT_STARTED → IN_PROGRESS (spawn) | `subPartStatus.validateCanSpawn()` |
 | IN_PROGRESS → COMPLETED / FAILED / IN_PROGRESS (signal-based) | `subPartStatus.transitionTo(agentSignal)` |
-| COMPLETED → IN_PROGRESS (doer resume) | `subPartStatus.validateCanResumeForIteration()` |
+| Doer IN_PROGRESS → COMPLETED (on reviewer PASS — part completion) | Executor applies `SubPartStateTransition.Complete` directly after marking reviewer COMPLETED; doer is guaranteed IN_PROGRESS at this point |
 
 Validators throw `IllegalStateException` on invalid input — invalid transitions are caught at
 the mutation site, not silently accepted. The sealed `SubPartStateTransition` `when` expression
