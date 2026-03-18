@@ -318,7 +318,7 @@ red error, kills all sessions, exits non-zero. V2 may add automatic retry with `
 
 ## Callback Scripts
 
-See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `callback_shepherd.{signal|query}.sh` scripts specification.
+See [Agent-to-Server Communication Protocol](../core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) for the `callback_shepherd.signal.sh` script specification.
 
 ---
 
