@@ -55,3 +55,9 @@ This is the `convertPlanToExecutionParts()` function referenced in the spec muta
 - `doc/use-case/SetupPlanUseCase/__this.md` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) — routing context
 - `doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E) — planning flow
 
+
+## Notes
+
+**2026-03-18T22:01:00Z**
+
+IMPORTANT — ensureStructure() for execution directories: After appending execution parts to CurrentState (step 3), call AiOutputStructure.ensureStructure() for the newly-added execution parts. At initial setup (TicketShepherdCreator), only planning directories are created for with-planning workflows because execution parts don't exist yet. The plan conversion step is responsible for creating the .ai_out/ directory tree for execution parts (per doc/schema/ai-out-directory.md ref.ap.BXQlLDTec7cVVOrzXWfR7.E). This requires AiOutputStructure as a dependency of the plan conversion logic. Ref: nid_fjod8du6esers3ajur2h7tvgx_E (ensureStructure), nid_9kic96nh6mb8r5legcsvt46uy_E (path resolution).

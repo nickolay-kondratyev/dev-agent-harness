@@ -54,3 +54,11 @@ Phase filtering: When iterating `parts: List<Part>`, filter by `phase == Phase.P
 **2026-03-18T21:56:56Z**
 
 Add explicit negative test: verify __feedback/ directories are NOT created under planning/ sub-part directories. This guards against accidentally creating feedback dirs for planning parts.
+
+**2026-03-18T22:03:09Z**
+
+Add 2 test cases from review:
+1. Planning-only test: calling ensureStructure() with only planning parts creates planning/ tree + harness_private/ + shared/plan/; NO execution/ or __feedback/ dirs created.
+2. Execution-only test (direct workflow): calling ensureStructure() with only execution parts creates harness_private/, shared/plan/, execution/ tree with __feedback/ dirs; NO planning/ dirs created.
+
+WHY-NOT: shared/plan/ is always created regardless of workflow type. PLAN.md is not created — agents correctly detect no-planning by file absence. This simplifies ensureStructure() logic (unconditional shared/plan/ creation).

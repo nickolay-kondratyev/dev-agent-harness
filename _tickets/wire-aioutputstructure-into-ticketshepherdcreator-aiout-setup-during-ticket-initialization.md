@@ -53,3 +53,7 @@ TicketShepherd spec reference: ref.ap.P3po8Obvcjw4IXsSUSU91.E (doc/core/TicketSh
 **2026-03-18T21:56:55Z**
 
 Test scope clarification: The body mentions verifying directory tree exists on disk — IGNORE that, it belongs in nid_fjod8du6esers3ajur2h7tvgx_E. This ticket's tests focus on: (1) AiOutputStructure correctly injected into ContextForAgentProviderImpl and TicketShepherd, (2) ensureStructure() called with correct parts list. Also: SetupPlanUseCase wiring (planFlowJson/planMd paths) is OUT OF SCOPE for this ticket — SetupPlanUseCase has its own tickets. This ticket is purely about AiOutputStructure construction + injection + ensureStructure() call.
+
+**2026-03-18T22:03:11Z**
+
+Add test case from review: verify ContextForAgentProviderImpl uses the injected AiOutputStructure instance for PRIVATE.md path resolution (e.g., executionPrivateMd(partName, subPartName) / planningPrivateMd(subPartName)) rather than constructing the path internally. Guards against the injection being present but unused.
