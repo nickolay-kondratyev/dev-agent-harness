@@ -34,7 +34,7 @@ data class UserQuestionContext(
 
 Q&A handling is **decoupled from the executor's coroutine scope**. The executor's health-aware
 await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it only checks
-`SessionEntry.isQAPending` to suppress health pings, compaction triggers, and noActivityTimeout.
+`SessionEntry.isQAPending` to suppress health pings and noActivityTimeout.
 
 ### Why Decoupled
 
@@ -62,7 +62,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
    (creates state if first question, appends if subsequent)
 7. **Agent waits** for the answer to arrive via TMUX (does not proceed)
 8. Executor's health-aware await loop detects `isQAPending == true` →
-   **skips** health pings, context window compaction, and noActivityTimeout
+   **skips** health pings and noActivityTimeout
 9. Q&A coordinator calls `UserQuestionHandler.handleQuestion()` for each queued question
    sequentially (V1: stdin prompt per question)
 10. When **all queued questions are answered**, coordinator writes all answers to
@@ -71,7 +71,7 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
     (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML
     (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
 12. After delivery ACK received: coordinator sets `SessionEntry.isQAPending = false` →
-    health monitoring and compaction resume normally
+    health monitoring resumes normally
 13. Agent reads the XML wrapper, ACKs the payload, reads the answer file, and continues
 
 **No long-lived HTTP connections.** The answer is delivered via TMUX, not via the HTTP response.
@@ -218,7 +218,6 @@ The following executor health-aware await loop behaviors are **suppressed** when
 | Check | Normal behavior | When Q&A pending |
 |-------|----------------|-----------------|
 | Health ping firing | Fire when `lastActivityTimestamp` stale > `normalActivity` | **Skip** — agent is known-idle awaiting TMUX answer |
-| Context window compaction trigger | Check `remaining_percentage` against thresholds | **Skip** — agent is idle, context not growing |
 | noActivityTimeout | Declare crash when stale > `normalActivity` + no ping response | **Skip** — agent is known-idle, not crashed |
 
 These gates are documented in the health-aware await loop pseudocode

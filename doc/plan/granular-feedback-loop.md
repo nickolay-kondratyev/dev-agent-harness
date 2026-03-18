@@ -374,16 +374,13 @@ and additional boundaries during rejection negotiation. Each done boundary is a 
 soft-compaction checkpoint. The harness reads `context_window_slim.json` after every item and
 compacts before feeding the next if the threshold is crossed.
 
-This is a significant improvement over the current design where the doer processes ALL
-reviewer feedback in one go. In the current design:
-- If the doer runs out of context mid-re-work → emergency interrupt (Ctrl+C), forced
-  compaction, session rotation, agent must resume from PRIVATE.md
-- The emergency path is disruptive and risks lost work
+This is a significant improvement over the alternative of processing ALL
+reviewer feedback in one go, where the doer could run out of context mid-re-work.
 
 With the inner feedback loop:
 - Soft compaction triggers between items while the agent has ample room to summarize
 - The agent finishes one item, compacts, starts fresh on the next
-- Emergency interrupts become rare — the soft threshold (35% remaining / 65% used) catches most cases
+- Claude Code's native auto-compaction handles the rare case of mid-task exhaustion
 
 **The inner loop makes self-compaction proactive rather than reactive.**
 
@@ -478,7 +475,7 @@ On reviewer PASS:
 | `doc/schema/ai-out-directory.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) | Add `__feedback/` directory tree (3 dirs: pending/, addressed/, rejected/) at part level. Add feedback file format with severity prefix. Update directory tree diagram. | Directory schema |
 | `doc/core/PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Add inner feedback loop to PartExecutorImpl flow (step 4). Add PROCESS_FEEDBACK_ITEM and REJECTION_NEGOTIATION flows. Add part completion guard. Reference self-compaction synergy. | Executor logic |
 | `doc/core/ContextForAgentProvider.md` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) | Add per-feedback-item doer instruction assembly. Add rejection judgment reviewer instruction. Update reviewer instruction concatenation table (sections 7a–7d). Update structured feedback contract (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) — reviewer now writes individual files instead of inline issues in PUBLIC.md. | Instruction assembly |
-| `doc/use-case/ContextWindowSelfCompactionUseCase.md` (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Add section on inner feedback loop as frequent done-boundary source. Note that granular feedback loop reduces emergency compaction frequency. Cross-reference ref.ap.5Y5s8gqykzGN1TVK5MZdS.E. | Self-compaction synergy |
+| `doc/use-case/ContextWindowSelfCompactionUseCase.md` (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Add section on inner feedback loop as frequent done-boundary source. Note that granular feedback loop reduces reliance on Claude Code's native auto-compaction by creating frequent done boundaries. Cross-reference ref.ap.5Y5s8gqykzGN1TVK5MZdS.E. | Self-compaction synergy |
 | `doc/high-level.md` | Update "Sub-Part Transitions" section — reviewer-driven iteration now includes inner feedback loop with rejection negotiation. Add link to this spec. | High-level overview |
 | `doc/schema/plan-and-current-state.md` (ref.ap.56azZbk7lAMll0D4Ot2G0.E) | Clarify that iteration.current semantics are unchanged — inner loop does not increment. No schema change needed. | Schema clarification |
 

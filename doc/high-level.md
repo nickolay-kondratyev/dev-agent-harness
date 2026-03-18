@@ -234,26 +234,22 @@ reading instructions — a 3-minute startup timeout catches spawn failures fast
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) for the full spec — flow, triggers, actions, and UseCase
 naming principle.
 
-> **Note:** `context_window_slim.json` is used for **compaction decisions only**
+> **Note:** `context_window_slim.json` is used for **done-boundary compaction decisions only**
 > (ref.ap.8nwz2AHf503xwq8fKuLcl.E), not for liveness detection. This is a deliberate
 > simplification — see [HealthMonitoring.md Simplification Tradeoff](use-case/HealthMonitoring.md#liveness-model-http-callbacks-only--apdnc1m7qkxvw2zjp8yfre).
 
 ## Context Window Monitoring & Self-Compaction
 
 Detects context window exhaustion in TMUX-powered agents and performs controlled
-self-compaction — killing the old session and spawning a fresh one with a `PRIVATE.md`
-context summary. Claude Code's built-in auto-compaction is **disabled** (via
-`~/.claude.json` + `DISABLE_AUTO_COMPACT=true` env var); the harness is the sole
-controller of context management.
+self-compaction at **done boundaries** — killing the old session and spawning a fresh one
+with a `PRIVATE.md` context summary.
 
-Two thresholds, one unified `performCompaction()` flow:
-- **Soft (35% remaining / 65% used)**: at `done` boundaries — proactive compaction while the agent still has room to summarize (`CompactionTrigger.DONE_BOUNDARY`, lazy respawn)
-- **Hard (20% remaining)**: continuous 1-second polling — emergency mid-task interrupt (Ctrl+C) + forced compaction (`CompactionTrigger.EMERGENCY_INTERRUPT`, immediate respawn)
-
-Both triggers share the same core compaction steps: reset signal → send instruction →
-await `SelfCompacted` → validate `PRIVATE.md` → git commit → kill session. Only the
-pre-compaction (interrupt vs no-op) and post-compaction (immediate vs lazy respawn)
-differ by trigger.
+**V1 approach:** Claude Code's built-in auto-compaction remains **enabled** for emergency
+mid-task compaction. The harness performs **controlled self-compaction only at done
+boundaries** (soft threshold at 35% remaining / 65% used). This eliminates the complex
+Ctrl+C emergency interrupt path. See
+[`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md) for
+the deferred V2 harness-controlled emergency compression design.
 
 After self-compaction, the agent's TMUX session is killed and a new one spawned. The new
 session receives `PRIVATE.md` (the compressed context summary) via `ContextForAgentProvider`
@@ -262,7 +258,7 @@ session receives `PRIVATE.md` (the compressed context summary) via `ContextForAg
 external hook artifact. File not present → hard stop failure.
 
 See [`ContextWindowSelfCompactionUseCase`](use-case/ContextWindowSelfCompactionUseCase.md)
-(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — `CompactionTrigger`, unified flow,
+(ref.ap.8nwz2AHf503xwq8fKuLcl.E) for the full spec — done-boundary trigger, compaction flow,
 thresholds, signal protocol, PRIVATE.md schema, and session rotation mechanics.
 
 ---
@@ -305,7 +301,7 @@ The health-aware await loop has two kinds of timing dependencies, both must be c
 
 | Dependency | Mechanism | Test control |
 |-----------|-----------|-------------|
-| Coroutine delays (`delay()`, `withTimeout()`) | 1-second tick polling, ACK timeouts, ping timeouts | `kotlinx-coroutines-test` `TestDispatcher` + `advanceTimeBy()` |
+| Coroutine delays (`delay()`, `withTimeout()`) | Health check intervals, ACK timeouts, ping timeouts | `kotlinx-coroutines-test` `TestDispatcher` + `advanceTimeBy()` |
 | Wall-clock reads (`now()` for timestamp age comparisons) | `lastActivityTimestamp` age | `Clock` interface with `TestClock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) |
 
 Together these give **full deterministic control** over the time dimension. Tests advance
@@ -334,7 +330,7 @@ Scenarios that are impractical or impossible to test with real agents become tri
 
 - Agent crashes 31 minutes into work → verify ping sent, no reply, session killed
 - ACK delivery fails 3 times → verify session crashed
-- Context window hits 20% during work → verify emergency compaction triggered
+- Context window hits 35% at done boundary → verify soft compaction triggered
 - Reviewer sends needs_iteration 5 times at budget max → verify FailedToConverge path
 
 All of these run in milliseconds with deterministic outcomes.
@@ -510,9 +506,9 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+version+user |
 | Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
 | System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
-| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage`). File not present → hard stop. Used for **compaction decisions only** (ref.ap.8nwz2AHf503xwq8fKuLcl.E), NOT for liveness (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
-| Auto-compaction | **Disabled — harness-controlled self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code auto-compaction disabled via `~/.claude.json` (`autoCompactEnabled: false`) + `DISABLE_AUTO_COMPACT=true` env var. Harness performs controlled self-compaction at predictable thresholds (35% remaining / 65% used at done boundary, 20% remaining / 80% used emergency interrupt). Thresholds are centralized constants for easy tuning. |
-| Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | New lifecycle signal. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
+| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage`). File not present → hard stop. Used for **done-boundary compaction decisions only** (ref.ap.8nwz2AHf503xwq8fKuLcl.E), NOT for liveness (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
+| Auto-compaction | **Claude Code native auto-compaction enabled; harness adds done-boundary self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code's built-in auto-compaction remains enabled for emergency mid-task compaction. The harness adds controlled self-compaction at done boundaries (35% remaining / 65% used) with guided summarization into `PRIVATE.md` + session rotation. V2 will add harness-controlled emergency interrupt — see [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md). |
+| Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | Lifecycle signal for done-boundary self-compaction. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
 | Reviewer feedback delivery | **Granular per-item feedback loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) | Reviewer writes individual feedback files to `__feedback/pending/` with severity filename prefix (`critical__`, `important__`, `optional__`) (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Harness feeds items to doer one at a time — critical → important → optional. Doer writes `## Resolution: ADDRESSED/REJECTED` marker; **harness** moves files. Rejections trigger bounded per-item negotiation (1 round — reviewer judges once, final). Self-compaction checkpoints between items. `iteration.current` unchanged by inner loop. |
 | Sub-part role tracking | **`SubPartRole` enum (explicit, not derived from position)** | In V1, position is deterministic (0 = DOER, 1 = REVIEWER). The enum is kept explicitly: (1) self-documentation — role is a named concept, not a positional convention, making the `done`-result validation table in the protocol (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) immediately readable; (2) evolvability — future roles (e.g., `FIXER`) are additive enum variants. Not built for those cases now, but the door is propped open. See `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) for full rationale. |
 
@@ -539,6 +535,6 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/NonInteractiveAgentRunner.md`](core/NonInteractiveAgentRunner.md) | Lightweight subprocess-based agent invocation (`--print` mode) for utility tasks — recovery, failure analysis |
 | [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
 | [`doc/use-case/TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) | Records structured failure context + LLM summary into ticket on workflow failure — enables cross-try learning |
-| [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, self-compaction flow, PRIVATE.md, session rotation, auto-compaction disabled |
+| [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, done-boundary self-compaction flow, PRIVATE.md, session rotation |
 | [`doc/plan/granular-feedback-loop.md`](plan/granular-feedback-loop.md) | Granular per-item feedback loop — `__feedback/` directory (3 dirs: pending/addressed/rejected), harness-owned file movement, resolution markers, per-item rejection negotiation, severity-based processing, part completion guard |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |

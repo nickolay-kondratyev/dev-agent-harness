@@ -33,7 +33,7 @@ to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<Age
 coroutine that owns the structured question/answer queue internally, collects answers via
 `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), and batch-delivers all answers via
 `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) once the full queue is answered.
-The executor stays suspended; health pings, compaction, and noActivityTimeout are suppressed while
+The executor stays suspended; health pings and noActivityTimeout are suppressed while
 `isQAPending` is true.
 
 ---
@@ -54,7 +54,7 @@ server-side validation and shepherd-side decision making.
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The executor suspends on `.await()`. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback (signal or query). Read by the executor's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
-| `isQAPending` | `Boolean` | `true` when Q&A is in progress for this session. Set to `true` by the server when `/signal/user-question` arrives. Set to `false` by the Q&A coordinator after all answers are batch-delivered and ACK received. Gates health ping firing, context window compaction, and noActivityTimeout — all are **suppressed** while `true` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The structured question/answer queue (`QAPendingState`) is owned internally by the Q&A coordinator — not exposed on `SessionEntry`. |
+| `isQAPending` | `Boolean` | `true` when Q&A is in progress for this session. Set to `true` by the server when `/signal/user-question` arrives. Set to `false` by the Q&A coordinator after all answers are batch-delivered and ACK received. Gates health ping firing and noActivityTimeout — both are **suppressed** while `true` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The structured question/answer queue (`QAPendingState`) is owned internally by the Q&A coordinator — not exposed on `SessionEntry`. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Role is derived on-the-fly from
 `subPartIndex` via `SubPartRole.fromIndex(subPartIndex)` — position 0 maps to `DOER`,

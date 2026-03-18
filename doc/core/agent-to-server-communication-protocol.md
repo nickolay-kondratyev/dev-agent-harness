@@ -105,7 +105,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 |---|---|
 | `POST /callback-shepherd/signal/started` | Bootstrap handshake — agent acknowledges it is alive and can reach the server. Harness sends full instructions only after receiving this. See ref.ap.xVsVi2TgoOJ2eubmoABIC.E. |
 | `POST /callback-shepherd/signal/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
-| `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (which owns the structured question/answer queue internally). Answer(s) batch-delivered asynchronously via TMUX `send-keys` after all queued questions are answered. Health pings, compaction, and noActivityTimeout suppressed while `isQAPending` is true. |
+| `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (which owns the structured question/answer queue internally). Answer(s) batch-delivered asynchronously via TMUX `send-keys` after all queued questions are answered. Health pings and noActivityTimeout suppressed while `isQAPending` is true. |
 | `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error and halts (`FailedToExecutePlanUseCase`). |
 | `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
 | `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
@@ -391,8 +391,8 @@ coroutine for this session. The coordinator owns the structured question/answer 
 (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML, not via HTTP response.
 
 While Q&A is pending (`SessionEntry.isQAPending == true`), the executor's health-aware await
-loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **suppresses** health pings, context window compaction
-triggers, and noActivityTimeout — the agent is known-idle, awaiting a TMUX answer.
+loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **suppresses** health pings and noActivityTimeout —
+the agent is known-idle, awaiting a TMUX answer.
 
 See [UserQuestionHandler](UserQuestionHandler.md) (ref.ap.NE4puAzULta4xlOLh5kfD.E) for the
 full Q&A coordinator lifecycle, queuing model, batch delivery format, and strategy interface.
@@ -518,9 +518,10 @@ Health pings are exempt because they have their own acknowledgment mechanism (`p
 **Input corruption prevention:** All content delivery uses `TmuxCommunicator.sendKeys()`
 (ref.ap.4cY9sc1jEQEseLgR7nDq0.E) which sends text via TMUX `send-keys -l` (literal flag) —
 preventing TMUX from interpreting payload content as key names (e.g., "Space", "Enter",
-"Escape"). Control sequences (Ctrl+C for emergency compaction) use `sendRawKeys()` which
-sends without `-l`. This two-method split ensures content is always delivered literally while
-preserving the ability to send control keys when needed. See `TmuxCommunicatorImpl`
+"Escape"). A separate `sendRawKeys()` method sends without `-l` for control sequences —
+reserved for V2 emergency compaction (see
+[`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md)).
+V1 uses only `sendKeys()` (literal mode). See `TmuxCommunicatorImpl`
 (ref.ap.3BCYPiR792a2B8I9ZONDwmvN.E) for the implementation.
 
 For the full agent lifecycle (spawn, session ID resolution), see
