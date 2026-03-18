@@ -97,3 +97,11 @@ PartContext requires ExecutionContext (partName, partDescription) which PlannerR
 - Renders nothing when the request is PlannerRequest/PlanReviewerRequest
 
 Add test: verify Planner instructions do NOT contain PartContext content.
+
+**2026-03-18T19:22:35Z**
+
+## SUPERSEDED: PrivateMd path sourcing (conflict resolved)
+
+The note from 2026-03-18T18:32:16Z (derive path from outputDir) is **SUPERSEDED** by the decision in nid_8ts4qxw2wevxwep3yk2gvqwja_E (2026-03-18T18:50:17Z): add `privateMdPath: Path?` to the abstract base of AgentInstructionRequest.
+
+**Correct approach:** PrivateMd renderer reads from `request.privateMdPath`. If null → skip silently (no compaction happened). If non-null → read file (fail hard if missing — caller asserts file exists). Do NOT derive from `outputDir`. The caller (PartExecutor) sets this field because it knows whether compaction occurred.

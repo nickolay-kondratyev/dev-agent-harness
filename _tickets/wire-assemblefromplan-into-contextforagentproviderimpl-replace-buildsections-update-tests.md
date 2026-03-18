@@ -133,3 +133,9 @@ Deleted:
 1. **Section ordering verification (promote from note to AC):** For each of the 4 roles, add an integration-style test that assembles a full instructions.md and verifies sections appear in spec-defined order (Doer: RoleDefinition→PrivateMd→PartContext→Ticket→..., etc).
 
 2. **FeedbackDirectorySection wiring:** Verify that ReviewerRequest.feedbackDir is correctly used to construct FeedbackDirectorySection instances for addressed/, rejected/, and pending/optional__* globs during reviewer plan assembly.
+
+**2026-03-18T19:22:41Z**
+
+## AC addition: output path convention test
+
+Add a test that verifies the assembled file is written to `${outputDir}/instructions.md` (matching the spec's 'Output Location' section). This ensures the path convention documented in the spec is enforced end-to-end.
