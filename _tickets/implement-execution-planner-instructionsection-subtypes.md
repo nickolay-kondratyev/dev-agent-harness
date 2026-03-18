@@ -81,3 +81,7 @@ For a sub-part in part N:
 **2026-03-18T18:21:29Z**
 
 Merge note: This ticket and nid_gp9rduvxoqf14m95z9bttnaxq_E both add subtypes to InstructionSection.kt. If run in parallel, expect a merge conflict on that file. The conflict will be trivial (additive subtypes), but the implementing agent should be aware.
+
+**2026-03-18T18:32:17Z**
+
+**IterationFeedback null-path behavior (from review):** Add AC criterion: IterationFeedback with `reviewerPublicMdPath == null` (iteration 1) silently produces no output. This is distinct from InlineFileContentSection with non-null path that fails hard if file missing.

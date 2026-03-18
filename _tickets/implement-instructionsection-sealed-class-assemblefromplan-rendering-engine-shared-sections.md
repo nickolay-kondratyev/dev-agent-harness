@@ -79,3 +79,11 @@ Each InstructionSection subtype must have a render method/function that produces
 5. Engine test verifies section ordering and separator insertion
 6. All tests pass via `./test.sh`
 
+
+## Notes
+
+**2026-03-18T18:32:16Z**
+
+**PrivateMd path sourcing (from review):** The PrivateMd renderer needs to derive the PRIVATE.md path. The spec says `${sub_part}/private/PRIVATE.md`. Since `outputDir` is `comm/in/`, the sub-part root is `outputDir.parent.parent`. Design decision: PrivateMd derives path from `outputDir` via `outputDir.parent.parent.resolve("private/PRIVATE.md")`. No extra field needed on AgentInstructionRequest — the outputDir already encodes the sub-part location.
+
+**CallbackHelp role-signal parameterization (from review):** CallbackHelp should be a single parameterized subtype: `CallbackHelp(doneSignals: List<String>)` where doers get `["done completed"]`, reviewers get `["done pass", "done needs_iteration"]`, planners get `["done completed"]`. The role plan determines what signal list to pass. Add AC: "CallbackHelp is parameterized with role-specific done signal variants — verified via unit test."
