@@ -1,11 +1,11 @@
 ---
 id: nid_erxsg4rjc8hpcflkg7ufbh9k9_E
 title: "SIMPLIFY_CANDIDATE: Eliminate EMERGENCY_INTERRUPT compaction — keep only done-boundary soft threshold"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T00:06:56Z
-status_updated_iso: 2026-03-18T00:06:56Z
+status_updated_iso: 2026-03-18T02:08:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
