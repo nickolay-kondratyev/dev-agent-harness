@@ -142,12 +142,6 @@ interface ContextWindowStateReader {
      * "unknown" — no compaction should be triggered, but a warning must be logged.
      */
     suspend fun read(agentSessionId: String): ContextWindowState
-
-    /**
-     * Validates that the context window state file exists for this session.
-     * Called after session ID resolution to fail fast on hook misconfiguration.
-     */
-    suspend fun validatePresence(agentSessionId: String)
 }
 
 data class ContextWindowState(
@@ -177,10 +171,6 @@ Reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_wi
        A truly dead agent will be caught by the existing noActivityTimeout in health monitoring.
        Making it a hard-stop would cause false-positive AgentCrashed events on transient
        hook hiccups. -->
-
-- `validatePresence()` called after `AgentTypeAdapter.resolveSessionId()` resolves the session ID
-  (step 6a in spawn flow — ref.ap.hZdTRho3gQwgIXxoUtTqy.E). Confirms hook is active
-  before any work begins.
 
 ### Caller Behavior on Stale State
 
@@ -369,26 +359,6 @@ The loop structure remains focused on health monitoring (liveness detection via
 
 ---
 
-## context_window_slim.json Validation After Session ID Resolution
-
-After `AgentTypeAdapter.resolveSessionId()` resolves the session ID (step 6a in spawn flow —
-ref.ap.hZdTRho3gQwgIXxoUtTqy.E), `AgentFacadeImpl` calls
-`contextWindowStateReader.validatePresence(agentSessionId)` internally as part of
-the spawn step within `sendPayload()`.
-
-**Timing:** This runs after `/signal/started` is received. At this point:
-- The agent is alive and has processed the bootstrap message
-- The session ID is resolved from JSONL artifacts
-- The external hook should have written `context_window_slim.json`
-
-**Failure:** If the file does not exist → `ContextWindowStateUnavailableException` →
-`PartResult.AgentCrashed("context_window_slim.json not found — external hook not configured")`.
-
-This catches hook misconfiguration early — within 3 minutes of spawn — rather than
-discovering it later when we need to read the context state.
-
----
-
 ## Hard Constraint Modification / ref.ap.NAVMACFCbnE7L6Geutwyk.E (high-level.md)
 
 > **One TMUX session per sub-part at a time.** A sub-part gets exactly one TMUX session,
@@ -510,7 +480,6 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 | `doc/core/ContextForAgentProvider.md` | PRIVATE.md in instruction concatenation (position 1b) |
 | `doc/schema/ai-out-directory.md` | New `private/PRIVATE.md` in directory tree, supersede "No PRIVATE.md" section |
 | `doc/core/agent-to-server-communication-protocol.md` | New `/signal/self-compacted` endpoint |
-| `doc/use-case/SpawnTmuxAgentSessionUseCase.md` | context_window_slim.json validation after session ID resolution |
 | `doc/core/SessionsState.md` | Clarification: multiple session records per sub-part after rotation |
 | `doc/high-level.md` (Key Technology Decisions) | Context window monitoring entry |
 
@@ -519,7 +488,7 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 ## Requirements
 
 ### R1: ContextWindowStateReader Interface + ClaudeCode Implementation
-- Interface with `read(agentSessionId)` and `validatePresence(agentSessionId)` methods
+- Interface with single `read(agentSessionId)` method
 - `ClaudeCodeContextWindowStateReader` reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_window_slim.json`
 - File missing → `ContextWindowStateUnavailableException` (hard stop)
 - File malformed (missing required fields or unparseable JSON) → same exception with parse error details
@@ -528,24 +497,19 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - Callers (done-boundary check): skip compaction trigger when `remainingPercentage == null`, log warning instead
 - Verifiable: unit test with fake file (fresh timestamp → value returned); unit test (stale timestamp → null returned + warning logged); unit test (file missing → exception); integration test confirming file presence after real Claude Code session
 
-### R2: context_window_slim.json Validation After Session ID Resolution
-- After `AgentTypeAdapter.resolveSessionId()` resolves session ID, call `contextWindowStateReader.validatePresence()`
-- Missing file → `PartResult.AgentCrashed` with clear error about hook misconfiguration
-- Verifiable: unit test — mock resolver returns ID, mock reader throws → executor returns AgentCrashed
-
-### R3: `performCompaction()` — Done-Boundary Compaction Flow
+### R2: `performCompaction()` — Done-Boundary Compaction Flow
 Single method for `DONE_BOUNDARY` trigger:
 - No pre-compaction interrupt
 - Core steps: send instruction → await `SelfCompacted` → validate PRIVATE.md → git commit → kill session
 - Post-compaction = lazy respawn (handle = null)
 - Verifiable: unit test — done → low context → compaction instruction → SelfCompacted → session killed
 
-### R4: Trigger Detection — Done Boundary
+### R3: Trigger Detection — Done Boundary
 - After `AgentSignal.Done` + PUBLIC.md validation, read context window state
 - If `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → call `performCompaction(DONE_BOUNDARY)`
 - Verifiable: unit test — done signal → low context → compaction → session killed; done signal → healthy context → no compaction
 
-### R5: Self-Compacted Signal Endpoint
+### R4: Self-Compacted Signal Endpoint
 - New endpoint `/callback-shepherd/signal/self-compacted`
 - New `AgentSignal.SelfCompacted` variant
 - Server completes `signalDeferred` with `SelfCompacted`
@@ -553,21 +517,21 @@ Single method for `DONE_BOUNDARY` trigger:
 - Callback script: `callback_shepherd.signal.sh self-compacted`
 - Verifiable: unit test — server receives self-compacted → deferred completed correctly
 
-### R6: PRIVATE.md in .ai_out/ Directory Structure
+### R5: PRIVATE.md in .ai_out/ Directory Structure
 - New path: `${sub_part}/private/PRIVATE.md`
 - Created by agent during self-compaction
 - Overwritten on subsequent self-compactions (git preserves history)
 - `AiOutputStructure` creates `private/` directory alongside `comm/`
 - Verifiable: directory creation test
 
-### R7: ContextForAgentProvider Includes PRIVATE.md
+### R6: ContextForAgentProvider Includes PRIVATE.md
 - Check for `private/PRIVATE.md` in sub-part directory
 - If exists and non-empty → include in instruction assembly at position 1b (after role def, before part context)
 - If not exists → skip silently (no error)
 - Applies to all instruction assembly methods (execution, planner, plan-reviewer)
 - Verifiable: unit test — instructions with/without PRIVATE.md present
 
-### R8: Session Rotation
+### R7: Session Rotation
 - After self-compaction: `agentFacade.killSession()` (internally kills TMUX, cleans
   SessionsState), set `handle = null`
 - Next `agentFacade.sendPayload(config, null, instructions)` transparently spawns fresh session
@@ -577,7 +541,7 @@ Single method for `DONE_BOUNDARY` trigger:
 - Verifiable: unit test via `FakeAgentFacade` — full rotation sequence;
   integration test — real session rotation
 
-### R9: Self-Compaction Instruction Message
+### R8: Self-Compaction Instruction Message
 - Template includes: PRIVATE.md path, summarization guidelines, signal instruction
 - Verifiable: template renders correct paths and signal commands
 
@@ -585,17 +549,16 @@ Single method for `DONE_BOUNDARY` trigger:
 
 ## Implementation Gates
 
-### Gate 1: Foundation — Reader + Validation
-**Scope:** R1, R2
-**What:** ContextWindowStateReader interface + ClaudeCode impl.
-context_window_slim.json validated after session ID resolution.
+### Gate 1: Foundation — Reader
+**Scope:** R1
+**What:** ContextWindowStateReader interface (single `read()` method) + ClaudeCode impl.
 **Verify:**
 - Unit tests: reader parses valid/invalid/missing JSON
 - Integration test: real Claude Code session has context_window_slim.json present
-**Proceed when:** Reader reliably reads context state, presence validation catches missing hook.
+**Proceed when:** Reader reliably reads context state; missing-file exception catches unconfigured hook.
 
 ### Gate 2: Signal + Directory + Instructions
-**Scope:** R5, R6, R7, R9
+**Scope:** R4, R5, R6, R8
 **What:** New `/signal/self-compacted` endpoint. `private/PRIVATE.md` directory structure.
 ContextForAgentProvider includes PRIVATE.md. Self-compaction instruction template.
 **Verify:**
@@ -607,7 +570,7 @@ ContextForAgentProvider includes PRIVATE.md. Self-compaction instruction templat
 template produces correct messages.
 
 ### Gate 3: `performCompaction()` — Done-Boundary Flow + Trigger Detection
-**Scope:** R3, R4, R8
+**Scope:** R2, R3, R7
 **What:** `performCompaction()` for `DONE_BOUNDARY`. Done-boundary trigger detection.
 **Verify:**
 - Unit test: `DONE_BOUNDARY` — done → low context → compaction instruction → SelfCompacted → session killed (lazy respawn)
@@ -633,7 +596,7 @@ template produces correct messages.
 |------|--------|------------|
 | **PRIVATE.md quality varies** | Poor summarization → degraded agent performance in new session | Structured prompt template with specific sections. Iterate on template based on real-world results. |
 | **Self-compaction itself fails** | Agent may not have enough context to summarize | 5-minute timeout. If fails → `AgentCrashed` → `FailedToExecutePlanUseCase`. |
-| **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files → `remainingPercentage` returned as null → compaction is skipped with a logged warning → health monitoring's existing noActivityTimeout eventually catches a truly dead/silent agent. |
+| **External hook stops writing** | context_window_slim.json stale or missing mid-session | First `read()` on the initial health check throws `ContextWindowStateUnavailableException` if file is missing (hard stop). Stale files → `remainingPercentage` returned as null → compaction is skipped with a logged warning → health monitoring's existing noActivityTimeout eventually catches a truly dead/silent agent. |
 | **35% remaining triggers too early for some workloads** | Frequent unnecessary self-compactions | Threshold is a centralized constant, easily adjustable. Monitor in practice and tune. Each compaction adds ~2 minutes overhead. |
 | **Context exhausted between done boundaries** | Agent degrades or crashes mid-task | Claude Code's native auto-compaction handles this. Health monitoring detects dead sessions. Granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) minimizes the gap between done boundaries. V2 adds harness-controlled emergency interrupt — see [`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md). |
 

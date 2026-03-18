@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:14:33Z
 id: nid_dhkir4fqzy8tcgmh7nyj23hzp_E
 title: "SIMPLIFY_CANDIDATE: Remove ContextWindowStateReader.validatePresence() — let read() fail naturally on first health check"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:23:33Z
-status_updated_iso: 2026-03-18T13:11:06Z
+status_updated_iso: 2026-03-18T13:14:33Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -61,3 +62,8 @@ Remove `validatePresence()` from the interface:
 --------------------------------------------------------------------------------
 
 AS long as first health check runs quite close we can SIMPLIFY.
+## Notes
+
+**2026-03-18T13:14:38Z**
+
+Completed: Removed validatePresence() from spec docs only (no code changes). Changes: (1) ContextWindowSelfCompactionUseCase.md — removed validatePresence() from interface, removed spawn-time validation section, removed R2 requirement, renumbered R3-R9→R2-R8, updated Gate scopes; (2) PartExecutor.md — updated precondition comment. First read() call naturally throws ContextWindowStateUnavailableException on missing file — same hard-stop outcome with simpler interface.
