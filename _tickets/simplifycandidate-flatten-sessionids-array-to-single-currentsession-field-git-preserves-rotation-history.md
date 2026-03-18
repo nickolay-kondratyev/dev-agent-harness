@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:44:32Z
 id: nid_ndift4w7dvm2hsozycuxlku4g_E
 title: "SIMPLIFY_CANDIDATE: Flatten sessionIds array to single currentSession field — git preserves rotation history"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T00:07:17Z
-status_updated_iso: 2026-03-18T00:07:17Z
+status_updated_iso: 2026-03-18T13:44:32Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
