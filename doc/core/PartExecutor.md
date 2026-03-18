@@ -164,9 +164,9 @@ while (sessionEntry.pendingPayloadAck != null) {
 
 // Phase B: Signal-Await with Health Monitoring
 //
-// PRECONDITION: This phase runs AFTER the bootstrap handshake (/signal/started received)
-// and AFTER contextWindowStateReader.validatePresence() has confirmed
-// context_window_slim.json exists. The file is guaranteed present.
+// PRECONDITION: This phase runs AFTER the bootstrap handshake (/signal/started received).
+// context_window_slim.json presence is validated implicitly on the first health-check
+// read() call — missing file throws ContextWindowStateUnavailableException (hard stop).
 //
 // Liveness: determined solely by lastActivityTimestamp (HTTP callbacks).
 // Compaction: determined by context_window_slim.json (remaining_percentage) — checked
