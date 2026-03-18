@@ -18,6 +18,8 @@ cat >> "${tmp_file:?}" <<EOF
 
       Slice the implementation tickets also so that each can fully fit into 200K context without triggering compaction. Use **dependency** addition=[ticket dep <id> <dep-id>] between tickets to create a hierarchy of implementation.
 
+      Focus on addition of tickets for just one spec. Separate iteration will create tickets for another spec.
+
       Review the tickets created to make sure the split makes the most sense.
 EOF
 
