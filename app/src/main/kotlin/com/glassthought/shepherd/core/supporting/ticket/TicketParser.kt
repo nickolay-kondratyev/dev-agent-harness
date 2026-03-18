@@ -3,7 +3,7 @@ package com.glassthought.shepherd.core.supporting.ticket
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
-import kotlinx.coroutines.Dispatchers
+import com.glassthought.shepherd.core.infra.DispatcherProvider
 import kotlinx.coroutines.withContext
 import java.nio.file.Path
 import kotlin.io.path.readText
@@ -36,7 +36,10 @@ fun interface TicketParser {
  * Reads the file from disk (on IO dispatcher) and delegates frontmatter parsing to
  * [YamlFrontmatterParser]. Fails fast if required fields `id` or `title` are absent.
  */
-class TicketParserImpl(outFactory: OutFactory) : TicketParser {
+class TicketParserImpl(
+    outFactory: OutFactory,
+    private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+) : TicketParser {
 
     private val out = outFactory.getOutForClass(TicketParserImpl::class)
 
@@ -49,7 +52,7 @@ class TicketParserImpl(outFactory: OutFactory) : TicketParser {
             listOf(Val(path.toString(), ValType.FILE_PATH_STRING))
         }
 
-        val content = withContext(Dispatchers.IO) { path.readText() }
+        val content = withContext(dispatcherProvider.io()) { path.readText() }
 
         val result = YamlFrontmatterParser.parse(content)
         val fields = FrontmatterFields(result.yamlFields)

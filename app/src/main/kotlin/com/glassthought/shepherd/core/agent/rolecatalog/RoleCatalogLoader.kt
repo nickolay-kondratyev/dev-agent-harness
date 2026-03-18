@@ -3,9 +3,9 @@ package com.glassthought.shepherd.core.agent.rolecatalog
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.infra.DispatcherProvider
 import com.glassthought.shepherd.core.supporting.ticket.FrontmatterFields
 import com.glassthought.shepherd.core.supporting.ticket.YamlFrontmatterParser
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
@@ -46,7 +46,10 @@ fun interface RoleCatalogLoader {
  * [YamlFrontmatterParser], and constructs [RoleDefinition] instances. Fails fast on
  * missing directory, empty catalog, or missing required frontmatter fields.
  */
-class RoleCatalogLoaderImpl(outFactory: OutFactory) : RoleCatalogLoader {
+class RoleCatalogLoaderImpl(
+    outFactory: OutFactory,
+    private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+) : RoleCatalogLoader {
 
     private val out = outFactory.getOutForClass(RoleCatalogLoaderImpl::class)
 
@@ -55,7 +58,7 @@ class RoleCatalogLoaderImpl(outFactory: OutFactory) : RoleCatalogLoader {
             listOf(Val(dir.toString(), ValType.FILE_PATH_STRING))
         }
 
-        val roles = withContext(Dispatchers.IO) {
+        val roles = withContext(dispatcherProvider.io()) {
             require(Files.exists(dir) && Files.isDirectory(dir)) {
                 "Role catalog directory does not exist or is not a directory: $dir"
             }
