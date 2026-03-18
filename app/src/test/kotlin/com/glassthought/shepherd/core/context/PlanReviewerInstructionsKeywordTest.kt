@@ -9,7 +9,7 @@ import kotlin.io.path.readText
  * Keyword presence tests for plan reviewer instructions.
  *
  * Verifies that plan reviewer instruction files contain all required protocol keywords
- * and plan-review-specific content (plan.json, PLAN.md, planner rationale).
+ * and plan-review-specific content (plan_flow.json, PLAN.md, planner rationale).
  */
 class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
 
@@ -49,7 +49,7 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             // ── Plan content ─────────────────────────────────────────────
-            it("THEN contains plan.json content") {
+            it("THEN contains plan_flow.json content") {
                 text shouldContain request.planJsonContent!!
             }
 

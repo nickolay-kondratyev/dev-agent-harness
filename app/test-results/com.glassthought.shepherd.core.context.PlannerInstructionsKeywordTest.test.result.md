@@ -16,7 +16,7 @@ skipped: 0
     - [PASS] THEN contains callback signal script name
     - [PASS] THEN contains payload ACK tag
     - [PASS] THEN contains plan format instructions
-    - [PASS] THEN contains plan.json output path
+    - [PASS] THEN contains plan_flow.json output path
     - [PASS] THEN contains role catalog with IMPLEMENTOR
     - [PASS] THEN contains role catalog with REVIEWER
     - [PASS] THEN contains ticket content

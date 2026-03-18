@@ -30,7 +30,7 @@ skipped: 0
     - [PASS] THEN no phases directory is created
     - [PASS] THEN plan directory still exists
     - [PASS] THEN shared directory still exists
-  - WHEN ensureStructure is called with planningSubParts
+  - WHEN ensureStructure is called with planningParts
     - [PASS] THEN planning/1_plan directory exists
     - [PASS] THEN planning/1_plan/session_ids directory exists
     - [PASS] THEN planning/2_plan_review directory exists
@@ -42,7 +42,7 @@ skipped: 0
   - WHEN part is blank
     - [PASS] THEN subPartDir throws IllegalArgumentException
   - WHEN subPart is blank
-    - [PASS] THEN planningSubPartDir throws IllegalArgumentException
+    - [PASS] THEN planningPartSubPartDir throws IllegalArgumentException
     - [PASS] THEN subPartDir throws IllegalArgumentException
 - GIVEN AiOutputStructure with valid repo root
   - AND branch is 'feature__my-task__try-1'

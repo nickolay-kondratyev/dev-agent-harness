@@ -16,6 +16,6 @@ skipped: 0
     - [PASS] THEN contains callback query script name (plan reviewer validates plan)
     - [PASS] THEN contains callback signal script name
     - [PASS] THEN contains payload ACK tag
-    - [PASS] THEN contains plan.json content
+    - [PASS] THEN contains plan_flow.json content
     - [PASS] THEN contains planner's PUBLIC.md content
     - [PASS] THEN contains ticket content

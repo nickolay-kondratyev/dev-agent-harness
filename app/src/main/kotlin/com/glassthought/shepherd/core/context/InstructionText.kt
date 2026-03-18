@@ -160,30 +160,34 @@ object InstructionText {
     val PLAN_FORMAT_INSTRUCTIONS: String = """
         ## Plan Format
 
-        Write `plan.json` following this schema. Each part has sub-parts (typically doer + reviewer).
+        Write `plan_flow.json` following this schema. Each part has sub-parts (typically doer + reviewer).
 
         ```json
         {
           "parts": [
             {
               "name": "<part_name>",
+              "phase": "execution",
               "description": "<what this part accomplishes>",
-              "sub_parts": [
+              "subParts": [
                 {
                   "name": "<sub_part_name>",
                   "role": "<role from catalog>",
                   "agentType": "ClaudeCode",
+                  "model": "opus|sonnet"
+                },
+                {
+                  "name": "review",
+                  "role": "<reviewer role from catalog>",
+                  "agentType": "ClaudeCode",
                   "model": "opus|sonnet",
-                  "loadsPlan": false
+                  "iteration": { "max": 3 }
                 }
-              ],
-              "iteration": { "max": 3 }
+              ]
             }
           ]
         }
         ```
-
-        At least one implementor sub-part must have `loadsPlan: true` to receive PLAN.md.
     """.trimIndent()
 
     // ── Reviewer iteration > 1: feedback state sections header ───────────────
