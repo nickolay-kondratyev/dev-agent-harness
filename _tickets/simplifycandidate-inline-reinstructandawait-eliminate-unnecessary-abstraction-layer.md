@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:33:24Z
 id: nid_pqml7kyou1qfggya49bgplqlr_E
 title: "SIMPLIFY_CANDIDATE: Inline ReInstructAndAwait — eliminate unnecessary abstraction layer"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:51Z
-status_updated_iso: 2026-03-18T15:29:51Z
+status_updated_iso: 2026-03-18T15:33:24Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

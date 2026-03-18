@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Current State
 In `doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md`, the planner agent produces TWO separate output files:
 1. `plan_flow.json` — the structured execution plan
@@ -32,4 +34,7 @@ Merge into a SINGLE output file (`plan_flow.json`) with an embedded `planDescrip
 - `doc/use-case/SetupPlanUseCase/DetailedPlanningUseCase.md` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E)
 - `doc/schema/plan-and-current-state.md` (ref.ap.56azZbk7lAMll0D4Ot2G0.E)
 - `doc/schema/ai-out-directory.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
+--------------------------------------------------------------------------------
 
+
+DECISION: KEEP PLAN.md. Document that PLAN.md will be passed to the DOER agent and doer-reviewer agent so that they know what was planned. While the `plan_flow.json` is used by the harness to orchestrate the flow. They are different responsibilities and it should be clear in the specs.
