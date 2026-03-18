@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:19:00Z
 id: nid_6n35nlejj5yy8iu4q7efxzbej_E
 title: "SIMPLIFY_CANDIDATE: Single auto-compaction disablement — env var only, drop .claude.json config"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:22:59Z
-status_updated_iso: 2026-03-18T13:15:28Z
+status_updated_iso: 2026-03-18T13:19:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -39,3 +40,18 @@ DECISION:
 We already moved the auto compaction out to V2 under ./doc_v2/our-own-emergency-compression.md
 
 We shouldnt have disablement problem at all for V1 as we arent disabling for V1 address the docs
+## Notes
+
+**2026-03-18T13:18:56Z**
+
+RESOLUTION: Doc-only change.
+
+V1 docs (doc/) were already correct — no auto-compaction disablement references anywhere.
+V1 approach: Claude Code's native auto-compaction remains ENABLED (handled natively).
+
+Updated doc_v2/our-own-emergency-compression.md V2 disablement section:
+- Removed .claude.json mechanism (two-mechanism 'belt and suspenders' approach)
+- Kept only DISABLE_AUTO_COMPACT=true env var
+- Added WHY-NOT comment explaining the decision
+
+Commit: 92edb14
