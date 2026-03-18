@@ -1,11 +1,11 @@
 ---
 id: nid_wxj0ewdf3fn6gqjzooqgdhec4_E
 title: "SIMPLIFY_CANDIDATE: Flatten AgentInstructionRequest — remove ExecutionRequest intermediate level"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:24Z
-status_updated_iso: 2026-03-18T15:29:24Z
+status_updated_iso: 2026-03-18T15:32:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
