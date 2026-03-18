@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:21:05Z
 id: nid_5l14yzdlzcryi8d3bearl9k1r_E
 title: "Missing PLANNER and PLAN_REVIEWER role definition files"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:03:01Z
-status_updated_iso: 2026-03-18T15:03:01Z
+status_updated_iso: 2026-03-18T15:21:05Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
