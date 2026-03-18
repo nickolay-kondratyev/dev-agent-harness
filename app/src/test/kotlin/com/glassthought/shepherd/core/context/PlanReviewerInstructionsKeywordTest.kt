@@ -19,10 +19,10 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.planReviewerRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleInstructions(AgentRole.PLAN_REVIEWER, request)
+            val instructionsPath = provider.assembleInstructions(request)
             val text = instructionsPath.readText()
 
-            // ── Reviewer-specific done results ───────────────────────────
+            // -- Reviewer-specific done results --
             it("THEN contains 'pass' done result") {
                 text shouldContain ProtocolVocabulary.DoneResult.PASS
             }
@@ -31,7 +31,7 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.DoneResult.NEEDS_ITERATION
             }
 
-            // ── Callback scripts ─────────────────────────────────────────
+            // -- Callback scripts --
             it("THEN contains callback signal script name") {
                 text shouldContain ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
             }
@@ -48,9 +48,9 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.PAYLOAD_ACK_TAG
             }
 
-            // ── Plan content ─────────────────────────────────────────────
+            // -- Plan content --
             it("THEN contains plan_flow.json content") {
-                text shouldContain request.planJsonContent!!
+                text shouldContain request.planJsonContent
             }
 
             it("THEN contains PLAN.md content") {
@@ -61,12 +61,12 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain "ClaudeCode"
             }
 
-            // ── Planner rationale ────────────────────────────────────────
+            // -- Planner rationale --
             it("THEN contains planner's PUBLIC.md content") {
                 text shouldContain "Chose 3-part approach"
             }
 
-            // ── Role and ticket ──────────────────────────────────────────
+            // -- Role and ticket --
             it("THEN contains PLAN_REVIEWER role name") {
                 text shouldContain "PLAN_REVIEWER"
             }

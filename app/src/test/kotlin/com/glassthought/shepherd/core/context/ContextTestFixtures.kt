@@ -32,31 +32,33 @@ object ContextTestFixtures {
     /**
      * Creates a minimal doer instruction request with all required filesystem structures.
      */
-    fun doerInstructionRequest(tempDir: Path): UnifiedInstructionRequest {
+    fun doerInstructionRequest(tempDir: Path): AgentInstructionRequest.DoerRequest {
         val outputDir = tempDir.resolve("comm/in")
         Files.createDirectories(outputDir)
 
         val publicMdOutputPath = tempDir.resolve("comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return UnifiedInstructionRequest(
+        return AgentInstructionRequest.DoerRequest(
             roleDefinition = roleDefinition("IMPLEMENTOR"),
-            partName = "part_1_implementation",
-            partDescription = "Implement the main feature",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            planMdPath = null,
-            priorPublicMdPaths = emptyList(),
             iterationNumber = 1,
-            reviewerPublicMdPath = null,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            executionContext = ExecutionContext(
+                partName = "part_1_implementation",
+                partDescription = "Implement the main feature",
+                planMdPath = null,
+                priorPublicMdPaths = emptyList(),
+            ),
+            reviewerPublicMdPath = null,
         )
     }
 
     /**
      * Creates a reviewer instruction request on iteration 1 with doer's PUBLIC.md.
      */
-    fun reviewerInstructionRequest(tempDir: Path): UnifiedInstructionRequest {
+    fun reviewerInstructionRequest(tempDir: Path): AgentInstructionRequest.ReviewerRequest {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -67,25 +69,30 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("reviewer/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return UnifiedInstructionRequest(
+        val feedbackDir = tempDir.resolve("doer/__feedback")
+        Files.createDirectories(feedbackDir)
+
+        return AgentInstructionRequest.ReviewerRequest(
             roleDefinition = roleDefinition("REVIEWER"),
-            partName = "part_1_implementation",
-            partDescription = "Review the implementation",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            planMdPath = null,
-            priorPublicMdPaths = emptyList(),
             iterationNumber = 1,
-            doerPublicMdPath = doerPublicMd,
-            feedbackDir = null,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            executionContext = ExecutionContext(
+                partName = "part_1_implementation",
+                partDescription = "Review the implementation",
+                planMdPath = null,
+                priorPublicMdPaths = emptyList(),
+            ),
+            doerPublicMdPath = doerPublicMd,
+            feedbackDir = feedbackDir,
         )
     }
 
     /**
      * Creates a reviewer instruction request on iteration > 1 with feedback directory.
      */
-    fun reviewerInstructionRequestWithFeedback(tempDir: Path): UnifiedInstructionRequest {
+    fun reviewerInstructionRequestWithFeedback(tempDir: Path): AgentInstructionRequest.ReviewerRequest {
         val outputDir = tempDir.resolve("reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -99,25 +106,27 @@ object ContextTestFixtures {
         // Use test resource feedback directory
         val feedbackDir = resourceDir("feedback")
 
-        return UnifiedInstructionRequest(
+        return AgentInstructionRequest.ReviewerRequest(
             roleDefinition = roleDefinition("REVIEWER"),
-            partName = "part_1_implementation",
-            partDescription = "Review the implementation",
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
-            planMdPath = null,
-            priorPublicMdPaths = emptyList(),
             iterationNumber = 2,
-            doerPublicMdPath = doerPublicMd,
-            feedbackDir = feedbackDir,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            executionContext = ExecutionContext(
+                partName = "part_1_implementation",
+                partDescription = "Review the implementation",
+                planMdPath = null,
+                priorPublicMdPaths = emptyList(),
+            ),
+            doerPublicMdPath = doerPublicMd,
+            feedbackDir = feedbackDir,
         )
     }
 
     /**
      * Creates a planner instruction request.
      */
-    fun plannerRequest(tempDir: Path): UnifiedInstructionRequest {
+    fun plannerRequest(tempDir: Path): AgentInstructionRequest.PlannerRequest {
         val outputDir = tempDir.resolve("planner/comm/in")
         Files.createDirectories(outputDir)
 
@@ -130,7 +139,7 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("planner/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return UnifiedInstructionRequest(
+        return AgentInstructionRequest.PlannerRequest(
             roleDefinition = roleDefinition("PLANNER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
             roleCatalogEntries = listOf(
@@ -149,7 +158,7 @@ object ContextTestFixtures {
     /**
      * Creates a plan reviewer instruction request.
      */
-    fun planReviewerRequest(tempDir: Path): UnifiedInstructionRequest {
+    fun planReviewerRequest(tempDir: Path): AgentInstructionRequest.PlanReviewerRequest {
         val outputDir = tempDir.resolve("plan_reviewer/comm/in")
         Files.createDirectories(outputDir)
 
@@ -160,7 +169,7 @@ object ContextTestFixtures {
         val publicMdOutputPath = tempDir.resolve("plan_reviewer/comm/out/PUBLIC.md")
         Files.createDirectories(publicMdOutputPath.parent)
 
-        return UnifiedInstructionRequest(
+        return AgentInstructionRequest.PlanReviewerRequest(
             roleDefinition = roleDefinition("PLAN_REVIEWER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
             planJsonContent = """{"parts": []}""",

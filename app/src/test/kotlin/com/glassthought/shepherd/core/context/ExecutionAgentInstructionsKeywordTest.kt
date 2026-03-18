@@ -21,10 +21,10 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleInstructions(AgentRole.DOER, request)
+            val instructionsPath = provider.assembleInstructions(request)
             val text = instructionsPath.readText()
 
-            // ── Callback signal script ───────────────────────────────────
+            // -- Callback signal script --
             it("THEN contains callback signal script name") {
                 text shouldContain ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
             }
@@ -57,12 +57,12 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.PAYLOAD_ACK_TAG
             }
 
-            // ── WHY-NOT keyword ──────────────────────────────────────────
+            // -- WHY-NOT keyword --
             it("THEN contains WHY-NOT keyword") {
                 text shouldContain ProtocolVocabulary.WHY_NOT
             }
 
-            // ── Role and ticket ──────────────────────────────────────────
+            // -- Role and ticket --
             it("THEN contains role name") {
                 text shouldContain "IMPLEMENTOR"
             }
@@ -72,10 +72,10 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains part name") {
-                text shouldContain request.partName!!
+                text shouldContain request.executionContext.partName
             }
 
-            // ── Doer callback shows 'completed', not reviewer results ─────
+            // -- Doer callback shows 'completed', not reviewer results --
             it("THEN contains callback example with 'completed' (not 'pass' or 'needs_iteration')") {
                 // The callback script section for doers shows only 'done completed'.
                 // PUBLIC_MD_WRITING_GUIDELINES may mention pass/needs_iteration in context,
@@ -83,7 +83,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}"
             }
 
-            // ── No plan validation query for execution agents ────────────
+            // -- No plan validation query for execution agents --
             it("THEN does NOT contain query script (execution agents have no queries)") {
                 text shouldNotContain ProtocolVocabulary.CALLBACK_QUERY_SCRIPT
             }
@@ -96,10 +96,10 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleInstructions(AgentRole.REVIEWER, request)
+            val instructionsPath = provider.assembleInstructions(request)
             val text = instructionsPath.readText()
 
-            // ── Reviewer-specific done results ───────────────────────────
+            // -- Reviewer-specific done results --
             it("THEN contains 'pass' done result") {
                 text shouldContain ProtocolVocabulary.DoneResult.PASS
             }
@@ -108,7 +108,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.DoneResult.NEEDS_ITERATION
             }
 
-            // ── Feedback status keywords ─────────────────────────────────
+            // -- Feedback status keywords --
             it("THEN contains 'unaddressed' feedback status") {
                 text shouldContain ProtocolVocabulary.FeedbackStatus.UNADDRESSED
             }
@@ -121,7 +121,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.FeedbackStatus.REJECTED
             }
 
-            // ── Severity keywords ────────────────────────────────────────
+            // -- Severity keywords --
             it("THEN contains 'critical' severity") {
                 text shouldContain ProtocolVocabulary.Severity.CRITICAL
             }
@@ -134,17 +134,17 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.Severity.OPTIONAL
             }
 
-            // ── Feedback file protocol ───────────────────────────────────
+            // -- Feedback file protocol --
             it("THEN contains Movement Log reference") {
                 text shouldContain ProtocolVocabulary.MOVEMENT_LOG
             }
 
-            // ── WHY-NOT protocol in structured feedback ──────────────────
+            // -- WHY-NOT protocol in structured feedback --
             it("THEN contains WHY-NOT in feedback format") {
                 text shouldContain ProtocolVocabulary.WHY_NOT
             }
 
-            // ── Feedback file content from test fixtures ─────────────────
+            // -- Feedback file content from test fixtures --
             it("THEN contains addressed feedback file content") {
                 text shouldContain "Race condition in session manager"
             }
@@ -153,7 +153,7 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain "CoroutineScope instead of GlobalScope"
             }
 
-            // ── Doer output included for review ──────────────────────────
+            // -- Doer output included for review --
             it("THEN contains doer's PUBLIC.md content") {
                 text shouldContain "Implemented feature X"
             }
