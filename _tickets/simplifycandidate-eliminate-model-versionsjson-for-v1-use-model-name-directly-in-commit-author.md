@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE, YAGNI, V1-scope]
 ---
 
+FEEDBACK
+--------------------------------------------------------------------------------
 ref.ap.BvNCIzjdHS2iAP4gAQZQf.E (git spec)
 
 Currently commit author encodes model version from a separate config/model-versions.json file (e.g., CC_sonnet-v4.6_WITH-username). This config must be manually kept in sync with actual agent model versions, and a missing/malformed file is a startup failure.
@@ -23,3 +25,8 @@ Why more robust: Eliminates config-drift risk (config says v4.5 but agent is act
 
 File: doc/core/git.md
 
+--------------------------------------------------------------------------------
+
+OK yes lets simplify it as it creates a RISK of stale models.
+
+Let's just have the model name in the commit.
