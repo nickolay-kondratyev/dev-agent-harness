@@ -19,10 +19,10 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.plannerRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val instructionsPath = provider.assembleInstructions(AgentRole.PLANNER, request)
+            val instructionsPath = provider.assembleInstructions(request)
             val text = instructionsPath.readText()
 
-            // ── Callback scripts ─────────────────────────────────────────
+            // -- Callback scripts --
             it("THEN contains callback signal script name") {
                 text shouldContain ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
             }
@@ -43,7 +43,7 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.PAYLOAD_ACK_TAG
             }
 
-            // ── Planner-specific content ─────────────────────────────────
+            // -- Planner-specific content --
             it("THEN contains role catalog with IMPLEMENTOR") {
                 text shouldContain "IMPLEMENTOR"
             }
@@ -61,14 +61,14 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains plan_flow.json output path") {
-                text shouldContain request.planJsonOutputPath!!.toString()
+                text shouldContain request.planJsonOutputPath.toString()
             }
 
             it("THEN contains PLAN.md output path") {
-                text shouldContain request.planMdOutputPath!!.toString()
+                text shouldContain request.planMdOutputPath.toString()
             }
 
-            // ── Role and ticket ──────────────────────────────────────────
+            // -- Role and ticket --
             it("THEN contains PLANNER role name") {
                 text shouldContain "PLANNER"
             }

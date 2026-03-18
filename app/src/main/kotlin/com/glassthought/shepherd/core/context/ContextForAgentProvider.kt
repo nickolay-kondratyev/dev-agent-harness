@@ -11,9 +11,10 @@ import java.nio.file.Path
  * ticket, shared context, prior agent outputs, and communication tooling. The provider is the
  * **single place** that decides what each agent sees.
  *
- * Single public method: `assembleInstructions(role, request)`. The caller passes `role` — the
- * provider dispatches to the correct internal section plan. Adding a new agent role requires only
- * a new `AgentRole` variant and a plan list, not a new interface method + request type.
+ * Single public method: `assembleInstructions(request)`. The request type encodes the role —
+ * no separate role parameter needed. Invalid field combinations are caught at compile time,
+ * not at runtime. Adding a new agent role requires only a new `AgentInstructionRequest`
+ * subtype and a plan list.
  *
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
@@ -25,10 +26,10 @@ interface ContextForAgentProvider {
 
     /**
      * Assembles the instruction file for an agent.
-     * `role` selects the section plan; `request` supplies all data needed by any role.
+     * The request type encodes the role — no separate role parameter needed.
      * Writes to `request.outputDir/instructions.md`. Returns the written path.
      */
-    suspend fun assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest): Path
+    suspend fun assembleInstructions(request: AgentInstructionRequest): Path
 
     companion object {
         fun standard(outFactory: OutFactory): ContextForAgentProvider =
@@ -36,51 +37,78 @@ interface ContextForAgentProvider {
     }
 }
 
-/** Discriminates which agent role is being assembled for. Drives section plan selection. */
-enum class AgentRole { DOER, REVIEWER, PLANNER, PLAN_REVIEWER }
+/**
+ * Shared fields between [AgentInstructionRequest.DoerRequest] and
+ * [AgentInstructionRequest.ReviewerRequest] — extracted via composition instead of an
+ * intermediate sealed class that would require override boilerplate and nested when-matching.
+ */
+data class ExecutionContext(
+    val partName: String,
+    val partDescription: String,
+    val planMdPath: Path?,               // null -> no-planning workflow
+    val priorPublicMdPaths: List<Path>,
+)
 
 /**
- * Single request type for all agent roles.
+ * Sealed request hierarchy for agent instruction assembly.
  *
- * Common fields are required for all roles. Role-specific fields are nullable (or empty list)
- * when not applicable. The `role` parameter passed to `assembleInstructions` is the discriminator
- * — the provider accesses only the fields relevant to the given role.
- *
- * Field grouping comments document which roles use each field.
+ * Each role gets its own subtype with exactly the fields it needs. No nullable role-specific
+ * fields; the type itself is the discriminator. Remaining nullables are semantically meaningful
+ * optionals (absent on first iteration or absent in no-planning workflows).
  */
-data class UnifiedInstructionRequest(
-    // ── common (all roles) ──────────────────────────────────────────────────
-    val roleDefinition: RoleDefinition,
-    val ticketContent: String,
-    val iterationNumber: Int,
-    val outputDir: Path,
-    val publicMdOutputPath: Path,
+sealed class AgentInstructionRequest {
+    // -- common (all roles) --
+    abstract val roleDefinition: RoleDefinition
+    abstract val ticketContent: String
+    abstract val iterationNumber: Int
+    abstract val outputDir: Path
+    abstract val publicMdOutputPath: Path
 
-    // ── execution agents (DOER + REVIEWER) ──────────────────────────────────
-    val partName: String? = null,
-    val partDescription: String? = null,
-    val planMdPath: Path? = null,              // null → no-planning workflow
-    val priorPublicMdPaths: List<Path> = emptyList(),
+    data class DoerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val executionContext: ExecutionContext,
+        val reviewerPublicMdPath: Path?,     // null on iteration 1
+    ) : AgentInstructionRequest()
 
-    // ── DOER-only ───────────────────────────────────────────────────────────
-    val reviewerPublicMdPath: Path? = null,    // null on iteration 1
+    data class ReviewerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val executionContext: ExecutionContext,
+        val doerPublicMdPath: Path,          // always required; non-nullable
+        val feedbackDir: Path,               // always required; non-nullable
+    ) : AgentInstructionRequest()
 
-    // ── REVIEWER-only ───────────────────────────────────────────────────────
-    val doerPublicMdPath: Path? = null,
-    val feedbackDir: Path? = null,
+    data class PlannerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val roleCatalogEntries: List<RoleCatalogEntry>,
+        val planReviewerPublicMdPath: Path?,     // null on iteration 1
+        val planJsonOutputPath: Path,            // always required; non-nullable
+        val planMdOutputPath: Path,              // always required; non-nullable
+    ) : AgentInstructionRequest()
 
-    // ── PLANNER-only ────────────────────────────────────────────────────────
-    val roleCatalogEntries: List<RoleCatalogEntry> = emptyList(),
-    val planReviewerPublicMdPath: Path? = null, // null on iteration 1
-    val planJsonOutputPath: Path? = null,
-    val planMdOutputPath: Path? = null,
-
-    // ── PLAN_REVIEWER-only ──────────────────────────────────────────────────
-    val planJsonContent: String? = null,
-    val planMdContent: String? = null,
-    val plannerPublicMdPath: Path? = null,
-    val priorPlanReviewerPublicMdPath: Path? = null, // null on iteration 1
-)
+    data class PlanReviewerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val planJsonContent: String,             // always required; non-nullable
+        val planMdContent: String,               // always required; non-nullable
+        val plannerPublicMdPath: Path,           // always required; non-nullable
+        val priorPlanReviewerPublicMdPath: Path?, // null on iteration 1
+    ) : AgentInstructionRequest()
+}
 
 /**
  * Minimal role info for the planner's role catalog section.
