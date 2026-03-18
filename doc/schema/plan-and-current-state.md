@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # Plan & Current-State JSON Schema / ap.56azZbk7lAMll0D4Ot2G0.E
 
 For directory layout and file locations see [`.ai_out/` directory schema](ai-out-directory.md) (ref.ap.BXQlLDTec7cVVOrzXWfR7.E).
