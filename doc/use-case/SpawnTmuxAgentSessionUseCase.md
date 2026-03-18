@@ -1,3 +1,4 @@
+#need-tickets
 # SpawnTmuxAgentSessionUseCase — Design / ap.hZdTRho3gQwgIXxoUtTqy.E
 
 Orchestrates spawning an agent in a TMUX session, establishing identity via HandshakeGuid,

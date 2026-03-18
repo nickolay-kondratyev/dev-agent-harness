@@ -1,3 +1,4 @@
+#need-tickets
 # Context Window Self-Compaction — UseCase / ap.8nwz2AHf503xwq8fKuLcl.E
 
 Detects context window exhaustion in TMUX-powered agents and performs controlled
