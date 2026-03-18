@@ -1,11 +1,11 @@
 ---
 id: nid_cos4q2sm2k5vznsg4vo5ajpwa_E
 title: "SIMPLIFY_CANDIDATE: Merge plan_flow.json and PLAN.md into single planner output"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:01Z
-status_updated_iso: 2026-03-18T15:29:01Z
+status_updated_iso: 2026-03-18T15:35:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
