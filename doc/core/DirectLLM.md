@@ -1,41 +1,40 @@
-# DirectLLM — Tier-Scoped Interfaces / ap.hnbdrLkRtNSDFArDFd9I2.E
+# DirectLLM — Single Interface with Model Config / ap.hnbdrLkRtNSDFArDFd9I2.E
 
 For harness-internal tasks (compress ticket title, suggest feature name, autonomous Q&A answers).
 **Not used for iteration decisions** — the reviewer's `result` field is authoritative.
 
 ---
 
-## Design: Interface-per-Tier
+## Design: Single Interface, Configuration at Wiring Time
 
-Each budget tier gets its own interface. The `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E)
-wires a concrete `DirectLLM` implementation to each tier interface — callers depend on the
-tier interface, never on a specific model.
+One interface. Callers receive the appropriately-configured instance via constructor injection
+(DIP preserved). Model selection is a constructor parameter of the implementation — not a
+type-level distinction.
 
 ```kotlin
-// Shared contract — all tiers implement this
 interface DirectLLM {
     suspend fun call(request: ChatRequest): ChatResponse
 }
 
-// Tier interfaces — callers depend on these
-interface DirectQuickCheapLLM : DirectLLM    // fast, low-cost tasks (title compression, slugification)
-interface DirectBudgetHighLLM : DirectLLM    // expensive tasks (autonomous Q&A answers)
+// Callers get the right DirectLLM via named constructor params
+class SomeUseCase(private val llm: DirectLLM)
 ```
 
-V1 has two tiers. A mid-tier interface can be added when a use case emerges (OCP —
-add a new interface, no changes to existing callers).
+The `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E) wires concrete `DirectLLM`
+implementations with the appropriate model config and injects each into its caller.
+Adding a new model config = adding a new wiring binding, not a new interface (OCP).
 
 ---
 
 ## V1 Model Assignments
 
-| Tier Interface | V1 Model | Provider | Typical Use |
+| Use case | V1 Model | Provider | Caller |
 |---|---|---|---|
-| `DirectQuickCheapLLM` | **GLM-4.7-Flash** | Z.AI (GLM) | Title compression, feature name suggestion |
-| `DirectBudgetHighLLM` | **GLM-5** | Z.AI (GLM) | `LlmUserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E) autonomous Q&A answers |
+| Title compression, feature name suggestion | **GLM-4.7-Flash** | Z.AI (GLM) | *(not in active use after slug truncation moved to deterministic algorithm)* |
+| Autonomous Q&A answers | **GLM-5** | Z.AI (GLM) | `LlmUserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E) |
 
-Model assignments are configuration — changing the model behind a tier requires no code changes
-outside the `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E).
+Model assignments are configuration — changing the model behind a use case requires no code
+changes outside the `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E).
 
 ---
 
