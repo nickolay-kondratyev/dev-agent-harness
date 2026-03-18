@@ -1,11 +1,11 @@
 ---
 id: nid_tk6as1efs9eb8htwomz33boqq_E
 title: "SIMPLIFY_CANDIDATE: Remove NeedsEscalation from RecoveryOutcome — collapse into Unresolvable"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:54:00Z
-status_updated_iso: 2026-03-17T23:54:00Z
+status_updated_iso: 2026-03-18T13:47:13Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
