@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T16:22:34Z
 id: nid_xme0h76xv7446kvdxudw7yff3_E
 title: "add detekt"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T16:12:42Z
-status_updated_iso: 2026-03-18T16:15:28Z
+status_updated_iso: 2026-03-18T16:22:34Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
