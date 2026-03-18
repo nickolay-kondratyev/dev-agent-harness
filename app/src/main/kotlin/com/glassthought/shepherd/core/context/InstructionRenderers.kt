@@ -69,7 +69,7 @@ object InstructionRenderers {
             |### Queries (read the response from stdout):
             |
             |Validate plan before signaling done:
-            |`${ProtocolVocabulary.CALLBACK_QUERY_SCRIPT} validate-plan /absolute/path/to/plan.json`
+            |`${ProtocolVocabulary.CALLBACK_QUERY_SCRIPT} validate-plan /absolute/path/to/plan_flow.json`
             """.trimMargin()
         } else {
             ""

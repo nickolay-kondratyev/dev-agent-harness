@@ -19,7 +19,7 @@ skipped: 0
   - WHEN parse is called
     - [PASS] THEN exception message mentions blank name
     - [PASS] THEN throws IllegalArgumentException
-- GIVEN a JSON file with both parts and planningPhases
+- GIVEN a JSON file with both parts and planningParts
   - WHEN parse is called
     - [PASS] THEN exception message mentions mutual exclusivity
     - [PASS] THEN throws IllegalArgumentException
@@ -27,7 +27,7 @@ skipped: 0
   - WHEN parse is called
     - [PASS] THEN exception message mentions the part name
     - [PASS] THEN throws IllegalArgumentException
-- GIVEN a JSON file with neither parts nor planningPhases
+- GIVEN a JSON file with neither parts nor planningParts
   - WHEN parse is called
     - [PASS] THEN exception message mentions the missing fields
     - [PASS] THEN throws IllegalArgumentException
@@ -68,7 +68,7 @@ skipped: 0
     - [PASS] THEN name is 'straightforward'
     - [PASS] THEN parts list has 1 entry
     - [PASS] THEN planningIteration is null
-    - [PASS] THEN planningPhases is null
+    - [PASS] THEN planningParts is null
     - [PASS] THEN second phase role is 'IMPLEMENTATION_REVIEWER'
 - GIVEN a with-planning JSON missing executionPhasesFrom
   - WHEN parse is called
@@ -92,10 +92,10 @@ skipped: 0
     - [PASS] THEN throws IllegalArgumentException
 - GIVEN a with-planning workflow JSON
   - WHEN parse is called
-    - [PASS] THEN executionPhasesFrom is 'plan.json'
+    - [PASS] THEN executionPhasesFrom is 'plan_flow.json'
     - [PASS] THEN first planning phase role is 'PLANNER'
     - [PASS] THEN name is 'with-planning'
     - [PASS] THEN parts is null
     - [PASS] THEN planningIteration max is 3
-    - [PASS] THEN planningPhases has 2 entries
+    - [PASS] THEN planningParts has 2 entries
     - [PASS] THEN second planning phase role is 'PLAN_REVIEWER'

@@ -57,10 +57,10 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains plan format instructions") {
-                text shouldContain "plan.json"
+                text shouldContain "plan_flow.json"
             }
 
-            it("THEN contains plan.json output path") {
+            it("THEN contains plan_flow.json output path") {
                 text shouldContain request.planJsonOutputPath!!.toString()
             }
 

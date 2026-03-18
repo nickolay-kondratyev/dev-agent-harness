@@ -143,7 +143,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
         }
-        // 7. plan.json output path
+        // 7. plan_flow.json output path
         add(planJsonOutputPathSection(planJsonOutputPath))
         // 8. PLAN.md output path
         add(planMdOutputPathSection(planMdOutputPath))
@@ -177,7 +177,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         add(roleDefinitionSection(request.roleDefinition))
         // 2. Ticket
         add(ticketSection(request.ticketContent))
-        // 3. plan.json content
+        // 3. plan_flow.json content
         add(planJsonContentSection(planJsonContent))
         // 4. PLAN.md content
         add(planMdContentSection(planMdContent))
@@ -297,9 +297,9 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
     // ── Planner-specific sections ────────────────────────────────────────────
 
     private fun planJsonOutputPathSection(path: Path): String = """
-        ## plan.json Output Path
+        ## plan_flow.json Output Path
 
-        Write your plan.json to:
+        Write your plan_flow.json to:
         `$path`
     """.trimIndent()
 
@@ -311,7 +311,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
     """.trimIndent()
 
     private fun planJsonContentSection(content: String): String =
-        "# plan.json\n\n```json\n$content\n```"
+        "# plan_flow.json\n\n```json\n$content\n```"
 
     private fun planMdContentSection(content: String): String =
         "# PLAN.md\n\n$content"

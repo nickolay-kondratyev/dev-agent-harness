@@ -121,7 +121,7 @@ object ContextTestFixtures {
         val outputDir = tempDir.resolve("planner/comm/in")
         Files.createDirectories(outputDir)
 
-        val planJsonOutputPath = tempDir.resolve("harness_private/plan.json")
+        val planJsonOutputPath = tempDir.resolve("harness_private/plan_flow.json")
         Files.createDirectories(planJsonOutputPath.parent)
 
         val planMdOutputPath = tempDir.resolve("shared/plan/PLAN.md")
