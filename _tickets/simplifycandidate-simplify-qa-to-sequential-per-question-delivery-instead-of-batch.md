@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:01:12Z
 id: nid_m3t3l7rry2eyye7zn2z72ahs9_E
 title: "SIMPLIFY_CANDIDATE: Simplify Q&A to sequential per-question delivery instead of batch"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:47:56Z
-status_updated_iso: 2026-03-18T14:47:56Z
+status_updated_iso: 2026-03-18T15:01:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

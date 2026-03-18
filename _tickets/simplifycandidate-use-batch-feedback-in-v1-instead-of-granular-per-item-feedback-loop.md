@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:02:08Z
 id: nid_ukrg4wjdjtlcn20jf3m3hrh8a_E
 title: "SIMPLIFY_CANDIDATE: Use batch feedback in V1 instead of granular per-item feedback loop"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:46:22Z
-status_updated_iso: 2026-03-18T14:46:22Z
+status_updated_iso: 2026-03-18T15:02:08Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
