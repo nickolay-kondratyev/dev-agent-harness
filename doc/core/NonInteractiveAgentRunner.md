@@ -1,4 +1,3 @@
-#need-tickets
 # NonInteractiveAgentRunner / ap.ad4vG4G2xMPiMHRreoYVr.E
 
 A lightweight alternative to `SpawnTmuxAgentSessionUseCase` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
