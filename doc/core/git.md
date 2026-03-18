@@ -210,6 +210,20 @@ missing model.
 **Loading**: The config file is read **once at harness initialization** (not on every commit).
 If the file is missing or malformed → fail hard at startup with a clear error.
 
+**Why model versions in commit author** (WHY-NOT drop version):
+Model version history in commits enables long-term codebase analysis:
+- **Upgrade targeting**: Identify code authored by older model versions (e.g., `sonnet-v4.6`)
+  that could benefit from re-generation or review with newer versions.
+- **Test coverage prioritization**: Code produced by less capable model versions may warrant
+  additional testing coverage — the version tag in git history makes this queryable.
+- **Quality correlation**: Correlate defect rates and code complexity with specific model
+  versions to inform model selection decisions.
+- **Audit trail**: The exact model version is baked into each commit, not just the model family.
+  While model family (sonnet, opus) is the primary differentiator, the version captures the
+  capability snapshot at the time of authorship. Commit dates alone are insufficient because
+  version upgrades are not instant — different environments may run different versions on the
+  same date.
+
 **Why JSON config over file-per-model directory**: Eliminates the `MODEL_VERSION_DIR` env var,
 removes file I/O at commit time, prevents "file not found" and "wrong content" failure classes,
 and co-locates all model versions in a single version-controlled file. Can be updated without

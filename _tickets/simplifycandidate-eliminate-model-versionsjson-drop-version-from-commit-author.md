@@ -1,49 +1,40 @@
 ---
+closed_iso: 2026-03-17T23:48:25Z
 id: nid_4awf8wopl41nje4demfjsijn8_E
 title: "SIMPLIFY_CANDIDATE: Eliminate model-versions.json — drop version from commit author"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:40:01Z
-status_updated_iso: 2026-03-17T23:47:04Z
+status_updated_iso: 2026-03-17T23:48:25Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplification, spec, git]
 ---
 
-FEEDBACK:
---------------------------------------------------------------------------------
-## Problem
+## Resolution: REJECTED — model versions are intentionally kept
 
-The commit author format `CC_sonnet-v4.6_WITH-nickolaykondratyev` includes `VERSION_OF_MODEL` resolved from `config/model-versions.json` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E). This introduces:
-- A dedicated config file (`config/model-versions.json`)
-- Startup file reading + JSON parsing + validation
-- Per-commit version lookup
-- A "model not found in version map" failure path
+**Decision**: The simplification was rejected. Model versions in commit authors serve important
+long-term codebase analysis needs that outweigh the added complexity.
 
-## Simplification
+### Original Proposal
 
-Drop the version component from commit author. Format becomes:
-`CC_sonnet_WITH-nickolaykondratyev` instead of `CC_sonnet-v4.6_WITH-nickolaykondratyev`
+Drop `VERSION_OF_MODEL` from commit author format and eliminate `config/model-versions.json`.
 
-This eliminates:
-- `config/model-versions.json` file entirely
-- File reading/parsing at startup
-- Version lookup at commit time
-- "Model not found" failure class
+### Why It Was Rejected
 
-## Why This Improves Robustness
+Model version history in commits enables:
+- **Upgrade targeting**: Identify code authored by older model versions that could benefit from
+  re-generation or review with newer versions.
+- **Test coverage prioritization**: Code produced by less capable model versions may warrant
+  additional testing — the version tag makes this queryable via `git log`.
+- **Quality correlation**: Correlate defect rates with specific model versions.
+- **Audit trail**: Commit dates alone are insufficient because version upgrades are not instant —
+  different environments may run different versions on the same date.
 
-- Fewer startup failure paths (no file-not-found, no malformed JSON)
-- Fewer runtime failure paths (no lookup-miss at commit time)
-- Model name (sonnet, opus) is the primary differentiator in git history — the exact version (4.6 vs 4.7) changes over time and can be inferred from the commit date
-- Model versions are already tracked in session records in `current_state.json` (`agentSession` entries) for V2 resume
+### Spec Changes Made
 
-## Affected Specs
-
-- `doc/core/git.md` — Model Version Resolution section, Commit Author section
-- `doc/high-level.md` — mentions model-versions.json under Required Environment Variables
---------------------------------------------------------------------------------
-
-DECISION: we need model versions. Lets document the WHY. Why do we need it? So that later it's easy to track which parts of code were made with which models. So that we can track which parts of code depending on the complexity of code could use an upgrade. Or could use additional testing coverage etc.. this history is important  
+Added a **"Why model versions in commit author"** rationale section to `doc/core/git.md`
+(ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) under Model Version Resolution, documenting the WHY
+for long-term maintainers.
