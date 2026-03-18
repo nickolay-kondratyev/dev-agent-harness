@@ -5,7 +5,9 @@ import com.glassthought.shepherd.core.supporting.git.BranchNameBuilder
 import com.glassthought.shepherd.core.supporting.ticket.TicketData
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldEndWith
+import io.kotest.matchers.string.shouldMatch
 import io.kotest.matchers.string.shouldNotEndWith
 import io.kotest.matchers.string.shouldStartWith
 
@@ -39,25 +41,6 @@ class BranchNameBuilderTest : AsgardDescribeSpec({
             }
         }
 
-        describe("WHEN called with a title exceeding 50 characters") {
-            val longTitle = "a".repeat(80)
-
-            it("THEN result length is at most 50") {
-                val slug = BranchNameBuilder.slugify(longTitle)
-                (slug.length <= 50) shouldBe true
-            }
-        }
-
-        describe("WHEN called with a title that truncates to end with a hyphen") {
-            // 49 'a' chars + hyphen at position 50 + more chars after
-            val titleThatTruncatesToHyphen = "a".repeat(49) + "-bbb"
-
-            it("THEN result does not end with a hyphen") {
-                val slug = BranchNameBuilder.slugify(titleThatTruncatesToHyphen)
-                slug shouldNotEndWith "-"
-            }
-        }
-
         describe("WHEN called with an empty string") {
             it("THEN returns 'untitled'") {
                 BranchNameBuilder.slugify("") shouldBe "untitled"
@@ -74,6 +57,161 @@ class BranchNameBuilderTest : AsgardDescribeSpec({
             it("THEN non-ascii chars become hyphens producing 'caf-latt'") {
                 val slug = BranchNameBuilder.slugify("caf\u00e9 latt\u00e9")
                 slug shouldBe "caf-latt"
+            }
+        }
+
+        // -- No-truncation boundary tests --
+
+        describe("WHEN called with a title that slugifies to exactly 50 chars") {
+            // 50 'a' chars = exactly MAX_SLUG_LENGTH
+            val exactTitle = "a".repeat(50)
+
+            it("THEN returns the full slug without hash suffix") {
+                BranchNameBuilder.slugify(exactTitle) shouldBe "a".repeat(50)
+            }
+        }
+
+        // -- Truncation tests --
+
+        describe("WHEN called with a title that slugifies to exactly 51 chars") {
+            // 51 'a' chars = one over the limit, single-word character-level fallback
+            val overByOneTitle = "a".repeat(51)
+
+            it("THEN result is exactly 50 chars") {
+                BranchNameBuilder.slugify(overByOneTitle).length shouldBe 50
+            }
+
+            it("THEN result starts with 43 'a' chars") {
+                BranchNameBuilder.slugify(overByOneTitle) shouldStartWith "a".repeat(43)
+            }
+
+            it("THEN result ends with a 6-char hex hash suffix") {
+                BranchNameBuilder.slugify(overByOneTitle) shouldMatch Regex(".*-[a-f0-9]{6}$")
+            }
+
+            it("THEN result matches expected value") {
+                BranchNameBuilder.slugify(overByOneTitle) shouldBe "a".repeat(43) + "-aca32b"
+            }
+        }
+
+        describe("WHEN called with a single long word of 80 'a' chars") {
+            val longTitle = "a".repeat(80)
+
+            it("THEN result is exactly 50 chars") {
+                BranchNameBuilder.slugify(longTitle).length shouldBe 50
+            }
+
+            it("THEN result uses character-level fallback with hash") {
+                BranchNameBuilder.slugify(longTitle) shouldBe "a".repeat(43) + "-86f336"
+            }
+        }
+
+        describe("WHEN called with first word exactly 43 chars followed by more words") {
+            // First word fits exactly in MAX_WORD_BUDGET, but total exceeds MAX_SLUG_LENGTH
+            val title = "a".repeat(43) + "-more-words"
+
+            it("THEN result is exactly 50 chars") {
+                BranchNameBuilder.slugify(title).length shouldBe 50
+            }
+
+            it("THEN result keeps the 43-char first word and appends hash") {
+                BranchNameBuilder.slugify(title) shouldBe "a".repeat(43) + "-d56f93"
+            }
+        }
+
+        describe("WHEN called with a long multi-word title that exceeds 50 chars") {
+            // 49 'a' chars + '-bbb' = 53 chars after slugify; first word is 49 chars > 43
+            val titleThatExceeds = "a".repeat(49) + "-bbb"
+
+            it("THEN result does not end with a hyphen") {
+                BranchNameBuilder.slugify(titleThatExceeds) shouldNotEndWith "-"
+            }
+
+            it("THEN result is at most 50 chars") {
+                (BranchNameBuilder.slugify(titleThatExceeds).length <= 50) shouldBe true
+            }
+
+            it("THEN result uses character-level fallback since first word exceeds 43 chars") {
+                BranchNameBuilder.slugify(titleThatExceeds) shouldBe "a".repeat(43) + "-104124"
+            }
+        }
+
+        describe("WHEN called with the spec canonical example") {
+            val title = "implement user authentication flow with oauth and session"
+
+            it("THEN returns word-boundary truncated slug with hash suffix") {
+                BranchNameBuilder.slugify(title) shouldBe
+                    "implement-user-authentication-flow-with-c33b35"
+            }
+
+            it("THEN result is 46 chars") {
+                BranchNameBuilder.slugify(title).length shouldBe 46
+            }
+        }
+
+        describe("WHEN called with a single long word of 60 chars") {
+            val longWord = "a".repeat(60)
+
+            it("THEN result starts with 43 chars of the word") {
+                BranchNameBuilder.slugify(longWord) shouldStartWith "a".repeat(43)
+            }
+
+            it("THEN result ends with hash suffix") {
+                BranchNameBuilder.slugify(longWord) shouldMatch Regex(".*-[a-f0-9]{6}$")
+            }
+
+            it("THEN result is exactly 50 chars") {
+                BranchNameBuilder.slugify(longWord).length shouldBe 50
+            }
+        }
+
+        // -- Determinism --
+
+        describe("WHEN called twice with the same long input") {
+            val longTitle = "implement user authentication flow with oauth and session management"
+
+            it("THEN returns identical results") {
+                val first = BranchNameBuilder.slugify(longTitle)
+                val second = BranchNameBuilder.slugify(longTitle)
+                first shouldBe second
+            }
+        }
+
+        // -- Uniqueness --
+
+        describe("WHEN called with two similar long titles sharing a prefix") {
+            val titleA = "implement user authentication flow with oauth and session management"
+            val titleB = "implement user authentication flow with oauth and token refresh"
+
+            it("THEN produces different slugs") {
+                val slugA = BranchNameBuilder.slugify(titleA)
+                val slugB = BranchNameBuilder.slugify(titleB)
+                slugA shouldNotBe slugB
+            }
+
+            it("THEN slugA has expected hash suffix") {
+                BranchNameBuilder.slugify(titleA) shouldBe
+                    "implement-user-authentication-flow-with-8461c2"
+            }
+
+            it("THEN slugB has expected hash suffix") {
+                BranchNameBuilder.slugify(titleB) shouldBe
+                    "implement-user-authentication-flow-with-5187b8"
+            }
+        }
+
+        // -- Invariants for truncated slugs --
+
+        describe("WHEN called with any truncated slug") {
+            val longTitle = "this is a very long title that should " +
+                "definitely exceed the fifty character maximum slug length"
+
+            it("THEN result never ends with a hyphen") {
+                BranchNameBuilder.slugify(longTitle) shouldNotEndWith "-"
+            }
+
+            it("THEN result is at most 50 chars") {
+                (BranchNameBuilder.slugify(longTitle).length <= 50) shouldBe true
             }
         }
     }
@@ -174,11 +312,18 @@ class BranchNameBuilderTest : AsgardDescribeSpec({
 
             it("THEN the slug portion is at most 50 characters") {
                 val branchName = BranchNameBuilder.build(ticketData, tryNumber = 1)
-                // Format: {id}__{slug}__try-{N}
                 val slug = branchName
                     .removePrefix("nid_abc123__")
                     .removeSuffix("__try-1")
                 (slug.length <= 50) shouldBe true
+            }
+
+            it("THEN the slug portion contains a hash suffix") {
+                val branchName = BranchNameBuilder.build(ticketData, tryNumber = 1)
+                val slug = branchName
+                    .removePrefix("nid_abc123__")
+                    .removeSuffix("__try-1")
+                slug shouldMatch Regex(".*-[a-f0-9]{6}$")
             }
         }
     }

@@ -40,8 +40,6 @@ at startup prevents this.
 ## Branch Naming
 <!-- ap.THL21SyZzJhzInG2m4zl2.E -->
 
-> **Implementation gap**: `BranchNameBuilder` uses simple character-level truncation instead of the word-boundary + SHA-1 hash algorithm below. Tracked: `nid_i3jzssg11s3e4wmjzcgdkcymk_E`.
-
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
 - `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
@@ -61,8 +59,8 @@ When the slugified title exceeds `MAX_SLUG_LENGTH` (50 characters), it is trunca
 
 **Example**: `"implement-user-authentication-flow-with-oauth-and-session"` (57 chars)
 → words that fit in 43 chars: `"implement-user-authentication-flow-with"`
-→ hash of full slug: `a1b2c3...`
-→ result: `"implement-user-authentication-flow-with-a1b2c3"` (46 chars ≤ 50)
+→ hash of full slug: `c33b35...`
+→ result: `"implement-user-authentication-flow-with-c33b35"` (46 chars ≤ 50)
 
 **Why deterministic truncation instead of LLM compression**:
 - No LLM call at startup → no LLM-related startup failure mode
