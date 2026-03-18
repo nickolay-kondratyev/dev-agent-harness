@@ -33,7 +33,7 @@ Agent-to-harness HTTP endpoints are **fire-and-forget signals** (`/callback-shep
 
 **Fire-and-forget.** The agent POSTs, gets a bare `200 OK`, and moves on. If the harness needs to deliver content back (Q&A answers, iteration feedback, pings), it uses TMUX `send-keys`. Agents that need a response after a signal (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
 
-Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ack-payload`). The `user-question` signal additionally sets `SessionEntry.isQAPending = true` and forwards the question to the Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
+Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ack-payload`). The `user-question` signal additionally appends the question to `SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E) — the executor's health-aware await loop picks it up and handles answer collection + delivery. The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ---
 
@@ -105,7 +105,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 |---|---|
 | `POST /callback-shepherd/signal/started` | Bootstrap handshake — agent acknowledges it is alive and can reach the server. Harness sends full instructions only after receiving this. See ref.ap.xVsVi2TgoOJ2eubmoABIC.E. |
 | `POST /callback-shepherd/signal/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
-| `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (which owns the structured question/answer queue internally). Answer(s) batch-delivered asynchronously via TMUX `send-keys` after all queued questions are answered. Health pings and noActivityTimeout suppressed while `isQAPending` is true. |
+| `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, appends question to `SessionEntry.questionQueue`. The executor's health-aware await loop detects the non-empty queue, collects answers via `UserQuestionHandler`, and batch-delivers all answers via TMUX `send-keys`. Health pings and noActivityTimeout suppressed while `isQAPending` is true (derived: `questionQueue.isNotEmpty()`). |
 | `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error, kills all sessions, and exits non-zero (`FailedToExecutePlanUseCase`). |
 | `POST /callback-shepherd/signal/self-compacted` | Agent signals it has completed context window self-compaction — wrote `PRIVATE.md`, ready for session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). |
 | `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload — including health pings (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
@@ -181,8 +181,9 @@ Signal endpoints (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
 `lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
 `signalDeferred`. Side-channel signals (`started`, `user-question`, `ack-payload`)
 do **not** complete the deferred — executor stays suspended. `user-question` additionally
-sets `SessionEntry.isQAPending = true` and forwards the question to the Q&A coordinator
-(ref.ap.NE4puAzULta4xlOLh5kfD.E). `ack-payload` additionally clears `pendingPayloadAck`
+appends the question to `SessionEntry.questionQueue`
+(ref.ap.NE4puAzULta4xlOLh5kfD.E) — the executor's health-aware await loop picks it up.
+`ack-payload` additionally clears `pendingPayloadAck`
 on the `SessionEntry` when the PayloadId matches (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ### Unknown HandshakeGuid
@@ -376,23 +377,23 @@ See [`.ai_out/` directory schema](../schema/ai-out-directory.md) (ref.ap.BXQlLDT
 
 ---
 
-## User-Question — Decoupled Q&A with Ping Suppression
+## User-Question — Executor-Driven Q&A with Ping Suppression
 <!-- ap.DvfGxWtvI1p6pDRXdHI2W.E — alias retained for backward refs -->
 
 Agent calls `callback_shepherd.signal.sh user-question`. Server returns **200 immediately**
-(fire-and-forget), sets `SessionEntry.isQAPending = true`
-(ref.ap.igClEuLMC0bn7mDrK41jQ.E), and forwards the question to a dedicated **Q&A coordinator**
-coroutine for this session. The coordinator owns the structured question/answer queue
-(`QAPendingState`) internally, collects answers via `UserQuestionHandler` strategy
+(fire-and-forget) and appends the question to `SessionEntry.questionQueue`
+(ref.ap.igClEuLMC0bn7mDrK41jQ.E). The executor's health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) detects the non-empty queue on its next tick, drains
+it, collects answers via `UserQuestionHandler` strategy
 (ref.ap.NE4puAzULta4xlOLh5kfD.E), and batch-delivers all answers via `AckedPayloadSender`
 (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML, not via HTTP response.
 
-While Q&A is pending (`SessionEntry.isQAPending == true`), the facade's health-aware await
-loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **suppresses** health pings and noActivityTimeout —
+While Q&A is pending (`isQAPending == true`, derived from `questionQueue.isNotEmpty()`),
+the executor's health-aware await loop **suppresses** health pings and noActivityTimeout —
 the agent is known-idle, awaiting a TMUX answer.
 
 See [UserQuestionHandler](UserQuestionHandler.md) (ref.ap.NE4puAzULta4xlOLh5kfD.E) for the
-full Q&A coordinator lifecycle, queuing model, batch delivery format, and strategy interface.
+executor-driven Q&A lifecycle, queuing model, batch delivery format, and strategy interface.
 
 ---
 
@@ -504,7 +505,7 @@ Harness-to-agent communication uses two channels depending on the phase:
   `-p`/`--print` flags) — the entire point of TMUX is to allow ongoing communication with a
   running agent:
   - Send instruction file paths (`comm/in/instructions.md` in `.ai_out/`)
-  - Send user-question answer file paths (`comm/in/` in `.ai_out/`)
+  - Send user-question answer file paths (`comm/in/qa_answers.md` in `.ai_out/`)
   - Send health pings
   - Send iteration feedback instructions (on `needs_iteration`)
 
@@ -637,7 +638,7 @@ interface AckedPayloadSender {
 |--------|------|
 | `AgentFacadeImpl` health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) | Phase 2 work instructions after bootstrap |
 | `AgentFacadeImpl` via `sendPayloadAndAwaitSignal` — triggered by PartExecutor re-instruction (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
-| Q&A coordinator answer batch delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After all queued questions are answered by `UserQuestionHandler` |
+| Executor Q&A answer batch delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After executor drains `questionQueue` and collects all answers via `UserQuestionHandler` |
 | `AgentFacadeImpl` health-aware await loop — health ping (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) | When `lastActivityTimestamp` stale > `healthTimeouts.normalActivity` |
 
 ### ACK Flow

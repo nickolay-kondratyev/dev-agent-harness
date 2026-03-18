@@ -1,8 +1,9 @@
 # UserQuestionHandler / ap.NE4puAzULta4xlOLh5kfD.E
 
 Strategy interface for handling user questions from agents. Decouples the question-answering
-mechanism from the server and protocol — the server enqueues the question, a dedicated
-**Q&A coordinator** collects answers, and batch-delivers them to the agent.
+mechanism from the server and protocol — the server queues the question on `SessionEntry`,
+the executor's health-aware await loop picks it up, collects answers via
+`UserQuestionHandler`, and batch-delivers them to the agent.
 
 Previously `ap.DvfGxWtvI1p6pDRXdHI2W.E` — that AP is retained as an alias in the protocol doc.
 
@@ -30,20 +31,31 @@ data class UserQuestionContext(
 
 ---
 
-## Architecture — Q&A as a Fully Independent Concern
+## Architecture — Executor-Driven Q&A Delivery
 
-Q&A handling is **decoupled from the executor's coroutine scope**. The executor's health-aware
-await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it only checks
-`SessionEntry.isQAPending` to suppress health pings and noActivityTimeout.
+Q&A handling is **integrated into the executor's health-aware await loop**
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E). There are only **two concurrent actors** involved in Q&A:
 
-### Why Decoupled
+1. **HTTP server** — receives `/signal/user-question`, queues the question on
+   `SessionEntry.questionQueue` (thread-safe)
+2. **Executor's health-aware await loop** (inside `sendPayloadAndAwaitSignal`) — on each tick,
+   checks `questionQueue`. When questions are found, pauses signal-await, collects answers via
+   `UserQuestionHandler`, batch-delivers answers to the agent via `AckedPayloadSender`, then
+   resumes signal-await.
 
-1. **Health pings fire during Q&A wait** — without suppression, after 30 min of no activity,
-   the health loop sends pings to the agent. The agent is sitting idle awaiting a TMUX answer;
-   these pings are pure context-window waste (could be hours of pings if the human is slow).
+### Why Executor-Driven (Not a Separate Coordinator)
 
-2. **Conceptual coupling** — Q&A lifecycle was previously entangled with the executor's health
-   loop scope, making it harder to reason about and extend.
+1. **Fewer concurrent actors** — two actors instead of three. No dedicated Q&A coordinator
+   coroutine with its own lifecycle management.
+2. **No conceptual split** — `isQAPending` is a derived property (`questionQueue.isNotEmpty()`),
+   not a separate boolean managed by a different actor than the one owning the queue.
+3. **Ping suppression is trivial** — the executor knows it's handling Q&A because it's the one
+   doing it. No cross-actor synchronization to check if Q&A is active.
+4. **No orphan risk** — a separate coordinator coroutine could die independently of the executor,
+   leaving `isQAPending = true` forever. With executor-driven delivery, the Q&A lifecycle is
+   bound to the executor's lifecycle automatically.
+5. **Batch delivery is naturally ordered** — the executor processes the queue, delivers all
+   answers, then resumes. No race between coordinator delivery and executor resumption.
 
 > **Clarification**: "fire-and-forget" refers to the HTTP endpoint returning 200 immediately —
 > the agent still sits idle awaiting the TMUX answer, it does NOT continue other work.
@@ -56,21 +68,21 @@ await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it o
 2. Script POSTs to `/callback-shepherd/signal/user-question` with `handshakeGuid` + question text
 3. Server returns **200 immediately** — no blocking
 4. Server updates `SessionEntry.lastActivityTimestamp` (resets health timer)
-5. Server sets `SessionEntry.isQAPending = true`
-   (ref.ap.igClEuLMC0bn7mDrK41jQ.E) and forwards the question to the **Q&A coordinator**
-6. Q&A coordinator enqueues the question into its internal `QAPendingState`
-   (creates state if first question, appends if subsequent)
+5. Server appends the question to `SessionEntry.questionQueue`
+   (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — thread-safe concurrent queue
+6. `isQAPending` becomes `true` (derived: `questionQueue.isNotEmpty()`)
 7. **Agent waits** for the answer to arrive via TMUX (does not proceed)
 8. Executor's health-aware await loop detects `isQAPending == true` →
    **skips** health pings and noActivityTimeout
-9. Q&A coordinator calls `UserQuestionHandler.handleQuestion()` for each queued question
-   sequentially (V1: stdin prompt per question)
-10. When **all queued questions are answered**, coordinator writes all answers to
+9. Executor detects non-empty `questionQueue` → drains the queue and calls
+   `UserQuestionHandler.handleQuestion()` for each question sequentially
+   (V1: stdin prompt per question)
+10. When **all queued questions are answered**, executor writes all answers to
     `comm/in/qa_answers.md` in the sub-part's `.ai_out/` directory
-11. Coordinator batch-delivers the answer file path to the agent via `AckedPayloadSender`
+11. Executor batch-delivers the answer file path to the agent via `AckedPayloadSender`
     (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML
     (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)
-12. After delivery ACK received: coordinator sets `SessionEntry.isQAPending = false` →
+12. After delivery ACK received: `questionQueue` is empty → `isQAPending` becomes `false` →
     health monitoring resumes normally
 13. Agent reads the XML wrapper, ACKs the payload, reads the answer file, and continues
 
@@ -84,13 +96,16 @@ Delivery confirmation follows the same protocol as all other `send-keys` payload
 
 ## Question + Answer Queuing (Batch Delivery)
 
-Multiple questions may arrive before any are answered. The Q&A coordinator owns the internal
-question/answer queue (`QAPendingState`). Both questions AND answers are queued:
+Multiple questions may arrive before any are answered. The question queue lives on
+`SessionEntry.questionQueue` — a thread-safe concurrent queue. Both questions AND answers are
+managed by the executor:
 
-- Questions forwarded by server to coordinator, which enqueues them as they arrive (one stdin prompt per question, sequentially)
-- Answers collected as humans provide them
+- Server appends questions to `questionQueue` as they arrive via `/signal/user-question`
+- Executor drains the queue and collects answers one at a time (one stdin prompt per question, sequentially)
 - **ALL answers delivered together** after the full queue is answered — prevents the agent
   from resuming mid-flight while additional answers are still pending
+- If a new question arrives while the executor is collecting answers, the queue grows and
+  the executor continues processing until the queue is empty
 
 ### Answer File Format (`comm/in/qa_answers.md`)
 
@@ -112,30 +127,31 @@ The file is overwritten on each batch delivery. Git history preserves prior Q&A 
 
 ---
 
-## Q&A Coordinator — Lifecycle
+## Executor-Driven Q&A — Lifecycle
 
-The Q&A coordinator is a **dedicated per-session coroutine**, launched by the server when
-the first question arrives for a session. It runs entirely outside the executor's coroutine
-scope.
+Q&A handling runs **inside the executor's health-aware await loop**
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E), which is owned by `AgentFacadeImpl.sendPayloadAndAwaitSignal`
+(ref.ap.9h0KS4EOK5yumssRCJdbq.E). No separate coroutine is launched.
 
 | Aspect | Behavior |
 |--------|----------|
-| **Scope** | Scoped to the session. If the session/executor terminates for any reason (noActivityTimeout, `/fail-workflow`, harness restart), the Q&A coroutine is **cancelled silently** — no answer delivered, no error. |
-| **Concurrency** | One coordinator per session. A second `/user-question` does not launch a second coordinator — the server forwards the question to the existing coordinator, which appends to its internal queue and processes it when it reaches that item. |
-| **Sequential processing** | Questions are presented to the human one at a time, in arrival order. The coordinator awaits the answer for question N before prompting for question N+1. |
-| **Batch delivery** | Only after `answers.size == questions.size` (all queued questions answered) does the coordinator deliver. If a new question arrives while the coordinator is collecting answers, the queue grows and delivery waits until the new question is also answered. |
-| **Post-delivery** | After `AckedPayloadSender` confirms delivery (ACK received), the coordinator sets `SessionEntry.isQAPending = false`. |
+| **Scope** | Scoped to the `sendPayloadAndAwaitSignal` call. If the call returns (signal received, crash detected), Q&A processing stops naturally — no orphaned coroutine. |
+| **Concurrency** | The server appends to `questionQueue` (thread-safe). The executor reads from it on each tick of the await loop. No separate actor. |
+| **Sequential processing** | Questions are presented to the human one at a time, in arrival order. The executor awaits the answer for question N before prompting for question N+1. |
+| **Batch delivery** | After draining the queue and collecting all answers, the executor delivers. If a new question arrives during answer collection, the executor continues until the queue is empty. |
+| **Post-delivery** | After `AckedPayloadSender` confirms delivery (ACK received), the queue is empty → `isQAPending` becomes `false` (derived). |
 
 ### noActivityTimeout During Q&A
 
-Because pings are suppressed during Q&A, the executor should **NOT** fire `noActivityTimeout`
-while `isQAPending` is true. The agent is known-idle; the only "crash" detectable is session
-death (which the harness cannot distinguish from a healthy idle agent without pinging).
+Because health checks are suppressed during Q&A, the executor does **NOT** fire
+`noActivityTimeout` while `isQAPending` is true. The agent is known-idle; the only "crash"
+detectable is session death (which the harness cannot distinguish from a healthy idle agent
+without pinging).
 
-If the TMUX session dies during Q&A, the coordinator will eventually fail when it attempts
-to deliver via `AckedPayloadSender` (send-keys fails or ACK never arrives) — the coordinator
-handles this as a session-dead scenario and cleans up. No special handling needed from the
-executor side.
+If the TMUX session dies during Q&A, the executor will detect this when it attempts to
+deliver via `AckedPayloadSender` (send-keys fails or ACK never arrives) — the standard ACK
+retry exhaustion path applies (3 attempts, then `AgentSignal.Crashed`). No special handling
+beyond what the ACK protocol already provides.
 
 ---
 
@@ -193,9 +209,10 @@ the agent's context window, which is pure waste: the agent is idle, waiting for 
 Over a multi-hour absence, this could accumulate dozens of pings, consuming context window
 capacity that the agent needs for actual work.
 
-With ping suppression (`isQAPending` gate), the executor knows the agent is in a known-idle
-state — no pings needed, no context waste. The agent's context window is preserved for the
-actual answer and subsequent work.
+With Q&A-aware suppression (`isQAPending` gate — derived from `questionQueue.isNotEmpty()`),
+the executor knows the agent is in a known-idle state because it is the one handling Q&A.
+No pings needed, no context waste. The agent's context window is preserved for the actual
+answer and subsequent work.
 
 ---
 
@@ -213,12 +230,14 @@ actual answer and subsequent work.
 ## Checks Gated on `isQAPending`
 
 The following executor health-aware await loop behaviors are **suppressed** when
-`SessionEntry.isQAPending` is true:
+`isQAPending` is true (derived: `questionQueue.isNotEmpty()`):
 
 | Check | Normal behavior | When Q&A pending |
 |-------|----------------|-----------------|
-| Health ping firing | Fire when `lastActivityTimestamp` stale > `normalActivity` | **Skip** — agent is known-idle awaiting TMUX answer |
+| Health ping firing | Fire when `lastActivityTimestamp` stale > `normalActivity` | **Skip** — agent is known-idle awaiting TMUX answer; executor is handling Q&A |
 | noActivityTimeout | Declare crash when stale > `normalActivity` + no ping response | **Skip** — agent is known-idle, not crashed |
 
-These gates are documented in the health-aware await loop pseudocode
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) and HealthMonitoring spec (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
+These gates are trivially implemented because the executor is the single owner of both
+health checks and Q&A processing — it knows it is handling Q&A because it is the one
+doing it. See the health-aware await loop pseudocode (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
+and HealthMonitoring spec (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
