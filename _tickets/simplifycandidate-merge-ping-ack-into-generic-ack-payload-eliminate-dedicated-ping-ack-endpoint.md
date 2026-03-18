@@ -1,11 +1,11 @@
 ---
 id: nid_aij16hhr7snq2m72q40n6y3w7_E
 title: "SIMPLIFY_CANDIDATE: Merge ping-ack into generic ack-payload — eliminate dedicated ping ACK endpoint"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:24:59Z
-status_updated_iso: 2026-03-18T14:24:59Z
+status_updated_iso: 2026-03-18T14:28:41Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
