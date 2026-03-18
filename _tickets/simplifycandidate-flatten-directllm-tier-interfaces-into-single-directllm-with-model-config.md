@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:45:12Z
 id: nid_ii9c7haj2romerfy785dlob8a_E
 title: "SIMPLIFY_CANDIDATE: Flatten DirectLLM tier interfaces into single DirectLLM with model config"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T00:06:22Z
-status_updated_iso: 2026-03-18T13:43:42Z
+status_updated_iso: 2026-03-18T13:45:12Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -54,3 +55,16 @@ class SomeUseCase(private val llm: DirectLLM)
 - `doc/core/UserQuestionHandler.md` (LlmUserQuestionHandler reference)
 - `doc/core/git.md` (DirectQuickCheapLLM reference in startup critical path note)
 
+
+## Notes
+
+**2026-03-18T13:45:21Z**
+
+## Resolution
+
+Completed. All four spec files updated:
+
+- `doc/core/DirectLLM.md`: Replaced "Interface-per-Tier" design section (with `DirectQuickCheapLLM`/`DirectBudgetHighLLM` tier interfaces) with single `DirectLLM` interface design. Updated V1 model assignments table to use-case-based columns instead of tier-interface columns.
+- `doc/high-level.md`: Updated DirectLLM section heading ("Tier-Scoped Interfaces" → "Single Interface") and description. Updated linked docs table entry.
+- `doc/core/UserQuestionHandler.md`: Updated Future Strategies table — `LlmUserQuestionHandler` now references `DirectLLM` configured with expensive model instead of `DirectBudgetHighLLM`.
+- `doc/core/git.md`: Removed `DirectQuickCheapLLM` reference in slug truncation rationale — now states deterministic truncation removes "any LLM dependency" from startup critical path.

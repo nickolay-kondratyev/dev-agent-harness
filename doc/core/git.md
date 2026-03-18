@@ -66,7 +66,7 @@ When the slugified title exceeds `MAX_SLUG_LENGTH` (50 characters), it is trunca
 - Same ticket always produces the same branch name (idempotent)
 - Zero latency overhead
 - The hash suffix preserves uniqueness across tickets with similar prefixes
-- Removes `DirectQuickCheapLLM` from the startup critical path
+- Removes any LLM dependency from the startup critical path
 
 ### Branch Creation
 

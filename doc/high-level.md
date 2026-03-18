@@ -358,11 +358,13 @@ and session schema.
 
 ---
 
-## DirectLLM — Tier-Scoped Interfaces
+## DirectLLM — Single Interface
 
-Interface-per-tier design (`DirectQuickCheapLLM`, `DirectBudgetHighLLM`). V1: two tiers.
-Not used for iteration decisions — the reviewer's verdict is authoritative. See
-[DirectLLM](core/DirectLLM.md) (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) for tier assignments and
+Single `DirectLLM` interface. Callers receive the appropriately-configured instance via
+constructor injection (DIP preserved). Model selection is a constructor parameter of the
+implementation, not a type-level distinction. Not used for iteration decisions — the
+reviewer's verdict is authoritative. See
+[DirectLLM](core/DirectLLM.md) (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) for model assignments and
 contract.
 
 ---
@@ -528,7 +530,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — delegates to AgentFacade, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/core/git.md`](core/git.md) | Git — branch naming, try-N resolution, commit strategy, author attribution, env var requirements |
-| [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM tier-scoped interfaces, V1 model assignments |
+| [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM single interface, V1 model assignments |
 | [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
 | [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — startup ack, timeout, ping, crash, convergence failure |
