@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [SIMPLIFY_CANDIDATE, observability, debugging]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ref.ap.wLpW8YbvqpRdxDplnN7Vh.E (agent-to-server-communication-protocol spec)
 
 Currently each payload sent via AckedPayloadSender gets a random 21-character PayloadId for ACK tracking. These IDs are opaque — correlating a PayloadId to a session requires lookup in SessionsState.
@@ -22,4 +24,6 @@ Why simpler: Counter increment vs. random string generation. No UUID/random libr
 Why more robust: PayloadId is self-correlating — seeing "a1b2c3d4-3" in logs immediately identifies the session and payload sequence. Sequence numbers reveal gaps (if payload 2 is ACKed but 3 is not, the problem is clear). Deterministic IDs enable easier test assertions.
 
 File: doc/core/agent-to-server-communication-protocol.md
+--------------------------------------------------------------------------------
 
+DECISION: Yes lets do this.
