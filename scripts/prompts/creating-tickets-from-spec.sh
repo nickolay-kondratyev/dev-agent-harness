@@ -48,7 +48,7 @@ main() {
     rm "${stop_file:?}"
   fi
 
-  for i in {1..10} ; do
+  for i in {1..20} ; do
       if [[ -f "${stop_file:?}" ]]; then
         echo.green "${stop_file:?} file exists. Exiting."
       	exit 1
