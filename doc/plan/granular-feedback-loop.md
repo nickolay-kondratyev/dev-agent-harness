@@ -246,7 +246,7 @@ The harness reads the `## Resolution:` line to determine disposition. Parsing is
 scan for `## Resolution: ADDRESSED`, `## Resolution: REJECTED`, or `## Resolution: SKIPPED`
 (case-insensitive match on the keyword after `## Resolution:`). `SKIPPED` is valid only for
 `optional__` prefixed files — the harness treats it as a skip acknowledgment and moves the
-file to `addressed/`. Any other value or missing marker → re-instruct doer.
+file to `addressed/`. Any other value or missing marker → `PartResult.AgentCrashed` immediately.
 
 ### Creation Timing
 
@@ -620,11 +620,10 @@ ContextForAgentProvider. Harness-owned file movement. Iteration counter unchange
 **Verify:**
 - Unit test: inner loop processes critical → important → optional in order
 - Unit test: harness moves files to addressed/ after ADDRESSED resolution
-- Unit test: missing resolution marker → re-instruction → eventual resolution or failure
+- Unit test: missing resolution marker → immediate AgentCrashed (no retry)
 - Unit test: self-compaction check fires at each done boundary
 - Unit test: iteration.current increments once per reviewer needs_iteration, not per item
-- Unit test: needs_iteration with empty pending → re-instruction → reviewer writes files
-- Unit test: needs_iteration with empty pending after retry → AgentCrashed
+- Unit test: needs_iteration with empty pending → immediate AgentCrashed (no retry)
 **Proceed when:** Full inner loop works with FakeAgentFacade, including guards and file movement.
 
 ### Gate 4: Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
@@ -646,7 +645,7 @@ pass independently of `PartExecutorImpl` tests.
 **What:** Harness validates no critical/important in `pending/` before completing.
 **Verify:**
 - Unit test: PASS with empty pending (no critical/important) → Completed
-- Unit test: PASS with critical__* in pending → re-instruction → eventual handling
+- Unit test: PASS with critical__* in pending → immediate AgentCrashed (no retry)
 - Unit test: PASS with only optional__* in pending → Completed (optional moved to addressed/)
 **Proceed when:** Part completion is correctly guarded.
 

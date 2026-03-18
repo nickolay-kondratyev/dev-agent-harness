@@ -584,7 +584,6 @@ Read instructions at /path/to/comm/in/instructions.md
 | Work instructions (Phase 2 file pointer) | **Yes** | Core delivery — must confirm receipt |
 | User-question answers (ref.ap.NE4puAzULta4xlOLh5kfD.E) | **Yes** | Agent is waiting for this; non-delivery blocks progress |
 | Iteration feedback instructions | **Yes** | Critical for doer re-instruction after `needs_iteration` |
-| PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | **Yes** | Agent must produce PUBLIC.md before part can proceed |
 | Health pings | **No** | Pings have their own ACK mechanism (`ping-ack` — ref.ap.RJWVLgUGjO5zAwupNLhA0.E) |
 
 **Bootstrap messages are NOT wrapped** — they are delivered as initial prompt arguments
@@ -617,7 +616,7 @@ interface AckedPayloadSender {
 **Why a shared abstraction:**
 
 - **DRY**: The wrap → send-keys → ACK-await → retry loop is identical across all use cases
-  (work instructions, Q&A answers, iteration feedback, PUBLIC.md re-instruction). Duplicating
+  (work instructions, Q&A answers, iteration feedback). Duplicating
   this logic creates divergence risk.
 - **Single place for retry policy**: Timeout, retry count, and failure behavior are defined
   once. Callers don't re-implement the retry loop.
@@ -630,7 +629,6 @@ interface AckedPayloadSender {
 |--------|------|
 | `PartExecutor` health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) | Phase 2 work instructions after bootstrap |
 | `PartExecutor` re-instruction pattern (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
-| `PartExecutor` PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | Missing PUBLIC.md after done signal |
 | Q&A coordinator answer batch delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After all queued questions are answered by `UserQuestionHandler` |
 
 ### ACK Flow

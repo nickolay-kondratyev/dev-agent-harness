@@ -288,8 +288,8 @@ miss actionable items entirely. A structured contract ensures productive iterati
 
 **Harness-enforced:** PUBLIC.md must exist and be non-empty after every `done` signal
 (including `needs_iteration`). This is validated by the executor
-(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) — missing or empty PUBLIC.md triggers re-instruction,
-then hard failure.
+(ref.ap.THDW9SHzs1x2JN9YP9OYU.E) — missing or empty PUBLIC.md triggers immediate
+`PartResult.AgentCrashed` (no retry).
 
 **Guidance only (not harness-validated):** The structured format below (## Issues,
 ## Acceptance Criteria, etc.) is delivered to the reviewer as instruction text. The harness
