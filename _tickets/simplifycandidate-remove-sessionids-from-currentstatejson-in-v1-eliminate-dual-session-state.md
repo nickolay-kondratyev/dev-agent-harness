@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, yagni]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Problem
 
 Session information exists in two places:
@@ -36,4 +38,7 @@ Remove the `sessionIds` array from `current_state.json` sub-part schema in V1. T
 - **Eliminates dual-state consistency risk**: No possibility of in-memory/on-disk divergence.
 - **Less I/O**: Fewer fields to serialize on every state transition (current_state.json is rewritten on every transition).
 - **Easy to reverse**: Adding `sessionIds` back for V2 is straightforward — the data is available in-memory.
+--------------------------------------------------------------------------------
 
+DECISION:
+LETS have current state stored in memory and get session ids from the current state that is stored in memory. The current state on disk would be a copy of what is stored in Memory. This way we get rid of duplication of keeping the two in sync as the current state in file system syncs down from the current state in memory, and session ids that we use are retrieved from current state in memory.
