@@ -1,11 +1,11 @@
 ---
 id: nid_vi76mhrrjybl3aksb8xvxwpbb_E
 title: "SIMPLIFY_CANDIDATE: Consolidate high-level.md Key Technology Decisions table into thin cross-references"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:47:39Z
-status_updated_iso: 2026-03-18T14:47:39Z
+status_updated_iso: 2026-03-18T14:54:24Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
