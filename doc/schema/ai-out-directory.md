@@ -63,8 +63,9 @@ doer one at a time in severity order (critical → important → optional).
 **Harness owns all file movement.** Agents write a `## Resolution: ADDRESSED` or
 `## Resolution: REJECTED` marker in the feedback file. The harness reads this marker and
 moves the file to `addressed/` or `rejected/` accordingly. When the doer rejects, the
-harness triggers a per-item rejection negotiation with the reviewer (bounded at 2
-disagreement rounds). Agents never move feedback files between directories.
+harness triggers a per-item rejection negotiation with the reviewer (at most 1 round of
+disagreement; reviewer is authority — ref.ap.5Y5s8gqykzGN1TVK5MZdS.E). Agents never move
+feedback files between directories.
 
 **Why move files when markers are the source of truth?** The `## Resolution` marker drives
 harness logic — it is the canonical state. The directory movement is a **deliberate redundancy
