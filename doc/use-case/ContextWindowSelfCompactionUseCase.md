@@ -412,7 +412,8 @@ the executor, so it applies to both without duplication.
 The compaction steps execute via `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E):
 
 1. **Validate PRIVATE.md:** Check `${sub_part}/private/PRIVATE.md` exists and is non-empty.
-   If missing after one retry → `PartResult.AgentCrashed`.
+   If missing → `PartResult.AgentCrashed` immediately. No retry — the agent received
+   ACK-confirmed compaction instructions before signaling `self-compacted`.
 2. **Git commit:** `GitCommitStrategy.onSubPartDone` — captures PRIVATE.md + any other
    changes the agent made before compaction.
 3. **Kill session:** `agentFacade.killSession(handle)` — internally kills TMUX session

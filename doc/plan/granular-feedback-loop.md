@@ -111,8 +111,9 @@ and moves the file:
 - `ADDRESSED` → `addressed/`
 - `REJECTED` → triggers per-item rejection negotiation (see below), then `rejected/` if accepted
 
-If the resolution marker is missing after `done`, the harness re-instructs the doer to write
-it (one retry, then `AgentCrashed`).
+If the resolution marker is missing after `done`, the harness returns `PartResult.AgentCrashed`
+immediately — no retry. The ACK protocol (ref.ap.tbtBcVN2iCl1xfHJthllP.E) already confirmed
+the agent received its instructions before signaling done.
 
 **Why harness-owned movement:** Agents are unreliable at file operations (wrong paths, forgetting
 to move). The harness is a Kotlin program that will reliably move a file. Shifting file movement
@@ -245,7 +246,7 @@ The harness reads the `## Resolution:` line to determine disposition. Parsing is
 scan for `## Resolution: ADDRESSED`, `## Resolution: REJECTED`, or `## Resolution: SKIPPED`
 (case-insensitive match on the keyword after `## Resolution:`). `SKIPPED` is valid only for
 `optional__` prefixed files — the harness treats it as a skip acknowledgment and moves the
-file to `addressed/`. Any other value or missing marker → re-instruct doer.
+file to `addressed/`. Any other value or missing marker → `PartResult.AgentCrashed` immediately.
 
 ### Creation Timing
 
@@ -280,16 +281,8 @@ NEEDS_ITERATION) gains an inner loop:
    e2. ── FEEDBACK FILES PRESENCE GUARD ──
       Validate: at least one file exists in __feedback/pending/
       ├─ If files exist → proceed to inner loop
-      └─ If empty → reviewer said needs_iteration but wrote no feedback files.
-         ReInstructAndAwait.execute(reviewerHandle, message) [ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E]
-         message: "You signaled needs_iteration but wrote no feedback files
-                   to __feedback/pending/. Write individual feedback files (one per issue)
-                   with severity prefix, then re-signal needs_iteration."
-         ├─ On Responded(needs_iteration) with files → proceed to inner loop
-         ├─ On Responded(needs_iteration) with still no files → PartResult.AgentCrashed(
-         │   "Reviewer signaled needs_iteration twice without writing feedback files")
-         ├─ On Responded(pass) → proceed to step 3 (reviewer changed its mind)
-         └─ On Crashed/FailedWorkflow → propagate immediately
+      └─ If empty → PartResult.AgentCrashed("Reviewer signaled needs_iteration without writing feedback files")
+         (ACK-confirmed delivery + needs_iteration signal without files = broken agent — no retry)
    f. ── INNER FEEDBACK LOOP ──
       │
       ├─ List files in pending/ matching critical__* (sorted by filename)
@@ -325,8 +318,8 @@ PROCESS_FEEDBACK_ITEM(file):
     │   └─ On Crashed/FailedWorkflow → propagate immediately
     ├─ PUBLIC.md validation (shallow — exists, non-empty)
     ├─ Read ## Resolution marker from feedback file
-    │   ├─ Missing marker → ReInstructAndAwait.execute(doerHandle, "write marker")
-    │   │                    (one retry, then AgentCrashed)
+    │   ├─ Missing marker → PartResult.AgentCrashed("Doer failed to write resolution marker after done signal")
+    │   │                    (no retry — ACK-confirmed delivery means agent received its instructions)
     │   ├─ ADDRESSED → harness moves file to addressed/, GitCommitStrategy.onSubPartDone
     │   └─ REJECTED → REJECTION_NEGOTIATION(file)
     └─ (next file)
@@ -457,12 +450,9 @@ On reviewer PASS:
   1. PUBLIC.md validation (existing)
   2. Validate __feedback/pending/ contains no critical__* files
   3. Validate __feedback/pending/ contains no important__* files
-  4. If 2 or 3 fails → do NOT complete. Log ERROR.
-     Re-instruct reviewer: "You signaled pass but there are unaddressed critical/important
-     feedback items in pending/. Write new feedback files for any remaining issues or
-     signal needs_iteration."
-     Await reviewer's re-signal. (One retry, then PartResult.AgentCrashed.)
-  6. Optional items in pending/ → acceptable. Part completes.
+  4. If 2 or 3 fails → PartResult.AgentCrashed("Reviewer signaled pass with unaddressed critical/important feedback items in pending/")
+     (no retry — ACK-confirmed delivery + pass signal with unresolved items = broken agent)
+  5. Optional items in pending/ → acceptable. Part completes.
      Harness moves remaining optional__* to addressed/ (implicitly accepted as skipped).
 ```
 
@@ -506,8 +496,8 @@ On reviewer PASS:
 - Feed ONE feedback file at a time to the doer via re-instruction pattern
 - Doer signals `done completed` after each item
 - Harness reads `## Resolution:` marker from feedback file after doer's `done`
-- Missing marker → re-instruct doer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
-  (one retry, then AgentCrashed)
+- Missing marker → `PartResult.AgentCrashed` immediately (no retry — ACK-confirmed delivery
+  guarantees the agent received its instructions before signaling done)
 - `ADDRESSED` → harness moves file to `addressed/`
 - `REJECTED` → triggers rejection negotiation (R5)
 - Optional items: doer can skip (writes `## Resolution: SKIPPED` noting skip)
@@ -568,21 +558,18 @@ On reviewer PASS:
 ### R8: Part Completion Guard — No Pending Critical/Important
 - After reviewer `PASS` + PUBLIC.md validation: harness checks `pending/` for
   `critical__*` and `important__*` files
-- If found: re-instruct reviewer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
-  (one retry, then AgentCrashed)
+- If found: `PartResult.AgentCrashed` immediately — reviewer signaled pass with unresolved
+  items = broken agent. No retry.
 - Remaining `optional__*` files → acceptable; harness moves to `addressed/` on completion
-- Verifiable: unit test — PASS with pending critical → re-instruction → eventual
-  completion or failure
+- Verifiable: unit test — PASS with pending critical → immediate AgentCrashed;
+  PASS with only optional → Completed
 
 ### R9: Feedback Files Presence Guard on `needs_iteration`
 - After reviewer signals `needs_iteration`: harness checks that at least one file exists in
   `pending/`
-- If empty: re-instruct reviewer via `ReInstructAndAwait` (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E)
-  to write feedback files (one retry)
-- If still empty after retry: `PartResult.AgentCrashed`
-- If reviewer changes verdict to `pass` on retry: proceed to completion (step 3)
-- Verifiable: unit test — needs_iteration with empty pending → re-instruction → eventual
-  file creation or failure
+- If empty: `PartResult.AgentCrashed` immediately — ACK-confirmed delivery + needs_iteration
+  signal without feedback files = broken agent. No retry.
+- Verifiable: unit test — needs_iteration with empty pending → immediate AgentCrashed
 
 ### R10: Iteration Counter Unchanged
 - `iteration.current` increments when reviewer signals `needs_iteration` — same as now
@@ -633,11 +620,10 @@ ContextForAgentProvider. Harness-owned file movement. Iteration counter unchange
 **Verify:**
 - Unit test: inner loop processes critical → important → optional in order
 - Unit test: harness moves files to addressed/ after ADDRESSED resolution
-- Unit test: missing resolution marker → re-instruction → eventual resolution or failure
+- Unit test: missing resolution marker → immediate AgentCrashed (no retry)
 - Unit test: self-compaction check fires at each done boundary
 - Unit test: iteration.current increments once per reviewer needs_iteration, not per item
-- Unit test: needs_iteration with empty pending → re-instruction → reviewer writes files
-- Unit test: needs_iteration with empty pending after retry → AgentCrashed
+- Unit test: needs_iteration with empty pending → immediate AgentCrashed (no retry)
 **Proceed when:** Full inner loop works with FakeAgentFacade, including guards and file movement.
 
 ### Gate 4: Rejection Negotiation (RejectionNegotiationUseCase — ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E)
@@ -659,7 +645,7 @@ pass independently of `PartExecutorImpl` tests.
 **What:** Harness validates no critical/important in `pending/` before completing.
 **Verify:**
 - Unit test: PASS with empty pending (no critical/important) → Completed
-- Unit test: PASS with critical__* in pending → re-instruction → eventual handling
+- Unit test: PASS with critical__* in pending → immediate AgentCrashed (no retry)
 - Unit test: PASS with only optional__* in pending → Completed (optional moved to addressed/)
 **Proceed when:** Part completion is correctly guarded.
 
@@ -682,11 +668,11 @@ pass independently of `PartExecutorImpl` tests.
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **Reviewer writes monolithic PUBLIC.md instead of individual files** | Inner loop has nothing to process; iteration stalls | Harness-enforced guard (R9): if `needs_iteration` but `pending/` is empty → re-instruct reviewer. One retry, then AgentCrashed. |
+| **Reviewer writes monolithic PUBLIC.md instead of individual files** | Inner loop has nothing to process; iteration stalls | Harness-enforced guard (R9): if `needs_iteration` but `pending/` is empty → immediate `AgentCrashed`. No retry. |
 | **Too many feedback files overwhelm the inner loop** | Many small items means many done→compaction cycles; overhead accumulates | Each cycle is lightweight (one file read, one instruction assembly). 20 items × 2 min each = 40 min — comparable to current single-pass behavior but with better context management. |
 | **Severity classification is subjective** | Reviewer calls something "optional" that should be "critical" | Severity determines processing order and skip rules, not quality. The reviewer is the severity authority. |
 | **Doer rejects everything** | All items go through rejection negotiation; expensive | Bounded at 1 round per item (reviewer judges once). `iteration.max` budget still applies at the macro level. Rejection after reviewer insistence → AgentCrashed. |
-| **Resolution marker missing or malformed** | Harness can't determine disposition | Re-instruct doer with explicit marker format (one retry, then AgentCrashed). Marker format is deliberately simple (`## Resolution: ADDRESSED/REJECTED`) to minimize parse failures. |
+| **Resolution marker missing or malformed** | Harness can't determine disposition | Immediate `AgentCrashed`. Marker format is deliberately simple (`## Resolution: ADDRESSED/REJECTED`) to minimize parse failures. ACK-confirmed delivery means the agent received explicit marker instructions before signaling done. |
 | **Reviewer always insists on rejected items** | 1 round × N items → each insistence forces compliance | This is correct behavior — the reviewer IS the authority. The cost is proportional to the number of genuine disagreements, which should be small in practice. |
 
 ---
@@ -704,8 +690,8 @@ pass independently of `PartExecutorImpl` tests.
    cleared between iterations. The reviewer references prior items. Git history tracks everything.
 
 4. **`needs_iteration` with no feedback files:** Harness-enforced guard. If reviewer signals
-   `needs_iteration` but `pending/` is empty → re-instruct reviewer to write feedback files.
-   One retry, then `AgentCrashed`. See R9.
+   `needs_iteration` but `pending/` is empty → immediate `AgentCrashed`. No retry — ACK
+   protocol already confirmed the agent received its instructions. See R9.
 
 5. **Who moves files?** Harness owns all file movement. Agents write resolution markers in
    feedback files; harness reads markers and moves files. This eliminates agent file-operation

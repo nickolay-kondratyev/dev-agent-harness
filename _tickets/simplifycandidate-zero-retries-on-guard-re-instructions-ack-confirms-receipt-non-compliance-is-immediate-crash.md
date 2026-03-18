@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:57:20Z
 id: nid_1h1l9zjbzun9qc7aq67dt9550_E
 title: "SIMPLIFY_CANDIDATE: Zero retries on guard re-instructions — ACK confirms receipt, non-compliance is immediate crash"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T00:08:13Z
-status_updated_iso: 2026-03-18T13:48:53Z
+status_updated_iso: 2026-03-18T13:57:20Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -71,3 +72,15 @@ Minimal. The retry catches a narrow case: agent received instruction, acknowledg
 - `doc/plan/granular-feedback-loop.md` (guard re-instruction references)
 - `doc/use-case/ContextWindowSelfCompactionUseCase.md` (PRIVATE.md guard reference)
 
+
+## Notes
+
+**2026-03-18T13:57:27Z**
+
+Completed. Updated 4 spec files:
+- doc/use-case/ReInstructAndAwait.md: reframed — removed guard-retry purpose; now documents instruction delivery for inner feedback loop and rejection negotiation only
+- doc/core/PartExecutor.md: all 5 guard points (PUBLIC.md, feedback files, resolution marker, part completion, PRIVATE.md) → immediate AgentCrashed instead of ReInstructAndAwait retry
+- doc/plan/granular-feedback-loop.md: R3/R8/R9, D6, flows, risks — all retry references replaced with immediate crash
+- doc/use-case/ContextWindowSelfCompactionUseCase.md: PRIVATE.md presence guard → immediate crash (no retry)
+
+Change log: wdiknnn5qkqqcq8dmc3hd0s0r
