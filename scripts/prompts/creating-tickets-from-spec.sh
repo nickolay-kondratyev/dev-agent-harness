@@ -25,6 +25,9 @@ cat >> "${tmp_file:?}" <<EOF
     Review the tickets created to make sure the split makes the most sense.
 
     IF there is no more tickets to be created write [$HOME/done_with_ticket_creation.md] marker file.
+
+  IN sub-agent review the tickets were created.
+  THEN address the sub-agents feedback.
 EOF
 
 echo "${tmp_file:?}"
