@@ -26,7 +26,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | Context/instruction assembly | ref.ap.9HksYVzl1KkR9E1L2x8Tx.E |
 | SessionsState (GUID→session registry, internal to AgentFacadeImpl) | ref.ap.7V6upjt21tOoCFXA7nqNh.E |
 | Health monitoring UseCases | ref.ap.RJWVLgUGjO5zAwupNLhA0.E |
-| DirectLLM single interface (model config at wiring time) | ref.ap.hnbdrLkRtNSDFArDFd9I2.E |
+| DirectLLM — **deferred to V2** (zero V1 consumers) | ref.ap.hnbdrLkRtNSDFArDFd9I2.E |
 | UserQuestionHandler strategy | ref.ap.NE4puAzULta4xlOLh5kfD.E |
 | Git branching, commits, author attribution | ref.ap.BvNCIzjdHS2iAP4gAQZQf.E |
 | Plan & current-state JSON schema, in-memory CurrentState | ref.ap.56azZbk7lAMll0D4Ot2G0.E |
