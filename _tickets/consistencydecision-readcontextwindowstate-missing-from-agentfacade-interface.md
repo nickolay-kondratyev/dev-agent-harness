@@ -1,11 +1,11 @@
 ---
 id: nid_udi17gkfnz6r8xzqk7qyjba41_E
 title: "CONSISTENCY_DECISION: readContextWindowState missing from AgentFacade interface"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:32:28Z
-status_updated_iso: 2026-03-18T14:32:28Z
+status_updated_iso: 2026-03-18T14:35:29Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
