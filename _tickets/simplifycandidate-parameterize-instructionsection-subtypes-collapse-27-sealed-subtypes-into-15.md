@@ -1,11 +1,11 @@
 ---
 id: nid_2njb0z4sew9d9hmr8hq8a0zlo_E
 title: "SIMPLIFY_CANDIDATE: Parameterize InstructionSection subtypes — collapse 27 sealed subtypes into ~15"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:24:42Z
-status_updated_iso: 2026-03-18T14:24:42Z
+status_updated_iso: 2026-03-18T14:29:22Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
