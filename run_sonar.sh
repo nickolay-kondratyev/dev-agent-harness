@@ -9,6 +9,12 @@ if [[ -z "${SONAR_TOKEN:-}" ]]; then
   exit 1
 fi
 
+# Prefer system curl over linuxbrew (linuxbrew curl may have missing shared libs)
+CURL="curl"
+if [[ -x /usr/bin/curl ]]; then
+  CURL="/usr/bin/curl"
+fi
+
 PROJECT_KEY="nickolay-kondratyev_dev-agent-harness"
 REPORT_DIR="_reports"
 REPORT_FILE="${REPORT_DIR}/sonar_report.json"
@@ -31,7 +37,7 @@ fetch_sonar_api() {
   local url="$2"
   local response
 
-  if ! response=$(curl -sf \
+  if ! response=$("${CURL}" -sf \
     -H "Authorization: Bearer ${SONAR_TOKEN}" \
     "${url}"); then
     echo "ERROR: Failed to fetch ${label} from SonarCloud API."
