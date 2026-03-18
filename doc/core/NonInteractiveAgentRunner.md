@@ -132,7 +132,7 @@ that need lightweight agent invocation.
 | Consumer | Agent Type | Model | Timeout | Purpose |
 |---|---|---|---|---|
 | `AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E) | PI | `$AI_MODEL__ZAI__FAST` | 20 min | Fix infrastructure issues (git lock, disk cleanup) |
-| `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) | ClaudeCode | sonnet | 10 min | Read artifacts, produce failure summary text (stdout only — harness handles ticket update and git) |
+| `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) | ClaudeCode | sonnet | 20 min | Read artifacts, produce failure summary text (stdout only — harness handles ticket update and git) |
 
 > **Why 20 minutes:** Non-interactive agents have **no health monitoring** — no ping, no
 > `lastActivityTimestamp`, no proof-of-life mechanism. The process-level timeout is the **only**
