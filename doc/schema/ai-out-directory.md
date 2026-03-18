@@ -50,7 +50,7 @@ The git branches will include ticket ids which guarantees not clashing.
 | `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
 | `current_state.json` | harness_private/ | Durable disk copy of the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) — plan blueprint + execution progress + session IDs. Flushed after every mutation for progress tracking and observability; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `plan_flow.json` | harness_private/ | Planner's raw output (with-planning only). Strict machine-readable workflow definition: which agent roles, models, and iteration budgets to use. Consumed and validated by the harness. Merged into in-memory `CurrentState` after planning converges; deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
-| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Captures the *what and how* to implement: clarified requirements, tradeoffs decided during planning, architecture constraints, affected file paths, and design decisions. Consumed by all doer sub-parts in `with-planning` workflows — not parsed by the harness. See [What Goes Where — plan_flow.json vs PLAN.md](#what-goes-where--plan_flowjson-vs-planmd) below. |
+| `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Captures the *what and how* to implement: clarified requirements, tradeoffs decided during planning, architecture constraints, affected file paths, and design decisions. Consumed by all execution sub-parts (doers and reviewers) in `with-planning` workflows — not parsed by the harness. Doers use it to know what to build; reviewers use it to evaluate against what was planned. See [What Goes Where — plan_flow.json vs PLAN.md](#what-goes-where--plan_flowjson-vs-planmd) below. |
 
 ### `__feedback/` — Granular Feedback Items
 
@@ -115,19 +115,20 @@ files.
 
 These two files are produced by the PLANNER agent and serve entirely different consumers and purposes:
 
-| `plan_flow.json` (workflow definition) | `PLAN.md` (implementation guidance) |
+| `plan_flow.json` (workflow orchestration) | `PLAN.md` (implementation guidance) |
 |---|---|
-| Strict machine-readable format — parsed and validated by the harness | Human-readable markdown — read by implementation agents |
+| Strict machine-readable format — parsed and validated by the harness | Human-readable markdown — read by execution agents (doers and reviewers) |
 | Which agent roles to run, in what order, with which models | Clarified requirements that didn't exist in the original ticket |
 | Iteration budgets per reviewer | Tradeoffs decided during planning and why |
 | `agentType` per sub-part | Architecture constraints and relevant file paths |
-| Consumed by the harness to drive execution | Passed to all doer sub-parts in `with-planning` workflows |
+| Consumed by the **harness** to orchestrate execution | Passed to all **execution sub-parts** (doers and reviewers) in `with-planning` workflows |
 
-**Why both exist:** `plan_flow.json` tells the harness *how to run the workflow* (which agents,
-what model, in what order). `PLAN.md` tells implementation agents *what to build and how* — it
-is the implementer's guide, containing everything needed to do the work confidently without
-second-guessing planning decisions. Single source of truth for each distinct consumer; no risk
-of divergence because they carry different information.
+**Why both exist — different responsibilities, different consumers:** `plan_flow.json` tells the
+**harness** *how to orchestrate the workflow* (which agents, what model, in what order, iteration
+budgets). `PLAN.md` tells **execution agents** *what to build and how* — doers use it as the
+implementation guide, reviewers use it to evaluate work against the planned approach. Each file
+is the single source of truth for its distinct consumer; no risk of divergence because they
+carry non-overlapping information.
 
 ### What Goes Where — PUBLIC.md vs PLAN.md
 

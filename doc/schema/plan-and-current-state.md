@@ -217,11 +217,13 @@ The PLANNER agent produces **two separate files** with entirely different purpos
 | File | Consumer | Purpose |
 |------|----------|---------|
 | `harness_private/plan_flow.json` | Harness (machine-parsed) | Strict workflow definition: which agent roles, models, order, and iteration budgets. The harness validates and merges it into the in-memory `CurrentState` (flushed to `current_state.json`). |
-| `shared/plan/PLAN.md` | Implementation agents (LLM-read) | Human-readable guide: clarified requirements, tradeoffs, architecture constraints, affected file paths, design decisions. Fed to all doer sub-parts in `with-planning` workflows. |
+| `shared/plan/PLAN.md` | Execution agents — doers and reviewers (LLM-read) | Human-readable guide: clarified requirements, tradeoffs, architecture constraints, affected file paths, design decisions. Fed to all execution sub-parts (doers and reviewers) in `with-planning` workflows so every agent knows what was planned. |
 
-**Why both:** `plan_flow.json` tells the harness *how to run the workflow*. `PLAN.md` tells
-implementation agents *what to build and how*. They serve different consumers and carry
-non-overlapping information — no risk of divergence.
+**Why both — different responsibilities, different consumers:** `plan_flow.json` tells the
+**harness** *how to orchestrate the workflow* (which agents, what models, in what order, iteration
+budgets). `PLAN.md` tells **execution agents** (both doers and reviewers) *what to build and how* —
+so doers implement confidently and reviewers evaluate against the planned approach. They carry
+non-overlapping information for non-overlapping consumers — no risk of divergence.
 
 ### plan_flow.json / CurrentState Schema
 

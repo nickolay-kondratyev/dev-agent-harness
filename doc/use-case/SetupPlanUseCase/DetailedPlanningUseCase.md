@@ -51,7 +51,7 @@ with the appropriate sealed subtype based on the sub-part role:
 | Sub-Part | Request Subtype | Content |
 |----------|----------------|---------|
 | PLANNER (doer) | `AgentInstructionRequest.PlannerRequest` | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
-| PLAN_REVIEWER (reviewer) | `AgentInstructionRequest.PlanReviewerRequest` | Ticket + `plan_flow.json` from `harness_private/` + review criteria |
+| PLAN_REVIEWER (reviewer) | `AgentInstructionRequest.PlanReviewerRequest` | Ticket + `plan_flow.json` from `harness_private/` + `PLAN.md` from `shared/plan/` + review criteria |
 
 ---
 
