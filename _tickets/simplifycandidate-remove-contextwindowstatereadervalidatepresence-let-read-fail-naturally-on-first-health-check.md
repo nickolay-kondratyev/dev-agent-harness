@@ -1,11 +1,11 @@
 ---
 id: nid_dhkir4fqzy8tcgmh7nyj23hzp_E
 title: "SIMPLIFY_CANDIDATE: Remove ContextWindowStateReader.validatePresence() — let read() fail naturally on first health check"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:23:33Z
-status_updated_iso: 2026-03-18T02:23:33Z
+status_updated_iso: 2026-03-18T13:11:06Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
