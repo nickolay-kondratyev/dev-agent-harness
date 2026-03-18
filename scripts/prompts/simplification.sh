@@ -3,6 +3,7 @@
 
 main() {
   ei2 is_in_docker
+  cdi.repo_root
 
 # shellcheck disable=SC2155
 local tmp_file="$(ei2 make_tmp_file)"
@@ -20,9 +21,8 @@ EOF
 
   for i in {1..1} ; do
       if [[ -f "$HOME/done_with_simplification.md" ]]; then
-        echo.green "$HOME/done_with_simplification.md file exists. Exitting."
+        echo.green "$HOME/done_with_simplification.md file exists. Exiting."
       	exit 1
-
       fi
 
       git.save
