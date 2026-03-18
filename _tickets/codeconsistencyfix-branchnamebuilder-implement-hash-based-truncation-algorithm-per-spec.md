@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T17:06:48Z
 id: nid_i3jzssg11s3e4wmjzcgdkcymk_E
 title: "CODE_CONSISTENCY_FIX: BranchNameBuilder — implement hash-based truncation algorithm per spec"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T16:06:22Z
-status_updated_iso: 2026-03-18T16:44:03Z
+status_updated_iso: 2026-03-18T17:06:48Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -41,11 +42,20 @@ Use `java.security.MessageDigest` for SHA-1. No new dependency required.
 
 ## Acceptance Criteria
 
-1. slugify() uses word-boundary preservation when truncating (not character-level cut)
-2. When slug > 50 chars: takes first K whole words fitting in 43 chars, appends `-{hash6}`
-3. hash6 = first 6 hex chars of SHA-1 of the full (untruncated) slug
-4. Result is always ≤ 50 chars
-5. Result never ends with a hyphen
-6. Same ticket title always produces the same branch name (deterministic)
-7. Tests cover: short title (no truncation), long title (word-boundary + hash), title where truncation point falls mid-word, uniqueness for similar long titles
+1. ✅ slugify() uses word-boundary preservation when truncating (not character-level cut)
+2. ✅ When slug > 50 chars: takes first K whole words fitting in 43 chars, appends `-{hash6}`
+3. ✅ hash6 = first 6 hex chars of SHA-1 of the full (untruncated) slug
+4. ✅ Result is always ≤ 50 chars
+5. ✅ Result never ends with a hyphen
+6. ✅ Same ticket title always produces the same branch name (deterministic)
+7. ✅ Tests cover: short title (no truncation), long title (word-boundary + hash), title where truncation point falls mid-word, uniqueness for similar long titles
+
+## Resolution
+
+**Completed** on 2026-03-18.
+
+### Changes Made
+- **`BranchNameBuilder.kt`**: Replaced `.take(50)` character-level truncation with spec-compliant word-boundary + SHA-1 hash algorithm. Added constants `HASH_SUFFIX_LENGTH` (7), `MAX_WORD_BUDGET` (43), and private helpers `truncateWithHash()`, `buildWordPrefix()`, `sha1Hash6()`.
+- **`BranchNameBuilderTest.kt`**: Updated existing tests, added comprehensive new tests covering boundary cases (50/51 chars), single long word fallback, spec example verification (`c33b35` hash), determinism, uniqueness of similar long titles.
+- **`doc/core/git.md`**: Updated spec example hash from placeholder `a1b2c3` to actual SHA-1 value `c33b35`. Removed implementation gap note.
 
