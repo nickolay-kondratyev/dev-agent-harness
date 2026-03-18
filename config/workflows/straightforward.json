@@ -3,6 +3,7 @@
   "parts": [
     {
       "name": "main",
+      "phase": "execution",
       "description": "Implement and review",
       "subParts": [
         { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },

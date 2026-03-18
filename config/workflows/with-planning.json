@@ -1,9 +1,16 @@
 {
   "name": "with-planning",
-  "planningSubParts": [
-    { "name": "plan", "role": "PLANNER", "agentType": "ClaudeCode", "model": "opus" },
-    { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "ClaudeCode", "model": "opus",
-      "iteration": { "max": 3 } }
+  "planningParts": [
+    {
+      "name": "planning",
+      "phase": "planning",
+      "description": "Plan the workflow",
+      "subParts": [
+        { "name": "plan", "role": "PLANNER", "agentType": "ClaudeCode", "model": "opus" },
+        { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "ClaudeCode", "model": "opus",
+          "iteration": { "max": 3 } }
+      ]
+    }
   ],
-  "executionPhasesFrom": "plan.json"
+  "executionPhasesFrom": "plan_flow.json"
 }
