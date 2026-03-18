@@ -16,8 +16,12 @@ cat >> "${tmp_file:?}" <<EOF
 ### IF very quick to FIX: FIX
     IF the code change is very small/quick, THEN: fix inline right away.
 
+### IF the change is LARGE: DELETE code
+   IF the change is large in the code to align it, THEN: delete the code for now. We are going to circle back and re-implement it from spec.
+
 ### IF requires some more work: Create ticket
   IF requires some more work to FIX: Create a ticket with Title "CODE_CONSISTENCY_FIX: <XXX>", do not fix right away.
+
 
 EOF
 
