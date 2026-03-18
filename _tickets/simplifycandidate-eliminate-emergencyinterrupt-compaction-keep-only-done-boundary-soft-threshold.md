@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T02:22:46Z
 id: nid_erxsg4rjc8hpcflkg7ufbh9k9_E
 title: "SIMPLIFY_CANDIDATE: Eliminate EMERGENCY_INTERRUPT compaction — keep only done-boundary soft threshold"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T00:06:56Z
-status_updated_iso: 2026-03-18T02:08:33Z
+status_updated_iso: 2026-03-18T02:22:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -70,3 +71,27 @@ The only risk: agent uses 35% → 0% between done signals. Mitigated by:
 <DECISION>
 DECISION: It's not that rare of the scenario and if we do not have it we put ourselves at RISK of being STUCK with an agent in ran out of contexts state that is not able to compress. Alternative for V1: do not implement our own emergency compression and rely on claude codes auto compression. Which is reasonable simplification. Let's do that. Make sure to look at all the specs in under FOLDER=[./doc]. FOCUS on specs not code. To move all the CTRL+C interruption into [./doc_v2/our-own-emergency-compression.md] this will allow us to SIMPLIFY all the specs in regard to emergency compression in V1 for claude code, and simplify the configuration for turning off compression. We will want to move the setting for auto-compression OFF into [./doc_v2/our-own-emergency-compression.md] and point to ./doc_v2/our-own-emergency-compression.md from main specs.
 </DECISION>
+## Notes
+
+**2026-03-18T02:22:42Z**
+
+## Resolution
+
+Completed spec-only simplification across 10 files:
+
+### Created
+- `doc_v2/our-own-emergency-compression.md` — Full V2 emergency compression design preserved (hard threshold, Ctrl+C interrupt, race guard, auto-compaction disable config)
+
+### Simplified V1 Specs (9 files)
+- `doc/use-case/ContextWindowSelfCompactionUseCase.md` — Complete rewrite: removed EMERGENCY_INTERRUPT enum, hard threshold, Ctrl+C logic, 1-second polling, auto-compaction disable requirements. V1 now has single trigger: DONE_BOUNDARY
+- `doc/high-level.md` — V1 relies on Claude Code native auto-compaction + harness done-boundary compaction
+- `doc/core/PartExecutor.md` — Health-aware await loop simplified: no continuous context polling, only health checks at normal intervals
+- `doc/core/agent-to-server-communication-protocol.md` — sendRawKeys reserved for V2, removed compaction from suppression lists
+- `doc/core/AgentInteraction.md` — Removed ContextWindowStateReader from sendPayloadAndAwaitSignal deps
+- `doc/core/SessionsState.md` — Simplified isQAPending suppression list
+- `doc/core/UserQuestionHandler.md` — Removed compaction trigger from Q&A suppression table
+- `doc/plan/granular-feedback-loop.md` — Updated to reference Claude Code native auto-compaction for mid-task exhaustion
+- `doc/use-case/HealthMonitoring.md` — context_window_slim.json is done-boundary only, not continuously polled
+
+### Key Design Decision
+V1 does NOT disable Claude Code native auto-compaction. This provides a safety net for mid-task context exhaustion without requiring our own EMERGENCY_INTERRUPT implementation. V2 will implement custom emergency compression and disable auto-compaction.
