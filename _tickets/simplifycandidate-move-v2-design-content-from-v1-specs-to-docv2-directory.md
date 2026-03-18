@@ -1,11 +1,11 @@
 ---
 id: nid_6o206wjjli6d6xzlw6s38mju2_E
 title: "SIMPLIFY_CANDIDATE: Move V2 design content from V1 specs to doc_v2/ directory"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:47:21Z
-status_updated_iso: 2026-03-18T14:47:21Z
+status_updated_iso: 2026-03-18T14:58:59Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
