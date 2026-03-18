@@ -178,9 +178,8 @@ while (sessionEntry.pendingPayloadAck != null) {
 // coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Pinging would waste context window;
 // timeout would kill a healthy idle agent.
 //
-lastHealthCheck = now()
 while (true) {
-    signal = awaitSignalWithTimeout(healthCheckInterval)
+    signal = awaitSignalWithTimeout(1.second)
 
     if (signal != null) {
         // Agent sent Done / FailWorkflow / SelfCompacted via server → deferred completed
@@ -194,7 +193,6 @@ while (true) {
     }
 
     // --- Health check: lastActivityTimestamp only ---
-    lastHealthCheck = now()
     callbackAge = now() - sessionEntry.lastActivityTimestamp
 
     if (callbackAge >= healthTimeouts.normalActivity) {
