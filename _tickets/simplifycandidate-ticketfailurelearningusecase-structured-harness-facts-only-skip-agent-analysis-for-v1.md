@@ -1,11 +1,11 @@
 ---
 id: nid_qm9uly3pe6fyw5zhft1rr529q_E
 title: "SIMPLIFY_CANDIDATE: TicketFailureLearningUseCase — structured harness facts only, skip agent analysis for V1"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:09:51Z
-status_updated_iso: 2026-03-18T02:09:51Z
+status_updated_iso: 2026-03-18T13:40:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
