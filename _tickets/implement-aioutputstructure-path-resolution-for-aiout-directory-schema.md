@@ -83,3 +83,7 @@ Test clarification: add explicit test case for branch names with slashes. E.g., 
 **2026-03-18T21:37:41Z**
 
 WHY-NOT: AiOutputStructure does NOT include deletion logic for plan_flow.json (or any other file). plan_flow.json is 'deleted after conversion' per the spec, but that deletion belongs to SetupPlanUseCase/DetailedPlanningUseCase — not to AiOutputStructure. This class is purely about path resolution and directory creation.
+
+**2026-03-18T21:51:40Z**
+
+WHY-NOT: No convenience method for individual feedback file paths (e.g., feedbackFilePath(partName, filename)). Callers compose from feedbackPendingDir(partName).resolve(filename) at call sites — keeping AiOutputStructure focused on directory-level path resolution. Individual file paths within feedback dirs are the caller's concern.

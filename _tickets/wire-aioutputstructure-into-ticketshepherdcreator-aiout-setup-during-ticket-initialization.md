@@ -45,3 +45,7 @@ Test clarity: The directory-existence verification belongs in ticket nid_fjod8du
 **2026-03-18T21:37:44Z**
 
 Test clarification: Add an explicit test assertion that TicketShepherd receives the AiOutputStructure instance (constructor injection verified), in addition to the existing test spec for ContextForAgentProviderImpl injection. Both consumers should be verified.
+
+**2026-03-18T21:51:42Z**
+
+TicketShepherd spec reference: ref.ap.P3po8Obvcjw4IXsSUSU91.E (doc/core/TicketShepherd.md) — read this to understand where AiOutputStructure slots into TicketShepherd constructor/usage.
