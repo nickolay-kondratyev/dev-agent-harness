@@ -3,6 +3,9 @@
   - Have select integration tests, especially be careful with integration tests that invoke real coding agents.
   - When you develop with new real dependencies make sure to create **TEMPORARY** integration temporary tests to run the real dependencies to **UNDERSTAND** how they work, and be able to create mocks and fakes for them. 
     - Look for opportunities to create re-usable **FAKES** for real dependencies that can be used in unit tests to keep tests running **FAST**
+  - The behavior must be thoroughly tested.
+    - Approach with tests first and then implementation.
+    - When working with external dependencies run time in sandboxes to understand their behavior and then create FAKEs for unit tests.
 
 ### Framework & Style
 - **BDD with GIVEN/WHEN/THEN** using Kotest `DescribeSpec`.
