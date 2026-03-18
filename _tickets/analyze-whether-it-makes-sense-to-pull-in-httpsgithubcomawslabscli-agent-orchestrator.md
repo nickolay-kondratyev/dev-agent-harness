@@ -12,3 +12,6 @@ assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 ---
 
 
+READ specs under FOLDER=[./doc]. FOCUS on specs not code.
+
+Research https://github.com/awslabs/cli-agent-orchestrator and give a recommendation whether it's worthwhile to include or whether going directly to TMUX from our orchestrator framework makes more sense.
