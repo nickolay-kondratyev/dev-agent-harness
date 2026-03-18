@@ -499,7 +499,8 @@ This means no cleanup is needed and the full communication is git-tracked alongs
 outputs (`comm/out/PUBLIC.md`).
 
 The provider writes the file and returns its `Path`. The caller
-(`PartExecutor` ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) sends the path to the agent via TMUX `send-keys`.
+(`PartExecutor` ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) sends the path to the agent via
+`AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E), which internally delivers it via TMUX `send-keys`.
 
 ---
 
@@ -514,5 +515,5 @@ The provider writes the file and returns its `Path`. The caller
 ## What It Does NOT Do
 
 - **Does not decide which agent to spawn** — that's TicketShepherd walking the workflow
-- **Does not send the file to the agent** — that's the `PartExecutor` via TMUX `send-keys`
+- **Does not send the file to the agent** — that's the `PartExecutor` via `AgentFacade`
 - **Does not validate PUBLIC.md existence** — guaranteed by executor's upstream validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E)

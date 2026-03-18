@@ -1,8 +1,8 @@
 # Agent Health Monitoring — UseCase Pattern / ap.RJWVLgUGjO5zAwupNLhA0.E
 
 Timeout + ping mechanism to detect crashed/hung agents. Failure scenarios are encapsulated
-in UseCase classes — simple, stateless, single-responsibility operations that the `PartExecutor`
-(ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) invokes from its health-aware await loop
+in UseCase classes — simple, stateless, single-responsibility operations that `AgentFacadeImpl`
+(ref.ap.9h0KS4EOK5yumssRCJdbq.E) invokes from its health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 Liveness is determined **solely by HTTP callback timestamps** (`lastActivityTimestamp`).
@@ -47,18 +47,18 @@ loop at ref.ap.QCjutDexa2UBDaKB3jTcF.E.
 ### Why AgentFacadeImpl-Owned
 
 - **Single control flow**: The facade creates the deferred, registers it, and awaits it.
-  Making the executor also responsible for health checks keeps a single owner for the deferred
+  Making the facade also responsible for health checks keeps a single owner for the deferred
   lifecycle. No separate coroutine competing to `complete()` the deferred.
-- **Structured concurrency**: The health check is naturally scoped to the executor's lifetime.
-  When the executor finishes (signal received or crash detected), the monitoring stops. No
-  cleanup of orphaned background coroutines.
+- **Structured concurrency**: The health check is naturally scoped to the facade's await
+  lifetime. When the facade finishes (signal received or crash detected), the monitoring
+  stops. No cleanup of orphaned background coroutines.
 - **Timer reset via shared state**: The server updates `SessionEntry.lastActivityTimestamp`
-  (ref.ap.igClEuLMC0bn7mDrK41jQ.E) on every callback. The executor reads this timestamp on
+  (ref.ap.igClEuLMC0bn7mDrK41jQ.E) on every callback. The facade reads this timestamp on
   each health check tick. No direct communication channel needed between server and monitor.
 
 ### Proof-of-Life Principle
 
-After sending a ping (via `AckedPayloadSender`), the executor re-checks
+After sending a ping (via `AckedPayloadSender`), the facade re-checks
 `lastActivityTimestamp` after the ping timeout window. If **any** callback arrived during
 that window (`user-question`, `done`, `ack-payload`, etc.), the agent is demonstrably
 alive. The ping's own `ack-payload` response serves as the proof-of-life for agents that
@@ -171,7 +171,7 @@ in the same outcome (kill TMUX session, return `AgentCrashed`) with context-spec
 |---|---|---|---|
 | `STARTUP_TIMEOUT` | No callback of any kind within `healthTimeouts.startup` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Session name, HandshakeGuid, env vars, timeout duration | Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `normalActivity`. |
 | `NO_ACTIVITY_TIMEOUT` | `lastActivityTimestamp` stale beyond `healthTimeouts.normalActivity` | Session name, stale duration, `normalActivity` value | Ping agent via TMUX send-keys. (If ping also times out → `PING_TIMEOUT`.) |
-| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after `healthTimeouts.pingResponse` window | Session name, ping response duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero). No automatic recovery in V1. |
+| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after `healthTimeouts.pingResponse` window | Session name, ping response duration | Mark as CRASHED, kill TMUX session. Facade completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero). No automatic recovery in V1. |
 
 **Design rationale**: The three detection contexts share the same conceptual event (agent
 is unresponsive) and the same outcome (kill session, return crashed). A single class with
@@ -271,7 +271,7 @@ can occur during this user interaction.
 
 ### Post-Convergence Doer Session — No Special Ping Needed
 After the user grants more iterations, the doer's TMUX session may have been idle for a long
-time. The executor sends new instructions directly via `AckedPayloadSender`
+time. The facade sends new instructions directly via `AckedPayloadSender`
 (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — **no special-case pre-send ping**. If the session is dead,
 `send-keys` will fail or the ACK will never arrive → 3-attempt retry exhausted →
 `AgentSignal.Crashed`. The Payload Delivery ACK Protocol
@@ -290,7 +290,7 @@ message that consumes context window capacity. If the human is away for hours (m
 walks, overnight), dozens of pings accumulate — pure context-window waste that degrades
 the agent's ability to work on the actual task after Q&A completes.
 
-With Q&A-aware suppression, the executor knows the agent is in a **known-idle state** (waiting
+With Q&A-aware suppression, the facade knows the agent is in a **known-idle state** (waiting
 for Q&A answer via TMUX). No liveness uncertainty exists — the Q&A coordinator
 (ref.ap.NE4puAzULta4xlOLh5kfD.E) owns the session's Q&A lifecycle independently. If the
 TMUX session dies during Q&A, the coordinator detects this when `AckedPayloadSender` fails

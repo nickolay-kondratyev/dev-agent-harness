@@ -301,11 +301,11 @@ for the abstraction design. Full spawn flow: see [SpawnTmuxAgentSessionUseCase](
 
 ### Startup Timeout
 
-The executor uses the **`healthTimeouts.startup`** window (default: **3 minutes**) between
+The facade uses the **`healthTimeouts.startup`** window (default: **3 minutes**) between
 spawn and first callback. This is significantly shorter than the steady-state
 `healthTimeouts.normalActivity` (30 min) because startup failures should be caught fast.
 
-If no callback of any kind arrives within `healthTimeouts.startup` after spawn, the executor
+If no callback of any kind arrives within `healthTimeouts.startup` after spawn, the facade
 triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error identifying the spawn failure → returns
 `PartResult.AgentCrashed`. See [Health Monitoring](../use-case/HealthMonitoring.md)
 (ref.ap.RJWVLgUGjO5zAwupNLhA0.E).
@@ -326,7 +326,7 @@ triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error i
 - If env vars are misconfigured, the `/started` call either fails or never fires —
   both caught by the 3-minute timeout
 
-After the first callback arrives, the executor switches to the `healthTimeouts.normalActivity`
+After the first callback arrives, the facade switches to the `healthTimeouts.normalActivity`
 window (30 min) for the remainder of the agent's work.
 
 ### WHY-NOT: Eliminating Phase 1 (Merging `/started` Into First `done`)
@@ -387,7 +387,7 @@ coroutine for this session. The coordinator owns the structured question/answer 
 (ref.ap.NE4puAzULta4xlOLh5kfD.E), and batch-delivers all answers via `AckedPayloadSender`
 (ref.ap.tbtBcVN2iCl1xfHJthllP.E) — wrapped in Payload Delivery ACK XML, not via HTTP response.
 
-While Q&A is pending (`SessionEntry.isQAPending == true`), the executor's health-aware await
+While Q&A is pending (`SessionEntry.isQAPending == true`), the facade's health-aware await
 loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **suppresses** health pings and noActivityTimeout —
 the agent is known-idle, awaiting a TMUX answer.
 
@@ -422,6 +422,7 @@ callback_shepherd.signal.sh done <result>                 # required: completed 
 callback_shepherd.signal.sh user-question "<text>"        # required: question text
 callback_shepherd.signal.sh fail-workflow "<reason>"      # required: failure reason (aborts entire workflow)
 callback_shepherd.signal.sh ack-payload <payload-id>      # required: PayloadId from the send-keys wrapper (e.g., "a1b2c3d4-3")
+callback_shepherd.signal.sh self-compacted                # no extra args — context window self-compaction complete (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
 ```
 
 **Argument validation on `done`:** The script rejects anything other than `completed`,
@@ -642,7 +643,7 @@ interface AckedPayloadSender {
 ### ACK Flow
 
 ```
-Executor                                Agent (in TMUX)                    Server
+AgentFacadeImpl                         Agent (in TMUX)                    Server
    │                                         │                               │
    ├─ generate PayloadId                     │                               │
    ├─ wrap payload in XML                    │                               │
@@ -660,7 +661,7 @@ Executor                                Agent (in TMUX)                    Serve
    │                                         │  (reads instructions, works)  │
 ```
 
-**On ACK received:** the executor knows the agent has received and is processing the
+**On ACK received:** the facade knows the agent has received and is processing the
 payload. It proceeds to the normal health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E) waiting for `done`/`fail-workflow`.
 
@@ -677,17 +678,17 @@ payload twice, it reads the same instruction file.
 | 2 (first retry) | Re-send same wrapped payload via `send-keys` | Wait 3 minutes |
 | 3 (second retry) | Re-send same wrapped payload via `send-keys` | All retries exhausted |
 
-**After all retries exhausted** (no ACK after 9 minutes total): the executor treats this as
+**After all retries exhausted** (no ACK after 9 minutes total): the facade treats this as
 an agent that is alive but unable to process input — functionally equivalent to a crash.
-The executor kills the TMUX session, completes `signalDeferred` with `AgentSignal.Crashed`,
+The facade kills the TMUX session, completes `signalDeferred` with `AgentSignal.Crashed`,
 and returns `PartResult.AgentCrashed`. `TicketShepherd` delegates to
 `FailedToExecutePlanUseCase` (red error, kills all sessions, exits non-zero).
 
 ### ACK Tracking on SessionEntry
 
 The `SessionEntry` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) carries an optional
-`pendingPayloadAck: PayloadId?` field. The executor sets this before sending `send-keys`.
-The server sets it to `null` when the matching `/signal/ack-payload` arrives. The executor
+`pendingPayloadAck: PayloadId?` field. The facade sets this before sending `send-keys`.
+The server sets it to `null` when the matching `/signal/ack-payload` arrives. The facade
 polls this field during the ACK-await phase.
 
 ### Signal Endpoint
@@ -697,7 +698,7 @@ polls this field during the ACK-await phase.
 Side-channel signal — same tier as `started`, `user-question`:
 - Updates `lastActivityTimestamp`
 - Clears `pendingPayloadAck` on `SessionEntry` when `payloadId` matches
-- Does **NOT** complete `signalDeferred` — the executor is in the ACK-await phase, not the
+- Does **NOT** complete `signalDeferred` — the facade is in the ACK-await phase, not the
   signal-await phase
 - Returns bare `200 OK`
 
