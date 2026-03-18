@@ -640,9 +640,9 @@ interface AckedPayloadSender {
 
 | Caller | When |
 |--------|------|
-| `PartExecutor` health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) | Phase 2 work instructions after bootstrap |
-| `PartExecutor` re-instruction pattern (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
-| `PartExecutor` PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | Missing PUBLIC.md after done signal |
+| `AgentFacadeImpl` health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) | Phase 2 work instructions after bootstrap |
+| `AgentFacadeImpl` via `sendPayloadAndAwaitSignal` — triggered by PartExecutor re-instruction (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
+| `AgentFacadeImpl` via `sendPayloadAndAwaitSignal` — triggered by PartExecutor PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | Missing PUBLIC.md after done signal |
 | Q&A coordinator answer batch delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After all queued questions are answered by `UserQuestionHandler` |
 
 ### ACK Flow

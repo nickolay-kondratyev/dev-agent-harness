@@ -39,19 +39,19 @@ Creates a `PartExecutorImpl` (with reviewer) configured for the planning phase:
 |--------|-------|
 | Doer role | `PLANNER` |
 | Reviewer role | `PLAN_REVIEWER` |
-| `ContextForAgentProvider` | Shared provider — executor calls planner/plan-reviewer methods directly (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) |
+| `ContextForAgentProvider` | Shared provider — executor calls `assembleInstructions()` with `PlannerRequest` / `PlanReviewerRequest` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) |
 | Iteration semantics | Same as execution parts — reviewer signals `pass` or `needs_iteration` |
 
 ### Planning Instruction Assembly
 
 The planning executor uses `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) directly —
-the same provider used by execution executors. The executor calls the appropriate method based on
-the sub-part role:
+the same provider used by execution executors. The executor calls `assembleInstructions(request)`
+with the appropriate sealed subtype based on the sub-part role:
 
-| Sub-Part | Provider Method | Content |
+| Sub-Part | Request Subtype | Content |
 |----------|----------------|---------|
-| PLANNER (doer) | `assemblePlannerInstructions()` | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
-| PLAN_REVIEWER (reviewer) | `assemblePlanReviewerInstructions()` | Ticket + `plan_flow.json` from `harness_private/` + review criteria |
+| PLANNER (doer) | `AgentInstructionRequest.PlannerRequest` | Ticket + role catalog + available agent types & models (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) + plan format instructions + reviewer feedback (on iteration) |
+| PLAN_REVIEWER (reviewer) | `AgentInstructionRequest.PlanReviewerRequest` | Ticket + `plan_flow.json` from `harness_private/` + review criteria |
 
 ---
 
