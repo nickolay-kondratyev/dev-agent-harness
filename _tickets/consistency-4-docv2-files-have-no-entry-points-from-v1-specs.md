@@ -12,5 +12,12 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [consistency, spec, docs]
 ---
 
-$Four doc_v2/ files exist but are not referenced from any V1 spec in doc/:\n\n- doc_v2/FailedToExecutePlanUseCaseV2.md\n- doc_v2/be-smart-on-whether-to-continue-or-restart.md\n- doc_v2/roll-up-PUBLIC-when-we-exist-part.md\n- doc_v2/verification-gate.md\n\nThey should be referenced from the relevant V1 specs or from the Linked Documentation table in doc/high-level.md, so they are discoverable by implementors. Each file should have a forward reference from its closest V1 spec (e.g., FailedToExecutePlanUseCaseV2 from TicketShepherd.md or HealthMonitoring.md).
+$Four doc_v2/ files exist but are not referenced from any V1 spec in doc/:
+
+- doc_v2/FailedToExecutePlanUseCaseV2.md
+- doc_v2/be-smart-on-whether-to-continue-or-restart.md
+- doc_v2/roll-up-PUBLIC-when-we-exist-part.md
+- doc_v2/verification-gate.md
+
+They should be referenced from the relevant V1 specs or from the Linked Documentation table in doc/high-level.md, so they are discoverable by implementors. Each file should have a forward reference from its closest V1 spec (e.g., FailedToExecutePlanUseCaseV2 from TicketShepherd.md or HealthMonitoring.md).
 
