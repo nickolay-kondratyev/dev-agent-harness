@@ -134,7 +134,7 @@ git checkout {tryBranch}
 The agent receives instructions to:
 
 1. **Read agent artifacts** from `.ai_out/`:
-   - `current_state.json` — workflow progress, session records
+   - `current_state.json` — workflow progress, session records (durable disk copy of in-memory `CurrentState`)
    - All `PUBLIC.md` files across sub-parts (agent outputs)
    - `PLAN.md` (from `shared/plan/`) if present
 

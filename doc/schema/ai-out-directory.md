@@ -11,7 +11,7 @@ The git branches will include ticket ids which guarantees not clashing.
 .ai_out/${git_branch}/
 ├── harness_private/
 │   ├── current_state.json              # Durable disk copy of in-memory CurrentState (plan + progress + session IDs)
-│   └── plan_flow.json                  # Planner output (with-planning only); becomes current_state.json after convergence
+│   └── plan_flow.json                  # Planner output (with-planning only); merged into CurrentState after convergence
 ├── shared/
 │   └── plan/
 │       └── PLAN.md                     # Human-readable plan (with-planning only)

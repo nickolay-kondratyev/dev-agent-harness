@@ -213,7 +213,7 @@ See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-
 
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for:
 - New session spawn flow (GUID generation, env var export, session ID resolution)
-- Session schema in `current_state.json`
+- Session schema in `CurrentState` (flushed to `current_state.json`)
 - Callback script spec
 
 ---
