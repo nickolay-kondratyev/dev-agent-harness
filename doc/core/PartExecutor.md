@@ -41,7 +41,7 @@ sealed class PartResult {
 
 `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly.
 All failure variants (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) delegate to
-`FailedToExecutePlanUseCase` — prints red error, halts. V1 has no automatic crash recovery.
+`FailedToExecutePlanUseCase` — prints red error, kills all sessions, exits non-zero. V1 has no automatic crash recovery.
 Note: `FailedToConvergeUseCase` runs inside the executor (see PartExecutorImpl step 4, iteration
 budget exceeded), not in TicketShepherd.
 
@@ -371,7 +371,7 @@ after `done` prevents downstream corruption.
    d. On `Crashed` or `FailedWorkflow` → propagate immediately (skip re-validation)
    e. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
       message: `"Agent failed to produce PUBLIC.md after explicit re-instruction"`.
-      `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, halt).
+      `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, kills all sessions, exits non-zero).
 
 **One retry, not infinite:** If the agent cannot produce `PUBLIC.md` after being explicitly
 told it is missing, something is fundamentally wrong (misconfigured output path, agent
@@ -433,7 +433,7 @@ expected in normal operation but must be handled.
 the executor logs an **ERROR** with the session name, HandshakeGuid, and the `send-keys`
 failure details, then returns `PartResult.AgentCrashed` with a message indicating which
 sub-part's idle session died. `TicketShepherd` delegates to `FailedToExecutePlanUseCase`
-(red error, halt — waits for human intervention).
+(red error, kills all sessions, exits non-zero).
 
 No automatic respawn in V1. See `doc_v2/idle-session-recovery.md` for V2 design
 (automatic respawn of the dead idle session with `--resume`).

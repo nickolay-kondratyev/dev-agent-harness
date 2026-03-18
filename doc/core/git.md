@@ -300,7 +300,7 @@ If the fast-path is not applicable (different error) or the retry after lock rem
 3. **Delegates to `AutoRecoveryByAgentUseCase`** with the packaged context
 4. **On recovery success** → retries the original git operation **once**
 5. **On retry failure or recovery failure** → delegates to `FailedToExecutePlanUseCase`
-   (prints red error, halts — waits for human intervention)
+   (prints red error, kills all sessions, exits non-zero)
 
 **Ownership**: The failure handling (catch → recovery → retry → fallback to
 `FailedToExecutePlanUseCase`) is encapsulated within the `GitCommitStrategy` implementation.

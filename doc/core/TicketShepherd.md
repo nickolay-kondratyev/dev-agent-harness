@@ -22,10 +22,10 @@ creates executors for each part, runs them in sequence, and handles the results.
    d. Handle `PartResult`:
       - `Completed` → kill TMUX sessions for part, move to next part
       - `FailedWorkflow` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
-        console, halts — waits for human intervention).
+        console, kills all sessions, exits non-zero).
       - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase(partResult)` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
       - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
-        console, halts — waits for human intervention). V1: no automatic recovery.
+        console, kills all sessions, exits non-zero). V1: no automatic recovery.
 
 `FailedToExecutePlanUseCase` receives a `PartResult` sealed class carrying enough context
 for formatted error messages and gives V2 the type information needed for different
@@ -92,7 +92,7 @@ state (`SessionsState`, parsed workflow, ticket metadata) wired by
 
 Additional dependencies:
 - `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) — records structured failure
-  context into the ticket on workflow failure, invoked by `FailedToExecutePlanUseCase` before halting.
+  context into the ticket on workflow failure, invoked by `FailedToExecutePlanUseCase` before exiting.
 
 ## Interrupt Protocol (Ctrl+C)
 
