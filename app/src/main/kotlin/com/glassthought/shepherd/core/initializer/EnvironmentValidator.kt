@@ -17,7 +17,7 @@ import java.nio.file.Path
  * 2. **Required env vars**: All [Constants.REQUIRED_ENV_VARS.ALL] are present and non-blank.
  */
 @AnchorPoint("ap.A8WqG9oplNTpsW7YqoIyX.E")
-interface EnvironmentValidator {
+fun interface EnvironmentValidator {
   /**
    * Validates the runtime environment. Throws [IllegalStateException] on failure.
    * Non-suspend — runs before any coroutine infrastructure.

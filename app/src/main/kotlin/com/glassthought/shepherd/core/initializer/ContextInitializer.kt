@@ -53,7 +53,7 @@ data class Infra(
  * dependencies.
  */
 @AnchorPoint("ap.9zump9YISPSIcdnxEXZZX.E")
-interface ContextInitializer {
+fun interface ContextInitializer {
   /**
    * @param outFactory Structured logging factory.
    */

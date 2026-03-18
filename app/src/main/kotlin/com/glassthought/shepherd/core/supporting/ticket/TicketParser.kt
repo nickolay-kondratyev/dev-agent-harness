@@ -16,7 +16,7 @@ import kotlin.io.path.readText
  *
  * See design doc: ref.ap.mmcagXtg6ulznKYYNKlNP.E (CLI Entry Point section — ticket as required input)
  */
-interface TicketParser {
+fun interface TicketParser {
     /**
      * Parses the ticket file at [path] and returns [TicketData].
      *

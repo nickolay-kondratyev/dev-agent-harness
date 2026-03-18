@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * ref.ap.gCgRdmWd9eTGXPbHJvyxI.E
  */
-interface GuidScanner {
+fun interface GuidScanner {
     /** Returns all JSONL [Path]s whose content contains [guid]. */
     suspend fun scan(guid: HandshakeGuid): List<Path>
 }

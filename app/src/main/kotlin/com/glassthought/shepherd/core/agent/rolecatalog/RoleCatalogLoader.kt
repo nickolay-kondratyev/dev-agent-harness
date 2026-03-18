@@ -24,7 +24,7 @@ import kotlin.io.path.readText
  * @throws IllegalArgumentException if the directory does not exist, contains no `.md` files,
  *   or if any role file is missing the required `description` frontmatter field.
  */
-interface RoleCatalogLoader {
+fun interface RoleCatalogLoader {
 
     /**
      * Scans [dir] for `.md` files (flat, non-recursive) and returns a [RoleDefinition] for each.
