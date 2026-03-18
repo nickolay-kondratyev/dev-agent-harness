@@ -1,11 +1,11 @@
 ---
 id: nid_iepdd3efhnkui5rn4esic98en_E
 title: "CONSISTENCY: 4 doc_v2/ files have no entry points from V1 specs"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:24:50Z
-status_updated_iso: 2026-03-18T15:24:50Z
+status_updated_iso: 2026-03-18T15:28:53Z
 type: chore
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
