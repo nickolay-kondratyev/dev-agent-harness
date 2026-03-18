@@ -4,6 +4,7 @@
 main() {
   ei2 is_in_docker
   cdi.repo_root
+  file_verify_exists "./ticket_shepherd_marker.txt"
 
 # shellcheck disable=SC2155
 local tmp_file="$(ei2 make_tmp_file)"
@@ -25,9 +26,8 @@ EOF
       	exit 1
       fi
 
+      cdi.repo_root
       git.save
-
-      cdi /home/nickolaykondratyev/git_repos/nickolay-kondratyev_dev-agent-harness-mirror-1
 
       ai_core --agent CC --model opus --print "Read and execute instructions in [${tmp_file:?}]"
 
