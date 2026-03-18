@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [spec-consistency]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 AgentFacade.md (ref.ap.9h0KS4EOK5yumssRCJdbq.E) interface shape table only lists 3 methods:
 - spawnAgent
 - sendPayloadAndAwaitSignal
@@ -22,3 +24,8 @@ However, ContextWindowSelfCompactionUseCase.md (ref.ap.8nwz2AHf503xwq8fKuLcl.E) 
 
 And AgentFacade.md R6 explicitly states that ContextWindowStateReader is NOT in PartExecutor's constructor but is internal to AgentFacadeImpl — implying it is accessed through the AgentFacade interface.\n\nDecision needed:\n1. Add readContextWindowState to the AgentFacade interface table in doc/core/AgentFacade.md\n2. OR clarify in ContextWindowSelfCompactionUseCase.md that readContextWindowState is accessed through a different path (not AgentFacade interface)\n\nRelevant files:\n- doc/core/AgentFacade.md (interface shape table)\n- doc/use-case/ContextWindowSelfCompactionUseCase.md (line ~182, calls agentFacade.readContextWindowState)
 
+
+--------------------------------------------------------------------------------
+
+DECISION:
+It should be already added double check
