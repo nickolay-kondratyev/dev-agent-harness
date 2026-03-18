@@ -6,6 +6,7 @@
   - The behavior must be thoroughly tested.
     - Approach with tests first and then implementation.
     - When working with external dependencies run time in sandboxes to understand their behavior and then create FAKEs for unit tests.
+- MUST make sure to run `:app:test` before deeming task done.
 
 ### Framework & Style
 - **BDD with GIVEN/WHEN/THEN** using Kotest `DescribeSpec`.
