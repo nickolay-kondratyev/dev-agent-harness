@@ -1,20 +1,36 @@
 # AutoRecoveryByAgentUseCase / ap.q54vAxzZnmWHuumhIQQWt.E
 
-A general-purpose recovery mechanism that runs a lightweight non-interactive agent to attempt
-automated recovery from infrastructure failures that occur mid-workflow.
+> **⚠️ V2 — DEFERRED FROM V1**
+>
+> This use case is deferred to V2. In V1, git operation failures use a simpler approach:
+> **index.lock fast-path** (deterministic delete + retry) for the most common failure,
+> and **immediate fail-fast** to `FailedToExecutePlanUseCase` for all other git failures.
+>
+> **Why deferred:**
+> - Fail-fast is MORE robust than hoping a recovery agent can fix infrastructure issues
+> - Recovery agents have their own failure modes (agent crash, timeout, wrong fix)
+> - 20-min timeout means 20 minutes of waiting before the user even knows something is wrong
+> - Index.lock fast-path handles ~80% of git failures (Pareto)
+> - Clear error message lets human diagnose and fix the actual issue
+>
+> See [GitOperationFailureUseCase (V1)](../core/git.md#git-operation-failure-handling)
+> (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E) for the simplified V1 approach.
 
 ---
 
-## Motivation
+## V2 Design (preserved for future implementation)
+
+A general-purpose recovery mechanism that runs a lightweight non-interactive agent to attempt
+automated recovery from infrastructure failures that occur mid-workflow.
+
+### Motivation
 
 Certain infrastructure failures (e.g., git commit failures due to disk full, `.gitignore`
 conflicts, index lock files) are recoverable — a skilled agent can diagnose the issue,
 apply a fix, and allow the workflow to continue. Rather than halting immediately and waiting
 for human intervention, the harness first attempts automated recovery via a dedicated agent.
 
----
-
-## Design
+### Design
 
 `AutoRecoveryByAgentUseCase` is a **generic recovery executor**. It does not know about git
 or any specific failure domain — it receives structured context describing what failed and
@@ -27,9 +43,7 @@ package the failure context and delegate to `AutoRecoveryByAgentUseCase`.
 agent invocation with no TMUX, no handshake, no health monitoring. Infrastructure recovery
 tasks are short-lived and don't need the full interactive session machinery.
 
----
-
-## Interface
+### Interface
 
 ```kotlin
 interface AutoRecoveryByAgentUseCase {
@@ -66,9 +80,7 @@ sealed class RecoveryOutcome {
 }
 ```
 
----
-
-## Flow
+### Flow
 
 The use case runs the recovery agent **exactly once**:
 
@@ -83,9 +95,7 @@ The use case runs the recovery agent **exactly once**:
    (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with:
    - **Agent type**: `PI` — lightweight, fast, cost-effective for infrastructure fixes
    - **Model**: `$AI_MODEL__ZAI__FAST` (e.g., `glm-4.7-flash`)
-   - **Timeout**: 20 minutes — non-interactive agents have no health monitoring (no ping,
-     no proof-of-life), so the process timeout is the only safeguard. Complex diagnostic
-     work (scanning logs, running git commands) may take time.
+   - **Timeout**: 20 minutes
 
 3. **Interpret result**:
    - `NonInteractiveAgentResult.Success` → return `RecoveryOutcome.Resolved`.
@@ -93,29 +103,7 @@ The use case runs the recovery agent **exactly once**:
    - `NonInteractiveAgentResult.Failed` or `TimedOut` → log FAIL and return
      `RecoveryOutcome.Unresolvable("recovery_failed")`.
 
-**Rationale for single attempt**: If a recovery agent with full file access and explicit error
-context cannot fix the issue, a second spawn receives identical context and has no reason to
-succeed. A single attempt caps worst-case recovery time at 20 minutes before escalating to human
-intervention — faster than a two-attempt loop (40 min) for genuinely unrecoverable failures.
-
----
-
-## Caller Protocol
-
-Callers (e.g., `GitOperationFailureUseCase`) follow this pattern:
-
-1. Package failure context into `RecoveryRequest`
-2. Call `AutoRecoveryByAgentUseCase.attemptRecovery(request)`
-3. On `RecoveryOutcome.Resolved` → **retry the original operation once**, then continue workflow
-4. On `RecoveryOutcome.Unresolvable(reason)` → delegate to `FailedToExecutePlanUseCase`
-   with the reason (prints red error, kills all sessions, exits non-zero)
-
-**Single attempt**: The use case spawns the recovery agent exactly once. All exit paths are
-explicit via `RecoveryOutcome` — callers do not implement any retry logic.
-
----
-
-## Constraints for Recovery Agents
+### Constraints for Recovery Agents
 
 Recovery agents receive explicit constraints to prevent them from causing more damage:
 
@@ -125,42 +113,8 @@ Recovery agents receive explicit constraints to prevent them from causing more d
 - **Do NOT modify `current_state.json`** — the harness owns workflow state
 - **Scope to the specific failure** — do not attempt to "fix" unrelated issues
 
----
-
-## First Consumer: GitOperationFailureUseCase
-
-See [Git Operation Failure Handling](../core/git.md#git-operation-failure-handling--autorecoverybyagentusecase)
-(ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E) for the git-specific use case that delegates to this.
-
----
-
-## Dependencies
-
-- `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — run recovery agent as subprocess
-
----
-
-## Not a Retry Mechanism
-
-`AutoRecoveryByAgentUseCase` is NOT a generic retry mechanism. It does not re-run the failed
-operation — it runs an agent to **fix the environment** so the caller can retry. The retry
-decision and execution belong to the caller.
-
----
-
-## Future Consumers
-
-The `AutoRecoveryByAgentUseCase` pattern is designed for extension (OCP). Future infrastructure
-failure scenarios can create new domain-specific use cases that delegate to this:
+### Future Consumers
 
 - **Disk space issues** — agent could identify and clean up temporary files
 - **Network-related failures** — agent could diagnose connectivity issues
-
-Each new consumer creates its own use case class, packages domain-specific context, and
-delegates to `AutoRecoveryByAgentUseCase`.
-
-> **Not a candidate:** TMUX session creation failure is a **hard fail** (see
-> [SpawnTmuxAgentSessionUseCase — TMUX Session Creation Failure](SpawnTmuxAgentSessionUseCase.md#tmux-session-creation-failure--hard-fail)).
-> Infrastructure prerequisite failures (tmux binary missing, session creation non-zero exit)
-> halt immediately with a red console error — no recovery agent is spawned. Recovery agents
-> are for mid-workflow operational failures (e.g., git conflicts), not missing prerequisites.
+- **Git operation failures** — first consumer, restored from V1 index.lock-only approach

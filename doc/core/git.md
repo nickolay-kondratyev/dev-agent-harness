@@ -208,29 +208,29 @@ not mid-workflow.
 
 ---
 
-## Git Operation Failure Handling — AutoRecoveryByAgentUseCase
+## Git Operation Failure Handling
 <!-- ap.AQ8cRaCyiwZWdK5TZiKgJ.E -->
 
 Git operations (especially `git commit`) can fail mid-workflow due to infrastructure issues
 (disk full, `.gitignore` conflict, index lock, etc.). Since commits happen after each sub-part
 signal, a failure here would otherwise be an unhandled exception that halts the workflow.
 
-**Instead of failing outright, the harness runs a recovery agent** via
-`AutoRecoveryByAgentUseCase` (ref.ap.q54vAxzZnmWHuumhIQQWt.E — see
-[`doc/use-case/AutoRecoveryByAgentUseCase.md`](../use-case/AutoRecoveryByAgentUseCase.md)),
-which delegates to `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) — a PI
-agent in `--print` mode with `$AI_MODEL__ZAI__FAST`.
-
 ### GitOperationFailureUseCase
 
-A git-specific use case that attempts a deterministic quick-fix before falling back to
-the full agent recovery path.
+**V1 approach: index.lock fast-path + fail-fast.** The most common git failure (~80%) in a
+CI/agent environment is a stale `.git/index.lock` left by a crashed process. This is fully
+deterministic to fix. All other git failures fail-fast with a clear error message — letting
+the human diagnose and fix the actual issue is more robust than a 20-minute recovery agent
+that has its own failure modes.
+
+> **Why-not agent-based recovery (V2):** `AutoRecoveryByAgentUseCase`
+> (ref.ap.q54vAxzZnmWHuumhIQQWt.E) is deferred to V2. Recovery agents add complexity
+> (agent crash, timeout, wrong fix) and a 20-minute delay before the user knows something
+> is wrong. Fail-fast with a clear error message is more robust for V1.
 
 #### Fast-path: index.lock detection
 
-The most common git failure in a CI/agent environment is a stale `.git/index.lock` file
-left by a crashed process. This is fully deterministic to fix (`rm -f .git/index.lock`)
-and requires no LLM agent. Before escalating, `GitOperationFailureUseCase` checks:
+Before failing, `GitOperationFailureUseCase` checks for the most common recoverable case:
 
 1. Error output contains `index.lock` **or** `unable to lock`
 2. `.git/index.lock` file exists
@@ -238,43 +238,37 @@ and requires no LLM agent. Before escalating, `GitOperationFailureUseCase` check
 If **both** conditions are true:
 1. Delete `.git/index.lock`
 2. Retry the original git operation immediately
-3. **If retry succeeds** → continue workflow normally (no agent invoked)
-4. **If retry fails** → fall through to the standard agent recovery path below
+3. **If retry succeeds** → continue workflow normally
+4. **If retry fails** → fall through to fail-fast below
 
 **Why-not just delete blindly**: Only delete when the error confirms a lock problem — avoids
 masking unrelated failures where a lock file happens to be present.
 
-#### Standard agent recovery path
+#### Fail-fast for all other git failures
 
 If the fast-path is not applicable (different error) or the retry after lock removal fails:
 
-1. **Captures failure context**:
-   - The git command that failed (e.g., `git add -A && git commit ...`)
-   - The error output (stderr)
-   - Current `git status` output
-   - Current `git diff` output (if relevant)
-   - Working directory path
-2. **Captures workflow context**:
-   - Where we are in the workflow (part name, sub-part name, iteration number)
-   - What we were trying to achieve (e.g., "commit agent changes after sub-part completion")
-   - The commit message that was intended
-3. **Delegates to `AutoRecoveryByAgentUseCase`** with the packaged context
-4. **On recovery success** → retries the original git operation **once**
-5. **On retry failure or recovery failure** → delegates to `FailedToExecutePlanUseCase`
-   (prints red error, kills all sessions, exits non-zero)
+1. **Log** the git command that failed, the error output (stderr), and current `git status`
+2. **Delegate to `FailedToExecutePlanUseCase`** — prints red error with the git failure
+   details, kills all sessions, exits non-zero
 
-**Ownership**: The failure handling (catch → recovery → retry → fallback to
-`FailedToExecutePlanUseCase`) is encapsulated within the `GitCommitStrategy` implementation.
-The executor calls `onSubPartDone` and either gets a successful commit or a
-`FailedToExecutePlanUseCase` escalation — the executor does not orchestrate the recovery itself.
+The error message includes enough context for a human to diagnose:
+- The git command that failed
+- The stderr output
+- Current workflow position (part name, sub-part, iteration)
+
+**Ownership**: The failure handling (catch → index.lock fast-path → fail-fast) is encapsulated
+within the `GitCommitStrategy` implementation. The executor calls `onSubPartDone` and either
+gets a successful commit or a `FailedToExecutePlanUseCase` escalation — the executor does not
+orchestrate any recovery itself.
 
 ### Failure Points Covered
 
 | Git Operation | Where It Happens | Recovery Via |
 |---|---|---|
-| `git add -A` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → `AutoRecoveryByAgentUseCase` |
-| `git commit` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → `AutoRecoveryByAgentUseCase` |
-| `git checkout -b` | `TicketShepherdCreator` (startup) | **Not covered** — startup failures fail hard (no recovery agent). The working tree is validated clean at this point, so `checkout -b` failures indicate a more fundamental issue. |
+| `git add -A` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → fail-fast to `FailedToExecutePlanUseCase` |
+| `git commit` | `GitCommitStrategy.onSubPartDone` | `GitOperationFailureUseCase` → index.lock fast-path (if applicable) → fail-fast to `FailedToExecutePlanUseCase` |
+| `git checkout -b` | `TicketShepherdCreator` (startup) | **Not covered** — startup failures fail hard. The working tree is validated clean at this point, so `checkout -b` failures indicate a more fundamental issue. |
 
 ---
 
@@ -285,5 +279,5 @@ The harness performs these git operations during a workflow:
 | When | Operation |
 |---|---|
 | Workflow start (in `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Validate clean working tree (ref.ap.QL051Wl21jmmYqTQTLglf.E) → resolve try-N (`.ai_out/` directory scan) → `git checkout -b {branch}`. See [Try-N Resolution](#try-n-resolution) above. |
-| `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E): index.lock fast-path first, then `AutoRecoveryByAgentUseCase` for other/unresolved failures. |
+| `onSubPartDone` | `git add -A` → `git commit --author="{author} <{email}>" -m "{message}"`. On failure → `GitOperationFailureUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E): index.lock fast-path first, then fail-fast to `FailedToExecutePlanUseCase` for other/unresolved failures. |
 | Workflow failure (`FailedToExecutePlanUseCase`) | `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E): agent (ClaudeCode `--print`, sonnet) reads `.ai_out/` artifacts and produces failure summary on stdout. **Harness** appends `### TRY-{N}` section to ticket, commits on try branch (`git add {ticketPath} && git commit`), and attempts best-effort propagation to originating branch. Non-fatal — all failures logged and skipped. |
