@@ -33,7 +33,7 @@ This logging requirement applies to all health monitoring logic described below.
 1. **No activity timeout** (`healthTimeouts.normalActivity`, default: 30 min): If no HTTP callback of any kind arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.NO_ACTIVITY_TIMEOUT`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
 2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
 3. **Ping response timeout** (`healthTimeouts.pingResponse`, default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `AgentUnresponsiveUseCase` with `DetectionContext.PING_TIMEOUT`.
-4. **Crash handling (V1)**: `AgentUnresponsiveUseCase` (with `PING_TIMEOUT` context) kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts — waits for human intervention). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+4. **Crash handling (V1)**: `AgentUnresponsiveUseCase` (with `PING_TIMEOUT` context) kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -158,7 +158,7 @@ high-level.md for the full testing approach.
 | UseCase | Trigger | Action |
 |---|---|---|
 | `AgentUnresponsiveUseCase` | Agent fails to respond — see `DetectionContext` below | Parameterized by `DetectionContext`. Logs structured context (detection reason, session name, durations). Action depends on context — see table below. Single class, single failure-handling path for all unresponsive-agent scenarios. |
-| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console and halt — wait for human intervention. See `doc_v2/FailedToExecutePlanUseCaseV2.md` for V2 automated cleanup. |
+| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console, kill all TMUX sessions, run `TicketFailureLearningUseCase` (best-effort), exit non-zero. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Present raw reviewer PUBLIC.md + doer PUBLIC.md to user, user decides whether to grant more iterations |
 
 ### AgentUnresponsiveUseCase — DetectionContext
@@ -172,7 +172,7 @@ in the same outcome (kill TMUX session, return `AgentCrashed`) with context-spec
 |---|---|---|---|
 | `STARTUP_TIMEOUT` | No callback of any kind within `healthTimeouts.startup` (3 min) after agent spawn (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Session name, HandshakeGuid, env vars, timeout duration | Kill TMUX session. Executor returns `PartResult.AgentCrashed`. Catches startup failures 10x faster than `normalActivity`. |
 | `NO_ACTIVITY_TIMEOUT` | `lastActivityTimestamp` stale beyond `healthTimeouts.normalActivity` | Session name, stale duration, `normalActivity` value | Ping agent via TMUX send-keys. (If ping also times out → `PING_TIMEOUT`.) |
-| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after `healthTimeouts.pingResponse` window | Session name, ping response duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts). No automatic recovery in V1. |
+| `PING_TIMEOUT` | No callback (`lastActivityTimestamp` unchanged) after `healthTimeouts.pingResponse` window | Session name, ping response duration | Mark as CRASHED, kill TMUX session. Executor completes `signalDeferred` with `AgentSignal.Crashed`, returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero). No automatic recovery in V1. |
 
 **Design rationale**: The three detection contexts share the same conceptual event (agent
 is unresponsive) and the same outcome (kill session, return crashed). A single class with
@@ -192,24 +192,19 @@ When plan execution hits a blocking failure (`FailedWorkflow`, `AgentCrashed`, o
 
 1. **Print the failure reason in red** to the console — formatted per `PartResult` variant
    (the use case receives the full sealed class, not just a string)
-2. **Leave all TMUX sessions alive** — for human inspection. The human can `tmux attach`
-   to review agent state, conversation history, or partially completed work.
-3. **Block on stdin** — the harness prints a message like
-   `"Workflow halted. Press Enter to shut down."` and blocks reading stdin. This keeps the
-   process alive (TMUX sessions stay alive as children of the process) without consuming
-   resources. The Ctrl+C interrupt protocol (ref.ap.P3po8Obvcjw4IXsSUSU91.E) remains active
-   during the block.
-4. **On Enter** → harness kills all TMUX sessions
-5. **Record failure learning** — `TicketFailureLearningUseCase`
+2. **Kill all TMUX sessions immediately** — debug artifacts are already persisted in
+   `.ai_out/` and git history; ephemeral TMUX scrollback provides no additional value.
+3. **Record failure learning** — `TicketFailureLearningUseCase`
    (ref.ap.cI3odkAZACqDst82HtxKa.E) records structured failure context + LLM summary into
    the ticket's `## Previous Failed Attempts` section. **Non-fatal** — if this step fails
    (LLM error, git error), it logs a warning and continues to exit. The learning is best-effort.
-6. **Exit with non-zero exit code**
+4. **Exit with non-zero exit code**
 
-No automated cleanup, no agent spawning, no git rollback — except for the ticket-failure-learning
-step (step 5) which records what happened for the benefit of the next try. The human reviews
-the state and decides what to do. V2 will add automated cleanup — see
-`doc_v2/FailedToExecutePlanUseCaseV2.md`.
+No stdin blocking. No interactive prompt. Deterministic cleanup — always kills sessions,
+always exits. No automated agent spawning, no git rollback — except for the
+ticket-failure-learning step (step 3) which records what happened for the benefit of the
+next try. If live TMUX debugging is needed, `--keep-sessions-on-failure` can be added as
+an opt-in flag in the future.
 
 ---
 
@@ -219,7 +214,7 @@ When the reviewer sends `needs_iteration` but the iteration counter exceeds `ite
 1. Harness presents the **raw reviewer PUBLIC.md + doer PUBLIC.md** directly to the user, along with the iteration history. No LLM summarization — the user sees the actual, unfiltered agent output.
 2. User decides:
    - **Grant more iterations**: user specifies how many additional iterations. `iteration.max` is bumped by that amount. Harness continues the doer→reviewer loop (delivers new instructions via `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E).
-   - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, halts)
+   - **Abort**: executor returns `PartResult.FailedToConverge` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero)
 
 Note: `iteration.max` is a **budget**, not a hard limit. The user can override it via `FailedToConvergeUseCase`.
 

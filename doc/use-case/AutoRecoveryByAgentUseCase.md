@@ -117,7 +117,7 @@ Callers (e.g., `GitOperationFailureUseCase`) follow this pattern:
 2. Call `AutoRecoveryByAgentUseCase.attemptRecovery(request)`
 3. On `RecoveryOutcome.Resolved` → **retry the original operation once**, then continue workflow
 4. On `RecoveryOutcome.Unresolvable` → delegate to `FailedToExecutePlanUseCase`
-   (prints red error, halts — waits for human intervention)
+   (prints red error, kills all sessions, exits non-zero)
 5. On `RecoveryOutcome.NeedsEscalation(reason)` → delegate to `FailedToExecutePlanUseCase`
    with the escalation reason
 

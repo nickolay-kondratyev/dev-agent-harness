@@ -20,13 +20,13 @@ with no knowledge of the two-phase protocol (run executor → convert plan).
 3. Handles `PartResult`:
    - `Completed` → proceeds to plan conversion (step 4).
    - Any failure (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) →
-     delegates to `FailedToExecutePlanUseCase(partResult)` (red error, halt).
+     delegates to `FailedToExecutePlanUseCase(partResult)` (red error, kills all sessions, exits non-zero).
      When they happen, the human is the right handler — no special recovery logic.
 4. Kills TMUX sessions for the planning part (`removeAllForPart`).
 5. Calls `convertPlanToExecutionParts()` → `List<Part>`.
    - On `PlanConversionException`: logs WARN, **restarts the planning loop** with
      validation errors injected as planner context. Counts against the planning
-     iteration budget. If budget exhausted, halts via `FailedToExecutePlanUseCase`.
+     iteration budget. If budget exhausted, exits non-zero via `FailedToExecutePlanUseCase`.
 6. Returns the execution parts.
 
 ---
@@ -80,7 +80,7 @@ a `PlanConversionException` (extends `AsgardBaseException`). `DetailedPlanningUs
 `PlanConversionException`, logs a **WARN** with the validation errors, and **restarts the
 planning loop** — injecting the validation errors as context for the planner on the next
 attempt. This counts against the planning iteration budget. If the budget is exhausted,
-halts via `FailedToExecutePlanUseCase` (red error). This is the **single validation point** —
+exits non-zero via `FailedToExecutePlanUseCase` (red error). This is the **single validation point** —
 harness-side validation is the source of truth, eliminating drift between what agents
 validate and what the harness validates.
 

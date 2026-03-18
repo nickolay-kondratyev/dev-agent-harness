@@ -289,7 +289,7 @@ name collision, permissions error), the harness treats this as an **immediate cr
 1. Log the tmux error output (stderr) via structured logging.
 2. Print **red error** to console with the tmux error output so the user sees it instantly.
 3. Complete `signalDeferred` with `AgentSignal.Crashed` — flows through the existing
-   crash handling path → `FailedToExecutePlanUseCase` → red error, halt.
+   crash handling path → `FailedToExecutePlanUseCase` → red error, kills all sessions, exits non-zero.
 4. No recovery agent is spawned — this is an infrastructure prerequisite failure, not a
    recoverable mid-workflow issue.
 5. No health monitoring loop is entered — there is no session to monitor.
@@ -311,7 +311,7 @@ rather than introducing a new failure flow.
 **V1: no automatic recovery.** When `AgentUnresponsiveUseCase` (`PING_TIMEOUT`) detects an
 agent crash, the TMUX session is killed, `signalDeferred` is completed with
 `AgentSignal.Crashed`, and `TicketShepherd` delegates to `FailedToExecutePlanUseCase` — prints
-red error, halts, waits for human intervention. V2 may add automatic retry with `--resume`
+red error, kills all sessions, exits non-zero. V2 may add automatic retry with `--resume`
 (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
