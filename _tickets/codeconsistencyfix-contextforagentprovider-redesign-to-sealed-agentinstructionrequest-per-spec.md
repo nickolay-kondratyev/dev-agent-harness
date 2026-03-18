@@ -1,11 +1,11 @@
 ---
 id: nid_8ts4qxw2wevxwep3yk2gvqwja_E
 title: "CODE_CONSISTENCY_FIX: ContextForAgentProvider — redesign to sealed AgentInstructionRequest per spec"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T16:05:59Z
-status_updated_iso: 2026-03-18T16:05:59Z
+status_updated_iso: 2026-03-18T16:52:27Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
