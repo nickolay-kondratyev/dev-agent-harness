@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:37:32Z
 id: nid_5mxkd9x6l1fx6ntbxd6mtkqr5_E
 title: "SIMPLIFY_CANDIDATE: Eliminate model-versions.json for V1 — use model name directly in commit author"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:10:06Z
-status_updated_iso: 2026-03-18T13:36:11Z
+status_updated_iso: 2026-03-18T13:37:32Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -30,3 +31,16 @@ File: doc/core/git.md
 OK yes lets simplify it as it creates a RISK of stale models.
 
 Let's just have the model name in the commit.
+## Notes
+
+**2026-03-18T13:37:39Z**
+
+Resolved by updating doc/core/git.md (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E).
+
+Changes made to spec:
+- Removed 'Model Version Resolution' section entirely (config/model-versions.json, lookup logic, startup validation)
+- Updated commit author format: CC_sonnet_WITH-username (was CC_sonnet-v4.6_WITH-username)
+- Removed VERSION_OF_MODEL row from the component table
+- Added Why-not explain YAGNI rationale inline in Commit Author section
+
+Commit: af8105d on branch CC_nid_5mxkd9x6l1fx6ntbxd6mtkqr5_E__simplifycandidate-...
