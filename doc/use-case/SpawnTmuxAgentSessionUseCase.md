@@ -29,12 +29,13 @@ See [Agent-to-Server Communication Protocol](../core/agent-to-server-communicati
 
 ---
 
-## Session Schema in current_state.json
+## Session Schema in CurrentState
 
 Session records follow the [Session Record Schema](../schema/plan-and-current-state.md#session-record-schema--apmwzgc1hykvwu3ijqbtew4e) (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E) — the canonical definition for `sessionIds` entries including `handshakeGuid`, `agentSession` (with `id`), `agentType`, `model`, and `timestamp`.
 
-The last element in the `sessionIds` array is the current session. Session history is tracked
-for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+Session records are stored in the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E)
+and flushed to `current_state.json` on disk. The last element in the `sessionIds` array is the
+current session. Session history is tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -85,7 +86,7 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 ### Phase 1: Bootstrap — Identity + Liveness Handshake
 
 1. Harness generates a `HandshakeGuid` (`handshake.${UUID}`)
-2. Harness reads `agentType` and `model` from sub-part config in `current_state.json` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
+2. Harness reads `agentType` and `model` from sub-part config in the in-memory `CurrentState` (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
 3. Harness builds the TMUX start command for **interactive mode** (no `-p`) with the
    **bootstrap message as initial prompt argument**:
    `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --system-prompt-file <resolved_path> [flags] "<bootstrap_message>"`
@@ -100,7 +101,8 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
       (e.g., Claude Code JSONL files) — by this point the GUID is guaranteed to be recorded,
       so resolution is fast and reliable
    b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
-      in `current_state.json` under the sub-part's `sessionIds` array
+      in the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) under the sub-part's
+      `sessionIds` array, then flushes to `current_state.json`
    c. Agent is confirmed alive, env is correct, server is reachable → proceed to Phase 2
 7. On timeout (no `/signal/started` within `healthTimeouts.startup`) → `AgentUnresponsiveUseCase`
    (`STARTUP_TIMEOUT`) → `PartResult.AgentCrashed`
@@ -238,7 +240,7 @@ eliminates the race condition that existed when polling concurrently with agent 
 
 #### Dispatch
 
-`SpawnTmuxAgentSessionUseCase` reads `agentType` from the sub-part config in `current_state.json`
+`SpawnTmuxAgentSessionUseCase` reads `agentType` from the sub-part config in the in-memory `CurrentState`
 and selects the matching `AgentTypeAdapter` implementation. A single dispatch replaces the
 previous dual dispatch to separate starter and resolver interfaces.
 
@@ -274,10 +276,11 @@ Spawning a separate agent session just for resolver testing would be wasteful.
 
 #### Value of Session Recording
 
-Session IDs are recorded in `current_state.json` even in V1 (which does not support resume).
-This is intentional — recorded sessions are valuable for **post-hoc inspection**: debugging
-agent behavior, auditing what happened in a run, and correlating TMUX session output with
-agent artifacts. Resume is an additional (V2) benefit, not the only reason to record.
+Session IDs are recorded in the in-memory `CurrentState` (flushed to `current_state.json`)
+even in V1 (which does not support resume). This is intentional — recorded sessions are
+valuable for **post-hoc inspection**: debugging agent behavior, auditing what happened in a
+run, and correlating TMUX session output with agent artifacts. Resume is an additional (V2)
+benefit, not the only reason to record.
 ---
 
 ## TMUX Session Creation Failure — Hard Fail

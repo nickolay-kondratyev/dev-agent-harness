@@ -6,8 +6,8 @@ creates executors for each part, runs them in sequence, and handles the results.
 
 ## How It Drives the Workflow
 
-1. Initial setup (`current_state.json` initialization — branch already created by
-   `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
+1. Initial setup (in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) initialization
+   — branch already created by `TicketShepherdCreator` ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 2. `SetupPlanUseCase.setup()` (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E) → `List<Part>`.
    Returns execution-ready parts regardless of workflow mode. For `with-planning`
    workflows, the planning lifecycle (executor, plan conversion, retry on validation
@@ -34,7 +34,7 @@ handled internally by `DetailedPlanningUseCase` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E)
 4. On all parts completed — **workflow success**:
    a. **Final commit** — `GitCommitStrategy.onSubPartDone` was already called for the last
       sub-part, but the shepherd performs one final `git add -A && git commit` to capture
-      any remaining state (e.g., final `current_state.json` updates). Skipped if working
+      any remaining state (e.g., final `CurrentState` flush to `current_state.json`). Skipped if working
       tree is clean (no changes since last commit).
    b. **Update ticket status** — set ticket `status` to `done` in the ticket file's YAML
       frontmatter.
@@ -101,7 +101,7 @@ The harness uses the standard **double-Ctrl+C pattern** to prevent accidental te
 1. First Ctrl+C → harness prints `"Press Ctrl+C again to confirm exit."` and records the
    current timestamp. Execution continues uninterrupted.
 2. Second Ctrl+C within **2 seconds** of the first → harness kills all TMUX sessions, writes
-   `current_state.json` with `FAILED` status on active sub-parts, and exits with non-zero
+   in-memory `CurrentState` with `FAILED` status on active sub-parts (flushed to `current_state.json`), and exits with non-zero
    code.
 3. Second Ctrl+C after **more than 2 seconds** → treated as a fresh first Ctrl+C (timestamp
    resets, prompt reprints).

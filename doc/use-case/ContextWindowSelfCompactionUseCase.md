@@ -50,7 +50,7 @@ boundaries, making mid-task exhaustion rare.
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
 | **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"file_updated_timestamp": "<ISO-8601 UTC>", "remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). The `file_updated_timestamp` field is used for staleness detection — if the timestamp is older than `contextFileStaleTimeout`, the value is treated as stale (unknown). |
 | **Soft threshold** | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35). Triggers when the agent has **used 65%** of its context (35% remaining). Checked at `done` boundaries — proactive compaction while the agent still has room to produce a quality summary. |
-| **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
+| **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in the in-memory `CurrentState`'s `sessionIds` array (flushed to `current_state.json`). |
 | **PRIVATE.md** | Agent's self-compaction summary. Written to `${sub_part}/private/PRIVATE.md` in `.ai_out/`. Contains compressed but context-rich summary of the agent's work, decisions, and challenges. |
 
 ---
@@ -345,7 +345,7 @@ plan-reviewer) when the file exists.
 |---|---------|--------|-------|
 | 1 | **Role definition** | `$TICKET_SHEPHERD_AGENTS_DIR` | Unchanged |
 | **1b** | **PRIVATE.md (if exists)** | `${sub_part}/private/PRIVATE.md` | **NEW** — Self-compaction context from prior session. Only present after session rotation. |
-| 2 | **Part context** | `current_state.json` | Unchanged |
+| 2 | **Part context** | `CurrentState` | Unchanged |
 | 3 | **Ticket** | CLI `--ticket` | Unchanged |
 | ... | *(remaining sections unchanged)* | | |
 
@@ -558,7 +558,7 @@ Single method for `DONE_BOUNDARY` trigger:
   SessionsState), set `handle = null`
 - Executor detects `handle == null`, spawns fresh session via `agentFacade.spawnAgent(config)`,
   then sends instructions via `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`
-- New HandshakeGuid, new session record in `sessionIds` array
+- New HandshakeGuid, new session record in the in-memory `CurrentState`'s `sessionIds` array
 - PRIVATE.md picked up by ContextForAgentProvider in new instructions
 - Works for both planning and execution parts (DRY via shared PartExecutor)
 - Verifiable: unit test via `FakeAgentFacade` — full rotation sequence;
@@ -627,9 +627,9 @@ template produces correct messages.
 
 ## Open Questions
 
-1. **Compaction count tracking:** Should `current_state.json` track how many times a sub-part
-   self-compacted? Useful for observability and debugging. Low effort — add a
-   `compactionCount: Int` field to the sub-part record.
+1. **Compaction count tracking:** Should the in-memory `CurrentState` track how many times a
+   sub-part self-compacted? Useful for observability and debugging. Low effort — add a
+   `compactionCount: Int` field to the sub-part record (flushed to `current_state.json`).
 
 2. **PRIVATE.md includes PUBLIC.md?** Should the self-compaction instruction tell the agent
    to incorporate PUBLIC.md content into PRIVATE.md? Or rely on PUBLIC.md being separately

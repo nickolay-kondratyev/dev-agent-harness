@@ -29,7 +29,7 @@ Sub-agents are spawned as independent processes with fully isolated context wind
 | DirectLLM single interface (model config at wiring time) | ref.ap.hnbdrLkRtNSDFArDFd9I2.E |
 | UserQuestionHandler strategy | ref.ap.NE4puAzULta4xlOLh5kfD.E |
 | Git branching, commits, author attribution | ref.ap.BvNCIzjdHS2iAP4gAQZQf.E |
-| Plan & current-state JSON schema | ref.ap.56azZbk7lAMll0D4Ot2G0.E |
+| Plan & current-state JSON schema, in-memory CurrentState | ref.ap.56azZbk7lAMll0D4Ot2G0.E |
 | `.ai_out/` directory schema | ref.ap.BXQlLDTec7cVVOrzXWfR7.E |
 | SetupPlanUseCase (routing) | ref.ap.VLjh11HdzC8ZOhNCDOr2g.E |
 | DetailedPlanningUseCase | ref.ap.cJhuVZTkwfrWUzTmaMbR3.E |

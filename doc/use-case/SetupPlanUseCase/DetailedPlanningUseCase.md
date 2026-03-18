@@ -70,9 +70,10 @@ Called internally **after** the planning executor completes successfully
    e. Every role value matches an existing .md file in $TICKET_SHEPHERD_AGENTS_DIR (catches
       non-existent role assignments before execution starts)
 3. Append execution parts (phase: "execution") to the existing parts array in
-   current_state.json (planning part at index 0 is preserved)
-4. Delete plan_flow.json (current_state.json is now the single source of truth)
-5. Return List<Part> — the execution parts extracted from current_state.json
+   the in-memory CurrentState (planning part at index 0 is preserved); flush to
+   current_state.json
+4. Delete plan_flow.json (in-memory CurrentState is the single source of truth)
+5. Return List<Part> — the execution parts extracted from in-memory CurrentState
 ```
 
 If `plan_flow.json` is malformed or fails schema validation, `convertPlanToExecutionParts` throws

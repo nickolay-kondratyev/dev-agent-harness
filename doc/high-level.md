@@ -143,7 +143,9 @@ already in use, the harness **fails hard** with a clear error message directing 
 stop the other instance first.
 
 V1 does not support resume-on-restart — if the harness dies, you start over.
-`current_state.json` is written for progress tracking but not consumed on restart.
+The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is the authoritative workflow
+state; `current_state.json` is a durable disk copy flushed after every mutation — written for
+progress tracking and observability but not consumed on restart in V1.
 See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 resume design.
 
 ---
@@ -211,7 +213,7 @@ See [Agent-to-Server Communication Protocol](core/agent-to-server-communication-
 
 See [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md) for:
 - New session spawn flow (GUID generation, env var export, session ID resolution)
-- Session schema in `current_state.json`
+- Session schema in `CurrentState` (flushed to `current_state.json`)
 - Callback script spec
 
 ---
@@ -343,7 +345,8 @@ Claude Code does **not** expose its session ID to the agent from within its own 
 (validated empirically). Session ID discovery is part of the `AgentTypeAdapter` interface
 (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) — each agent type provides its own `resolveSessionId()`
 implementation (`ClaudeCodeAdapter` scans JSONL files; future agent types will differ).
-Session IDs are recorded in `current_state.json` for **inspection and debugging** (V1)
+Session IDs are recorded in the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E)
+and flushed to `current_state.json` for **inspection and debugging** (V1)
 and **resume** (V2).
 
 **Why not have the agent self-report its session ID?** Evaluated and rejected: Claude Code
@@ -379,7 +382,7 @@ See:
 - **JSON** under `./config/workflows/`. **Jackson + Kotlin module** for serialization.
 - `--workflow <name>` → loads `./config/workflows/<name>.json`. Fail-fast if not found.
 - Two modes: **straightforward** (static parts) and **with-planning** (planning loop → dynamic execution).
-- `current_state.json` in `harness_private/` is the single source of truth for plan + progress + session IDs.
+- In-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is the single source of truth for plan + progress + session IDs. `current_state.json` in `harness_private/` is a durable disk copy flushed after every mutation.
 
 ### Sub-Part Transitions
 
@@ -436,8 +439,8 @@ which model (`model`) to use are **workflow-level decisions**, not role-level pr
 
 | Workflow type | Who assigns `agentType` + `model`? | Where it lives |
 |---|---|---|
-| `with-planning` | **Planner agent** — assigns per sub-part in `plan_flow.json` | `plan_flow.json` → `current_state.json` |
-| `straightforward` | **Static workflow JSON** — specified per sub-part | `config/workflows/*.json` → `current_state.json` |
+| `with-planning` | **Planner agent** — assigns per sub-part in `plan_flow.json` | `plan_flow.json` → in-memory `CurrentState` → `current_state.json` |
+| `straightforward` | **Static workflow JSON** — specified per sub-part | `config/workflows/*.json` → in-memory `CurrentState` → `current_state.json` |
 
 This design supports varying agents across sub-parts (e.g., ClaudeCode-opus for planning,
 PI-glm-5 for implementation) without touching role definitions. The planner receives
@@ -476,7 +479,8 @@ attribution), and all env var requirements are fully specified in
 ## Harness-Level Resume — V2
 
 V1 does **not** support resume-on-restart — if the harness dies, you start over.
-`current_state.json` is written for progress tracking but not consumed on restart.
+The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is flushed to
+`current_state.json` for progress tracking but not consumed on restart in V1.
 V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
@@ -493,7 +497,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
 | Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
 | Agent-type adaptation | **`AgentTypeAdapter` interface** (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) | Single interface per agent type: `buildStartCommand()` + `resolveSessionId()`. Always deployed together — merging eliminates mismatched-pair risk and simplifies wiring (1 dep instead of 2). Different agent types have different CLI invocations AND session ID discovery. OCP: new agent types add a new `AgentTypeAdapter` implementation. V1: `ClaudeCodeAdapter`. Agents spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument**. Session ID: Claude Code cannot self-report (validated empirically); GUID handshake + JSONL scanning is required (see [rejected simplification rationale](use-case/SpawnTmuxAgentSessionUseCase.md#why-not-agent-self-reporting-rejected--do-not-revisit)). Session IDs recorded for inspection (V1) + resume (V2). |
-| Session storage | **`sessionIds` array in `current_state.json`** | All state in one file; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
+| Session storage | **`sessionIds` array in in-memory `CurrentState`** (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) | All state in one in-memory object, flushed to `current_state.json`; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
 | Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
 | Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter; roles define behavior only — no `agentType`/`model` |
@@ -521,7 +525,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | Doc | Content |
 |-----|---------|
 | [`doc/schema/ai-out-directory.md`](schema/ai-out-directory.md) | `.ai_out/` directory tree, scoping rules, cross-agent visibility |
-| [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, plan lifecycle, session ID storage |
+| [`doc/schema/plan-and-current-state.md`](schema/plan-and-current-state.md) | Unified parts/sub-parts schema, in-memory CurrentState, plan lifecycle, session ID storage |
 | [`doc/core/agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) | Agent↔server protocol — HandshakeGuid, endpoints, payloads, port discovery, callback scripts |
 | [`doc/core/ContextForAgentProvider.md`](core/ContextForAgentProvider.md) | Instruction file assembly — content, ordering, visibility rules per agent type, structured reviewer feedback contract |
 | [`doc/core/AgentFacade.md`](core/AgentFacade.md) | AgentFacade facade — testability seam, signal ownership, FakeAgentFacade, virtual time strategy |

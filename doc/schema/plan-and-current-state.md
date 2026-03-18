@@ -4,6 +4,29 @@ For directory layout and file locations see [`.ai_out/` directory schema](ai-out
 
 ---
 
+## In-Memory CurrentState — Single Source of Truth / ap.K3vNzHqR8wYm5pJdL2fXa.E
+
+The **in-memory `CurrentState` object** is the authoritative representation of workflow state
+(parts, sub-parts, statuses, iteration counters, and session records). All reads and mutations
+go through this in-memory object. `current_state.json` on disk is a **durable copy** — flushed
+after every mutation for progress tracking and V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+
+**Key invariant:** No component reads `current_state.json` from disk during a run. All state
+queries (sub-part status, session records, iteration counters) are served from the in-memory
+`CurrentState`. The disk file exists for:
+1. **Durability** — crash recovery in V2
+2. **Observability** — human inspection of progress during a run
+3. **Post-mortem** — examining final state after completion or failure
+
+**Eliminates dual-state sync:** Previously, `SessionsState` (live handles) and
+`current_state.json` (session records) were independent — both had to be updated on spawn
+and kept in sync. Now, session records live in the in-memory `CurrentState`, and the disk
+file is a passive copy. `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) holds only
+**live runtime handles** (TMUX sessions, CompletableDeferreds, lastActivityTimestamp) —
+concerns that are inherently transient and never persisted.
+
+---
+
 ## Unified Plan Schema — Parts and Sub-Parts
 
 All workflow JSON files (static workflows **and** planner-generated `plan_flow.json`) use the **same**
@@ -26,7 +49,7 @@ parts/sub-parts schema. One parser handles everything.
 | `role` | yes | Role from the role catalog (`$TICKET_SHEPHERD_AGENTS_DIR/*.md`). |
 | `agentType` | yes | Agent implementation to use (e.g., `"ClaudeCode"`, `"PI"`). Assigned by the planner (with-planning workflows) or specified in static workflow JSON (straightforward workflows). Never from role definitions — see ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E. |
 | `model` | yes | Actual model name (e.g., `"sonnet"`, `"opus"`, `"glm-5"`). Same assignment source as `agentType`. Must be the **actual model name**, never a tier name like `"BudgetHigh"` — required for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E). |
-| `status` | runtime | Sub-part execution status. Added by harness when converting to `current_state.json`. See [SubPartStatus](#subpartstatus). |
+| `status` | runtime | Sub-part execution status. Added by harness in the in-memory `CurrentState`. See [SubPartStatus](#subpartstatus). |
 | `iteration` | no | Present only on the reviewer sub-part (second sub-part). Contains `max` and runtime `current`. |
 | `iteration.max` | yes (when `iteration` present) | Maximum number of times the reviewer can loop back to the doer. This is a **budget** — user can extend in fixed increments (+2) at runtime via `FailedToConvergeUseCase` (y/N prompt). |
 | `iteration.current` | runtime | Current iteration count. Added by harness. Starts at `0`, incremented each time the reviewer signals `needs_iteration`. See [Iteration Counter](#iteration-counter). |
@@ -193,25 +216,25 @@ The PLANNER agent produces **two separate files** with entirely different purpos
 
 | File | Consumer | Purpose |
 |------|----------|---------|
-| `harness_private/plan_flow.json` | Harness (machine-parsed) | Strict workflow definition: which agent roles, models, order, and iteration budgets. The harness validates and converts it to `current_state.json`. |
+| `harness_private/plan_flow.json` | Harness (machine-parsed) | Strict workflow definition: which agent roles, models, order, and iteration budgets. The harness validates and merges it into the in-memory `CurrentState` (flushed to `current_state.json`). |
 | `shared/plan/PLAN.md` | Implementation agents (LLM-read) | Human-readable guide: clarified requirements, tradeoffs, architecture constraints, affected file paths, design decisions. Fed to all doer sub-parts in `with-planning` workflows. |
 
 **Why both:** `plan_flow.json` tells the harness *how to run the workflow*. `PLAN.md` tells
 implementation agents *what to build and how*. They serve different consumers and carry
 non-overlapping information — no risk of divergence.
 
-### plan_flow.json / current_state.json Schema
+### plan_flow.json / CurrentState Schema
 
 The plan and execution state share the **same** base structure (parts → sub-parts). They differ
 in whether runtime fields are present:
 
-| File | Runtime fields | Source |
+| Source | Runtime fields | Authoritative location |
 |------|---------------|--------|
-| `plan_flow.json` | **Absent** — no `status`, no `iteration.current`, no `sessionIds` | Planner output |
-| `current_state.json` | **Present** — `status` on every sub-part, `iteration.current` on reviewers, `sessionIds` as sessions are created | Harness-managed (see [Persistence Timing](#currentstatejson-persistence-timing)) |
+| `plan_flow.json` | **Absent** — no `status`, no `iteration.current`, no `sessionIds` | Planner output (disk) |
+| In-memory `CurrentState` | **Present** — `status` on every sub-part, `iteration.current` on reviewers, `sessionIds` as sessions are created | In-memory (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E); flushed to `current_state.json` on disk after every mutation |
 
-For straightforward workflows, the harness generates `current_state.json` directly from the
-static workflow JSON (no `plan_flow.json` involved).
+For straightforward workflows, the harness initializes the in-memory `CurrentState` directly
+from the static workflow JSON (no `plan_flow.json` involved) and flushes to disk.
 
 ### Planning Part in the Parts Array
 
@@ -232,10 +255,10 @@ historical record — it is not removed.
 
 This means:
 - Planning sub-part status transitions (`NOT_STARTED` → `IN_PROGRESS` → `COMPLETED`) are
-  persisted to disk after every transition
-- Planning iteration counters (PLAN_REVIEWER's `iteration.current`) are persisted
-- Planning session IDs are persisted in the same `sessionIds` array format
-- V2 resume can recover mid-planning state from `current_state.json`
+  mutated in the in-memory `CurrentState` and flushed to disk after every transition
+- Planning iteration counters (PLAN_REVIEWER's `iteration.current`) are tracked in-memory
+- Planning session IDs are stored in the same `sessionIds` array format within `CurrentState`
+- V2 resume can recover mid-planning state from `current_state.json` (the durable disk copy)
 - **Single code path** for reading/writing all parts — no separate top-level field for
   planning vs the `parts` array
 
@@ -399,30 +422,31 @@ the planner is not marked `COMPLETED` until the planning part converges (plan re
 No execution parts exist yet in the array — they will be appended from `plan_flow.json` after
 planning converges.
 
-### plan_flow.json → current_state.json Lifecycle
+### plan_flow.json → CurrentState Lifecycle
 
 1. **With-planning**:
-   a. At workflow init, `TicketShepherdCreator` creates `current_state.json` with a `parts`
-      array containing **one entry**: the planning part (`phase: "planning"`), populated from
-      the workflow JSON's `planningParts` (runtime fields added: `status: NOT_STARTED`,
-      `iteration.current: 0`). No execution parts yet.
+   a. At workflow init, `TicketShepherdCreator` creates the in-memory `CurrentState` with a
+      `parts` array containing **one entry**: the planning part (`phase: "planning"`), populated
+      from the workflow JSON's `planningParts` (runtime fields added: `status: NOT_STARTED`,
+      `iteration.current: 0`). No execution parts yet. Flushed to `current_state.json`.
    b. During planning, the `PartExecutor` updates the planning part's sub-part statuses,
-      iteration counters, and session IDs — identical persistence path as execution parts.
+      iteration counters, and session IDs in the in-memory `CurrentState` — identical
+      mutation + flush path as execution parts.
    c. Planner writes `plan_flow.json` to `harness_private/` (and `PLAN.md` to `shared/plan/`).
       PLAN_REVIEWER sees `plan_flow.json` via
       `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) (not because it's in `shared/`).
    d. After planning converges, harness converts `plan_flow.json` → **appends** execution
-      parts (`phase: "execution"`) to the existing `parts` array in `current_state.json`
-      and deletes `plan_flow.json`. The planning part remains at index 0 as a historical
-      record.
-2. **Straightforward**: No `plan_flow.json`, no planning part. Harness generates
-   `current_state.json` with `parts` (all `phase: "execution"`) directly from
-   `config/workflows/straightforward.json`.
+      parts (`phase: "execution"`) to the in-memory `CurrentState`'s `parts` array, flushes
+      to `current_state.json`, and deletes `plan_flow.json`. The planning part remains at
+      index 0 as a historical record.
+2. **Straightforward**: No `plan_flow.json`, no planning part. Harness initializes the
+   in-memory `CurrentState` with `parts` (all `phase: "execution"`) directly from
+   `config/workflows/straightforward.json` and flushes to disk.
 
 **Conversion adds these runtime fields to execution parts:**
 - `status: "NOT_STARTED"` on every sub-part
 - `iteration.current: 0` on every reviewer sub-part (where `iteration` block exists)
-- `sessionIds` is absent initially — added when agents are spawned
+- `sessionIds` is absent initially — added to in-memory `CurrentState` when agents are spawned
 
 ### Workflow JSON Schema (static workflows)
 
@@ -483,8 +507,8 @@ A workflow is either **straightforward** (has `parts`) or **with-planning** (has
 - **With-planning**: `planningParts` defines the planning loop (PLANNER ↔ PLAN_REVIEWER) using
   the same part/sub-parts schema with `phase: "planning"`. `executionPhasesFrom` names the file
   the planner generates (e.g., `"plan_flow.json"`) in `harness_private/`. After planning
-  converges, the harness appends execution parts to the `parts` array in `current_state.json`
-  and deletes `plan_flow.json`.
+  converges, the harness appends execution parts to the in-memory `CurrentState`'s `parts`
+  array, flushes to `current_state.json`, and deletes `plan_flow.json`.
 
 ---
 
@@ -494,11 +518,12 @@ See `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) for the full iteration l
 The schema fields that support iteration (`iteration.max`, `iteration.current`,
 `SubPartStatus` transitions) are defined in [SubPart Fields](#subpart-fields) above.
 
-### Session IDs in current_state.json
+### Session IDs in CurrentState
 
-All session IDs live in `current_state.json` as a `sessionIds` array on each sub-part — no
-separate `session_ids/` directories. The harness appends a new entry each time a session is
-created. The last element is the current session. Each entry follows the
+All session IDs live in the **in-memory `CurrentState`** (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) as a
+`sessionIds` array on each sub-part — no separate `session_ids/` directories. The harness
+appends a new entry to the in-memory state each time a session is created, then flushes to
+`current_state.json` on disk. The last element is the current session. Each entry follows the
 [Session Record Schema](#session-record-schema--apmwzgc1hykvwu3ijqbtew4e).
 
 ```json
@@ -527,7 +552,8 @@ created. The last element is the current session. Each entry follows the
 }
 ```
 
-This applies to **both** execution sub-parts and planning sub-parts — all state in one file.
+This applies to **both** execution sub-parts and planning sub-parts — all state in one
+in-memory object (flushed to one file).
 
 ### Session Record Schema / ap.mwzGc1hYkVwu3IJQbTeW4.E
 
@@ -565,27 +591,28 @@ PUBLIC.md writing guidelines and visibility rules.
 
 ---
 
-## current_state.json Persistence Timing
+## CurrentState Mutation & Persistence Timing
 
-The harness writes `current_state.json` to disk **after every state transition and session
-record addition**. This provides maximum durability and enables V2 resume
-(ref.ap.LX1GCIjv6LgmM7AJFas20.E) to lose minimal state on crash.
+All mutations happen on the **in-memory `CurrentState` object** (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E).
+After every mutation, the full state is flushed to `current_state.json` on disk. This provides
+maximum durability and enables V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) to lose minimal
+state on crash.
 
-**Write triggers:**
+**Mutation + flush triggers:**
 
 These triggers apply to **all** parts in the `parts` array — planning and execution alike.
-The `PartExecutor` writes to `current_state.json` identically regardless of whether it is
-running a planning-phase part or an execution part.
+The `PartExecutor` mutates the in-memory `CurrentState` identically regardless of whether it
+is running a planning-phase part or an execution part.
 
-| Event | What changes | Written by |
-|-------|-------------|------------|
+| Event | In-memory mutation | Mutated by |
+|-------|-------------------|------------|
 | Agent spawned | `status` → `IN_PROGRESS`, new entry in `sessionIds` | `PartExecutor` (after spawn + session ID resolution) |
 | Agent signals `done` (any result) | Reviewer `PASS`: reviewer + doer both → `COMPLETED`. Doer-only `COMPLETED`: doer → `COMPLETED`. Reviewer `NEEDS_ITERATION`: stays `IN_PROGRESS`, `iteration.current` incremented. Doer `COMPLETED` in doer+reviewer: doer stays `IN_PROGRESS` (internal event, no status change). | `PartExecutor` (after processing `AgentSignal.Done`) |
 | Agent signals `fail-workflow` | `status` → `FAILED` | `PartExecutor` (after processing `AgentSignal.FailWorkflow`) |
 | Agent crash detected | `status` → `FAILED` | `PartExecutor` (after health-aware await loop returns `Crashed`) |
-| With-planning workflow init | `current_state.json` created with `parts` containing the planning part (`phase: "planning"`) from workflow JSON `planningParts` | `TicketShepherdCreator` |
+| With-planning workflow init | `CurrentState` created with `parts` containing the planning part (`phase: "planning"`) from workflow JSON `planningParts` | `TicketShepherdCreator` |
 | Plan conversion | Execution parts (`phase: "execution"`) appended to `parts` array from `plan_flow.json`; planning part retained at index 0 | `convertPlanToExecutionParts()` |
-| Straightforward workflow init | `current_state.json` created with `parts` (all `phase: "execution"`) from workflow JSON | `TicketShepherdCreator` |
+| Straightforward workflow init | `CurrentState` created with `parts` (all `phase: "execution"`) from workflow JSON | `TicketShepherdCreator` |
 
-Each write is a **full file rewrite** (atomic write to temp file + rename). No partial
+Each disk flush is a **full file rewrite** (atomic write to temp file + rename). No partial
 updates, no append. Simple and corruption-resistant.

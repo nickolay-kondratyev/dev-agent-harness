@@ -10,8 +10,8 @@ The git branches will include ticket ids which guarantees not clashing.
 ```
 .ai_out/${git_branch}/
 ├── harness_private/
-│   ├── current_state.json              # Plan blueprint + execution progress + session IDs (single source of truth)
-│   └── plan_flow.json                  # Planner output (with-planning only); becomes current_state.json after convergence
+│   ├── current_state.json              # Durable disk copy of in-memory CurrentState (plan + progress + session IDs)
+│   └── plan_flow.json                  # Planner output (with-planning only); merged into CurrentState after convergence
 ├── shared/
 │   └── plan/
 │       └── PLAN.md                     # Human-readable plan (with-planning only)
@@ -48,8 +48,8 @@ The git branches will include ticket ids which guarantees not clashing.
 | `PUBLIC.md` | Per sub-part (`comm/out/`) | **Agent work log** — decisions made + rationale, what was implemented/reviewed, review verdicts. Overwritten each iteration; history preserved in git. **Required**: the harness validates existence and non-emptiness after every `done` signal (ref.ap.THDW9SHzs1x2JN9YP9OYU.E). |
 | `PRIVATE.md` | Per sub-part (`private/`) | **Self-compaction context summary** — written by an agent during harness-controlled self-compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Contains compressed but context-rich summary of the agent's work, decisions, challenges, and codebase discoveries. Only present after a session rotation triggered by context window exhaustion. Overwritten on subsequent self-compactions; history preserved in git. Fed to the next session via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E). |
 | `instructions.md` | Per sub-part (`comm/in/`) | **Instructions from harness to agent** — the assembled instruction file containing role definition, ticket, shared context, prior outputs, and callback script usage. Overwritten each iteration; history preserved in git. |
-| `current_state.json` | harness_private/ | Plan blueprint + execution progress — single source of truth for what to do and where we are. Written for progress tracking; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
-| `plan_flow.json` | harness_private/ | Planner's raw output (with-planning only). Strict machine-readable workflow definition: which agent roles, models, and iteration budgets to use. Consumed and validated by the harness. Becomes `current_state.json` after planning converges. Deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
+| `current_state.json` | harness_private/ | Durable disk copy of the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) — plan blueprint + execution progress + session IDs. Flushed after every mutation for progress tracking and observability; consumed on restart in V2 (ref.ap.LX1GCIjv6LgmM7AJFas20.E). See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
+| `plan_flow.json` | harness_private/ | Planner's raw output (with-planning only). Strict machine-readable workflow definition: which agent roles, models, and iteration budgets to use. Consumed and validated by the harness. Merged into in-memory `CurrentState` after planning converges; deleted after conversion. See [plan-and-current-state schema](plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E). |
 | `PLAN.md` | shared/plan/ | Human-readable plan (with-planning only). Captures the *what and how* to implement: clarified requirements, tradeoffs decided during planning, architecture constraints, affected file paths, and design decisions. Consumed by all doer sub-parts in `with-planning` workflows — not parsed by the harness. See [What Goes Where — plan_flow.json vs PLAN.md](#what-goes-where--plan_flowjson-vs-planmd) below. |
 
 ### `__feedback/` — Granular Feedback Items
@@ -156,7 +156,7 @@ continue my work in a fresh session."
 
 - **Part** = iteration group. Groups sub-parts that may loop (e.g., impl ↔ review).
 - **Sub-part** = one unit of work by one agent. Numbered for execution order within the part.
-- Role and agent type metadata live in `current_state.json` / workflow JSON, not in directory names.
+- Role and agent type metadata live in the in-memory `CurrentState` / workflow JSON, not in directory names.
 
 ## Scoping Rules
 

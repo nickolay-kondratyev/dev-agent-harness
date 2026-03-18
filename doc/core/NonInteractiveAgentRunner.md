@@ -161,7 +161,7 @@ that need lightweight agent invocation.
 | Agent mode | Interactive (conversation loop) | `--print` (single run, exit) |
 | Handshake | Full HandshakeGuid protocol | None |
 | Health monitoring | Health-aware await loop with ping | Process-level timeout only |
-| Session tracking | `SessionsState` + `current_state.json` | None |
+| Session tracking | `SessionsState` + in-memory `CurrentState` (flushed to `current_state.json`) | None |
 | Session ID | `AgentTypeAdapter.resolveSessionId()` | Not applicable |
 | Use case | Long-lived work sessions (implementation, review) | Short-lived utility tasks (recovery, analysis) |
 | Complexity | High (necessary for interactive work) | Low (appropriate for utility tasks) |
