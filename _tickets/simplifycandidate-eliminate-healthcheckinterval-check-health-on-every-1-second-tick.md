@@ -1,11 +1,11 @@
 ---
 id: nid_mn0nrr1l8817c0kzvsknbrmxj_E
 title: "SIMPLIFY_CANDIDATE: Eliminate healthCheckInterval — check health on every 1-second tick"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:53:30Z
-status_updated_iso: 2026-03-17T23:53:30Z
+status_updated_iso: 2026-03-18T13:26:04Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
