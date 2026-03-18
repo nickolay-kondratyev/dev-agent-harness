@@ -1,11 +1,11 @@
 ---
 id: nid_m5e0q3oslsihsxsz1h6no6nwr_E
 title: "Design and implement agent role catalog"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-12T23:19:46Z
-status_updated_iso: 2026-03-12T23:19:46Z
+status_updated_iso: 2026-03-18T14:53:35Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
