@@ -39,18 +39,18 @@ class BranchNameBuilderTest : AsgardDescribeSpec({
             }
         }
 
-        describe("WHEN called with a title exceeding 60 characters") {
+        describe("WHEN called with a title exceeding 50 characters") {
             val longTitle = "a".repeat(80)
 
-            it("THEN result length is at most 60") {
+            it("THEN result length is at most 50") {
                 val slug = BranchNameBuilder.slugify(longTitle)
-                (slug.length <= 60) shouldBe true
+                (slug.length <= 50) shouldBe true
             }
         }
 
         describe("WHEN called with a title that truncates to end with a hyphen") {
-            // 59 'a' chars + hyphen at position 60 + more chars after
-            val titleThatTruncatesToHyphen = "a".repeat(59) + "-bbb"
+            // 49 'a' chars + hyphen at position 50 + more chars after
+            val titleThatTruncatesToHyphen = "a".repeat(49) + "-bbb"
 
             it("THEN result does not end with a hyphen") {
                 val slug = BranchNameBuilder.slugify(titleThatTruncatesToHyphen)
@@ -172,13 +172,13 @@ class BranchNameBuilderTest : AsgardDescribeSpec({
                 branchName shouldEndWith "__try-1"
             }
 
-            it("THEN the slug portion is at most 60 characters") {
+            it("THEN the slug portion is at most 50 characters") {
                 val branchName = BranchNameBuilder.build(ticketData, tryNumber = 1)
                 // Format: {id}__{slug}__try-{N}
                 val slug = branchName
                     .removePrefix("nid_abc123__")
                     .removeSuffix("__try-1")
-                (slug.length <= 60) shouldBe true
+                (slug.length <= 50) shouldBe true
             }
         }
     }

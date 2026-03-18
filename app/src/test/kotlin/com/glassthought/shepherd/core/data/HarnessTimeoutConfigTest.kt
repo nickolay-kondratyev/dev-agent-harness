@@ -31,8 +31,8 @@ class HarnessTimeoutConfigTest : AsgardDescribeSpec({
             config.payloadAckTimeout shouldBe 3.minutes
         }
 
-        it("THEN payloadAckRetries is 3") {
-            config.payloadAckRetries shouldBe 3
+        it("THEN payloadAckMaxAttempts is 3") {
+            config.payloadAckMaxAttempts shouldBe 3
         }
 
         it("THEN selfCompactionTimeout is 5 minutes") {

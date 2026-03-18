@@ -39,6 +39,8 @@ at startup prevents this.
 ## Branch Naming
 <!-- ap.THL21SyZzJhzInG2m4zl2.E -->
 
+> **Implementation gap**: `BranchNameBuilder` uses simple character-level truncation instead of the word-boundary + SHA-1 hash algorithm below. Tracked: `nid_i3jzssg11s3e4wmjzcgdkcymk_E`.
+
 Branch is derived from the ticket. Format: `{TICKET_ID}__{slugified_title}__try-{N}`
 
 - `TICKET_ID`: the `id` field from the ticket's YAML frontmatter
