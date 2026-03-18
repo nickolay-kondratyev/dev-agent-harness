@@ -87,8 +87,10 @@ handled internally by `DetailedPlanningUseCase` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E)
 
 Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in code at
 `ShepherdContext.kt`) for shared infrastructure (tmux, LLM, use cases) plus ticket-scoped
-state (`SessionsState`, parsed workflow, ticket metadata) wired by
-`TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E).
+state (parsed workflow, ticket metadata) wired by
+`TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E). `SessionsState`
+(ref.ap.7V6upjt21tOoCFXA7nqNh.E) is internal to `AgentFacadeImpl` — the shepherd
+passes the `AgentFacade` interface to each `PartExecutor`, not the raw infra components.
 
 Additional dependencies:
 - `TicketFailureLearningUseCase` (ref.ap.cI3odkAZACqDst82HtxKa.E) — records structured failure
@@ -119,5 +121,5 @@ Why this pattern over stdin confirmation:
 ## Not a Use Case
 
 `TicketShepherd` is a long-lived coordinator, not a discrete operation. It lives for the
-duration of a ticket's processing and holds mutable state (`SessionsState`). Use cases are
-stateless operations it delegates to.
+duration of a ticket's processing. Use cases are stateless operations it delegates to.
+`SessionsState` is internal to `AgentFacadeImpl` (ref.ap.7V6upjt21tOoCFXA7nqNh.E).

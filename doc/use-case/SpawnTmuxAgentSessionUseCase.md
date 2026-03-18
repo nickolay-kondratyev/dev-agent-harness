@@ -166,8 +166,9 @@ file controlled by the harness operator.
 - `MY_ENV` is a required environment variable (see [Required Environment Variables](../core/git.md#required-environment-variables)).
 - Both system prompt files are validated at **harness initialization** — hard fail if either is missing.
   This follows the same fail-at-startup pattern as other required env vars.
-- The caller (PartExecutor / TicketShepherd) knows the current stage and passes the resolved
-  absolute path to `SpawnTmuxAgentSessionUseCase`.
+- `AgentFacadeImpl` knows the current stage and passes the resolved absolute path to
+  `SpawnTmuxAgentSessionUseCase` (the use case is encapsulated by `AgentFacade.spawnAgent()`
+  — ref.ap.9h0KS4EOK5yumssRCJdbq.E).
 
 ---
 
