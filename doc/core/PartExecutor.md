@@ -332,8 +332,9 @@ TMUX session, waiting for the executor to send it new instructions.
        Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
      - After inner loop: validate `pending/` contains no `critical__*` or `important__*`
        files → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
-   - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → user
-     decides continue or abort
+   - Exceeds budget → `FailedToConvergeUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) → y/N prompt:
+     `y` → `iteration.max += 2` (fixed increment), continue doer→reviewer loop;
+     `N` or timeout → executor returns `PartResult.FailedToConverge`
 5. **On FailWorkflow / Crashed** → return corresponding `PartResult`
 
 ### PUBLIC.md Validation After Done / ap.THDW9SHzs1x2JN9YP9OYU.E
