@@ -124,8 +124,8 @@ The emergency interrupt path is the most complex code path in the system:
 
 ## Auto-Compaction Configuration (V1 Simplification)
 
-In V1, Claude Code's auto-compaction is **NOT disabled**. The harness does NOT set
-`autoCompactEnabled: false` in `~/.claude.json` or export `DISABLE_AUTO_COMPACT=true`.
+In V1, Claude Code's auto-compaction is **NOT disabled**. The harness does NOT export
+`DISABLE_AUTO_COMPACT=true`.
 
 Claude Code handles its own emergency compaction natively. The harness only performs
 controlled self-compaction at done boundaries (soft threshold).
