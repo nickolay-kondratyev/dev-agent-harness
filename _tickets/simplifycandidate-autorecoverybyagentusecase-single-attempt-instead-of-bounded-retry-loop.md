@@ -1,11 +1,11 @@
 ---
 id: nid_f1gdpwvkohsyykfgfd7qx3g9h_E
 title: "SIMPLIFY_CANDIDATE: AutoRecoveryByAgentUseCase — single attempt instead of bounded retry loop"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:54:16Z
-status_updated_iso: 2026-03-17T23:54:16Z
+status_updated_iso: 2026-03-18T13:23:40Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
