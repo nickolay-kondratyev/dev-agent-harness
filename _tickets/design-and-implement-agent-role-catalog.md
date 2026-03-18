@@ -12,6 +12,10 @@ assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 tags: [roles, catalog]
 ---
 
+GOAL: MERGE the info into the specs right now DO NOT IMPLEMENT IT YET.
+
+TICKET AS IS to merge into the specs and close the ticket:
+--------------------------------------------------------------------------------
 Design the agent role catalog system:
 - Role definitions live in $_config/agents/input/*.md (authoritative source)
 - generate.sh produces $_config/agents/_generated/*.md (runtime files)
@@ -26,4 +30,4 @@ Spec references:
 - Directory structure: doc/high-level.md (ap.Q7kR9vXm3pNwLfYtJ8dZs.E)
 - Agent type & model assignment: doc/high-level.md (ap.Xt9bKmV2wR7pLfNhJ3cQy.E)
 - Env var validation: doc/core/git.md (TICKET_SHEPHERD_AGENTS_DIR)
-
+--------------------------------------------------------------------------------
