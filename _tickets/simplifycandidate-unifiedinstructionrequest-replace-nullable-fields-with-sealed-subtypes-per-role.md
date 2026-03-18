@@ -1,11 +1,11 @@
 ---
 id: nid_s9yhhndwqn6xlu94lj55w7bzt_E
 title: "SIMPLIFY_CANDIDATE: UnifiedInstructionRequest — replace nullable fields with sealed subtypes per role"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:09:44Z
-status_updated_iso: 2026-03-18T02:09:44Z
+status_updated_iso: 2026-03-18T13:42:21Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
