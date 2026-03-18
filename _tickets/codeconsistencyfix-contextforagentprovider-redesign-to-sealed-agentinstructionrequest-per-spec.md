@@ -79,3 +79,9 @@ PlanReviewer: [RoleDefinition, PrivateMd, Ticket, ...]
 8. All existing tests pass with updated API
 9. Compile-time: passing wrong fields to wrong role is a build error
 
+
+## Notes
+
+**2026-03-18T18:21:21Z**
+
+Scope clarification: Criterion 7 (PrivateMd in all role plans) — this ticket should only declare the plan position for PrivateMd (i.e., include it in the instruction plan lists). The actual PrivateMd InstructionSection renderer implementation belongs to nid_7vpbal1qdmrvt23g44vpq6hgv_E (InstructionSection engine + shared sections). If implementing before the InstructionSection engine exists, use a placeholder/inline approach that will be replaced when the engine lands.
