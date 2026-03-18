@@ -1,0 +1,36 @@
+<?xml version="1.0" ?>
+<SmellBaseline>
+  <ManuallySuppressedIssues/>
+  <CurrentIssues>
+    <ID>ForbiddenComment:AppMain.kt$// TODO: Implement Initializer that orchestrates:</ID>
+    <ID>LongMethod:GlmApiHttpContractTestHelper.kt$fun AsgardDescribeSpec.glmApiHttpContractTests( modelName: String, createApi: (outFactory: OutFactory, httpClient: OkHttpClient, modelName: String, maxTokens: Int, apiEndpoint: String, apiToken: String) -&gt; DirectLLM, )</ID>
+    <ID>LongParameterList:GlmDirectLlmFactory.kt$GlmDirectLlmFactory$( outFactory: OutFactory, httpClient: OkHttpClient, modelName: String, maxTokens: Int, apiEndpoint: String, apiToken: String, )</ID>
+    <ID>MaxLineLength:CallGLMApiSandboxMain.kt$val llm = ContextInitializer.standard().initialize(outFactory = SimpleConsoleOutFactory.standard()).infra.directLlm.budgetHigh</ID>
+    <ID>MaxLineLength:ClaudeCodeAgentSessionIdResolverTest.kt$ClaudeCodeAgentSessionIdResolverTest$result shouldBe ResumableAgentSessionId(guid, AgentType.CLAUDE_CODE, "abc-session-id-123", TEST_MODEL)</ID>
+    <ID>MaxLineLength:ExecutionAgentInstructionsKeywordTest.kt$ExecutionAgentInstructionsKeywordTest$text shouldContain "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}"</ID>
+    <ID>MaxLineLength:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$"Direct LLM API returned empty content array. response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"</ID>
+    <ID>MaxLineLength:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$"Direct LLM API returned non-text content block. type=[${firstBlock.getString("type")}], response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"</ID>
+    <ID>MaxLineLength:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$"Failed to parse direct LLM API response. response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]"</ID>
+    <ID>MaxLineLength:GlmApiHttpContractTestHelper.kt$createApi: (outFactory: OutFactory, httpClient: OkHttpClient, modelName: String, maxTokens: Int, apiEndpoint: String, apiToken: String) -&gt; DirectLLM</ID>
+    <ID>MaxLineLength:RoleCatalogLoaderTest.kt$RoleCatalogLoaderTest$implementor.descriptionLong shouldBe "Full-stack implementation agent that writes production code, tests, and documentation"</ID>
+    <ID>MaxLineLength:TmuxCommunicatorIntegTest.kt$TmuxCommunicatorIntegTest$val outputFile = File(System.getProperty("user.dir"), ".tmp/tmux_test_out_${System.currentTimeMillis()}")</ID>
+    <ID>NewLineAtEndOfFile:AgentType.kt$com.glassthought.shepherd.core.data.AgentType.kt</ID>
+    <ID>NewLineAtEndOfFile:CallGLMApiSandboxMain.kt$com.glassthought.shepherd.cli.sandbox.CallGLMApiSandboxMain.kt</ID>
+    <ID>NewLineAtEndOfFile:ShepherdContext.kt$com.glassthought.shepherd.core.initializer.data.ShepherdContext.kt</ID>
+    <ID>NewLineAtEndOfFile:TmuxSessionName.kt$com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName.kt</ID>
+    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("checkout", "-b", branchName))</ID>
+    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("rev-parse", "--abbrev-ref", "HEAD"))</ID>
+    <ID>ThrowsCount:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$private fun parseResponseContent(responseBody: String): String</ID>
+    <ID>TooGenericExceptionCaught:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$e: Exception</ID>
+    <ID>TooManyFunctions:ContextForAgentProviderImpl.kt$ContextForAgentProviderImpl : ContextForAgentProvider</ID>
+    <ID>UseCheckOrError:ClaudeCodeAgentSessionIdResolver.kt$ClaudeCodeAgentSessionIdResolver$throw IllegalStateException( "Ambiguous GUID match: GUID [$guid] found in multiple files $filenames" )</ID>
+    <ID>UseCheckOrError:ClaudeCodeAgentSessionIdResolver.kt$ClaudeCodeAgentSessionIdResolver$throw IllegalStateException( "No JSONL file contains GUID [$guid]" )</ID>
+    <ID>UseCheckOrError:ContextInitializer.kt$ContextInitializerImpl$throw IllegalStateException( "Required environment variable [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] is not set" )</ID>
+    <ID>UseCheckOrError:EnvironmentValidator.kt$EnvironmentValidatorImpl$throw IllegalStateException( "Required environment variables are missing or blank: $missing" )</ID>
+    <ID>UseCheckOrError:GLMHighestTierApiIntegTest.kt$GLMHighestTierApiIntegTest$throw IllegalStateException( "Integration test requires [${Constants.Z_AI_API.API_TOKEN_ENV_VAR}] environment variable to be set" )</ID>
+    <ID>UseCheckOrError:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$throw IllegalStateException( "Direct LLM API returned empty content array. response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]" )</ID>
+    <ID>UseCheckOrError:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$throw IllegalStateException( "Direct LLM API returned non-text content block. type=[${firstBlock.getString("type")}], response_snippet=[${responseBody.take(MAX_ERROR_BODY_SNIPPET_LENGTH)}]" )</ID>
+    <ID>UseCheckOrError:GlmAnthropicCompatibleApi.kt$GlmAnthropicCompatibleApi$throw IllegalStateException( "Direct LLM API returned null body. HTTP status=[${response.code}]" )</ID>
+    <ID>UseCheckOrError:ProcessResult.kt$throw IllegalStateException("Failed to $operation. Exit code: [$exitCode]. Stderr: [$stdErr]")</ID>
+  </CurrentIssues>
+</SmellBaseline>
