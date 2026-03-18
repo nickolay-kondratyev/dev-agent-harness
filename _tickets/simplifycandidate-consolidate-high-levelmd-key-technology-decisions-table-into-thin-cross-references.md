@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:59:13Z
 id: nid_vi76mhrrjybl3aksb8xvxwpbb_E
 title: "SIMPLIFY_CANDIDATE: Consolidate high-level.md Key Technology Decisions table into thin cross-references"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:47:39Z
-status_updated_iso: 2026-03-18T14:54:24Z
+status_updated_iso: 2026-03-18T14:59:13Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -41,3 +42,21 @@ Replace the detailed table with a thin summary table:
 ## Specs Affected
 - doc/high-level.md (primary — replace detailed table with summary + AP refs)
 
+
+## Notes
+
+**2026-03-18T14:59:23Z**
+
+## Resolution
+
+Completed successfully.
+
+### Changes Made
+1. **doc/high-level.md** — Replaced the 30-row detailed Key Technology Decisions table with a thin navigational index. Each row now has: 1-line summary + link to authoritative spec file with AP reference.
+2. **doc/core/SessionsState.md** — Added missing SubPartRole enum design rationale (WHY explicit enum vs positional convention) that was previously only in the high-level.md table.
+
+### What Was Preserved
+- All 28 decisions still listed in the summary table
+- All AP cross-references maintained
+- All detailed rationale preserved in authoritative spec files (single source of truth)
+- The table remains scannable and navigational

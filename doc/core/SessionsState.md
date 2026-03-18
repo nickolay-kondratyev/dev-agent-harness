@@ -62,6 +62,12 @@ position 1 maps to `REVIEWER`. Used for `/callback-shepherd/signal/done`
 result validation (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) — doers send `completed`, reviewers
 send `pass` or `needs_iteration`.
 
+**Why an explicit enum (not positional convention):** (1) Self-documentation — role is a
+named concept, making the `done`-result validation table in the protocol
+(ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) immediately readable without knowing positional rules;
+(2) Evolvability — future roles (e.g., `FIXER`) are additive enum variants, not index
+conventions. Not built for those cases now, but the door is propped open.
+
 `fromIndex` is the single source of truth for position→role mapping. Future role additions
 only require updating `fromIndex()`, not session records or any persisted state.
 
