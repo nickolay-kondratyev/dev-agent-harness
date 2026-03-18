@@ -25,6 +25,7 @@ fi
 PROJECT_KEY="${PROJECT_KEY:-nickolay-kondratyev_dev-agent-harness}"
 REPORT_DIR="${REPORT_DIR:-_reports}"
 REPORT_FILE="${REPORT_DIR}/sonar_report.json"
+SONAR_ISSUES_JSONL="${REPORT_DIR}/sonar_issues.jsonl"
 
 mkdir -p "${REPORT_DIR}"
 
@@ -81,3 +82,5 @@ jq -n \
   }' > "${REPORT_FILE}"
 
 echo "SonarCloud report written to: ${REPORT_FILE}"
+
+cat "${REPORT_FILE}" | jq .issues.issues[] -c > "${SONAR_ISSUES_JSONL:?}"
