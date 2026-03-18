@@ -1,4 +1,3 @@
-#need-tickets
 # `.ai_out/` Directory Schema / ap.BXQlLDTec7cVVOrzXWfR7.E
 
 ## Overview
@@ -195,3 +194,8 @@ created at initialization — it is only written by agents during self-compactio
 
 To be rebuilt: `AiOutputStructure` class for path resolution + `ensureStructure()` for directory creation.
 Previous implementation deleted for clean rebuild against the new schema.
+
+**Tracked in:**
+- `nid_9kic96nh6mb8r5legcsvt46uy_E` — AiOutputStructure path resolution
+- `nid_fjod8du6esers3ajur2h7tvgx_E` — AiOutputStructure.ensureStructure() directory creation
+- `nid_7xzhkw4pw5sc5hqh80cvsotdc_E` — Wire into TicketShepherdCreator + ContextForAgentProvider
