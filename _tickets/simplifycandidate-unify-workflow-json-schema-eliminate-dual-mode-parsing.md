@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:36:22Z
 id: nid_r6e891iw9scxjk3d10y7dwlt7_E
 title: "SIMPLIFY_CANDIDATE: Unify workflow JSON schema — eliminate dual-mode parsing"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:12Z
-status_updated_iso: 2026-03-18T15:29:12Z
+status_updated_iso: 2026-03-18T15:36:22Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

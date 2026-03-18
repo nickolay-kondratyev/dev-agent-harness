@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:36:48Z
 id: nid_o9z2nk2kwqrxwa6g12rlyrihr_E
 title: "SIMPLIFY_CANDIDATE: Defer TicketFailureLearning agent summary to V2 — use structured facts template only"
-status: open
+status: closed
 deps: []
 links: [nid_bmf7mq2lrusqiibmubwtrvyy0_E]
 created_iso: 2026-03-18T14:58:40Z
-status_updated_iso: 2026-03-18T14:58:40Z
+status_updated_iso: 2026-03-18T15:36:48Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

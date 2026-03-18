@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:36:34Z
 id: nid_k5pinoo8bk3lapv9fn9cdm36e_E
 title: "SIMPLIFY_CANDIDATE: Defer harness-controlled self-compaction to V2 — rely on native auto-compaction"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:58:09Z
-status_updated_iso: 2026-03-18T14:58:09Z
+status_updated_iso: 2026-03-18T15:36:34Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

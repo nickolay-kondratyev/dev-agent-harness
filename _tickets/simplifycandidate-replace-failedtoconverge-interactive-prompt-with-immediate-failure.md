@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:37:14Z
 id: nid_hxs92i3pryren8vhn71ji70ck_E
 title: "SIMPLIFY_CANDIDATE: Replace FailedToConverge interactive prompt with immediate failure"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:58:46Z
-status_updated_iso: 2026-03-18T14:58:46Z
+status_updated_iso: 2026-03-18T15:37:14Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

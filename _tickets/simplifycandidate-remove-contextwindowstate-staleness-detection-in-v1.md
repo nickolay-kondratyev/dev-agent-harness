@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:35:57Z
 id: nid_qemtp595umzazuhbhlnn1c517_E
 title: "SIMPLIFY_CANDIDATE: Remove ContextWindowState staleness detection in V1"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:41Z
-status_updated_iso: 2026-03-18T15:29:41Z
+status_updated_iso: 2026-03-18T15:35:57Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
