@@ -90,7 +90,10 @@ performCompaction(handle, trigger: CompactionTrigger.DONE_BOUNDARY):
     │   ├─ Send self-compaction instruction via AgentFacade.sendPayload(config, handle, payload)
     │   │   (creates fresh signal deferred implicitly — ref.ap.9h0KS4EOK5yumssRCJdbq.E)
     │   │   → update handle with returned value
-    │   ├─ Await AgentSignal.SelfCompacted on handle.signal (with timeout: SELF_COMPACTION_TIMEOUT)
+    │   ├─ Await signal on handle.signal (with timeout: SELF_COMPACTION_TIMEOUT)
+    │   │   ├─ SelfCompacted → proceed
+    │   │   ├─ Done (first occurrence) → re-instruct ("you are in compaction mode — signal self-compacted") → await again
+    │   │   └─ Done (second occurrence) → AgentCrashed ("agent cannot follow compaction protocol")
     │   ├─ Validate PRIVATE.md exists and is non-empty
     │   ├─ Git commit — captures PRIVATE.md + any changes before compaction
     │   └─ Kill session via AgentFacade.killSession(handle) → set handle = null
@@ -235,14 +238,20 @@ This is included in the self-compaction instruction (not in the standard callbac
 block, since agents don't call it spontaneously — only in response to a harness-initiated
 compaction instruction).
 
-### Fallback: Agent Signals `done` Instead of `self-compacted`
+### Strict Signal Enforcement During Compaction
 
-If the agent misunderstands the compaction instruction and signals `done` instead of
-`self-compacted`, the executor receives `Done`. It should:
-1. Check if `PRIVATE.md` was written (the agent may have done the right thing, wrong signal)
-2. If `PRIVATE.md` exists → proceed with session rotation (treat as successful compaction)
-3. If `PRIVATE.md` missing → re-instruction (one retry, same pattern as PUBLIC.md retry —
-   ref.ap.THDW9SHzs1x2JN9YP9OYU.E)
+During compaction, `AgentSignal.SelfCompacted` is the **only** valid success signal.
+If the agent signals `done` instead:
+
+1. **Re-instruct once:** "You are in compaction mode — write `PRIVATE.md` then signal
+   `self-compacted`, not `done`." Await again within the remaining compaction timeout.
+2. **If `done` received again:** `AgentCrashed("agent cannot follow compaction protocol")`.
+
+**No PRIVATE.md existence check as a fallback.** The signal is the protocol contract —
+producing the right artifact with the wrong signal is still a protocol violation. This approach:
+- Keeps signal semantics unambiguous (`done` = work complete, `self-compacted` = compaction complete)
+- Prevents protocol drift where agents learn they can signal `done` and have it silently accepted
+- Produces an explicit failure (re-instruction, then crash) rather than hiding the violation
 
 ---
 
@@ -576,7 +585,8 @@ template produces correct messages.
 - Unit test: `DONE_BOUNDARY` — done → low context → compaction instruction → SelfCompacted → session killed (lazy respawn)
 - Unit test: `DONE_BOUNDARY` — done → healthy context → no compaction (normal flow)
 - Unit test: session rotation → next use spawns new session with PRIVATE.md
-- Unit test: fallback when agent signals `done` instead of `self-compacted`
+- Unit test: `done` received during compaction → re-instruct → `SelfCompacted` → session killed
+- Unit test: `done` received twice during compaction → `AgentCrashed`
 **Proceed when:** Done-boundary compaction works in unit tests.
 
 ### Gate 4: Integration Validation

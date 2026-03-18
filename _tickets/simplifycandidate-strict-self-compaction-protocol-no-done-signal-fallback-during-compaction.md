@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:29:17Z
 id: nid_kz0l9iajekpnfyfc2bnk5lnsd_E
 title: "SIMPLIFY_CANDIDATE: Strict self-compaction protocol — no done-signal fallback during compaction"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:23:14Z
-status_updated_iso: 2026-03-18T13:27:34Z
+status_updated_iso: 2026-03-18T13:29:17Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -48,3 +49,22 @@ Strict protocol enforcement:
 ## Specs Affected
 - `doc/use-case/ContextWindowSelfCompactionUseCase.md` (primary)
 
+
+## Notes
+
+**2026-03-18T13:29:13Z**
+
+## Resolution
+
+Updated `doc/use-case/ContextWindowSelfCompactionUseCase.md` to implement strict self-compaction protocol:
+
+1. **Replaced** the "Fallback: Agent Signals `done` Instead of `self-compacted`" section with "Strict Signal Enforcement During Compaction" — `SelfCompacted` is the only valid success signal.
+
+2. **Updated** the `performCompaction()` flow pseudocode to show the strict enforcement:
+   - `SelfCompacted` → proceed
+   - `Done` (first occurrence) → re-instruct → await again
+   - `Done` (second occurrence) → `AgentCrashed`
+
+3. **Updated** Gate 3 test cases to replace the ambiguous fallback test with two explicit tests covering: re-instruct path and double-done crash path.
+
+No PRIVATE.md existence check is used as a fallback — the signal is the protocol contract.
