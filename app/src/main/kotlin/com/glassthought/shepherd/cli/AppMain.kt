@@ -16,7 +16,7 @@ import kotlinx.coroutines.runBlocking
 // See high-level.md ap.mmcagXtg6ulznKYYNKlNP.E for CLI spec.
 // See high-level.md ap.HRlQHC1bgrTRyRknP3WNX.E for startup sequence spec.
 @AnchorPoint("ap.4JVSSyLwZXop6hWiJNYevFQX.E")
-fun main(args: Array<String>) {
+fun main() {
   // Step 0: Validate environment before any infrastructure is created.
   // Ensures Docker container and required env vars. See ref.ap.A8WqG9oplNTpsW7YqoIyX.E.
   EnvironmentValidator.standard().validate()

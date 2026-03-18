@@ -19,6 +19,5 @@ data class ProcessResult(
  * @param operation Short description of the failed operation (used in the error message).
  */
 internal fun ProcessResult.orThrow(operation: String) {
-    if (exitCode != 0)
-        throw IllegalStateException("Failed to $operation. Exit code: [$exitCode]. Stderr: [$stdErr]")
+    check(exitCode == 0) { "Failed to $operation. Exit code: [$exitCode]. Stderr: [$stdErr]" }
 }

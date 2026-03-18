@@ -18,15 +18,9 @@ import com.glassthought.shepherd.core.initializer.Infra
  * - Created by [com.glassthought.shepherd.core.initializer.ContextInitializer]/ref.ap.9zump9YISPSIcdnxEXZZX.E
  */
 @AnchorPoint("ap.TkpljsXvwC6JaAVnIq02He98.E")
+// Delegates AsgardCloseable to infra: infra is closed last as it contains the out factory used
+// for logging — we may want to log during shutdown.
 class ShepherdContext(
   val infra: Infra,
   val timeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
-) : AsgardCloseable {
-
-  override suspend fun close() {
-
-    // Infra should be the last to be closed as it contains the out factory which is used
-    // for logging, and we may want to log while we are shutting down.
-    infra.close()
-  }
-}
+) : AsgardCloseable by infra

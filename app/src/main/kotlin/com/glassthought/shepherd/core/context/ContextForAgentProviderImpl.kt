@@ -25,6 +25,11 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
 
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
 
+    companion object {
+        /** Markdown horizontal rule separator used to delimit instruction sections. */
+        private const val SECTION_SEPARATOR = "\n\n---\n\n"
+    }
+
     override suspend fun assembleInstructions(
         request: AgentInstructionRequest,
     ): Path {
@@ -280,14 +285,14 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         return severities
             .map { severity -> feedbackDir.resolve(status).resolve(severity) }
             .flatMap { dir -> collectMarkdownFilesInDir(dir) }
-            .joinToString("\n\n---\n\n")
+            .joinToString(SECTION_SEPARATOR)
     }
 
     /**
      * Reads all `.md` files in a directory and returns their content concatenated.
      */
     private fun collectFeedbackFilesInDir(dir: Path): String =
-        collectMarkdownFilesInDir(dir).joinToString("\n\n---\n\n")
+        collectMarkdownFilesInDir(dir).joinToString(SECTION_SEPARATOR)
 
     private fun collectMarkdownFilesInDir(dir: Path): List<String> =
         if (Files.exists(dir) && Files.isDirectory(dir)) {
@@ -346,7 +351,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         withContext(Dispatchers.IO) {
             Files.createDirectories(outputDir)
             val instructionsPath = outputDir.resolve("instructions.md")
-            instructionsPath.toFile().writeText(sections.joinToString("\n\n---\n\n"))
+            instructionsPath.toFile().writeText(sections.joinToString(SECTION_SEPARATOR))
 
             out.info(
                 "instructions_file_written",

@@ -46,12 +46,10 @@ class EnvironmentValidatorImpl(
   }
 
   private fun validateDockerEnvironment() {
-    if (!Files.exists(dockerEnvFilePath)) {
-      throw IllegalStateException(
-        "TICKET_SHEPHERD must run inside a Docker container. " +
-          "Docker sentinel file not found at [$dockerEnvFilePath]. " +
-          "Agents are spawned with --dangerously-skip-permissions which is only safe inside a container."
-      )
+    check(Files.exists(dockerEnvFilePath)) {
+      "TICKET_SHEPHERD must run inside a Docker container. " +
+        "Docker sentinel file not found at [$dockerEnvFilePath]. " +
+        "Agents are spawned with --dangerously-skip-permissions which is only safe inside a container."
     }
   }
 
@@ -60,10 +58,8 @@ class EnvironmentValidatorImpl(
       envVarReader(envVarName).isNullOrBlank()
     }
 
-    if (missing.isNotEmpty()) {
-      throw IllegalStateException(
-        "Required environment variables are missing or blank: $missing"
-      )
+    check(missing.isEmpty()) {
+      "Required environment variables are missing or blank: $missing"
     }
   }
 }
