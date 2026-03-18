@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:53:44Z
 id: nid_n8608ym27ipcqke4iwd0934g7_E
 title: "SIMPLIFY_CANDIDATE: Reduce QAPendingState on SessionEntry to boolean flag — coordinator owns structured Q&A state"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:40:32Z
-status_updated_iso: 2026-03-17T23:49:42Z
+status_updated_iso: 2026-03-17T23:53:44Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -40,4 +41,18 @@ Replace `pendingQA: QAPendingState?` on SessionEntry with a simple `isQAPending:
 - `doc/core/SessionsState.md` — SessionEntry fields, QAPendingState section
 - `doc/core/UserQuestionHandler.md` — Q&A coordinator lifecycle, flow
 - `doc/core/agent-to-server-communication-protocol.md` — user-question routing
+
+## Resolution
+
+**Completed.** All spec files updated to reflect the simplified ownership model:
+
+### Changes made (6 spec files):
+1. **`doc/core/SessionsState.md`** — Replaced `pendingQA: QAPendingState?` field with `isQAPending: Boolean` in SessionEntry table. Renamed QAPendingState section to "Coordinator-Owned" and documented ownership boundary (server sets true, coordinator sets false, coordinator owns structured state).
+2. **`doc/core/UserQuestionHandler.md`** — Updated flow steps 5-6 (server sets flag + forwards to coordinator), step 12 (coordinator sets false), lifecycle table (concurrency, post-delivery), queuing section.
+3. **`doc/core/agent-to-server-communication-protocol.md`** — Updated signal endpoint design, V1 endpoint table, user-question section, and routing section.
+4. **`doc/core/PartExecutor.md`** — Updated user-question handler description in "What Does NOT Flow Through AgentSignal" table.
+5. **`doc/core/AgentInteraction.md`** — Updated R2 Q&A coordinator section.
+6. **`doc/use-case/HealthMonitoring.md`** — Updated health ping suppression section.
+
+All `pendingQA` references removed from spec docs. No behavioral changes — only ownership boundaries clarified.
 
