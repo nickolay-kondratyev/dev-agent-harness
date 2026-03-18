@@ -20,9 +20,7 @@ The AgentFacade interface currently defines only: spawnAgent, sendPayloadAndAwai
 
 The executor needs to read context window state at done boundaries for compaction decisions (PartExecutor.md line 244). PartExecutor.md line 471 says the executor never accesses ContextWindowStateReader directly — implying it should go through AgentFacade.
 
-Options:
-1. Add readContextWindowState(handle): ContextWindowState to the AgentFacade interface + update FakeAgentFacade (R3) to support programmable context state
-2. Move the compaction decision logic inside AgentFacadeImpl (but this moves business logic into the facade)
+DECISION: Add readContextWindowState(handle): ContextWindowState to the AgentFacade interface + update FakeAgentFacade (R3) to support programmable context state
 
 Files:
 - doc/core/AgentFacade.md (interface table, R3 FakeAgentFacade)
