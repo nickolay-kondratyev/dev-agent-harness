@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:31:57Z
 id: nid_iepdd3efhnkui5rn4esic98en_E
 title: "CONSISTENCY: 4 doc_v2/ files have no entry points from V1 specs"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:24:50Z
-status_updated_iso: 2026-03-18T15:28:53Z
+status_updated_iso: 2026-03-18T15:31:57Z
 type: chore
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -21,3 +22,27 @@ $Four doc_v2/ files exist but are not referenced from any V1 spec in doc/:
 
 They should be referenced from the relevant V1 specs or from the Linked Documentation table in doc/high-level.md, so they are discoverable by implementors. Each file should have a forward reference from its closest V1 spec (e.g., FailedToExecutePlanUseCaseV2 from TicketShepherd.md or HealthMonitoring.md).
 
+
+## Notes
+
+**2026-03-18T15:31:53Z**
+
+## Resolution
+
+Added forward references from V1 specs to all 4 doc_v2/ files:
+
+1. **doc_v2/FailedToExecutePlanUseCaseV2.md** — Referenced from:
+   - `doc/use-case/HealthMonitoring.md` (FailedToExecutePlanUseCase Detail section, V2 blockquote)
+   - `doc/high-level.md` Linked Documentation table (V2 Design section)
+
+2. **doc_v2/be-smart-on-whether-to-continue-or-restart.md** — Referenced from:
+   - `doc/use-case/ContextWindowSelfCompactionUseCase.md` (Why This Exists section, Background blockquote)
+   - `doc/high-level.md` Linked Documentation table (V2 Design section)
+
+3. **doc_v2/roll-up-PUBLIC-when-we-exist-part.md** — Referenced from:
+   - `doc/core/PartExecutor.md` (Ownership and Lifecycle section, V2 blockquote)
+   - `doc/high-level.md` Linked Documentation table (V2 Design section)
+
+4. **doc_v2/verification-gate.md** — Referenced from:
+   - `doc/core/PartExecutor.md` (PartExecutorImpl step 2 doer+reviewer flow, V2 blockquote)
+   - `doc/high-level.md` Linked Documentation table (V2 Design section)

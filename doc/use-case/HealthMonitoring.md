@@ -205,6 +205,10 @@ ticket-failure-learning step (step 3) which records what happened for the benefi
 next try. If live TMUX debugging is needed, `--keep-sessions-on-failure` can be added as
 an opt-in flag in the future.
 
+> **V2:** Automated cleanup via `CLEANUP_AGENT` — commits work, rolls back to the pre-branch
+> merge-base, and reopens the ticket for retry. See
+> [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../../doc_v2/FailedToExecutePlanUseCaseV2.md).
+
 ---
 
 ## FailedToConvergeUseCase Detail
