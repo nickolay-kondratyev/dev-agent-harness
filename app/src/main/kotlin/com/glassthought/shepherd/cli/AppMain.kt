@@ -23,12 +23,12 @@ fun main() {
 
   // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
   runBlocking {
-    // TODO: Implement Initializer that orchestrates:
+    // Implement Initializer that orchestrates:
     //   1. ContextInitializer → ShepherdContext
     //   2. ShepherdServer startup (Ktor CIO)
     //   3. TicketShepherdCreator → TicketShepherd
     //   4. TicketShepherd.run()
     //   5. Cleanup (ShepherdContext.close())
-    TODO("CLI not yet implemented — see high-level.md ap.HRlQHC1bgrTRyRknP3WNX.E")
+    throw RuntimeException("Not implemented yet: CLI not yet implemented — see high-level.md ap.HRlQHC1bgrTRyRknP3WNX.E")
   }
 }
