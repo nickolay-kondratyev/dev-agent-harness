@@ -296,8 +296,9 @@ TMUX session, waiting for the executor to send it new instructions.
       `SessionEntry`, and runs the full health-aware await loop
       (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 2. **On doer COMPLETED** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
-   verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
-   re-instruction (see [PUBLIC.md Validation After Done](#publicmd-validation-after-done--apthdw9shzs1x2jn9yp9oyue)).
+   verify doer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty →
+   `PartResult.AgentCrashed` immediately (ACK-confirmed delivery + done signal without
+   PUBLIC.md = broken agent — no retry).
    Then → start reviewer:
    a. First iteration: **spawn** reviewer TMUX session (via `agentFacade.spawnAgent()`) →
       assemble instructions (includes doer's `PUBLIC.md`) →
@@ -307,20 +308,21 @@ TMUX session, waiting for the executor to send it new instructions.
       `agentFacade.sendPayloadAndAwaitSignal(reviewerHandle, newInstructions)` → receive
       `AgentSignal`
 3. **On reviewer PASS** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
-   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
-   re-instruction. Then **feedback completion guard**
+   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty →
+   `PartResult.AgentCrashed` immediately. Then **feedback completion guard**
    (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E): validate `__feedback/pending/` contains no `critical__*`
-   or `important__*` files. If found → re-instruct reviewer (one retry, then `AgentCrashed`).
+   or `important__*` files. If found → `PartResult.AgentCrashed` immediately (reviewer signaled
+   pass with unresolved critical/important items = broken agent — no retry).
    Remaining `optional__*` files do not block — harness moves them to `addressed/` on
    completion. Otherwise → return `PartResult.Completed`
 4. **On reviewer NEEDS_ITERATION** — **PUBLIC.md validation** (ref.ap.THDW9SHzs1x2JN9YP9OYU.E):
-   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty → trigger
-   re-instruction. Then → check budget:
+   verify reviewer's `comm/out/PUBLIC.md` exists and is non-empty. If missing/empty →
+   `PartResult.AgentCrashed` immediately. Then → check budget:
    - Within budget → `GitCommitStrategy.onSubPartDone`, increment `iteration.current` →
      **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E):
      - **Feedback files presence guard**: validate reviewer wrote feedback files to
-       `__feedback/pending/` (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Empty → re-instruct
-       reviewer (one retry, then `AgentCrashed`).
+       `__feedback/pending/` (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Empty → `PartResult.AgentCrashed`
+       immediately (needs_iteration without files = broken agent — no retry).
      - **Inner feedback loop**: process feedback items one at a time — critical → important
        → optional (severity determined by filename prefix). Each item: self-compaction check
        → doer re-instruction with single item → await done → harness reads `## Resolution:`
@@ -328,7 +330,7 @@ TMUX session, waiting for the executor to send it new instructions.
        `REJECTED`: harness delegates to `RejectionNegotiationUseCase`
        (ref.ap.fvpIuw4Yeeq1IXDvLC3mL.E) — focused inline resolution while both agents have
        the item in context (1 round: reviewer judges once, judgment is final).
-       Missing marker → re-instruct doer (one retry, then `AgentCrashed`).
+       Missing marker → `PartResult.AgentCrashed` immediately (no retry).
        Full flow detail in ref.ap.5Y5s8gqykzGN1TVK5MZdS.E.
      - After inner loop: validate `pending/` contains no `critical__*` or `important__*`
        files → re-instruct reviewer → go to step 3 (PASS) or step 4 (NEEDS_ITERATION)
@@ -354,35 +356,16 @@ after `done` prevents downstream corruption.
    (path resolved via the `.ai_out/` directory schema — ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 2. Check: file exists AND file size > 0 bytes
 3. If **valid** → proceed to next step (reviewer start, iteration restart, etc.)
-4. If **missing or empty** → re-instruction attempt via **`ReInstructAndAwait`**
-   (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E) (one retry):
-   a. Log **WARN** identifying the sub-part and the missing/empty `PUBLIC.md` path
-   b. Invoke `ReInstructAndAwait.execute(handle, message)` with the re-instruction message
-      telling the agent:
-      - Its `PUBLIC.md` at `<path>` is missing or empty
-      - It must write `PUBLIC.md` with its work log (decisions, rationale, what was done)
-      - It must re-signal `done` with the same result value
-      (`ReInstructAndAwait` internally delegates to `agentFacade.sendPayloadAndAwaitSignal` —
-      the facade handles fresh deferred creation, re-registration, ACK, and the
-      health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E))
-   c. On `Responded` → re-validate `PUBLIC.md`
-   d. On `Crashed` or `FailedWorkflow` → propagate immediately (skip re-validation)
-   e. If **still** missing or empty after retry → return `PartResult.AgentCrashed` with a
-      message: `"Agent failed to produce PUBLIC.md after explicit re-instruction"`.
-      `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (red error, kills all sessions, exits non-zero).
+4. If **missing or empty** → return `PartResult.AgentCrashed` immediately with a message:
+   `"Agent failed to produce PUBLIC.md"`. Log **ERROR** identifying the sub-part and the
+   missing/empty `PUBLIC.md` path. `TicketShepherd` delegates to `FailedToExecutePlanUseCase`
+   (red error, kills all sessions, exits non-zero).
 
-**One retry, not infinite:** If the agent cannot produce `PUBLIC.md` after being explicitly
-told it is missing, something is fundamentally wrong (misconfigured output path, agent
-context exhausted, agent confused). Retrying further would waste time.
-
-**Re-instruction message format** (sent as a direct `send-keys` message, not an instruction
-file — short enough for inline delivery):
-
-```
-Your PUBLIC.md at <path> is missing or empty. You MUST write your work log to this file
-before signaling done. Write PUBLIC.md now, then re-signal:
-callback_shepherd.signal.sh done <result>
-```
+**No retry — immediate crash:** The **Payload Delivery ACK protocol**
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E) guarantees the agent received and acknowledged its
+instructions before signaling done. If the agent signaled done without producing PUBLIC.md,
+it is fundamentally broken (misconfigured output path, agent confused). Retrying wastes time
+and masks the real problem.
 
 **Applies to all paths:** `PartExecutorImpl` performs this validation for both doer-only
 and doer+reviewer parts. The check is identical — only the sub-part path differs.
@@ -474,9 +457,9 @@ makes new-transition coverage compiler-enforced.
 - `FailedToConvergeUseCase` — when iteration budget exceeded
 - **Granular Feedback Loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — inner feedback loop, per-item doer re-instruction, feedback file guards, part completion guard. Full spec: [`doc/plan/granular-feedback-loop.md`](../plan/granular-feedback-loop.md)
 - **`ReInstructAndAwait`** (ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E) — shared use-case encapsulating
-  the "send re-instruction to existing session, await next signal" pattern used in every guard
-  location (PUBLIC.md missing, PRIVATE.md missing, feedback files missing, resolution marker
-  missing, part completion guard). Full spec: [`doc/use-case/ReInstructAndAwait.md`](../use-case/ReInstructAndAwait.md)
+  the "send instruction to existing session, await next signal" pattern used in the granular
+  feedback loop and rejection negotiation (NOT used for guard checks — those crash immediately).
+  Full spec: [`doc/use-case/ReInstructAndAwait.md`](../use-case/ReInstructAndAwait.md)
 
 > **Note:** `Clock`, `HarnessTimeoutConfig`, `AgentUnresponsiveUseCase`, and
 > `ContextWindowStateReader` are constructor dependencies of `AgentFacadeImpl`, **not**
