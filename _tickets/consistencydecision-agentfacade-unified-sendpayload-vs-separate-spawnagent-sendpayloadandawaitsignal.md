@@ -1,11 +1,11 @@
 ---
 id: nid_zgc5ozb1zspazunktkk6fpag7_E
 title: "CONSISTENCY_DECISION: AgentFacade unified sendPayload vs separate spawnAgent + sendPayloadAndAwaitSignal"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:19:22Z
-status_updated_iso: 2026-03-18T14:19:22Z
+status_updated_iso: 2026-03-18T14:21:39Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
