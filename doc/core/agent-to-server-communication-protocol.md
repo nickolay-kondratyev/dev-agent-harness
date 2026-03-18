@@ -108,6 +108,7 @@ The server starts once at harness startup and stays alive across all sub-parts.
 | `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (which owns the structured question/answer queue internally). Answer(s) batch-delivered asynchronously via TMUX `send-keys` after all queued questions are answered. Health pings and noActivityTimeout suppressed while `isQAPending` is true. |
 | `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error, kills all sessions, and exits non-zero (`FailedToExecutePlanUseCase`). |
 | `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
+| `POST /callback-shepherd/signal/self-compacted` | Agent signals it has completed context window self-compaction — wrote `PRIVATE.md`, ready for session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). |
 | `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
 
 ---
