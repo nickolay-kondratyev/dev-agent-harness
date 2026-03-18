@@ -171,10 +171,12 @@ the testability seam between orchestration logic and infrastructure. The real im
 `ContextWindowStateReader`, `SessionsState`). None of these infra components are visible
 to the orchestration layer.
 
-The interface exposes high-level operations: spawn agent (returning a handle with a
-`Deferred<AgentSignal>`), send payload with ACK, send health ping, read context window state,
-and kill session. `SessionsState` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) is an **internal
-implementation detail** of `AgentFacadeImpl` — `PartExecutor` never touches it directly.
+The interface exposes four high-level operations: `spawnAgent` (returning a
+`SpawnedAgentHandle` — no `Deferred` exposed), `sendPayloadAndAwaitSignal` (full
+payload delivery + health-aware await + signal return cycle), `readContextWindowState`
+(done-boundary compaction decisions), and `killSession`. `SessionsState`
+(ref.ap.7V6upjt21tOoCFXA7nqNh.E) is an **internal implementation detail** of
+`AgentFacadeImpl` — `PartExecutor` never touches it directly.
 
 See [`AgentFacade`](core/AgentFacade.md) (ref.ap.9h0KS4EOK5yumssRCJdbq.E) for the
 full spec — interface shape, decisions, signal delivery ownership, and spec impact.
