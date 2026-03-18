@@ -1,11 +1,11 @@
 ---
 id: nid_kjwk0b0fote876s4z2rulk514_E
 title: "SIMPLIFY_CANDIDATE: Eliminate FailedToExecutePlanUseCase stdin blocking — exit non-zero immediately"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:22:42Z
-status_updated_iso: 2026-03-18T02:22:42Z
+status_updated_iso: 2026-03-18T13:08:55Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
