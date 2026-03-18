@@ -1,11 +1,11 @@
 ---
 id: nid_1h1l9zjbzun9qc7aq67dt9550_E
 title: "SIMPLIFY_CANDIDATE: Zero retries on guard re-instructions — ACK confirms receipt, non-compliance is immediate crash"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T00:08:13Z
-status_updated_iso: 2026-03-18T00:08:13Z
+status_updated_iso: 2026-03-18T13:48:53Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
