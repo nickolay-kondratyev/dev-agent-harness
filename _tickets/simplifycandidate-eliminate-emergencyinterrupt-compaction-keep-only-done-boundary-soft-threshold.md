@@ -12,6 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, spec-change]
 ---
 
+FEEDBACK:
+--------------------------------------------------------------------------------
 ## Current Design (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
 
 Two context window compaction thresholds:
@@ -64,3 +66,7 @@ The only risk: agent uses 35% → 0% between done signals. Mitigated by:
 - `doc/core/PartExecutor.md` (health-aware await loop references)
 - `doc/plan/granular-feedback-loop.md` (emergency interrupt reference)
 
+--------------------------------------------------------------------------------
+<DECISION>
+DECISION: It's not that rare of the scenario and if we do not have it we put ourselves at RISK of being STUCK with an agent in ran out of contexts state that is not able to compress. Alternative for V1: do not implement our own emergency compression and rely on claude codes auto compression. Which is reasonable simplification. Let's do that. Make sure to look at all the specs in under FOLDER=[./doc]. FOCUS on specs not code. To move all the CTRL+C interruption into [./doc_v2/our-own-emergency-compression.md] this will allow us to SIMPLIFY all the specs in regard to emergency compression in V1 for claude code, and simplify the configuration for turning off compression. We will want to move the setting for auto-compression OFF into [./doc_v2/our-own-emergency-compression.md] and point to ./doc_v2/our-own-emergency-compression.md from main specs.
+</DECISION>
