@@ -41,7 +41,8 @@
 
 ### Static Analysis (detekt)
 - Detekt runs as part of `./test.sh` via `:app:test` task dependency.
-- Baseline file at `detekt-baseline.xml` excludes existing issues to keep build green.
+- Baseline file at `detekt-baseline.xml` excludes pre-existing issues.
 - **When modifying code in a file with baseline exceptions**: fix the issues and remove the corresponding entries from the baseline.
+  - Our aim is to fix all detekt issues in long term.
 - Run `./gradlew :app:detektBaseline` to regenerate baseline after fixes (only if needed).
 - Config: `detekt-config.yml` — project-specific overrides on top of detekt defaults.
