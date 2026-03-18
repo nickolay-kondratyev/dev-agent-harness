@@ -1,11 +1,11 @@
 ---
 id: nid_lqo6g9lo6lvnrx6tmfr9q9ucj_E
 title: "Fix sonar issues in existing code"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T23:36:48Z
-status_updated_iso: 2026-03-18T23:36:48Z
+status_updated_iso: 2026-03-18T23:38:12Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
