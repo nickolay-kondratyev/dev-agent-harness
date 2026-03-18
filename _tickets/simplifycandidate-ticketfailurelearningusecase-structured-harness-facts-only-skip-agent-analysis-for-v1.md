@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:41:25Z
 id: nid_qm9uly3pe6fyw5zhft1rr529q_E
 title: "SIMPLIFY_CANDIDATE: TicketFailureLearningUseCase — structured harness facts only, skip agent analysis for V1"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:09:51Z
-status_updated_iso: 2026-03-18T13:40:46Z
+status_updated_iso: 2026-03-18T13:41:25Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -29,3 +30,8 @@ File: doc/use-case/TicketFailureLearningUseCase.md
 --------------------------------------------------------------------------------
 
 DECISION: Lets keep the --print analysis as it should be reasonably straighforward to do this analysis lets increase the time out to 20 minutes though. 
+## Notes
+
+**2026-03-18T13:41:25Z**
+
+DECISION: Keep --print agent analysis. Updated timeout from 10 min to 20 min in doc/use-case/TicketFailureLearningUseCase.md (line 99). No code changes — spec-only update.
