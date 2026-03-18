@@ -32,10 +32,6 @@ tasks are short-lived and don't need the full interactive session machinery.
 ## Interface
 
 ```kotlin
-/**
- * Constructed with [maxRecoveryAttempts] (default 2) — the maximum number of times
- * the recovery agent will be spawned per [attemptRecovery] call before giving up.
- */
 interface AutoRecoveryByAgentUseCase {
     suspend fun attemptRecovery(request: RecoveryRequest): RecoveryOutcome
 }
@@ -62,15 +58,14 @@ sealed class RecoveryOutcome {
     object Resolved : RecoveryOutcome()
 
     /**
-     * All [maxRecoveryAttempts] attempts exhausted without success.
-     * The use case emits a FAIL signal with reason "recovery_exhausted".
+     * The single recovery attempt did not succeed (Failed or TimedOut).
+     * The use case emits a FAIL signal with reason "recovery_failed".
      * Caller should delegate to FailedToExecutePlanUseCase.
      */
     object Unresolvable : RecoveryOutcome()
 
     /**
      * Recovery agent explicitly signals the issue requires human intervention.
-     * Returned immediately (without consuming further attempts).
      * Caller should halt and escalate with the given [reason].
      */
     data class NeedsEscalation(val reason: String) : RecoveryOutcome()
@@ -81,7 +76,7 @@ sealed class RecoveryOutcome {
 
 ## Flow
 
-The use case runs an internal bounded loop of at most `maxRecoveryAttempts` (default 2) iterations:
+The use case runs the recovery agent **exactly once**:
 
 1. **Assemble recovery instructions** — combine `RecoveryRequest` fields into a focused
    instruction string for the agent. The instructions include:
@@ -99,13 +94,15 @@ The use case runs an internal bounded loop of at most `maxRecoveryAttempts` (def
      work (scanning logs, running git commands) may take time.
 
 3. **Interpret result**:
-   - `NonInteractiveAgentResult.Success` → return `RecoveryOutcome.Resolved` immediately.
-   - Agent output contains an escalation marker → return `RecoveryOutcome.NeedsEscalation(reason)`
-     immediately, without consuming further attempts.
-   - `NonInteractiveAgentResult.Failed` or `TimedOut` → increment failure count:
-     - If attempts remain → go back to step 1 and spawn the recovery agent again.
-     - If `maxRecoveryAttempts` exhausted → log FAIL with reason `"recovery_exhausted"` and
-       return `RecoveryOutcome.Unresolvable`.
+   - `NonInteractiveAgentResult.Success` → return `RecoveryOutcome.Resolved`.
+   - Agent output contains an escalation marker → return `RecoveryOutcome.NeedsEscalation(reason)`.
+   - `NonInteractiveAgentResult.Failed` or `TimedOut` → log FAIL with reason `"recovery_failed"`
+     and return `RecoveryOutcome.Unresolvable`.
+
+**Rationale for single attempt**: If a recovery agent with full file access and explicit error
+context cannot fix the issue, a second spawn receives identical context and has no reason to
+succeed. A single attempt caps worst-case recovery time at 20 minutes before escalating to human
+intervention — faster than a two-attempt loop (40 min) for genuinely unrecoverable failures.
 
 ---
 
@@ -121,9 +118,8 @@ Callers (e.g., `GitOperationFailureUseCase`) follow this pattern:
 5. On `RecoveryOutcome.NeedsEscalation(reason)` → delegate to `FailedToExecutePlanUseCase`
    with the escalation reason
 
-**Bounded recovery**: The use case internally retries the recovery agent up to `maxRecoveryAttempts`
-(default 2) times before returning `Unresolvable`. Callers do not implement retry logic — the
-use case owns the retry loop and all exit paths are explicit via `RecoveryOutcome`.
+**Single attempt**: The use case spawns the recovery agent exactly once. All exit paths are
+explicit via `RecoveryOutcome` — callers do not implement any retry logic.
 
 ---
 
