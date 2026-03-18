@@ -2,7 +2,7 @@
 id: nid_7xzhkw4pw5sc5hqh80cvsotdc_E
 title: "Wire AiOutputStructure into TicketShepherdCreator — .ai_out/ setup during ticket initialization"
 status: open
-deps: [nid_fjod8du6esers3ajur2h7tvgx_E, nid_9kic96nh6mb8r5legcsvt46uy_E, nid_8ts4qxw2wevxwep3yk2gvqwja_E]
+deps: [nid_fjod8du6esers3ajur2h7tvgx_E, nid_9kic96nh6mb8r5legcsvt46uy_E, nid_8ts4qxw2wevxwep3yk2gvqwja_E, nid_o4gj7swdejriooj5bex3b34vf_E]
 links: [nid_zseecydaikj0f2i2l14nwcfax_E, nid_o5azwgdl76nnofttpt7ljgkua_E]
 created_iso: 2026-03-18T20:45:06Z
 status_updated_iso: 2026-03-18T20:45:06Z
@@ -57,3 +57,9 @@ Test scope clarification: The body mentions verifying directory tree exists on d
 **2026-03-18T22:03:11Z**
 
 Add test case from review: verify ContextForAgentProviderImpl uses the injected AiOutputStructure instance for PRIVATE.md path resolution (e.g., executionPrivateMd(partName, subPartName) / planningPrivateMd(subPartName)) rather than constructing the path internally. Guards against the injection being present but unused.
+
+**2026-03-18T22:08:33Z**
+
+IMPORTANT: ensureStructure() must be called with ALL parts from the parsed WorkflowDefinition (both planning and execution parts), not just the parts currently in CurrentState.parts. In with-planning workflows, CurrentState is initialized with only planning parts; the full part list for directory creation must come from the workflow JSON directly.
+
+Also: dependency on nid_o4gj7swdejriooj5bex3b34vf_E added — ContextForAgentProviderImpl still navigates the old 9-directory feedback layout (feedbackDir/{status}/{severity}/). AiOutputStructure creates the new flat 3-directory layout (pending/addressed/rejected/ with severity in filename prefixes). Wiring must happen AFTER the feedback alignment ticket lands, or the provider will navigate wrong paths.

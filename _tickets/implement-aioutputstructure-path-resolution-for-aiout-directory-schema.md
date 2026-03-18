@@ -91,3 +91,7 @@ WHY-NOT: No convenience method for individual feedback file paths (e.g., feedbac
 **2026-03-18T21:56:58Z**
 
 Add concrete test case for feedbackDir family: feedbackPendingDir("backend") → .ai_out/my_branch/execution/backend/__feedback/pending/ — verifying __feedback/ sits at part level (between execution/${partName}/ and ${subPartName}/), not nested under a sub-part.
+
+**2026-03-18T22:08:36Z**
+
+WHY-NOT: AiOutputStructure.feedbackPendingDir() uses "pending/" (per spec doc/schema/ai-out-directory.md). The existing codebase has ProtocolVocabulary.FeedbackStatus.UNADDRESSED = "unaddressed" which is a pre-existing naming inconsistency being cleaned up separately in nid_o4gj7swdejriooj5bex3b34vf_E. Do NOT attempt to reconcile these names in this ticket — use "pending" as the spec says.
