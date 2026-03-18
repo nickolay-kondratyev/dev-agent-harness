@@ -69,3 +69,9 @@ A class `AiOutputStructure` (package `com.glassthought.shepherd.core.filestructu
 - Directory tree: doc/schema/ai-out-directory.md (ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 - "Codified In" section at bottom of spec confirms this needs rebuilding.
 
+
+## Notes
+
+**2026-03-18T21:10:45Z**
+
+Branch name with slashes (e.g., feature/my-ticket): Path.resolve() handles this natively — slashes create nested directories. This is the correct behavior since .ai_out/ is a local directory tree, and Files.createDirectories() will create intermediate dirs. Tests should verify this works correctly with slashes in branch names.

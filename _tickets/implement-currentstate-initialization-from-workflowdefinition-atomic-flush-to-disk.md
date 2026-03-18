@@ -3,7 +3,7 @@ id: nid_o5azwgdl76nnofttpt7ljgkua_E
 title: "Implement CurrentState initialization from WorkflowDefinition + atomic flush to disk"
 status: open
 deps: [nid_m3cm8xizw5qhu1cu3454rca79_E, nid_kavqh23pdfq56cdli0fv4sm3u_E, nid_9kic96nh6mb8r5legcsvt46uy_E]
-links: []
+links: [nid_7xzhkw4pw5sc5hqh80cvsotdc_E]
 created_iso: 2026-03-18T18:03:26Z
 status_updated_iso: 2026-03-18T18:03:26Z
 type: task
