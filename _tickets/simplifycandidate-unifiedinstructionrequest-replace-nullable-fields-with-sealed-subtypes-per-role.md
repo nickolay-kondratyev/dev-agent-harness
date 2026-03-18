@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:44:32Z
 id: nid_s9yhhndwqn6xlu94lj55w7bzt_E
 title: "SIMPLIFY_CANDIDATE: UnifiedInstructionRequest — replace nullable fields with sealed subtypes per role"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:09:44Z
-status_updated_iso: 2026-03-18T13:42:21Z
+status_updated_iso: 2026-03-18T13:44:32Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -23,3 +24,9 @@ Why more robust: Invalid field combinations become compile errors. Cannot accide
 
 File: doc/core/ContextForAgentProvider.md
 
+
+## Notes
+
+**2026-03-18T13:44:29Z**
+
+Spec updated in doc/core/ContextForAgentProvider.md. Replaced UnifiedInstructionRequest (flat data class with ~15 nullable fields) with AgentInstructionRequest sealed class hierarchy: DoerRequest, ReviewerRequest (nested under ExecutionRequest), PlannerRequest, PlanReviewerRequest. Each subtype carries exactly the fields it needs — previously nullable role-specific fields are now non-nullable in their respective subtypes. assembleInstructions signature simplified from (role, request) to (request) — role is now encoded in the type. Internal when dispatch is compile-time exhaustive.

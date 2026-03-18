@@ -21,78 +21,113 @@ content out — is critical for agent effectiveness. The provider centralizes th
 ## Interface
 
 ```kotlin
-enum class AgentRole { DOER, REVIEWER, PLANNER, PLAN_REVIEWER }
-
 interface ContextForAgentProvider {
 
     /**
      * Assembles the instruction file for an agent.
-     * `role` selects the section plan; `request` supplies all data needed by any role.
+     * The request type encodes the role — no separate role parameter needed.
      * Writes to `request.outputDir/instructions.md`. Returns the written path.
      */
-    suspend fun assembleInstructions(role: AgentRole, request: UnifiedInstructionRequest): Path
+    suspend fun assembleInstructions(request: AgentInstructionRequest): Path
 }
 ```
 
-Single public method. The executor passes `role` — no longer needs to know which of four methods
-to call, making it impossible to call the wrong one. Adding a new agent role requires only a new
-`AgentRole` variant and a plan list, not a new interface method + request type.
+Single public method. The request type encodes the role — invalid field combinations are
+caught at compile time, not at runtime. Adding a new agent role requires only a new
+`AgentInstructionRequest` subtype and a plan list.
 
-### UnifiedInstructionRequest
+### AgentInstructionRequest
+
+Each role gets its own subtype with exactly the fields it needs. No nullable role-specific
+fields; the type itself is the discriminator.
 
 ```kotlin
-data class UnifiedInstructionRequest(
+sealed class AgentInstructionRequest {
     // ── common (all roles) ────────────────────────────────────────────────────
-    val roleDefinition: RoleDefinition,
-    val ticketContent: String,
-    val iterationNumber: Int,
-    val outputDir: Path,
-    val publicMdOutputPath: Path,
+    abstract val roleDefinition: RoleDefinition
+    abstract val ticketContent: String
+    abstract val iterationNumber: Int
+    abstract val outputDir: Path
+    abstract val publicMdOutputPath: Path
 
     // ── execution agents (DOER + REVIEWER) ────────────────────────────────────
-    val partName: String? = null,
-    val partDescription: String? = null,
-    val planMdPath: Path? = null,              // null → no-planning workflow
-    val priorPublicMdPaths: List<Path> = emptyList(),
+    sealed class ExecutionRequest : AgentInstructionRequest() {
+        abstract val partName: String
+        abstract val partDescription: String
+        abstract val planMdPath: Path?           // null → no-planning workflow
+        abstract val priorPublicMdPaths: List<Path>
 
-    // ── DOER-only ─────────────────────────────────────────────────────────────
-    val reviewerPublicMdPath: Path? = null,    // null on iteration 1
+        data class DoerRequest(
+            override val roleDefinition: RoleDefinition,
+            override val ticketContent: String,
+            override val iterationNumber: Int,
+            override val outputDir: Path,
+            override val publicMdOutputPath: Path,
+            override val partName: String,
+            override val partDescription: String,
+            override val planMdPath: Path?,
+            override val priorPublicMdPaths: List<Path>,
+            val reviewerPublicMdPath: Path?,     // null on iteration 1
+        ) : ExecutionRequest()
 
-    // ── REVIEWER-only ─────────────────────────────────────────────────────────
-    val doerPublicMdPath: Path? = null,
-    val feedbackDir: Path? = null,
+        data class ReviewerRequest(
+            override val roleDefinition: RoleDefinition,
+            override val ticketContent: String,
+            override val iterationNumber: Int,
+            override val outputDir: Path,
+            override val publicMdOutputPath: Path,
+            override val partName: String,
+            override val partDescription: String,
+            override val planMdPath: Path?,
+            override val priorPublicMdPaths: List<Path>,
+            val doerPublicMdPath: Path,          // always required; non-nullable
+            val feedbackDir: Path,               // always required; non-nullable
+        ) : ExecutionRequest()
+    }
 
-    // ── PLANNER-only ──────────────────────────────────────────────────────────
-    val roleCatalogEntries: List<RoleCatalogEntry> = emptyList(),
-    val planReviewerPublicMdPath: Path? = null, // null on iteration 1
-    val planJsonOutputPath: Path? = null,
-    val planMdOutputPath: Path? = null,
+    data class PlannerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val roleCatalogEntries: List<RoleCatalogEntry>,
+        val planReviewerPublicMdPath: Path?,     // null on iteration 1
+        val planJsonOutputPath: Path,            // always required; non-nullable
+        val planMdOutputPath: Path,              // always required; non-nullable
+    ) : AgentInstructionRequest()
 
-    // ── PLAN_REVIEWER-only ────────────────────────────────────────────────────
-    val planJsonContent: String? = null,
-    val planMdContent: String? = null,
-    val plannerPublicMdPath: Path? = null,
-    val priorPlanReviewerPublicMdPath: Path? = null, // null on iteration 1
-)
+    data class PlanReviewerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val planJsonContent: String,             // always required; non-nullable
+        val planMdContent: String,               // always required; non-nullable
+        val plannerPublicMdPath: Path,           // always required; non-nullable
+        val priorPlanReviewerPublicMdPath: Path?, // null on iteration 1
+    ) : AgentInstructionRequest()
+}
 ```
 
-Role-specific fields are `null` (or empty list) when not applicable. The `role` parameter is the
-discriminator — the provider accesses only the fields relevant to the given role. Unused fields
-are visible from the grouping comments above.
+Remaining `null`s are **semantically meaningful optionals** (absent on first iteration or
+absent in no-planning workflows) — not "does not apply to this role." The type hierarchy
+eliminates the latter category entirely.
 
 ---
 
 ## Instruction File Content — By Agent Type
 
 Each role defines its section sequence as an `InstructionPlan` — a `List<InstructionSection>`.
-A single internal `assembleFromPlan(plan: List<InstructionSection>, request: UnifiedInstructionRequest)`
+A single internal `assembleFromPlan(plan: List<InstructionSection>, request: AgentInstructionRequest)`
 walks the plan and renders each section. State-dependent sections (e.g. `iterationNumber > 1`)
 are modeled as conditional section types within the plan, not as conditionals scattered across
 role-specific template methods.
 
 ### Doer — ap.5N6TJ1MKDHCG01cJwTMFk.E
 
-Concatenation order (via `AgentRole.DOER` / `UnifiedInstructionRequest`):
+Concatenation order (via `AgentInstructionRequest.ExecutionRequest.DoerRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -109,7 +144,7 @@ Concatenation order (via `AgentRole.DOER` / `UnifiedInstructionRequest`):
 
 ### Reviewer
 
-Concatenation order (via `AgentRole.REVIEWER` / `UnifiedInstructionRequest`):
+Concatenation order (via `AgentInstructionRequest.ExecutionRequest.ReviewerRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -227,22 +262,39 @@ PlanReviewer: [RoleDefinition, Ticket, PlanFlowJsonContent, PlanMdContent,
 ```kotlin
 private suspend fun assembleFromPlan(
     plan: List<InstructionSection>,
-    request: UnifiedInstructionRequest,
+    request: AgentInstructionRequest,
 ): Path
 ```
 
-`assembleInstructions` selects the role-specific plan (a `List<InstructionSection>`) by
-dispatching on `role`, then delegates to `assembleFromPlan`. Each `InstructionSection` reads
-only the fields it needs from `UnifiedInstructionRequest` — conditional sections
-(e.g. `IterationFeedback`, `PlanMd`) simply render empty when the condition is false.
+`assembleInstructions` selects the role-specific plan by dispatching on the sealed type —
+exhaustiveness is enforced at compile time, so adding a subtype without a plan entry is a
+build error. Then it delegates to `assembleFromPlan`:
+
+```kotlin
+suspend fun assembleInstructions(request: AgentInstructionRequest): Path {
+    val plan = when (request) {
+        is AgentInstructionRequest.ExecutionRequest.DoerRequest      -> doerPlan
+        is AgentInstructionRequest.ExecutionRequest.ReviewerRequest  -> reviewerPlan
+        is AgentInstructionRequest.PlannerRequest                    -> plannerPlan
+        is AgentInstructionRequest.PlanReviewerRequest               -> planReviewerPlan
+    }
+    return assembleFromPlan(plan, request)
+}
+```
+
+Each `InstructionSection` smart-casts to the specific subtype it needs — the compiler
+guarantees the cast succeeds, so no runtime field-presence checks are needed. Conditional
+sections (e.g. `IterationFeedback`, `PlanMd`) still render empty when the optional field
+is `null`.
 
 ### Benefits
 
 - **DRY**: shared sections (`Ticket`, `WritingGuidelines`, `CallbackHelp`, etc.) have exactly one implementation each.
 - **Legible structure**: instruction composition is readable as a data list, not scattered across template methods.
-- **Extensible**: new section = one new `InstructionSection` subtype; new role = one new `AgentRole` variant + one plan list.
+- **Extensible**: new section = one new `InstructionSection` subtype; new role = one new `AgentInstructionRequest` subtype + one plan list.
 - **Testable**: each `InstructionSection` can be unit-tested in isolation.
-- **Simplified call site**: `PartExecutor` calls one method with a `role` parameter — impossible to call the wrong one; no role dispatch at the call site.
+- **Compile-time role safety**: the request type encodes the role — passing reviewer-only fields to a doer request is a build error, not a runtime surprise. No mental tracking of which nullable fields apply to which role.
+- **Simplified call site**: `PartExecutor` constructs the right subtype directly — no separate `role` parameter to keep in sync.
 
 ---
 
