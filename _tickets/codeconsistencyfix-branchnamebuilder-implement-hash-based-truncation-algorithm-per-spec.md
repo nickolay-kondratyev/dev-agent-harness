@@ -1,11 +1,11 @@
 ---
 id: nid_i3jzssg11s3e4wmjzcgdkcymk_E
 title: "CODE_CONSISTENCY_FIX: BranchNameBuilder — implement hash-based truncation algorithm per spec"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T16:06:22Z
-status_updated_iso: 2026-03-18T16:06:22Z
+status_updated_iso: 2026-03-18T16:43:33Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
