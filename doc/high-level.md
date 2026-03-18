@@ -187,8 +187,10 @@ Agents are spawned via [`AgentFacade.spawnAgent()`](core/AgentFacade.md)
 (ref.ap.9h0KS4EOK5yumssRCJdbq.E), which encapsulates the full
 [`SpawnTmuxAgentSessionUseCase`](use-case/SpawnTmuxAgentSessionUseCase.md)
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) flow internally. The returned `SpawnedAgentHandle`
-includes a `Deferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) that the executor
-awaits — see [`PartExecutor`](core/PartExecutor.md) for the state machine design.
+contains the `HandshakeGuid` and `ResumableAgentSessionId` — no `Deferred` is exposed.
+The executor uses `sendPayloadAndAwaitSignal(handle, payload)` to deliver instructions
+and await the agent's signal — see [`PartExecutor`](core/PartExecutor.md) for the
+state machine design.
 
 - Instructions written to `comm/in/instructions.md` in the sub-part's `.ai_out/` directory (preserves formatting, git-tracked)
 - V1: no tool restrictions (allow everything)
@@ -317,8 +319,8 @@ decisions (ping, declare crash, trigger compaction) at the right moments.
 The `FakeAgentFacade` implements `AgentFacade` with full programmatic control:
 
 - **Spawn behavior** — configure whether spawn succeeds, fails, or delays
-- **Signal delivery** — complete the `Deferred<AgentSignal>` at controlled times with any
-  variant (Done, FailWorkflow, Crashed, SelfCompacted)
+- **Signal delivery** — return pre-programmed `AgentSignal` variants from
+  `sendPayloadAndAwaitSignal` (Done, FailWorkflow, Crashed, SelfCompacted)
 - **ACK behavior** — configure whether payload ACK succeeds, times out, or partially fails
 - **Context window state** — return programmable `ContextWindowState` (any remaining percentage)
 - **Activity timestamps** — control `lastActivityTimestamp` advancement
@@ -497,7 +499,7 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | CLI parser | **picocli** | Mature, annotation-driven |
 | HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
 | Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
-| Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
+| Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (`spawnAgent`, `sendPayloadAndAwaitSignal`, `readContextWindowState`, `killSession`). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
 | Agent-type adaptation | **`AgentTypeAdapter` interface** (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) | Single interface per agent type: `buildStartCommand()` + `resolveSessionId()`. Always deployed together — merging eliminates mismatched-pair risk and simplifies wiring (1 dep instead of 2). Different agent types have different CLI invocations AND session ID discovery. OCP: new agent types add a new `AgentTypeAdapter` implementation. V1: `ClaudeCodeAdapter`. Agents spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument**. Session ID: Claude Code cannot self-report (validated empirically); GUID handshake + JSONL scanning is required (see [rejected simplification rationale](use-case/SpawnTmuxAgentSessionUseCase.md#why-not-agent-self-reporting-rejected--do-not-revisit)). Session IDs recorded for inspection (V1) + resume (V2). |
 | Session storage | **`sessionIds` array in in-memory `CurrentState`** (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) | All state in one in-memory object, flushed to `current_state.json`; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
 | Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
