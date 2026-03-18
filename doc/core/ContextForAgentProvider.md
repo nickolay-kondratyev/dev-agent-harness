@@ -1,6 +1,5 @@
 # ContextForAgentProvider / ap.9HksYVzl1KkR9E1L2x8Tx.E
 
-> **Implementation gap**: current code uses flat `UnifiedInstructionRequest + AgentRole` enum instead of the sealed `AgentInstructionRequest` hierarchy below. Also missing: `PrivateMd` section in all role plans. Tracked: `nid_8ts4qxw2wevxwep3yk2gvqwja_E`.
 
 Assembles instruction files for agents. Each agent receives a single Markdown file containing
 everything it needs — role definition, ticket, shared context, prior agent outputs, and
