@@ -31,7 +31,7 @@ This logging requirement applies to all health monitoring logic described below.
 0. **Startup acknowledgment** (`healthTimeouts.startup`, default: 3 min): After spawn, the facade uses a shorter startup window. If no callback of any kind (`/callback-shepherd/signal/started`, `/callback-shepherd/signal/done`, etc.) arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.STARTUP_TIMEOUT`. This catches agent startup failures (bad env, binary crash, TMUX issues) in 3 minutes instead of 30. Once any callback arrives, the facade switches to the `normalActivity` window. See [Agent Startup Acknowledgment](../core/agent-to-server-communication-protocol.md#agent-startup-acknowledgment--apxvsvi2tgooj2eubmoabice) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E).
 0b. **Payload delivery ACK** (default: 3 min per attempt, 3 attempts max): After sending instructions via `send-keys`, the facade awaits `/signal/ack-payload` before entering the signal-await loop. If no ACK → retry `send-keys` (up to 2 retries). All retries exhausted → `AgentCrashed`. This catches the "alive but never received instruction" failure mode. See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 1. **No activity timeout** (`healthTimeouts.normalActivity`, default: 30 min): If no HTTP callback of any kind arrives within this window → triggers `AgentUnresponsiveUseCase` with `DetectionContext.NO_ACTIVITY_TIMEOUT`. Activity is determined by `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated on every HTTP callback.
-2. **Ping**: Harness sends a message to agent via TMUX send-keys asking if it's still running and needs more time. Agent is expected to reply via `callback_shepherd.signal.sh ping-ack`
+2. **Ping**: Harness sends a health ping to agent via TMUX send-keys (wrapped with `AckedPayloadSender` — ref.ap.tbtBcVN2iCl1xfHJthllP.E) asking if it's still running and needs more time. Agent ACKs via the generic `callback_shepherd.signal.sh ack-payload <payload_id>` mechanism — same as all other `send-keys` payloads.
 3. **Ping response timeout** (`healthTimeouts.pingResponse`, default: 3 min): After ping, re-check `lastActivityTimestamp`. If **any** callback arrived during the ping window, the agent is alive (proof of life) — loop back to step 1. If no callback → triggers `AgentUnresponsiveUseCase` with `DetectionContext.PING_TIMEOUT`.
 4. **Crash handling (V1)**: `AgentUnresponsiveUseCase` (with `PING_TIMEOUT` context) kills TMUX session, completes `signalDeferred` with `AgentSignal.Crashed` → executor returns `PartResult.AgentCrashed` → `TicketShepherd` delegates to `FailedToExecutePlanUseCase` (prints red error, kills all sessions, exits non-zero). **No automatic recovery in V1.** V2 may add retry with `--resume` (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
@@ -58,10 +58,10 @@ loop at ref.ap.QCjutDexa2UBDaKB3jTcF.E.
 
 ### Proof-of-Life Principle
 
-After sending a ping, the executor does **not** require a specific `/ping-ack` response.
-Instead, it re-checks `lastActivityTimestamp` after the ping timeout window. If **any**
-callback arrived during that window (`user-question`, `done`, `ping-ack`,
-etc.), the agent is demonstrably alive. `/ping-ack` exists as a fallback for agents that
+After sending a ping (via `AckedPayloadSender`), the executor re-checks
+`lastActivityTimestamp` after the ping timeout window. If **any** callback arrived during
+that window (`user-question`, `done`, `ack-payload`, etc.), the agent is demonstrably
+alive. The ping's own `ack-payload` response serves as the proof-of-life for agents that
 are alive but idle (no other callbacks to send) — which is exactly the scenario health
 monitoring aims to detect.
 
@@ -73,7 +73,7 @@ The `context_window_slim.json` file is used for **context window compaction deci
 
 | Signal | Source | Purpose |
 |--------|--------|---------|
-| `lastActivityTimestamp` | Agent → Server HTTP callbacks | **Liveness detection** — updated on every callback (started, done, ping-ack, ack-payload, user-question, self-compacted) |
+| `lastActivityTimestamp` | Agent → Server HTTP callbacks | **Liveness detection** — updated on every callback (started, done, ack-payload, user-question, self-compacted) |
 | `context_window_slim.json` | External hook (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | **Done-boundary compaction decisions only** — remaining_percentage drives self-compaction at done boundaries (ref.ap.8nwz2AHf503xwq8fKuLcl.E). NOT used for liveness. NOT polled continuously in the health-aware await loop. |
 
 #### Simplification Tradeoff
@@ -248,8 +248,8 @@ prevents this class of failure from ever reaching the health monitoring layer.
 The Payload Delivery ACK Protocol (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) addresses a failure mode
 that health monitoring alone **cannot** resolve: the "alive but never received instruction"
 loop. The ACK protocol catches this at the source (within 9 minutes worst-case) rather than
-letting it loop indefinitely through health monitoring. All `send-keys` payloads (except pings)
-go through the shared `AckedPayloadSender` abstraction (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
+letting it loop indefinitely through health monitoring. All `send-keys` payloads (including
+health pings) go through the shared `AckedPayloadSender` abstraction (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
 
 See [Payload Delivery ACK Protocol](../core/agent-to-server-communication-protocol.md#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe)
 (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) for the full specification: wrapping format, retry policy,
@@ -285,7 +285,7 @@ While Q&A is pending, the health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **skips all health checks** — no pings, no noActivityTimeout.
 
 **Why suppressed (not "harmless"):** Previously, pings during Q&A were considered harmless
-because the agent could respond with `ping-ack`. However, each ping is a TMUX `send-keys`
+because the agent could respond with `ack-payload`. However, each ping is a TMUX `send-keys`
 message that consumes context window capacity. If the human is away for hours (meetings,
 walks, overnight), dozens of pings accumulate — pure context-window waste that degrades
 the agent's ability to work on the actual task after Q&A completes.

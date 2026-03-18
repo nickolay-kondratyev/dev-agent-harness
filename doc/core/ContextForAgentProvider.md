@@ -478,8 +478,9 @@ Wait for the answer — it will arrive via your input.
 If you hit an unrecoverable error:
 `callback_shepherd.signal.sh fail-workflow "Reason for failure"`
 
-Health ping acknowledgment (when asked):
-`callback_shepherd.signal.sh ping-ack`
+Health pings arrive wrapped in `<payload_from_shepherd_must_ack>` XML — ACK them the
+same way as any other payload (using the command in the `MUST_ACK_BEFORE_PROCEEDING`
+attribute) and respond to the ping's question.
 </critical_to_keep_through_compaction>
 ```
 

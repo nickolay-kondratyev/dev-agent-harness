@@ -33,7 +33,7 @@ Agent-to-harness HTTP endpoints are **fire-and-forget signals** (`/callback-shep
 
 **Fire-and-forget.** The agent POSTs, gets a bare `200 OK`, and moves on. If the harness needs to deliver content back (Q&A answers, iteration feedback, pings), it uses TMUX `send-keys`. Agents that need a response after a signal (e.g., after `user-question`) must **wait** for it to arrive via TMUX, not via the HTTP response.
 
-Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ping-ack`, `ack-payload`). The `user-question` signal additionally sets `SessionEntry.isQAPending = true` and forwards the question to the Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
+Signals either complete `CompletableDeferred<AgentSignal>` (lifecycle signals: `done`, `fail-workflow`) or update `lastActivityTimestamp` only (side-channel signals: `started`, `user-question`, `ack-payload`). The `user-question` signal additionally sets `SessionEntry.isQAPending = true` and forwards the question to the Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). The `ack-payload` signal additionally clears `pendingPayloadAck` on the `SessionEntry` (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E).
 
 ---
 
@@ -107,9 +107,8 @@ The server starts once at harness startup and stays alive across all sub-parts.
 | `POST /callback-shepherd/signal/done` | Agent signals task completion with a `result` field. Result values are role-scoped (see Result Validation). |
 | `POST /callback-shepherd/signal/user-question` | Agent has a question for the human. Server returns 200 immediately, sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (which owns the structured question/answer queue internally). Answer(s) batch-delivered asynchronously via TMUX `send-keys` after all queued questions are answered. Health pings and noActivityTimeout suppressed while `isQAPending` is true. |
 | `POST /callback-shepherd/signal/fail-workflow` | Unrecoverable error — aborts the entire workflow. Harness prints red error, kills all sessions, and exits non-zero (`FailedToExecutePlanUseCase`). |
-| `POST /callback-shepherd/signal/ping-ack` | Agent acknowledges a health ping (see Agent Health Monitoring in [high-level.md](../high-level.md)). |
 | `POST /callback-shepherd/signal/self-compacted` | Agent signals it has completed context window self-compaction — wrote `PRIVATE.md`, ready for session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). |
-| `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
+| `POST /callback-shepherd/signal/ack-payload` | Agent acknowledges receipt of a `send-keys` payload — including health pings (see [Payload Delivery ACK Protocol](#payload-delivery-ack-protocol--apr0us6iysirrzrqha5mvo0qe) — ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Side-channel signal — clears `pendingPayloadAck` on `SessionEntry`, does not complete `signalDeferred`. |
 
 ---
 
@@ -140,10 +139,7 @@ GUID-to-sub-part registry.
 // POST /callback-shepherd/signal/fail-workflow
 { "handshakeGuid": "handshake.a1b2c3d4-...", "reason": "Cannot compile after multiple approaches" }
 
-// POST /callback-shepherd/signal/ping-ack
-{ "handshakeGuid": "handshake.a1b2c3d4-..." }
-
-// POST /callback-shepherd/signal/ack-payload — acknowledges receipt of a send-keys payload
+// POST /callback-shepherd/signal/ack-payload — acknowledges receipt of a send-keys payload (including health pings)
 { "handshakeGuid": "handshake.a1b2c3d4-...", "payloadId": "a1b2c3d4-3" }
 ```
 
@@ -183,7 +179,7 @@ the `signalDeferred` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E). See
 
 Signal endpoints (`/callback-shepherd/signal/*`): Look up `SessionEntry`, update
 `lastActivityTimestamp`. Lifecycle signals (`done`, `fail-workflow`) additionally complete
-`signalDeferred`. Side-channel signals (`started`, `user-question`, `ping-ack`, `ack-payload`)
+`signalDeferred`. Side-channel signals (`started`, `user-question`, `ack-payload`)
 do **not** complete the deferred — executor stays suspended. `user-question` additionally
 sets `SessionEntry.isQAPending = true` and forwards the question to the Q&A coordinator
 (ref.ap.NE4puAzULta4xlOLh5kfD.E). `ack-payload` additionally clears `pendingPayloadAck`
@@ -272,7 +268,7 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
 - Server: updates `lastActivityTimestamp` on the `SessionEntry` (same as any side-channel
   signal — no new machinery). Returns 200.
 - **Does NOT flow through `AgentSignal`** — this is a side-channel signal, same as
-  `ping-ack` and `user-question`.
+  `user-question` and `ack-payload`.
 - **On `/signal/started` received**: harness resolves agent session ID via `AgentTypeAdapter.resolveSessionId()`
   (GUID is now guaranteed in JSONL), then sends full instructions via TMUX `send-keys`
 
@@ -425,7 +421,6 @@ callback_shepherd.signal.sh started                       # no extra args — bo
 callback_shepherd.signal.sh done <result>                 # required: completed | pass | needs_iteration
 callback_shepherd.signal.sh user-question "<text>"        # required: question text
 callback_shepherd.signal.sh fail-workflow "<reason>"      # required: failure reason (aborts entire workflow)
-callback_shepherd.signal.sh ping-ack                      # no extra args — acknowledges health ping
 callback_shepherd.signal.sh ack-payload <payload-id>      # required: PayloadId from the send-keys wrapper (e.g., "a1b2c3d4-3")
 ```
 
@@ -482,7 +477,7 @@ Without retry, a lost `/signal/done` creates an unrecoverable deadlock:
 1. Agent calls `done` → transient HTTP failure → script exits non-zero
 2. Agent believes it signaled completion (or treats the failure as non-fatal)
 3. Harness never completes `signalDeferred` → waits indefinitely
-4. Health monitor pings (after 30 min) → agent responds with `ping-ack` (it IS alive)
+4. Health monitor pings (after 30 min) → agent responds with `ack-payload` (it IS alive)
 5. Loop repeats: harness pings → agent acks → harness waits → harness pings
 
 The agent has no reason to re-send `done` — it already did. With retry, the transient failure
@@ -512,9 +507,9 @@ Harness-to-agent communication uses two channels depending on the phase:
   - Send health pings
   - Send iteration feedback instructions (on `needs_iteration`)
 
-**All `send-keys` payloads (except health pings) are wrapped with the Payload Delivery ACK
+**All `send-keys` payloads are wrapped with the Payload Delivery ACK
 Protocol** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) — the agent must ACK receipt before processing.
-Health pings are exempt because they have their own acknowledgment mechanism (`ping-ack`).
+This includes health pings, which use the same generic ACK mechanism as all other payloads.
 
 **Input corruption prevention:** All content delivery uses `TmuxCommunicator.sendKeys()`
 (ref.ap.4cY9sc1jEQEseLgR7nDq0.E) which sends text via TMUX `send-keys -l` (literal flag) —
@@ -542,7 +537,7 @@ on the instruction" from "agent never received the instruction."
 
 This creates a specific failure mode: instruction delivered via `send-keys` → agent never
 processes it → agent stays idle → `healthTimeouts.normalActivity` (30 min) → health ping → agent responds
-with `ping-ack` (it IS alive, just never got the instruction) → timeout resets → repeat
+with `ack-payload` (it IS alive, just never got the instruction) → timeout resets → repeat
 indefinitely. Health monitoring cannot break this loop because the agent is demonstrably
 alive.
 
@@ -597,7 +592,7 @@ Read instructions at /path/to/comm/in/instructions.md
 | User-question answers (ref.ap.NE4puAzULta4xlOLh5kfD.E) | **Yes** | Agent is waiting for this; non-delivery blocks progress |
 | Iteration feedback instructions | **Yes** | Critical for doer re-instruction after `needs_iteration` |
 | PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | **Yes** | Agent must produce PUBLIC.md before part can proceed |
-| Health pings | **No** | Pings have their own ACK mechanism (`ping-ack` — ref.ap.RJWVLgUGjO5zAwupNLhA0.E) |
+| Health pings | **Yes** | Pings use the same generic ACK mechanism as all other payloads — one fewer endpoint, one fewer code path (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) |
 
 **Bootstrap messages are NOT wrapped** — they are delivered as initial prompt arguments
 (not `send-keys`), and the `/signal/started` callback serves as their ACK
@@ -607,8 +602,7 @@ Read instructions at /path/to/comm/in/instructions.md
 
 All callers that deliver payloads to agents via `send-keys` (every "Yes" row in the scope
 table above) **must** use a single shared abstraction: `AckedPayloadSender`. This is the
-sole gateway for harness→agent `send-keys` communication (except health pings, which use
-their own mechanism).
+sole gateway for **all** harness→agent `send-keys` communication — including health pings.
 
 ```kotlin
 interface AckedPayloadSender {
@@ -629,8 +623,8 @@ interface AckedPayloadSender {
 **Why a shared abstraction:**
 
 - **DRY**: The wrap → send-keys → ACK-await → retry loop is identical across all use cases
-  (work instructions, Q&A answers, iteration feedback, PUBLIC.md re-instruction). Duplicating
-  this logic creates divergence risk.
+  (work instructions, Q&A answers, iteration feedback, PUBLIC.md re-instruction, health pings).
+  Duplicating this logic creates divergence risk.
 - **Single place for retry policy**: Timeout, retry count, and failure behavior are defined
   once. Callers don't re-implement the retry loop.
 - **Testability**: Each caller tests its own orchestration; `AckedPayloadSender` tests the
@@ -644,6 +638,7 @@ interface AckedPayloadSender {
 | `AgentFacadeImpl` via `sendPayloadAndAwaitSignal` — triggered by PartExecutor re-instruction (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) | Iteration feedback to doer/reviewer |
 | `AgentFacadeImpl` via `sendPayloadAndAwaitSignal` — triggered by PartExecutor PUBLIC.md re-instruction (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | Missing PUBLIC.md after done signal |
 | Q&A coordinator answer batch delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E) | After all queued questions are answered by `UserQuestionHandler` |
+| `AgentFacadeImpl` health-aware await loop — health ping (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) | When `lastActivityTimestamp` stale > `healthTimeouts.normalActivity` |
 
 ### ACK Flow
 
@@ -700,7 +695,7 @@ polls this field during the ACK-await phase.
 
 `POST /callback-shepherd/signal/ack-payload`
 
-Side-channel signal — same tier as `started`, `ping-ack`, `user-question`:
+Side-channel signal — same tier as `started`, `user-question`:
 - Updates `lastActivityTimestamp`
 - Clears `pendingPayloadAck` on `SessionEntry` when `payloadId` matches
 - Does **NOT** complete `signalDeferred` — the executor is in the ACK-await phase, not the
@@ -736,9 +731,8 @@ the agent should be able to ACK correctly from the wrapper alone.
 | Mechanism | Scope | Direction |
 |---|---|---|
 | `/signal/started` (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message (Phase 1) | Agent → Harness |
-| `/signal/ping-ack` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) | Health pings | Agent → Harness |
-| `/signal/ack-payload` (this section) | All `send-keys` payloads except pings (Phase 2) | Agent → Harness |
+| `/signal/ack-payload` (this section) | All `send-keys` payloads including health pings (Phase 2) | Agent → Harness |
 
-These three mechanisms together ensure **every** message from harness to agent has a
-confirmation path. The bootstrap has `/started`. Pings have `/ping-ack`. Everything else
-has `/ack-payload`.
+These two mechanisms together ensure **every** message from harness to agent has a
+confirmation path. The bootstrap has `/started`. Everything else (work instructions,
+Q&A answers, iteration feedback, health pings) has `/ack-payload`.

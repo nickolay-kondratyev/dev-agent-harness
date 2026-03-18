@@ -88,8 +88,7 @@ enum class DoneResult {
 |----------|---------|---------|
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
 | `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Executor detects `isQAPending` and **suppresses** health pings, compaction, and noActivityTimeout. Answers batch-delivered via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) by the Q&A coordinator (outside executor scope). |
-| `/callback-shepherd/signal/ping-ack` | Side-channel signal — proof of life only | Updates `lastActivityTimestamp`; facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) reads this inside `sendPayloadAndAwaitSignal` |
-| `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; facade's ACK-await phase reads this |
+| `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation, including health ping ACKs (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; facade's ACK-await phase reads this |
 
 All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
 (ref.ap.igClEuLMC0bn7mDrK41jQ.E) so the facade's health-aware await loop (inside
