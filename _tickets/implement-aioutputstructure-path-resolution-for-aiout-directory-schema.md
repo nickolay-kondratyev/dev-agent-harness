@@ -75,3 +75,7 @@ A class `AiOutputStructure` (package `com.glassthought.shepherd.core.filestructu
 **2026-03-18T21:10:45Z**
 
 Branch name with slashes (e.g., feature/my-ticket): Path.resolve() handles this natively — slashes create nested directories. This is the correct behavior since .ai_out/ is a local directory tree, and Files.createDirectories() will create intermediate dirs. Tests should verify this works correctly with slashes in branch names.
+
+**2026-03-18T21:29:27Z**
+
+Test clarification: add explicit test case for branch names with slashes. E.g., with branch='feature/my-ticket', planningPublicMd("plan") should resolve to .ai_out/feature/my-ticket/planning/plan/comm/out/PUBLIC.md. This converts the existing note about slash behavior into a concrete test assertion.
