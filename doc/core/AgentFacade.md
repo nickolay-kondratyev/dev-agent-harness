@@ -39,7 +39,7 @@ testability from day one, not retrofitted.
 - Raw interfaces directly — 5+ constructor params per executor, fakes must be coordinated to
   simulate realistic scenarios.
 
-**Tradeoff accepted:** Mild ISP tension (interface has ~5 methods spanning lifecycle, communication,
+**Tradeoff accepted:** Mild ISP tension (interface has 4 methods spanning lifecycle, communication,
 and state reading). Acceptable because: (a) all methods relate to "interacting with one agent," (b)
 the real impl delegates to focused components internally, (c) the primary consumer (PartExecutor)
 genuinely needs all of them.
@@ -365,7 +365,7 @@ must be injectable so tests can route everything through the test dispatcher.
 
 | Spec | Change |
 |------|--------|
-| `PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Dependencies: replace `SessionsState`, `SpawnTmuxAgentSessionUseCase` with `AgentFacade`. Health-aware await loop: `readContextWindowState` and `sendHealthPing` calls go through `AgentFacade`. |
+| `PartExecutor.md` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) | Dependencies: replace `SessionsState`, `SpawnTmuxAgentSessionUseCase` with `AgentFacade`. Health-aware await loop is internal to `sendPayloadAndAwaitSignal`. Done-boundary compaction checks use `readContextWindowState`. |
 | `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) | Ownership: `register` caller → `AgentFacadeImpl` (not PartExecutor). `lookup` caller → `ShepherdServer` (unchanged). Add note: "Internal to `AgentFacadeImpl`; not directly accessed by orchestration layer." |
 | `TicketShepherdCreator.md` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) | Wiring: create `AgentFacadeImpl` and pass to executor factories. |
 | `SpawnTmuxAgentSessionUseCase.md` (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) | Note: "Encapsulated by `AgentFacadeImpl.spawnAgent()`. Still describes the spawn flow accurately." |

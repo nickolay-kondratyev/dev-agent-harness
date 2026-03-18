@@ -467,8 +467,10 @@ makes new-transition coverage compiler-enforced.
 
 > **Note:** `Clock`, `HarnessTimeoutConfig`, `AgentUnresponsiveUseCase`, and
 > `ContextWindowStateReader` are constructor dependencies of `AgentFacadeImpl`, **not**
-> `PartExecutorImpl`. They support the health-aware await loop that lives inside
-> `sendPayloadAndAwaitSignal`.
+> `PartExecutorImpl`. `Clock`, `HarnessTimeoutConfig`, and `AgentUnresponsiveUseCase`
+> support the health-aware await loop inside `sendPayloadAndAwaitSignal`.
+> `ContextWindowStateReader` supports done-boundary compaction decisions via
+> `readContextWindowState` (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
 
 ### Testability
 
