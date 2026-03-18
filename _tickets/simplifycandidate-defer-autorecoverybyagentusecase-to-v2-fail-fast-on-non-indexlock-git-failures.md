@@ -1,11 +1,11 @@
 ---
 id: nid_bmf7mq2lrusqiibmubwtrvyy0_E
 title: "SIMPLIFY_CANDIDATE: Defer AutoRecoveryByAgentUseCase to V2 — fail-fast on non-index.lock git failures"
-status: open
+status: in_progress
 deps: []
 links: [nid_o9z2nk2kwqrxwa6g12rlyrihr_E]
 created_iso: 2026-03-18T14:58:24Z
-status_updated_iso: 2026-03-18T14:58:24Z
+status_updated_iso: 2026-03-18T15:30:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
