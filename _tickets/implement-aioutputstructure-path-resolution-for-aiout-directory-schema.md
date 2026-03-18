@@ -79,3 +79,7 @@ Branch name with slashes (e.g., feature/my-ticket): Path.resolve() handles this 
 **2026-03-18T21:29:27Z**
 
 Test clarification: add explicit test case for branch names with slashes. E.g., with branch='feature/my-ticket', planningPublicMd("plan") should resolve to .ai_out/feature/my-ticket/planning/plan/comm/out/PUBLIC.md. This converts the existing note about slash behavior into a concrete test assertion.
+
+**2026-03-18T21:37:41Z**
+
+WHY-NOT: AiOutputStructure does NOT include deletion logic for plan_flow.json (or any other file). plan_flow.json is 'deleted after conversion' per the spec, but that deletion belongs to SetupPlanUseCase/DetailedPlanningUseCase — not to AiOutputStructure. This class is purely about path resolution and directory creation.
