@@ -50,3 +50,7 @@ Uses the `Part`/`SubPart` data classes from ticket nid_m3cm8xizw5qhu1cu3454rca79
 **2026-03-18T21:20:15Z**
 
 Phase filtering: When iterating `parts: List<Part>`, filter by `phase == Phase.PLANNING` for the `planning/` tree and `phase == Phase.EXECUTION` for the `execution/` tree. Do NOT create planning directories for execution parts or vice versa.
+
+**2026-03-18T21:56:56Z**
+
+Add explicit negative test: verify __feedback/ directories are NOT created under planning/ sub-part directories. This guards against accidentally creating feedback dirs for planning parts.

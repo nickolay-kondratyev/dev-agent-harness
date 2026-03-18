@@ -87,3 +87,7 @@ WHY-NOT: AiOutputStructure does NOT include deletion logic for plan_flow.json (o
 **2026-03-18T21:51:40Z**
 
 WHY-NOT: No convenience method for individual feedback file paths (e.g., feedbackFilePath(partName, filename)). Callers compose from feedbackPendingDir(partName).resolve(filename) at call sites — keeping AiOutputStructure focused on directory-level path resolution. Individual file paths within feedback dirs are the caller's concern.
+
+**2026-03-18T21:56:58Z**
+
+Add concrete test case for feedbackDir family: feedbackPendingDir("backend") → .ai_out/my_branch/execution/backend/__feedback/pending/ — verifying __feedback/ sits at part level (between execution/${partName}/ and ${subPartName}/), not nested under a sub-part.

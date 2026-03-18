@@ -49,3 +49,7 @@ Test clarification: Add an explicit test assertion that TicketShepherd receives 
 **2026-03-18T21:51:42Z**
 
 TicketShepherd spec reference: ref.ap.P3po8Obvcjw4IXsSUSU91.E (doc/core/TicketShepherd.md) — read this to understand where AiOutputStructure slots into TicketShepherd constructor/usage.
+
+**2026-03-18T21:56:55Z**
+
+Test scope clarification: The body mentions verifying directory tree exists on disk — IGNORE that, it belongs in nid_fjod8du6esers3ajur2h7tvgx_E. This ticket's tests focus on: (1) AiOutputStructure correctly injected into ContextForAgentProviderImpl and TicketShepherd, (2) ensureStructure() called with correct parts list. Also: SetupPlanUseCase wiring (planFlowJson/planMd paths) is OUT OF SCOPE for this ticket — SetupPlanUseCase has its own tickets. This ticket is purely about AiOutputStructure construction + injection + ensureStructure() call.
