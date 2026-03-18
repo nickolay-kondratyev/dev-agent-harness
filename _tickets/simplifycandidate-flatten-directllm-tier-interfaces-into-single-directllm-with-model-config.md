@@ -1,11 +1,11 @@
 ---
 id: nid_ii9c7haj2romerfy785dlob8a_E
 title: "SIMPLIFY_CANDIDATE: Flatten DirectLLM tier interfaces into single DirectLLM with model config"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T00:06:22Z
-status_updated_iso: 2026-03-18T00:06:22Z
+status_updated_iso: 2026-03-18T13:43:42Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
