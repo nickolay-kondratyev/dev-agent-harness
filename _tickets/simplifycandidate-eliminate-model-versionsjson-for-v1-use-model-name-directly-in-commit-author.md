@@ -1,11 +1,11 @@
 ---
 id: nid_5mxkd9x6l1fx6ntbxd6mtkqr5_E
 title: "SIMPLIFY_CANDIDATE: Eliminate model-versions.json for V1 — use model name directly in commit author"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:10:06Z
-status_updated_iso: 2026-03-18T02:10:06Z
+status_updated_iso: 2026-03-18T13:36:11Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
