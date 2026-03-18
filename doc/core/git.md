@@ -58,8 +58,8 @@ When the slugified title exceeds `MAX_SLUG_LENGTH` (50 characters), it is trunca
 
 **Example**: `"implement-user-authentication-flow-with-oauth-and-session"` (57 chars)
 → words that fit in 43 chars: `"implement-user-authentication-flow-with"`
-→ hash of full slug: `a1b2c3...`
-→ result: `"implement-user-authentication-flow-with-a1b2c3"` (46 chars ≤ 50)
+→ hash of full slug: `c33b35...`
+→ result: `"implement-user-authentication-flow-with-c33b35"` (46 chars ≤ 50)
 
 **Why deterministic truncation instead of LLM compression**:
 - No LLM call at startup → no LLM-related startup failure mode
