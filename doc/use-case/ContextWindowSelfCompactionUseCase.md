@@ -41,6 +41,9 @@ Code's native auto-compaction handles it. This is less controlled but adequate f
 the granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) creates frequent done
 boundaries, making mid-task exhaustion rare.
 
+> **Background:** The "continue vs. restart" V2 design note that motivated this spec lives at
+> [`doc_v2/be-smart-on-whether-to-continue-or-restart.md`](../../doc_v2/be-smart-on-whether-to-continue-or-restart.md).
+
 ---
 
 ## Vocabulary

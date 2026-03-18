@@ -42,6 +42,8 @@ sealed class PartResult {
 `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) reads the `PartResult` and acts accordingly.
 All failure variants (`FailedWorkflow`, `FailedToConverge`, `AgentCrashed`) delegate to
 `FailedToExecutePlanUseCase` — prints red error, kills all sessions, exits non-zero. V1 has no automatic crash recovery.
+> **V2:** Automated cleanup via CLEANUP_AGENT — see [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../../doc_v2/FailedToExecutePlanUseCaseV2.md).
+
 Note: `FailedToConvergeUseCase` runs inside the executor (see PartExecutorImpl step 4, iteration
 budget exceeded), not in TicketShepherd.
 
@@ -300,6 +302,9 @@ TMUX session, waiting for the executor to send it new instructions.
    PUBLIC.md = broken agent — no retry).
    The doer's `SubPartStatus` **remains IN_PROGRESS** — the doer is not marked `COMPLETED`
    until the entire part completes (reviewer PASS). Then → start reviewer:
+   > **V2:** A verification gate (configurable build/test/lint commands) runs between doer
+   > done and reviewer spawn, creating a hard quality floor. See
+   > [`doc_v2/verification-gate.md`](../../doc_v2/verification-gate.md).
    a. First iteration: **spawn** reviewer TMUX session (via `agentFacade.spawnAgent()`) →
       assemble instructions (includes doer's `PUBLIC.md`) →
       `agentFacade.sendPayloadAndAwaitSignal(reviewerHandle, instructions)` → receive `AgentSignal`
@@ -523,3 +528,7 @@ If they somehow leak through, treat as a bug — fail with `IllegalStateExceptio
   facade's `sendPayloadAndAwaitSignal` (ref.ap.QCjutDexa2UBDaKB3jTcF.E), not the executor
   itself — cancelling the executor coroutine cancels the outstanding `sendPayloadAndAwaitSignal`
   call as well.
+
+> **V2:** On part exit, PUBLIC.md files from all sub-parts may be compressed into a rolled-up
+> summary so the next part receives leaner context. See
+> [`doc_v2/roll-up-PUBLIC-when-we-exist-part.md`](../../doc_v2/roll-up-PUBLIC-when-we-exist-part.md).

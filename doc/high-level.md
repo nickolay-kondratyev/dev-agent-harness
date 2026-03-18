@@ -554,3 +554,7 @@ layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6L
 | [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md) | V2 harness-controlled emergency interrupt compaction (deferred from V1) |
 | [`doc_v2/idle-session-recovery.md`](../doc_v2/idle-session-recovery.md) | V2 automatic respawn of dead idle sessions |
 | [`doc_v2/user-question-handler-future-strategies.md`](../doc_v2/user-question-handler-future-strategies.md) | V2+ UserQuestionHandler strategies (LLM, Slack, timeout-with-fallback) |
+| [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../doc_v2/FailedToExecutePlanUseCaseV2.md) | V2 automated cleanup on plan execution failure — CLEANUP_AGENT, git rollback to merge-base, ticket reopen |
+| [`doc_v2/be-smart-on-whether-to-continue-or-restart.md`](../doc_v2/be-smart-on-whether-to-continue-or-restart.md) | V2 background note on continue-vs-restart decision (resolved by ContextWindowSelfCompactionUseCase) |
+| [`doc_v2/roll-up-PUBLIC-when-we-exist-part.md`](../doc_v2/roll-up-PUBLIC-when-we-exist-part.md) | V2 PUBLIC.md roll-up on part exit — compress sub-part PUBLIC.mds so next part gets leaner context |
+| [`doc_v2/verification-gate.md`](../doc_v2/verification-gate.md) | V2 verification gate — configurable build/test/lint commands between doer done and reviewer spawn |

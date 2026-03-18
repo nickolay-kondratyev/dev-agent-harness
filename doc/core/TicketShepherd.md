@@ -26,6 +26,8 @@ creates executors for each part, runs them in sequence, and handles the results.
       - `FailedToConverge` → delegate to `FailedToExecutePlanUseCase(partResult)` (user already chose to abort inside executor's `FailedToConvergeUseCase` call)
       - `AgentCrashed` → delegate to `FailedToExecutePlanUseCase(partResult)` (prints red error to
         console, kills all sessions, exits non-zero). V1: no automatic recovery.
+        > **V2:** Automated cleanup via CLEANUP_AGENT — commits work, rolls back to merge-base,
+        > reopens ticket. See [`doc_v2/FailedToExecutePlanUseCaseV2.md`](../../doc_v2/FailedToExecutePlanUseCaseV2.md).
 
 `FailedToExecutePlanUseCase` receives a `PartResult` sealed class carrying enough context
 for formatted error messages and gives V2 the type information needed for different
