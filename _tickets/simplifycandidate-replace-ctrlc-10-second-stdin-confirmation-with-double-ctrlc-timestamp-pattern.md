@@ -1,11 +1,11 @@
 ---
 id: nid_hgi8ohge4qlpn28g0iyoqrk5b_E
 title: "SIMPLIFY_CANDIDATE: Replace Ctrl+C 10-second stdin confirmation with double-Ctrl+C timestamp pattern"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:09:58Z
-status_updated_iso: 2026-03-18T02:09:58Z
+status_updated_iso: 2026-03-18T13:16:13Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
