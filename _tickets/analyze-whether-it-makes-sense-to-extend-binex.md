@@ -1,11 +1,11 @@
 ---
 id: nid_rbk6jzzqoz9qvkr3l4s7hgnwk_E
 title: "Analyze whether it makes sense to extend binex"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T01:42:39Z
-status_updated_iso: 2026-03-18T01:42:39Z
+status_updated_iso: 2026-03-18T01:50:07Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
