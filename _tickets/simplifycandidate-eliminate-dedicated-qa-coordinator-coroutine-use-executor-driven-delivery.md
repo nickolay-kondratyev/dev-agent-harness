@@ -1,11 +1,11 @@
 ---
 id: nid_pcrrocwj7pkx55nnvmbc2c310_E
 title: "SIMPLIFY_CANDIDATE: Eliminate dedicated Q&A coordinator coroutine — use executor-driven delivery"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:10:04Z
-status_updated_iso: 2026-03-18T15:10:04Z
+status_updated_iso: 2026-03-18T15:26:10Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
