@@ -1,11 +1,11 @@
 ---
 id: nid_zgw4sjklj66xn06k7lk5h170b_E
 title: "with-planning.json structure differs from spec (planningSubParts vs planningParts)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:03:04Z
-status_updated_iso: 2026-03-18T15:03:04Z
+status_updated_iso: 2026-03-18T15:27:43Z
 type: bug
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
