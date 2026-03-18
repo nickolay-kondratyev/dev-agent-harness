@@ -8,7 +8,7 @@ import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessionId
 import com.glassthought.shepherd.core.agent.sessionresolver.AgentSessionIdResolver
-import kotlinx.coroutines.Dispatchers
+import com.glassthought.shepherd.core.infra.DispatcherProvider
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
@@ -28,7 +28,7 @@ import kotlin.time.Duration.Companion.milliseconds
  *
  * ref.ap.gCgRdmWd9eTGXPbHJvyxI.E
  */
-interface GuidScanner {
+fun interface GuidScanner {
     /** Returns all JSONL [Path]s whose content contains [guid]. */
     suspend fun scan(guid: HandshakeGuid): List<Path>
 }
@@ -37,8 +37,11 @@ interface GuidScanner {
  * Filesystem-backed [GuidScanner]: walks [claudeProjectsDir] recursively
  * for `*.jsonl` files and returns those containing the GUID string.
  */
-private class FilesystemGuidScanner(private val claudeProjectsDir: Path) : GuidScanner {
-    override suspend fun scan(guid: HandshakeGuid): List<Path> = withContext(Dispatchers.IO) {
+private class FilesystemGuidScanner(
+    private val claudeProjectsDir: Path,
+    private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+) : GuidScanner {
+    override suspend fun scan(guid: HandshakeGuid): List<Path> = withContext(dispatcherProvider.io()) {
         Files.walk(claudeProjectsDir)
             .use { stream ->
                 stream
@@ -73,6 +76,7 @@ class ClaudeCodeAgentSessionIdResolver(
     outFactory: OutFactory,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
+    dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
 ) : AgentSessionIdResolver {
 
     // Internal constructor allows tests to inject a fake GuidScanner.
@@ -93,7 +97,7 @@ class ClaudeCodeAgentSessionIdResolver(
     private val out = outFactory.getOutForClass(ClaudeCodeAgentSessionIdResolver::class)
 
     // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
-    private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir)
+    private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider)
 
     override suspend fun resolveSessionId(guid: HandshakeGuid, model: String): ResumableAgentSessionId {
         out.info(

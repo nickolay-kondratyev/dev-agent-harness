@@ -17,7 +17,7 @@ import java.nio.file.Path
  * 2. **Required env vars**: All [Constants.REQUIRED_ENV_VARS.ALL] are present and non-blank.
  */
 @AnchorPoint("ap.A8WqG9oplNTpsW7YqoIyX.E")
-interface EnvironmentValidator {
+fun interface EnvironmentValidator {
   /**
    * Validates the runtime environment. Throws [IllegalStateException] on failure.
    * Non-suspend — runs before any coroutine infrastructure.
@@ -46,12 +46,10 @@ class EnvironmentValidatorImpl(
   }
 
   private fun validateDockerEnvironment() {
-    if (!Files.exists(dockerEnvFilePath)) {
-      throw IllegalStateException(
-        "TICKET_SHEPHERD must run inside a Docker container. " +
-          "Docker sentinel file not found at [$dockerEnvFilePath]. " +
-          "Agents are spawned with --dangerously-skip-permissions which is only safe inside a container."
-      )
+    check(Files.exists(dockerEnvFilePath)) {
+      "TICKET_SHEPHERD must run inside a Docker container. " +
+        "Docker sentinel file not found at [$dockerEnvFilePath]. " +
+        "Agents are spawned with --dangerously-skip-permissions which is only safe inside a container."
     }
   }
 
@@ -60,10 +58,8 @@ class EnvironmentValidatorImpl(
       envVarReader(envVarName).isNullOrBlank()
     }
 
-    if (missing.isNotEmpty()) {
-      throw IllegalStateException(
-        "Required environment variables are missing or blank: $missing"
-      )
+    check(missing.isEmpty()) {
+      "Required environment variables are missing or blank: $missing"
     }
   }
 }

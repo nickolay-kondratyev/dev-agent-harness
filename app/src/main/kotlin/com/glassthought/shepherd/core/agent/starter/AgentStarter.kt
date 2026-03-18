@@ -8,7 +8,7 @@ import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
  * Implementations are agent-type-specific (e.g., Claude Code CLI, PI agent)
  * and are pre-configured with all necessary flags via constructor injection.
  */
-interface AgentStarter {
+fun interface AgentStarter {
 
     /**
      * Returns the fully constructed shell command to launch the agent.

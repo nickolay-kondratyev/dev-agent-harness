@@ -75,6 +75,10 @@ class TmuxCommunicatorImpl(
 ) : TmuxCommunicator {
     private val out = outFactory.getOutForClass(TmuxCommunicatorImpl::class)
 
+    companion object {
+        private const val SEND_KEYS = "send-keys"
+    }
+
     override suspend fun sendKeys(paneTarget: String, text: String) {
         out.info(
             "sending_keys_to_tmux_pane",
@@ -84,11 +88,11 @@ class TmuxCommunicatorImpl(
 
         // [-l]: send text literally so words like "Space", "Enter", "Escape" are NOT
         // interpreted as tmux key names.
-        commandRunner.run("send-keys", "-t", paneTarget, "-l", text)
+        commandRunner.run(SEND_KEYS, "-t", paneTarget, "-l", text)
             .orThrow("send literal keys to tmux pane [$paneTarget]")
 
         // Send Enter as a separate command (NOT literal — we want the actual key press).
-        commandRunner.run("send-keys", "-t", paneTarget, "Enter")
+        commandRunner.run(SEND_KEYS, "-t", paneTarget, "Enter")
             .orThrow("send Enter to tmux pane [$paneTarget]")
     }
 
@@ -99,7 +103,7 @@ class TmuxCommunicatorImpl(
             Val(keys, ValType.SHELL_COMMAND),
         )
 
-        commandRunner.run("send-keys", "-t", paneTarget, keys)
+        commandRunner.run(SEND_KEYS, "-t", paneTarget, keys)
             .orThrow("send raw keys to tmux pane [$paneTarget]")
     }
 }

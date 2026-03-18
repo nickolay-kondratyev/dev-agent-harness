@@ -23,7 +23,7 @@ import com.asgard.core.annotation.AnchorPoint
  * side resolver.
  */
 @AnchorPoint("ap.D3ICqiFdFFgbFIPLMTYdoyss.E")
-interface AgentSessionIdResolver {
+fun interface AgentSessionIdResolver {
 
     /**
      * Resolves the session ID for the agent session that contains the given GUID.

@@ -1,6 +1,6 @@
 package com.glassthought.shepherd.core.agent.tmux.util
 
-import kotlinx.coroutines.Dispatchers
+import com.glassthought.shepherd.core.infra.DispatcherProvider
 import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 
@@ -8,9 +8,11 @@ import kotlinx.coroutines.withContext
  * Executes tmux CLI commands and returns a [ProcessResult].
  *
  * Shared infrastructure for [com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager] and [com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl].
- * Runs commands on [Dispatchers.IO] to avoid blocking the coroutine dispatcher.
+ * Runs commands on the IO dispatcher provided by [dispatcherProvider].
  */
-class TmuxCommandRunner {
+class TmuxCommandRunner(
+    private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+) {
 
     /**
      * Runs a tmux command with the given arguments and returns the full [ProcessResult].
@@ -21,7 +23,7 @@ class TmuxCommandRunner {
      * @return [ProcessResult] containing exit code, stdout, and stderr.
      */
     suspend fun run(vararg args: String): ProcessResult {
-        return withContext(Dispatchers.IO) {
+        return withContext(dispatcherProvider.io()) {
             val process = ProcessBuilder("tmux", *args).start()
 
             // Read stdout and stderr concurrently — sequential reads risk deadlock if one

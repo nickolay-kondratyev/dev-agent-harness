@@ -4,7 +4,7 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
-import kotlinx.coroutines.Dispatchers
+import com.glassthought.shepherd.core.infra.DispatcherProvider
 import kotlinx.coroutines.withContext
 import java.nio.file.Files
 import java.nio.file.Path
@@ -21,9 +21,17 @@ import kotlin.io.path.readText
  * See ContextForAgentProvider.md (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for the authoritative
  * concatenation tables.
  */
-class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvider {
+class ContextForAgentProviderImpl(
+    outFactory: OutFactory,
+    private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+) : ContextForAgentProvider {
 
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
+
+    companion object {
+        /** Markdown horizontal rule separator used to delimit instruction sections. */
+        private const val SECTION_SEPARATOR = "\n\n---\n\n"
+    }
 
     override suspend fun assembleInstructions(
         request: AgentInstructionRequest,
@@ -280,14 +288,14 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         return severities
             .map { severity -> feedbackDir.resolve(status).resolve(severity) }
             .flatMap { dir -> collectMarkdownFilesInDir(dir) }
-            .joinToString("\n\n---\n\n")
+            .joinToString(SECTION_SEPARATOR)
     }
 
     /**
      * Reads all `.md` files in a directory and returns their content concatenated.
      */
     private fun collectFeedbackFilesInDir(dir: Path): String =
-        collectMarkdownFilesInDir(dir).joinToString("\n\n---\n\n")
+        collectMarkdownFilesInDir(dir).joinToString(SECTION_SEPARATOR)
 
     private fun collectMarkdownFilesInDir(dir: Path): List<String> =
         if (Files.exists(dir) && Files.isDirectory(dir)) {
@@ -343,10 +351,10 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
     // -- File writing --
 
     private suspend fun writeInstructionsFile(outputDir: Path, sections: List<String>): Path =
-        withContext(Dispatchers.IO) {
+        withContext(dispatcherProvider.io()) {
             Files.createDirectories(outputDir)
             val instructionsPath = outputDir.resolve("instructions.md")
-            instructionsPath.toFile().writeText(sections.joinToString("\n\n---\n\n"))
+            instructionsPath.toFile().writeText(sections.joinToString(SECTION_SEPARATOR))
 
             out.info(
                 "instructions_file_written",

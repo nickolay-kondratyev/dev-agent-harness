@@ -22,7 +22,7 @@ import java.nio.file.Path
  * @see InstructionRenderers for dynamic rendering functions
  * @see ProtocolVocabulary for protocol keyword constants
  */
-interface ContextForAgentProvider {
+fun interface ContextForAgentProvider {
 
     /**
      * Assembles the instruction file for an agent.
