@@ -2,7 +2,7 @@
 id: nid_o5azwgdl76nnofttpt7ljgkua_E
 title: "Implement CurrentState initialization from WorkflowDefinition + atomic flush to disk"
 status: open
-deps: [nid_m3cm8xizw5qhu1cu3454rca79_E, nid_kavqh23pdfq56cdli0fv4sm3u_E]
+deps: [nid_m3cm8xizw5qhu1cu3454rca79_E, nid_kavqh23pdfq56cdli0fv4sm3u_E, nid_9kic96nh6mb8r5legcsvt46uy_E]
 links: []
 created_iso: 2026-03-18T18:03:26Z
 status_updated_iso: 2026-03-18T18:03:26Z
@@ -82,3 +82,9 @@ Implement query methods on CurrentState for part-level status. Part status is **
 - `doc/core/TicketShepherdCreator.md` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — wiring context
 - `doc/schema/ai-out-directory.md` (ref.ap.BXQlLDTec7cVVOrzXWfR7.E) — harness_private/ directory
 
+
+## Notes
+
+**2026-03-18T20:51:14Z**
+
+Added dep on nid_9kic96nh6mb8r5legcsvt46uy_E (AiOutputStructure path resolution). The flush-to-disk logic MUST use AiOutputStructure.currentStateJson() for the output path — NOT compute it independently. This prevents dual path derivation sources.
