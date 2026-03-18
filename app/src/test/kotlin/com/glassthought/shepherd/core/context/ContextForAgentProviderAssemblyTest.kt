@@ -1,7 +1,6 @@
 package com.glassthought.shepherd.core.context
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import java.nio.file.Files
@@ -25,10 +24,12 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         Files.createDirectories(planMdPath.parent)
         Files.writeString(planMdPath, "# Plan\n\nStep 1: Do the thing.")
 
-        val request = baseRequest.copy(planMdPath = planMdPath)
+        val request = baseRequest.copy(
+            executionContext = baseRequest.executionContext.copy(planMdPath = planMdPath),
+        )
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN includes PLAN.md content") {
                 text shouldContain "Step 1: Do the thing"
@@ -42,7 +43,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN does NOT include plan section header") {
                 text shouldNotContain "# Plan\n"
@@ -56,7 +57,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN does NOT include pushback guidance (first iteration)") {
                 text shouldNotContain "Handling Reviewer Feedback"
@@ -83,7 +84,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         )
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN includes pushback guidance") {
                 text shouldContain "Handling Reviewer Feedback"
@@ -101,7 +102,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.REVIEWER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN includes structured feedback format guidance") {
                 text shouldContain "Structured Feedback Format"
@@ -127,7 +128,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.REVIEWER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN includes addressed feedback header") {
                 text shouldContain "Addressed Feedback"
@@ -148,10 +149,14 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         Files.createDirectories(priorPublicMd.parent)
         Files.writeString(priorPublicMd, "# Prior Work\n\nSet up database schema.")
 
-        val request = baseRequest.copy(priorPublicMdPaths = listOf(priorPublicMd))
+        val request = baseRequest.copy(
+            executionContext = baseRequest.executionContext.copy(
+                priorPublicMdPaths = listOf(priorPublicMd),
+            ),
+        )
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(AgentRole.DOER, request).readText()
+            val text = provider.assembleInstructions(request).readText()
 
             it("THEN includes prior PUBLIC.md content") {
                 text shouldContain "Set up database schema"
@@ -169,7 +174,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN the file is written") {
-            val path = provider.assembleInstructions(AgentRole.DOER, request)
+            val path = provider.assembleInstructions(request)
 
             it("THEN the file is named instructions.md") {
                 path.fileName.toString() shouldContain "instructions.md"
@@ -181,52 +186,60 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
-    // ── requireNotNull validation guard tests ────────────────────────────────
+    // -- PrivateMd tests --
 
-    describe("GIVEN a DOER request with null partName") {
+    describe("GIVEN a doer request with PRIVATE.md present") {
         val provider = ContextForAgentProvider.standard(outFactory)
-        val tempDir = Files.createTempDirectory("assembly-guard-doer-test")
-        val request = ContextTestFixtures.doerInstructionRequest(tempDir).copy(partName = null)
+        val tempDir = Files.createTempDirectory("assembly-privatemd-present-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
-        it("THEN assembleInstructions throws IllegalArgumentException") {
-            shouldThrow<IllegalArgumentException> {
-                provider.assembleInstructions(AgentRole.DOER, request)
+        // outputDir = tempDir/comm/in -> parent.parent = tempDir
+        val privateMdDir = tempDir.resolve("private")
+        Files.createDirectories(privateMdDir)
+        Files.writeString(privateMdDir.resolve("PRIVATE.md"), "Session context from prior run.")
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN output contains PRIVATE.md content") {
+                text shouldContain "Session context from prior run"
+            }
+
+            it("THEN output contains Prior Session Context header") {
+                text shouldContain "Prior Session Context (PRIVATE.md)"
             }
         }
     }
 
-    describe("GIVEN a REVIEWER request with null partName") {
+    describe("GIVEN a doer request without PRIVATE.md") {
         val provider = ContextForAgentProvider.standard(outFactory)
-        val tempDir = Files.createTempDirectory("assembly-guard-reviewer-test")
-        val request = ContextTestFixtures.reviewerInstructionRequest(tempDir).copy(partName = null)
+        val tempDir = Files.createTempDirectory("assembly-privatemd-absent-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
-        it("THEN assembleInstructions throws IllegalArgumentException") {
-            shouldThrow<IllegalArgumentException> {
-                provider.assembleInstructions(AgentRole.REVIEWER, request)
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN output does NOT contain Prior Session Context header") {
+                text shouldNotContain "Prior Session Context"
             }
         }
     }
 
-    describe("GIVEN a PLANNER request with null planJsonOutputPath") {
+    describe("GIVEN a planner request with PRIVATE.md present") {
         val provider = ContextForAgentProvider.standard(outFactory)
-        val tempDir = Files.createTempDirectory("assembly-guard-planner-test")
-        val request = ContextTestFixtures.plannerRequest(tempDir).copy(planJsonOutputPath = null)
+        val tempDir = Files.createTempDirectory("assembly-planner-privatemd-test")
+        val request = ContextTestFixtures.plannerRequest(tempDir)
 
-        it("THEN assembleInstructions throws IllegalArgumentException") {
-            shouldThrow<IllegalArgumentException> {
-                provider.assembleInstructions(AgentRole.PLANNER, request)
-            }
-        }
-    }
+        // outputDir = tempDir/planner/comm/in -> parent.parent = tempDir/planner
+        val privateMdDir = tempDir.resolve("planner/private")
+        Files.createDirectories(privateMdDir)
+        Files.writeString(privateMdDir.resolve("PRIVATE.md"), "Planner session context.")
 
-    describe("GIVEN a PLAN_REVIEWER request with null planJsonContent") {
-        val provider = ContextForAgentProvider.standard(outFactory)
-        val tempDir = Files.createTempDirectory("assembly-guard-planreviewer-test")
-        val request = ContextTestFixtures.planReviewerRequest(tempDir).copy(planJsonContent = null)
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
 
-        it("THEN assembleInstructions throws IllegalArgumentException") {
-            shouldThrow<IllegalArgumentException> {
-                provider.assembleInstructions(AgentRole.PLAN_REVIEWER, request)
+            it("THEN output contains PRIVATE.md content") {
+                text shouldContain "Planner session context"
             }
         }
     }

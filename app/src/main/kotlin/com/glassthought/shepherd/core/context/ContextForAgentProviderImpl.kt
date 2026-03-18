@@ -13,10 +13,10 @@ import kotlin.io.path.readText
 /**
  * Default implementation of [ContextForAgentProvider].
  *
- * `assembleInstructions` dispatches on [AgentRole] to pick the correct internal section plan.
- * Each private `build*Sections()` method uses `buildList` to show the concatenation order as a
- * readable linear sequence — no scattered role-dispatching conditionals. The `buildList` IS the
- * documentation of the concatenation order.
+ * `assembleInstructions` dispatches on the sealed [AgentInstructionRequest] type to pick the
+ * correct internal section plan. Each private `build*Sections()` method uses `buildList` to show
+ * the concatenation order as a readable linear sequence — no scattered role-dispatching
+ * conditionals. The `buildList` IS the documentation of the concatenation order.
  *
  * See ContextForAgentProvider.md (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for the authoritative
  * concatenation tables.
@@ -26,42 +26,45 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
 
     override suspend fun assembleInstructions(
-        role: AgentRole,
-        request: UnifiedInstructionRequest,
+        request: AgentInstructionRequest,
     ): Path {
         out.debug("assembling_instructions") {
             buildList {
-                add(Val(role.name, ValType.STRING_USER_AGNOSTIC))
+                add(Val(request::class.simpleName ?: "Unknown", ValType.STRING_USER_AGNOSTIC))
                 add(Val(request.iterationNumber.toString(), ValType.STRING_USER_AGNOSTIC))
-                request.partName?.let { add(Val(it, ValType.STRING_USER_AGNOSTIC)) }
+                request.executionContextOrNull?.partName?.let {
+                    add(Val(it, ValType.STRING_USER_AGNOSTIC))
+                }
             }
         }
 
-        val sections = when (role) {
-            AgentRole.DOER -> buildDoerSections(request)
-            AgentRole.REVIEWER -> buildReviewerSections(request)
-            AgentRole.PLANNER -> buildPlannerSections(request)
-            AgentRole.PLAN_REVIEWER -> buildPlanReviewerSections(request)
+        val sections = when (request) {
+            is AgentInstructionRequest.DoerRequest -> buildDoerSections(request)
+            is AgentInstructionRequest.ReviewerRequest -> buildReviewerSections(request)
+            is AgentInstructionRequest.PlannerRequest -> buildPlannerSections(request)
+            is AgentInstructionRequest.PlanReviewerRequest -> buildPlanReviewerSections(request)
         }
         return writeInstructionsFile(request.outputDir, sections)
     }
 
-    // ── Doer ──────────────────────────────────────────────────────────────────
+    // -- Doer --
 
-    private fun buildDoerSections(request: UnifiedInstructionRequest): List<String> = buildList {
+    private fun buildDoerSections(request: AgentInstructionRequest.DoerRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
-        // 2. Part context
+        // 2. PrivateMd (silently skipped if absent)
+        privateMdSection(request.outputDir)?.let { add(it) }
+        // 3. Part context
         add(InstructionRenderers.partContext(
-            requireNotNull(request.partName) { "partName required for DOER role" },
-            requireNotNull(request.partDescription) { "partDescription required for DOER role" },
+            request.executionContext.partName,
+            request.executionContext.partDescription,
         ))
-        // 3. Ticket
+        // 4. Ticket
         add(ticketSection(request.ticketContent))
-        // 4. PLAN.md (with-planning only)
-        request.planMdPath?.let { add(planSection(it)) }
-        // 5. Prior PUBLIC.md files
-        addAll(priorPublicMdSections(request.priorPublicMdPaths))
+        // 5. PLAN.md (with-planning only)
+        request.executionContext.planMdPath?.let { add(planSection(it)) }
+        // 6. Prior PUBLIC.md files
+        addAll(priorPublicMdSections(request.executionContext.priorPublicMdPaths))
         // 7. Iteration feedback (iteration > 1): reviewer's PUBLIC.md + pushback guidance
         if (request.iterationNumber > 1 && request.reviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.reviewerPublicMdPath))
@@ -80,37 +83,39 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         )
     }
 
-    // ── Reviewer ──────────────────────────────────────────────────────────────
+    // -- Reviewer --
 
-    private fun buildReviewerSections(request: UnifiedInstructionRequest): List<String> = buildList {
+    private fun buildReviewerSections(request: AgentInstructionRequest.ReviewerRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
-        // 2. Part context
+        // 2. PrivateMd (silently skipped if absent)
+        privateMdSection(request.outputDir)?.let { add(it) }
+        // 3. Part context
         add(InstructionRenderers.partContext(
-            requireNotNull(request.partName) { "partName required for REVIEWER role" },
-            requireNotNull(request.partDescription) { "partDescription required for REVIEWER role" },
+            request.executionContext.partName,
+            request.executionContext.partDescription,
         ))
-        // 3. Ticket
+        // 4. Ticket
         add(ticketSection(request.ticketContent))
-        // 4. PLAN.md (with-planning only)
-        request.planMdPath?.let { add(planSection(it)) }
-        // 5. Prior PUBLIC.md files
-        addAll(priorPublicMdSections(request.priorPublicMdPaths))
-        // 6. Doer's PUBLIC.md for review
-        request.doerPublicMdPath?.let { add(doerOutputForReviewerSection(it)) }
-        // 6a. Structured feedback format
+        // 5. PLAN.md (with-planning only)
+        request.executionContext.planMdPath?.let { add(planSection(it)) }
+        // 6. Prior PUBLIC.md files
+        addAll(priorPublicMdSections(request.executionContext.priorPublicMdPaths))
+        // 7. Doer's PUBLIC.md for review
+        add(doerOutputForReviewerSection(request.doerPublicMdPath))
+        // 7a. Structured feedback format
         add(InstructionText.REVIEWER_FEEDBACK_FORMAT)
-        // 6b–6d. Feedback state (iteration > 1)
-        if (request.iterationNumber > 1 && request.feedbackDir != null) {
+        // 7b-7d. Feedback state (iteration > 1)
+        if (request.iterationNumber > 1) {
             addAll(feedbackStateSections(request.feedbackDir))
         }
-        // 6e. Feedback writing instructions
+        // 7e. Feedback writing instructions
         add(InstructionText.FEEDBACK_WRITING_INSTRUCTIONS)
-        // 7. Output paths
+        // 8. Output paths
         add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
-        // 8. PUBLIC.md writing guidelines
+        // 9. PUBLIC.md writing guidelines
         add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
-        // 9. Callback script usage
+        // 10. Callback script usage
         add(
             InstructionRenderers.callbackScriptUsage(
                 forReviewer = true,
@@ -119,39 +124,34 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         )
     }
 
-    // ── Planner ───────────────────────────────────────────────────────────────
+    // -- Planner --
 
-    private fun buildPlannerSections(request: UnifiedInstructionRequest): List<String> = buildList {
-        val planJsonOutputPath = requireNotNull(request.planJsonOutputPath) {
-            "planJsonOutputPath required for PLANNER role"
-        }
-        val planMdOutputPath = requireNotNull(request.planMdOutputPath) {
-            "planMdOutputPath required for PLANNER role"
-        }
-
+    private fun buildPlannerSections(request: AgentInstructionRequest.PlannerRequest): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
-        // 2. Ticket
+        // 2. PrivateMd (silently skipped if absent)
+        privateMdSection(request.outputDir)?.let { add(it) }
+        // 3. Ticket
         add(ticketSection(request.ticketContent))
-        // 3. Role catalog
+        // 4. Role catalog
         add(InstructionRenderers.roleCatalog(request.roleCatalogEntries))
-        // 4. Available agent types & models
+        // 5. Available agent types & models
         add(InstructionText.AGENT_TYPES_AND_MODELS)
-        // 5. Plan format instructions
+        // 6. Plan format instructions
         add(InstructionText.PLAN_FORMAT_INSTRUCTIONS)
-        // 6. Reviewer feedback (iteration > 1)
+        // 7. Reviewer feedback (iteration > 1)
         if (request.iterationNumber > 1 && request.planReviewerPublicMdPath != null) {
             add(reviewerFeedbackForDoerSection(request.planReviewerPublicMdPath))
         }
-        // 7. plan_flow.json output path
-        add(planJsonOutputPathSection(planJsonOutputPath))
-        // 8. PLAN.md output path
-        add(planMdOutputPathSection(planMdOutputPath))
-        // 9. PUBLIC.md output path
+        // 8. plan_flow.json output path
+        add(planJsonOutputPathSection(request.planJsonOutputPath))
+        // 9. PLAN.md output path
+        add(planMdOutputPathSection(request.planMdOutputPath))
+        // 10. PUBLIC.md output path
         add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
-        // 10. PUBLIC.md writing guidelines
+        // 11. PUBLIC.md writing guidelines
         add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
-        // 11. Callback script usage (includes validate-plan query)
+        // 12. Callback script usage (includes validate-plan query)
         add(
             InstructionRenderers.callbackScriptUsage(
                 forReviewer = false,
@@ -160,40 +160,34 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         )
     }
 
-    // ── Plan Reviewer ─────────────────────────────────────────────────────────
+    // -- Plan Reviewer --
 
-    private fun buildPlanReviewerSections(request: UnifiedInstructionRequest): List<String> = buildList {
-        val planJsonContent = requireNotNull(request.planJsonContent) {
-            "planJsonContent required for PLAN_REVIEWER role"
-        }
-        val planMdContent = requireNotNull(request.planMdContent) {
-            "planMdContent required for PLAN_REVIEWER role"
-        }
-        val plannerPublicMdPath = requireNotNull(request.plannerPublicMdPath) {
-            "plannerPublicMdPath required for PLAN_REVIEWER role"
-        }
-
+    private fun buildPlanReviewerSections(
+        request: AgentInstructionRequest.PlanReviewerRequest,
+    ): List<String> = buildList {
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
-        // 2. Ticket
+        // 2. PrivateMd (silently skipped if absent)
+        privateMdSection(request.outputDir)?.let { add(it) }
+        // 3. Ticket
         add(ticketSection(request.ticketContent))
-        // 3. plan_flow.json content
-        add(planJsonContentSection(planJsonContent))
-        // 4. PLAN.md content
-        add(planMdContentSection(planMdContent))
-        // 5. Available agent types & models
+        // 4. plan_flow.json content
+        add(planJsonContentSection(request.planJsonContent))
+        // 5. PLAN.md content
+        add(planMdContentSection(request.planMdContent))
+        // 6. Available agent types & models
         add(InstructionText.AGENT_TYPES_AND_MODELS)
-        // 6. Planner's PUBLIC.md
-        add(plannerPublicMdSection(plannerPublicMdPath))
-        // 7. Iteration feedback (iteration > 1)
+        // 7. Planner's PUBLIC.md
+        add(plannerPublicMdSection(request.plannerPublicMdPath))
+        // 8. Iteration feedback (iteration > 1)
         if (request.iterationNumber > 1 && request.priorPlanReviewerPublicMdPath != null) {
             add(priorPlanReviewerFeedbackSection(request.priorPlanReviewerPublicMdPath))
         }
-        // 8. PUBLIC.md output path
+        // 9. PUBLIC.md output path
         add(InstructionRenderers.publicMdOutputPath(request.publicMdOutputPath))
-        // 9. PUBLIC.md writing guidelines
+        // 10. PUBLIC.md writing guidelines
         add(InstructionText.PUBLIC_MD_WRITING_GUIDELINES)
-        // 10. Callback script usage (includes validate-plan query)
+        // 11. Callback script usage (includes validate-plan query)
         add(
             InstructionRenderers.callbackScriptUsage(
                 forReviewer = true,
@@ -202,11 +196,25 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
         )
     }
 
-    // ── Per-section private methods ──────────────────────────────────────────
+    // -- Per-section private methods --
     // Each reads a file or returns formatted text. Named to match the spec's section names.
 
     private fun roleDefinitionSection(role: RoleDefinition): String =
         "# Role: ${role.name}\n\n${role.filePath.readText()}"
+
+    /**
+     * Reads `${sub_part}/private/PRIVATE.md` if it exists.
+     * outputDir = `${sub_part}/comm/in` -> parent.parent = `${sub_part}`
+     * Returns null (silently skipped) when the file does not exist.
+     */
+    private fun privateMdSection(outputDir: Path): String? {
+        val privateMdPath = outputDir.parent.parent.resolve("private/PRIVATE.md")
+        return if (Files.exists(privateMdPath)) {
+            "# Prior Session Context (PRIVATE.md)\n\n${privateMdPath.readText()}"
+        } else {
+            null
+        }
+    }
 
     private fun ticketSection(content: String): String =
         "# Ticket\n\n$content"
@@ -294,7 +302,7 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
             emptyList()
         }
 
-    // ── Planner-specific sections ────────────────────────────────────────────
+    // -- Planner-specific sections --
 
     private fun planJsonOutputPathSection(path: Path): String = """
         ## plan_flow.json Output Path
@@ -322,7 +330,17 @@ class ContextForAgentProviderImpl(outFactory: OutFactory) : ContextForAgentProvi
     private fun priorPlanReviewerFeedbackSection(path: Path): String =
         "# Your Prior Feedback\n\n${path.readText()}"
 
-    // ── File writing ─────────────────────────────────────────────────────────
+    // -- Utility extension --
+
+    private val AgentInstructionRequest.executionContextOrNull: ExecutionContext?
+        get() = when (this) {
+            is AgentInstructionRequest.DoerRequest -> executionContext
+            is AgentInstructionRequest.ReviewerRequest -> executionContext
+            is AgentInstructionRequest.PlannerRequest -> null
+            is AgentInstructionRequest.PlanReviewerRequest -> null
+        }
+
+    // -- File writing --
 
     private suspend fun writeInstructionsFile(outputDir: Path, sections: List<String>): Path =
         withContext(Dispatchers.IO) {

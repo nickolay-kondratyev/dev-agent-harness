@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T17:13:01Z
 id: nid_8ts4qxw2wevxwep3yk2gvqwja_E
 title: "CODE_CONSISTENCY_FIX: ContextForAgentProvider — redesign to sealed AgentInstructionRequest per spec"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T16:05:59Z
-status_updated_iso: 2026-03-18T16:52:27Z
+status_updated_iso: 2026-03-18T17:13:01Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -81,6 +82,22 @@ PlanReviewer: [RoleDefinition, PrivateMd, Ticket, ...]
 
 
 ## Notes
+
+**2026-03-18T17:13:11Z**
+
+## Resolution
+
+Successfully redesigned ContextForAgentProvider to use sealed AgentInstructionRequest hierarchy per spec.
+
+### Changes Made
+- Deleted AgentRole enum and UnifiedInstructionRequest
+- Added sealed AgentInstructionRequest with 4 subtypes (DoerRequest, ReviewerRequest, PlannerRequest, PlanReviewerRequest)
+- Added ExecutionContext composition for shared doer+reviewer fields
+- Added PrivateMd section to all 4 role plans (silently skips if file absent)
+- Removed all runtime requireNotNull guards (compile-time via sealed types)
+- Removed implementation gap note from spec doc
+- 4 guard tests removed, 3 PrivateMd tests added
+- All tests pass, detekt passes
 
 **2026-03-18T18:21:21Z**
 
