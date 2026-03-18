@@ -174,7 +174,7 @@ Concatenation order (via `AgentInstructionRequest.ExecutionRequest.ReviewerReque
 | 5 | **Plan format instructions** | Static text — JSON schema for `plan_flow.json` | Must match schema in ref.ap.56azZbk7lAMll0D4Ot2G0.E. |
 | 6 | **Reviewer feedback** (iteration > 1) | PLAN_REVIEWER's `PUBLIC.md` | What the plan reviewer found lacking — absent on first iteration |
 | 7 | **plan_flow.json output path** | `harness_private/plan_flow.json` (absolute path) | Strict workflow definition — harness-consumed. |
-| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable implementation guide (clarified requirements, tradeoffs, architecture constraints, file paths) — fed to all doer sub-parts in `with-planning` workflows. |
+| 8 | **PLAN.md output path** | `shared/plan/PLAN.md` (absolute path) | Human-readable implementation guide (clarified requirements, tradeoffs, architecture constraints, file paths) — fed to all execution sub-parts (doers and reviewers) in `with-planning` workflows. |
 | 9 | **PUBLIC.md output path** | `planning/${planner_sub_part}/comm/out/PUBLIC.md` | Planner's rationale and decisions — reviewed by PLAN_REVIEWER |
 | 10 | **PUBLIC.md writing guidelines** | Static text | Same as execution agent |
 | 11 | **Callback script usage** | Same as execution agent | `callback_shepherd.signal.sh done completed` |
@@ -211,7 +211,7 @@ Each logical content block is one `InstructionSection` subtype:
 | `PrivateMd` | Self-compaction context from prior session (`${sub_part}/private/PRIVATE.md`). Only present after session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Skipped silently if file does not exist. |
 | `PartContext` | Part `name` and `description` from `CurrentState` |
 | `Ticket` | Ticket markdown file content |
-| `PlanMd` | `shared/plan/PLAN.md` — always included for `with-planning` workflows; absent for straightforward workflows |
+| `PlanMd` | `shared/plan/PLAN.md` — included for all execution sub-parts (doers and reviewers) in `with-planning` workflows; absent for straightforward workflows |
 | `PriorPublicMd` | Prior completed PUBLIC.md files per [Visibility Rules](#visibility-rules) |
 | `StructuredFeedbackFormat` | Static structured-feedback format instruction — reviewer only |
 | `FeedbackWritingInstructions` | Static instructions for writing feedback files — reviewer only |
@@ -321,8 +321,8 @@ This is deterministic from the workflow position. No heuristics, no "relevance" 
 
 - PLAN_REVIEWER sees planner's `PUBLIC.md`
 - Planner on iteration sees plan reviewer's `PUBLIC.md`
-- Execution agents do **not** see planning phase `PUBLIC.md` files — the plan itself
-  (`PLAN.md` in `shared/plan/`) is sufficient context
+- Execution agents (doers and reviewers) do **not** see planning phase `PUBLIC.md` files —
+  the plan itself (`PLAN.md` in `shared/plan/`) is sufficient context for both
 
 ---
 
