@@ -1,11 +1,11 @@
 ---
 id: nid_3fy5tujjzrud1fduy25zzdijm_E
 title: "Look into openclaw"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T12:55:55Z
-status_updated_iso: 2026-03-18T12:55:55Z
+status_updated_iso: 2026-03-18T13:06:16Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
