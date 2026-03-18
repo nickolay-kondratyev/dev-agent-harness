@@ -487,36 +487,39 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 
 ## Key Technology Decisions
 
-| Decision | Choice | Rationale |
+> Detailed rationale for each decision lives in the linked authoritative spec.
+> This table is a navigational index — see the referenced spec for the full "why."
+
+| Decision | Choice | Authoritative Spec |
 |---|---|---|
-| Workflow format | **JSON** | Easy for LLMs to generate; strong tooling |
-| Workflow schema | **Unified parts/sub-parts** | Same schema for static workflows and planner output; one parser |
-| JSON library | **Jackson + Kotlin module** | Battle-tested, runtime reflection |
-| CLI parser | **picocli** | Mature, annotation-driven |
-| HTTP server | **Ktor CIO** | Coroutine-native, Kotlin ecosystem |
-| Server port | **Stable via env var** | `TICKET_SHEPHERD_SERVER_PORT` — simple, explicit, no temp files; fail hard if port in use |
-| Agent interaction facade | **`AgentFacade` interface** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) | Single facade for all agent operations (spawn, send, ping, read state, kill). Orchestration layer (`PartExecutor`) depends on one interface, not 5+ infra components. Enables `FakeAgentFacade` for comprehensive unit testing with virtual time. `SessionsState` is internal to the real impl. |
-| Agent-type adaptation | **`AgentTypeAdapter` interface** (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) | Single interface per agent type: `buildStartCommand()` + `resolveSessionId()`. Always deployed together — merging eliminates mismatched-pair risk and simplifies wiring (1 dep instead of 2). Different agent types have different CLI invocations AND session ID discovery. OCP: new agent types add a new `AgentTypeAdapter` implementation. V1: `ClaudeCodeAdapter`. Agents spawned in **interactive mode** (no `-p`/`--print`); bootstrap delivered as **initial prompt argument**. Session ID: Claude Code cannot self-report (validated empirically); GUID handshake + JSONL scanning is required (see [rejected simplification rationale](use-case/SpawnTmuxAgentSessionUseCase.md#why-not-agent-self-reporting-rejected--do-not-revisit)). Session IDs recorded for inspection (V1) + resume (V2). |
-| Session storage | **`sessionIds` array in in-memory `CurrentState`** (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) | All state in one in-memory object, flushed to `current_state.json`; session history tracked for V2 resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E) |
-| Package | **com.glassthought.shepherd** | Shepherd as sub-package under glassthought |
-| Q&A mode | **`UserQuestionHandler` strategy** (ref.ap.NE4puAzULta4xlOLh5kfD.E) | V1: `StdinUserQuestionHandler` (human at terminal, stdin/stdout, blocks indefinitely). Strategy interface enables future swap to LLM/Slack/timeout-with-fallback. |
-| Role catalog | **Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR`** | Every .md file is eligible; `description` from frontmatter; roles define behavior only — no `agentType`/`model` |
-| Agent type + model | **Assigned by planner or workflow JSON** (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) | Planner decides per sub-part (with-planning); static in workflow JSON (straightforward). Session records store actual model names, never tier names. |
-| Plan mutability | **Frozen; minor tweaks OK** | Major deviations → fail explicitly (`FailedToExecutePlanUseCase` — red error, kills all sessions, exits non-zero) |
-| Callback protocol | **Fire-and-forget signals only** | Signal endpoints return bare 200; harness-to-agent delivery via TMUX send-keys |
-| Payload delivery ACK | **ACK-before-proceed wrapper on all `send-keys` payloads** (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Every `send-keys` payload (including health pings) wrapped in XML with PayloadId (`{handshakeGuid_short_8chars}-{sequenceN}`, e.g., `a1b2c3d4-3`). Agent must `ack-payload` before processing. 3 min ACK timeout, 2 retries. Prevents "alive but never got instruction" loop that health monitoring alone cannot break. |
-| Iteration decisions | **Reviewer-authoritative** | Reviewer signals `pass`/`needs_iteration` directly; no LLM re-evaluation. `needs_iteration`: harness enforces PUBLIC.md exists + non-empty (ref.ap.THDW9SHzs1x2JN9YP9OYU.E); structured format (ref.ap.EslyJMFQq8BBrFXCzYw5P.E) is instruction guidance, not harness-validated |
-| Pitfall documentation | **Code comments** | Agents document non-obvious decisions and pitfalls in code comments. No structured protocol — just "write good comments." |
-| Startup acknowledgment | **`/callback-shepherd/signal/started`** (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Bootstrap message delivered as initial prompt argument when agent starts. Agent calls `callback_shepherd.signal.sh started` as first action. `healthTimeouts.startup` (3 min) catches spawn failures 10x faster than `normalActivity` (30 min). Side-channel signal — updates `lastActivityTimestamp`, no AgentSignal. |
-| Callback scripts | **`callback_shepherd.signal.sh`** | Single script for all agent-to-harness communication (fire-and-forget signals) |
-| Git commits | **Harness-owned, pluggable strategy** | `GitCommitStrategy` interface; V1 default `CommitPerSubPart`; author encodes agent+model+user (e.g., `CC_sonnet_WITH-username`) |
-| Cross-try learning | **Ticket mutation via NonInteractiveAgentRunner** | On failure, run ClaudeCode `--print` (sonnet) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to read `.ai_out/` artifacts, generate failure summary, and append `## Previous Failed Attempts` section to the ticket. Agent handles git commit + best-effort propagation. Ticket already feeds into agent context — no plumbing changes needed. |
-| System prompt | **Always override via `--system-prompt-file`** | Stage-specific prompts: `for_planning.md` (planning) / `default.md` (execution) from `${MY_ENV}/config/claude/ai_input/system_prompt/`. Hard fail if missing. See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution](use-case/SpawnTmuxAgentSessionUseCase.md#system-prompt-file-resolution). |
-| Context window monitoring | **ContextWindowStateReader interface** (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | Per-agent-type interface. V1: `ClaudeCodeContextWindowStateReader` reads `context_window_slim.json` (format: `remaining_percentage`). File not present → hard stop. Used for **done-boundary compaction decisions only** (ref.ap.8nwz2AHf503xwq8fKuLcl.E), NOT for liveness (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). OCP: future agent types provide their own reader. |
-| Auto-compaction | **Claude Code native auto-compaction enabled; harness adds done-boundary self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E) | Claude Code's built-in auto-compaction remains enabled for emergency mid-task compaction. The harness adds controlled self-compaction at done boundaries (35% remaining / 65% used) with guided summarization into `PRIVATE.md` + session rotation. V2 will add harness-controlled emergency interrupt — see [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md). |
-| Self-compaction signal | **`/callback-shepherd/signal/self-compacted`** (ref.ap.HU6KB4uRDmOObD54gdjYs.E) | Lifecycle signal for done-boundary self-compaction. Agent calls after writing PRIVATE.md. Completes signalDeferred with `AgentSignal.SelfCompacted`. |
-| Reviewer feedback delivery | **Granular per-item feedback loop** (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) | Reviewer writes individual feedback files to `__feedback/pending/` with severity filename prefix (`critical__`, `important__`, `optional__`) (ref.ap.3Hskx3JzhDlixTnvYxclk.E). Harness feeds items to doer one at a time — critical → important → optional. Doer writes `## Resolution: ADDRESSED/REJECTED` marker; **harness** moves files. Rejections trigger bounded per-item negotiation (1 round — reviewer judges once, final). Self-compaction checkpoints between items. `iteration.current` unchanged by inner loop. |
-| Sub-part role tracking | **`SubPartRole` enum (explicit, not derived from position)** | In V1, position is deterministic (0 = DOER, 1 = REVIEWER). The enum is kept explicitly: (1) self-documentation — role is a named concept, not a positional convention, making the `done`-result validation table in the protocol (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) immediately readable; (2) evolvability — future roles (e.g., `FIXER`) are additive enum variants. Not built for those cases now, but the door is propped open. See `SessionsState.md` (ref.ap.7V6upjt21tOoCFXA7nqNh.E) for full rationale. |
+| Workflow format | JSON — easy for LLMs to generate | [`plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) |
+| Workflow schema | Unified parts/sub-parts — same schema for static & planner output | [`plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) |
+| JSON library | Jackson + Kotlin module | [`plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.56azZbk7lAMll0D4Ot2G0.E) |
+| CLI parser | picocli — mature, annotation-driven | [CLI Entry Point](#cli-entry-point) (ref.ap.mmcagXtg6ulznKYYNKlNP.E) |
+| HTTP server | Ktor CIO — coroutine-native | [`agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) |
+| Server port | Stable via `TICKET_SHEPHERD_SERVER_PORT` env var — fail hard if in use | [`git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) |
+| Agent interaction facade | Single `AgentFacade` interface — testability seam for orchestration | [`AgentFacade.md`](core/AgentFacade.md) (ref.ap.9h0KS4EOK5yumssRCJdbq.E) |
+| Agent-type adaptation | `AgentTypeAdapter` interface — one impl per agent type (start + session ID) | [`SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) |
+| Session storage | `sessionIds` in in-memory `CurrentState`, flushed to disk | [`plan-and-current-state.md`](schema/plan-and-current-state.md) (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) |
+| Package | `com.glassthought.shepherd` | — |
+| Q&A mode | `UserQuestionHandler` strategy — V1: stdin, blocks indefinitely | [`UserQuestionHandler.md`](core/UserQuestionHandler.md) (ref.ap.NE4puAzULta4xlOLh5kfD.E) |
+| Role catalog | Auto-discovered from `$TICKET_SHEPHERD_AGENTS_DIR` — roles define behavior only | [Role Catalog](#role-catalog--auto-discovered) (ref.ap.iF4zXT5FUcqOzclp5JVHj.E) |
+| Agent type + model | Assigned by planner or workflow JSON, not role-level | [Agent Type & Model Assignment](#agent-type--model-assignment) (ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E) |
+| Plan mutability | Frozen; minor tweaks OK, major deviations → fail explicitly | [Plan Mutability During Execution](#plan-mutability-during-execution) |
+| Callback protocol | Fire-and-forget signals; harness→agent via TMUX `send-keys` | [`agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) |
+| Payload delivery ACK | ACK-before-proceed on all `send-keys` payloads — 3 min timeout, 2 retries | [`agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) |
+| Iteration decisions | Reviewer-authoritative — `pass`/`needs_iteration`, no LLM re-evaluation | [`granular-feedback-loop.md`](plan/granular-feedback-loop.md) (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
+| Pitfall documentation | Code comments — no structured protocol | — |
+| Startup acknowledgment | `/signal/started` — 3 min timeout catches spawn failures fast | [`agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) |
+| Callback scripts | Single `callback_shepherd.signal.sh` for all agent→harness signals | [`agent-to-server-communication-protocol.md`](core/agent-to-server-communication-protocol.md) (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) |
+| Git commits | Harness-owned, pluggable `GitCommitStrategy` — V1: `CommitPerSubPart` | [`git.md`](core/git.md) (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) |
+| Cross-try learning | Ticket mutation via `NonInteractiveAgentRunner` on failure | [`TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) (ref.ap.cI3odkAZACqDst82HtxKa.E) |
+| System prompt | Always override via `--system-prompt-file` — stage-specific | [`SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) |
+| Context window monitoring | `ContextWindowStateReader` interface — done-boundary only, not liveness | [`ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) (ref.ap.ufavF1Ztk6vm74dLAgANY.E) |
+| Auto-compaction | CC native enabled + harness done-boundary self-compaction (35%/65%) | [`ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) (ref.ap.8nwz2AHf503xwq8fKuLcl.E) |
+| Self-compaction signal | `/signal/self-compacted` — completes deferred with `AgentSignal.SelfCompacted` | [`ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) (ref.ap.HU6KB4uRDmOObD54gdjYs.E) |
+| Reviewer feedback delivery | Granular per-item loop — severity-ordered, harness-owned file movement | [`granular-feedback-loop.md`](plan/granular-feedback-loop.md) (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
+| Sub-part role tracking | `SubPartRole` enum — explicit named concept, not positional convention | [`SessionsState.md`](core/SessionsState.md) (ref.ap.7V6upjt21tOoCFXA7nqNh.E) |
 
 ---
 
