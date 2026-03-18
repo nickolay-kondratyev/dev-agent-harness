@@ -39,7 +39,7 @@ EOF
       cdi.repo_root
       git.save
 
-      ai_core --agent CC --model opus --print "Read and execute instructions in [${tmp_file:?}]"
+      ai_core --agent CC --model opus "Read and execute instructions in [${tmp_file:?}]"
 
       git.save
   done
