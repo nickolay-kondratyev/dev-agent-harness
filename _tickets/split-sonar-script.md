@@ -1,11 +1,11 @@
 ---
 id: nid_wsx7pnjsnmab6xe6va8m1zwgt_E
 title: "split sonar script"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T23:28:57Z
-status_updated_iso: 2026-03-18T23:28:57Z
+status_updated_iso: 2026-03-18T23:30:00Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
