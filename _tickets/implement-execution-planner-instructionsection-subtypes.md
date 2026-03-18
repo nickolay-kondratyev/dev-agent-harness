@@ -85,3 +85,9 @@ Merge note: This ticket and nid_gp9rduvxoqf14m95z9bttnaxq_E both add subtypes to
 **2026-03-18T18:32:17Z**
 
 **IterationFeedback null-path behavior (from review):** Add AC criterion: IterationFeedback with `reviewerPublicMdPath == null` (iteration 1) silently produces no output. This is distinct from InlineFileContentSection with non-null path that fails hard if file missing.
+
+**2026-03-18T19:37:42Z**
+
+## AC addition: Planning-phase visibility negative test
+
+Add a negative assertion test: verify that execution agents (Doer/Reviewer) PriorPublicMd does NOT include planning-phase PUBLIC.md files. This boundary is enforced by the caller populating ExecutionContext.priorPublicMdPaths, but a negative test ("Doer instructions do not contain planner PUBLIC.md content") makes the visibility contract explicit and guards against accidental contamination.

@@ -139,3 +139,9 @@ Deleted:
 ## AC addition: output path convention test
 
 Add a test that verifies the assembled file is written to `${outputDir}/instructions.md` (matching the spec's 'Output Location' section). This ensures the path convention documented in the spec is enforced end-to-end.
+
+**2026-03-18T19:37:40Z**
+
+## PartExecutor call-site integration note
+
+PartExecutor (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) is the primary caller of ContextForAgentProvider. When PartExecutor is implemented, it MUST construct the new sealed AgentInstructionRequest subtypes (DoerRequest, ReviewerRequest, etc.) — not the old AgentRole + UnifiedInstructionRequest. PartExecutor tickets (created from doc/core/PartExecutor.md) own that call-site update. This ticket verifies the old types are deleted; PartExecutor ticket verifies the new types are used at the call site.
