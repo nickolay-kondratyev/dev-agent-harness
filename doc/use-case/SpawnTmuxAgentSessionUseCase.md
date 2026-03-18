@@ -13,7 +13,7 @@ and resolving the agent's session ID.
 ---
 
 > Vocabulary: see [high-level.md Vocabulary](../high-level.md#vocabulary).
-> Additional: **AgentSessionIdResolver** — interface that resolves agent-internal session IDs (e.g., Claude Code's JSONL filename) from a HandshakeGuid marker.
+> Additional: **AgentTypeAdapter** (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) — single interface per agent type that provides both the start command builder and session ID resolver.
 
 ---
 
@@ -59,7 +59,7 @@ delivered." The bootstrap is a lightweight, self-contained string — no instruc
 
 Contents:
 - The `HandshakeGuid` (so it's recorded in agent session artifacts for
-  `AgentSessionIdResolver`)
+  `AgentTypeAdapter.resolveSessionId()`)
 - A single instruction: call `callback_shepherd.signal.sh started` to acknowledge startup
 
 ```bash
@@ -96,7 +96,7 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 5. Harness awaits `/callback-shepherd/signal/started` within `healthTimeouts.startup`
    (default 3 min) — see ref.ap.xVsVi2TgoOJ2eubmoABIC.E
 6. On `/signal/started` received:
-   a. **`AgentSessionIdResolver`** polls for the GUID in agent session artifacts
+   a. **`AgentTypeAdapter.resolveSessionId()`** polls for the GUID in agent session artifacts
       (e.g., Claude Code JSONL files) — by this point the GUID is guaranteed to be recorded,
       so resolution is fast and reliable
    b. Harness stores a session record (ref.ap.mwzGc1hYkVwu3IJQbTeW4.E)
@@ -145,7 +145,7 @@ history via `--resume`.
   delivered atomically on startup. When `/started` arrives, the agent has proven it can
   process input, making subsequent `send-keys` (Phase 2) safe by demonstration.
 - **Universal**: same handshake for new and resumed agents — one protocol to test and debug.
-- **Simpler session ID resolution**: `AgentSessionIdResolver` runs after `/started`, when
+- **Simpler session ID resolution**: `AgentTypeAdapter.resolveSessionId()` runs after `/started`, when
   the GUID is guaranteed to be in the JSONL — no race condition, no polling timeout risk.
 
 ### System Prompt File Resolution
@@ -169,36 +169,52 @@ file controlled by the harness operator.
 
 ---
 
-### AgentStarter — Interface for Start Command
-<!-- ap.RK7bWx3vN8qLfYtJ5dZmQ.E -->
+### AgentTypeAdapter — Unified Interface for Agent-Type-Specific Behavior
+<!-- ap.A0L92SUzkG3gE0gX04ZnK.E -->
 
 **Problem:** Different agent types (Claude Code, PI, future agents) have entirely different
-CLI invocations — flags, env vars, nested-session workarounds, system prompt mechanisms.
-The spawn flow must not hard-code any agent-specific command construction.
+CLI invocations and session ID discovery mechanisms. The spawn flow must not hard-code any
+agent-specific behavior. Previously, this was split across two interfaces (`AgentStarter` +
+`AgentSessionIdResolver`), but they are always deployed as a pair per agent type and no caller
+ever uses one without the other. This created unnecessary wiring complexity and the risk of
+mismatching starter/resolver pairs.
 
-**Solution:** `AgentStarter` **interface** — each agent type provides its own implementation
-that knows how to build the shell command for TMUX session creation.
+**Solution:** `AgentTypeAdapter` **interface** — each agent type provides a single implementation
+that encapsulates both the start command builder and the session ID resolver.
 
 ```kotlin
-interface AgentStarter {
+interface AgentTypeAdapter {
     fun buildStartCommand(bootstrapMessage: String): TmuxStartCommand
+    suspend fun resolveSessionId(handshakeGuid: HandshakeGuid): String
 }
 ```
 
-#### Why an Interface
+#### Why a Single Interface
 
-1. **Different agent types have different start commands.** Claude Code uses `claude --system-prompt-file <path> [flags]`
-   (interactive mode); a PI agent will have an entirely different binary and flags. The interface allows each
-   `AgentType` to provide its own starter without modifying existing code (OCP).
-2. **Agent-specific concerns are encapsulated.** Claude Code needs `unset CLAUDECODE` to avoid
-   nested-session detection; other agents won't. These details belong in the implementation,
-   not in `SpawnTmuxAgentSessionUseCase`.
-3. **Testability.** Unit tests inject a fake starter — no real CLI invocations. The interface
-   boundary is what makes `SpawnTmuxAgentSessionUseCase` independently testable.
+1. **Always deployed together.** Every caller that builds a start command also resolves the
+   session ID — they are two steps of the same spawn flow. Separate interfaces create the
+   risk of wiring mismatched pairs (e.g., ClaudeCode starter + PI resolver).
+2. **Different agent types have different start commands AND different session ID discovery.**
+   Claude Code uses `claude --system-prompt-file <path> [flags]` + JSONL scanning; a PI agent
+   will have an entirely different binary, flags, and artifacts. The interface allows each
+   `AgentType` to provide its own adapter without modifying existing code (OCP).
+3. **Agent-specific concerns are encapsulated.** Claude Code needs `unset CLAUDECODE` and JSONL
+   scanning; other agents won't. These details belong in the implementation.
+4. **Simpler wiring.** One constructor parameter on `AgentFacadeImpl` instead of two. One
+   dispatch in `SpawnTmuxAgentSessionUseCase` instead of two.
+5. **Testability.** Unit tests inject a fake adapter — no real CLI invocations or filesystem
+   scanning. The interface boundary is what makes `SpawnTmuxAgentSessionUseCase` independently
+   testable.
 
-#### V1 Implementation — ClaudeCodeAgentStarter
+#### ISP Consideration
 
-Builds the `claude` CLI command for **interactive mode** (no `-p`/`--print`):
+ISP would argue for separate interfaces. But ISP applies when different callers need different
+subsets. Here, every caller needs both methods together in the spawn flow. ISP-purity at the
+cost of coupling prevention is not a good trade.
+
+#### V1 Implementation — ClaudeCodeAdapter
+
+**`buildStartCommand`** — builds the `claude` CLI command for **interactive mode** (no `-p`/`--print`):
 - `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT` env var exports
 - `cd` to working directory
 - `unset CLAUDECODE` (nested-session detection workaround)
@@ -208,42 +224,23 @@ Builds the `claude` CLI command for **interactive mode** (no `-p`/`--print`):
 - Bootstrap message embedded as a positional initial prompt argument
 - **No `-p` flag** — agent starts interactively
 
+**`resolveSessionId`** — polls `$HOME/.claude/projects/.../*.jsonl` for files containing the
+GUID string. The matching filename (minus `.jsonl` extension) is the session ID.
+
+**Sequencing:** Resolution runs **after `/callback-shepherd/signal/started` is received**
+(step 6a in the spawn flow). At this point, the agent has already processed the bootstrap
+message containing the GUID, so the GUID is guaranteed to be in the JSONL file. This
+eliminates the race condition that existed when polling concurrently with agent startup.
+
+- Exactly one match required; zero (timeout) or multiple matches → `IllegalStateException`
+- Default timeout: 45 seconds, poll interval: 500ms (generous — resolution is typically
+  instant since the GUID is already written by the time we poll)
+
 #### Dispatch
 
 `SpawnTmuxAgentSessionUseCase` reads `agentType` from the sub-part config in `current_state.json`
-and selects the matching `AgentStarter` implementation. The pair of `AgentStarter` +
-`AgentSessionIdResolver` per agent type forms the complete agent-type-specific contract.
-
----
-
-### AgentSessionIdResolver — Interface, Not Implementation
-
-**Problem:** Claude Code does **not** expose its session ID to the agent from within its own
-context. There is no API, env var, or CLI flag that an agent running inside Claude Code can
-call to learn its own session ID. **This has been validated empirically** — it is a confirmed
-limitation, not a guess.
-
-Yet the harness needs the session ID for:
-- Persisting session records in `current_state.json` (inspectable, git-tracked)
-- V2 resume via `--resume <session_id>` (ref.ap.LX1GCIjv6LgmM7AJFas20.E)
-- Correlating TMUX sessions with agent artifacts for debugging
-
-**Solution:** `AgentSessionIdResolver` **interface** (ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E)
-+ `ClaudeCodeAgentSessionIdResolver` **implementation** (ref.ap.gCgRdmWd9eTGXPbHJvyxI.E).
-
-#### Why an Interface
-
-`AgentSessionIdResolver` is an **interface by design** — not fragile coupling:
-
-1. **Different agent types have different session ID discovery mechanisms.** Claude Code uses
-   JSONL files; a future PI agent or other agent implementation will have entirely different
-   artifacts. The interface allows each `AgentType` to provide its own resolver without
-   modifying existing code (OCP).
-2. **Testability.** Unit tests inject a fake resolver — no filesystem scanning, no real
-   Claude Code sessions. The interface boundary is what makes `SpawnTmuxAgentSessionUseCase`
-   independently testable.
-3. **The resolver is NOT internal coupling** — it's the harness extracting externally observable
-   artifacts (JSONL files that Claude Code writes). The agent is unaware of the resolver.
+and selects the matching `AgentTypeAdapter` implementation. A single dispatch replaces the
+previous dual dispatch to separate starter and resolver interfaces.
 
 #### Why Not: Agent Self-Reporting (Rejected — Do Not Revisit)
 
@@ -261,26 +258,14 @@ evaluated and rejected:
 **Do not reopen this as a simplification opportunity.** The complexity lives in the resolver,
 not in an avoidable design choice.
 
-#### Resolution Mechanism (ClaudeCode)
+#### Integration Testing — ClaudeCodeAdapter
 
-The `ClaudeCodeAgentSessionIdResolver` polls `$HOME/.claude/projects/.../*.jsonl` for files
-containing the GUID string. The matching filename (minus `.jsonl` extension) is the session ID.
-
-**Sequencing:** Resolution runs **after `/callback-shepherd/signal/started` is received** (step 6a in the spawn flow). At this point, the agent has already processed the bootstrap message
-containing the GUID, so the GUID is guaranteed to be in the JSONL file. This eliminates
-the race condition that existed when polling concurrently with agent startup.
-
-- Exactly one match required; zero (timeout) or multiple matches → `IllegalStateException`
-- Default timeout: 45 seconds, poll interval: 500ms (generous — resolution is typically
-  instant since the GUID is already written by the time we poll)
-
-#### Integration Testing — ClaudeCodeAgentSessionIdResolver
-
-`ClaudeCodeAgentSessionIdResolver` **must** be validated by integration tests against a real
-Claude Code session. This confirms:
+`ClaudeCodeAdapter` **must** be validated by integration tests against a real Claude Code
+session. This confirms:
 
 - The JSONL file format assumption still holds (Claude Code could change it across versions)
 - GUID matching works end-to-end (env var → bootstrap message → JSONL write → scan → resolve)
+- Start command construction produces a valid, launchable command
 
 **Resource efficiency:** Session ID resolution testing should be part of a **broader
 integration test that spawns a single real agent session** and validates multiple concerns
@@ -363,7 +348,7 @@ encapsulation and type safety.
 | Field | Type | Description |
 |-------|------|-------------|
 | `handshakeGuid` | `HandshakeGuid` | The GUID assigned to this session (ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E). Used for server routing via `SessionsState`. |
-| `agentType` | `AgentType` | Which agent implementation (e.g., `ClaudeCode`, `PI`). Used for dispatching to the correct `AgentStarter` and `AgentSessionIdResolver`. |
+| `agentType` | `AgentType` | Which agent implementation (e.g., `ClaudeCode`, `PI`). Used for dispatching to the correct `AgentTypeAdapter`. |
 | `sessionId` | `String` | The agent's internal session ID (e.g., Claude Code JSONL filename UUID). Used for V2 `--resume`. |
 | `model` | `String` | The actual model name used for this session (e.g., `sonnet`, `opus`). Must match the sub-part's `model` field. |
 
