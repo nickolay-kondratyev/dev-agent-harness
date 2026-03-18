@@ -91,8 +91,7 @@ performCompaction(handle, trigger: CompactionTrigger.DONE_BOUNDARY):
     │   │   (creates fresh signal deferred implicitly — ref.ap.9h0KS4EOK5yumssRCJdbq.E)
     │   ├─ Signal returned from sendPayloadAndAwaitSignal (with timeout: SELF_COMPACTION_TIMEOUT)
     │   │   ├─ SelfCompacted → proceed
-    │   │   ├─ Done (first occurrence) → re-instruct ("you are in compaction mode — signal self-compacted") → await again
-    │   │   └─ Done (second occurrence) → AgentCrashed ("agent cannot follow compaction protocol")
+    │   │   └─ Done → AgentCrashed immediately ("agent cannot follow compaction protocol" — no retry)
     │   ├─ Validate PRIVATE.md exists and is non-empty
     │   ├─ Git commit — captures PRIVATE.md + any changes before compaction
     │   └─ Kill session via agentFacade.killSession(handle) → set handle = null
@@ -241,17 +240,17 @@ compaction instruction).
 ### Strict Signal Enforcement During Compaction
 
 During compaction, `AgentSignal.SelfCompacted` is the **only** valid success signal.
-If the agent signals `done` instead:
+If the agent signals `done` instead: immediate `AgentCrashed("agent cannot follow compaction protocol")`.
 
-1. **Re-instruct once:** "You are in compaction mode — write `PRIVATE.md` then signal
-   `self-compacted`, not `done`." Await again within the remaining compaction timeout.
-2. **If `done` received again:** `AgentCrashed("agent cannot follow compaction protocol")`.
+The compaction instruction is delivered via the **Payload Delivery ACK protocol**
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E) — the agent confirmed receipt before proceeding.
+Non-compliance after ACK-confirmed delivery = broken agent. No re-instruction, no retry.
 
 **No PRIVATE.md existence check as a fallback.** The signal is the protocol contract —
 producing the right artifact with the wrong signal is still a protocol violation. This approach:
 - Keeps signal semantics unambiguous (`done` = work complete, `self-compacted` = compaction complete)
 - Prevents protocol drift where agents learn they can signal `done` and have it silently accepted
-- Produces an explicit failure (re-instruction, then crash) rather than hiding the violation
+- Produces an explicit failure (immediate crash) rather than hiding the violation
 
 ---
 
@@ -599,8 +598,7 @@ template produces correct messages.
 - Unit test: `DONE_BOUNDARY` — done → low context → compaction instruction → SelfCompacted → session killed (lazy respawn)
 - Unit test: `DONE_BOUNDARY` — done → healthy context → no compaction (normal flow)
 - Unit test: session rotation → next use spawns new session with PRIVATE.md
-- Unit test: `done` received during compaction → re-instruct → `SelfCompacted` → session killed
-- Unit test: `done` received twice during compaction → `AgentCrashed`
+- Unit test: `done` received during compaction → immediate `AgentCrashed` (no retry)
 **Proceed when:** Done-boundary compaction works in unit tests.
 
 ### Gate 4: Integration Validation
