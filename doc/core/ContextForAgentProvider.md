@@ -42,6 +42,18 @@ Each role gets its own subtype with exactly the fields it needs. No nullable rol
 fields; the type itself is the discriminator.
 
 ```kotlin
+/**
+ * Shared fields between DoerRequest and ReviewerRequest — extracted via composition
+ * instead of an intermediate sealed class (ExecutionRequest) that required override
+ * boilerplate and nested when-matching.
+ */
+data class ExecutionContext(
+    val partName: String,
+    val partDescription: String,
+    val planMdPath: Path?,               // null → no-planning workflow
+    val priorPublicMdPaths: List<Path>,
+)
+
 sealed class AgentInstructionRequest {
     // ── common (all roles) ────────────────────────────────────────────────────
     abstract val roleDefinition: RoleDefinition
@@ -50,40 +62,26 @@ sealed class AgentInstructionRequest {
     abstract val outputDir: Path
     abstract val publicMdOutputPath: Path
 
-    // ── execution agents (DOER + REVIEWER) ────────────────────────────────────
-    sealed class ExecutionRequest : AgentInstructionRequest() {
-        abstract val partName: String
-        abstract val partDescription: String
-        abstract val planMdPath: Path?           // null → no-planning workflow
-        abstract val priorPublicMdPaths: List<Path>
+    data class DoerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val executionContext: ExecutionContext,
+        val reviewerPublicMdPath: Path?,     // null on iteration 1
+    ) : AgentInstructionRequest()
 
-        data class DoerRequest(
-            override val roleDefinition: RoleDefinition,
-            override val ticketContent: String,
-            override val iterationNumber: Int,
-            override val outputDir: Path,
-            override val publicMdOutputPath: Path,
-            override val partName: String,
-            override val partDescription: String,
-            override val planMdPath: Path?,
-            override val priorPublicMdPaths: List<Path>,
-            val reviewerPublicMdPath: Path?,     // null on iteration 1
-        ) : ExecutionRequest()
-
-        data class ReviewerRequest(
-            override val roleDefinition: RoleDefinition,
-            override val ticketContent: String,
-            override val iterationNumber: Int,
-            override val outputDir: Path,
-            override val publicMdOutputPath: Path,
-            override val partName: String,
-            override val partDescription: String,
-            override val planMdPath: Path?,
-            override val priorPublicMdPaths: List<Path>,
-            val doerPublicMdPath: Path,          // always required; non-nullable
-            val feedbackDir: Path,               // always required; non-nullable
-        ) : ExecutionRequest()
-    }
+    data class ReviewerRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        val executionContext: ExecutionContext,
+        val doerPublicMdPath: Path,          // always required; non-nullable
+        val feedbackDir: Path,               // always required; non-nullable
+    ) : AgentInstructionRequest()
 
     data class PlannerRequest(
         override val roleDefinition: RoleDefinition,
@@ -112,8 +110,10 @@ sealed class AgentInstructionRequest {
 ```
 
 Remaining `null`s are **semantically meaningful optionals** (absent on first iteration or
-absent in no-planning workflows) — not "does not apply to this role." The type hierarchy
-eliminates the latter category entirely.
+absent in no-planning workflows) — not "does not apply to this role." The flat sealed hierarchy
+eliminates the latter category entirely. Shared execution fields (`partName`, `partDescription`,
+`planMdPath`, `priorPublicMdPaths`) are grouped into `ExecutionContext` via composition — no
+intermediate sealed class, no `override` boilerplate.
 
 ---
 
@@ -127,7 +127,7 @@ role-specific template methods.
 
 ### Doer — ap.5N6TJ1MKDHCG01cJwTMFk.E
 
-Concatenation order (via `AgentInstructionRequest.ExecutionRequest.DoerRequest`):
+Concatenation order (via `AgentInstructionRequest.DoerRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -144,7 +144,7 @@ Concatenation order (via `AgentInstructionRequest.ExecutionRequest.DoerRequest`)
 
 ### Reviewer
 
-Concatenation order (via `AgentInstructionRequest.ExecutionRequest.ReviewerRequest`):
+Concatenation order (via `AgentInstructionRequest.ReviewerRequest`):
 
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
@@ -269,10 +269,10 @@ build error. Then it delegates to `assembleFromPlan`:
 ```kotlin
 suspend fun assembleInstructions(request: AgentInstructionRequest): Path {
     val plan = when (request) {
-        is AgentInstructionRequest.ExecutionRequest.DoerRequest      -> doerPlan
-        is AgentInstructionRequest.ExecutionRequest.ReviewerRequest  -> reviewerPlan
-        is AgentInstructionRequest.PlannerRequest                    -> plannerPlan
-        is AgentInstructionRequest.PlanReviewerRequest               -> planReviewerPlan
+        is AgentInstructionRequest.DoerRequest         -> doerPlan
+        is AgentInstructionRequest.ReviewerRequest     -> reviewerPlan
+        is AgentInstructionRequest.PlannerRequest      -> plannerPlan
+        is AgentInstructionRequest.PlanReviewerRequest -> planReviewerPlan
     }
     return assembleFromPlan(plan, request)
 }
