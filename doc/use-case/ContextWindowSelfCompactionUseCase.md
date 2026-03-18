@@ -87,21 +87,21 @@ performCompaction(handle, trigger: CompactionTrigger.DONE_BOUNDARY):
     ├─ 1. Pre-compaction: no-op (agent already idle at done boundary)
     │
     ├─ 2. Core compaction:
-    │   ├─ Send self-compaction instruction via AgentFacade.sendPayload(config, handle, payload)
+    │   ├─ Send self-compaction instruction via agentFacade.sendPayloadAndAwaitSignal(handle, compactionPayload)
     │   │   (creates fresh signal deferred implicitly — ref.ap.9h0KS4EOK5yumssRCJdbq.E)
-    │   │   → update handle with returned value
-    │   ├─ Await signal on handle.signal (with timeout: SELF_COMPACTION_TIMEOUT)
+    │   ├─ Signal returned from sendPayloadAndAwaitSignal (with timeout: SELF_COMPACTION_TIMEOUT)
     │   │   ├─ SelfCompacted → proceed
     │   │   ├─ Done (first occurrence) → re-instruct ("you are in compaction mode — signal self-compacted") → await again
     │   │   └─ Done (second occurrence) → AgentCrashed ("agent cannot follow compaction protocol")
     │   ├─ Validate PRIVATE.md exists and is non-empty
     │   ├─ Git commit — captures PRIVATE.md + any changes before compaction
-    │   └─ Kill session via AgentFacade.killSession(handle) → set handle = null
+    │   └─ Kill session via agentFacade.killSession(handle) → set handle = null
     │
     └─ 3. Post-compaction:
         └─ handle is now null. Continue normal flow (next sub-part, iteration
-           restart, etc.). The next sendPayload call will transparently spawn
-           a fresh session.
+           restart, etc.). The executor's existing first-iteration spawn logic
+           (agentFacade.spawnAgent → agentFacade.sendPayloadAndAwaitSignal)
+           handles re-spawning when the agent is next needed.
 ```
 
 ### Entry Point: Done Boundary (Soft Threshold)
@@ -378,24 +378,28 @@ The loop structure remains focused on health monitoring (liveness detection via
 
 ---
 
-## Impact on PartExecutor — Unified Session Lifecycle
+## Impact on PartExecutor — Session Lifecycle After Compaction
 
-`PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) uses a single call for all
-instruction delivery — first run, re-instruction, and post-compaction are identical:
+`PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) uses the standard `AgentFacade`
+methods (ref.ap.9h0KS4EOK5yumssRCJdbq.E) for all agent interactions — `spawnAgent` for
+session creation, `sendPayloadAndAwaitSignal` for instruction delivery and signal awaiting:
 
 ```kotlin
-handle = agentFacade.sendPayload(config, handle, instructions)
-// handle is null on first run and after compaction kill
-// AgentFacade transparently: spawns if null/dead, re-uses if alive
+// First iteration or after compaction (handle == null): spawn then send
+if (handle == null) {
+    handle = agentFacade.spawnAgent(config)
+}
+val signal = agentFacade.sendPayloadAndAwaitSignal(handle, instructions)
 ```
 
-After session rotation (self-compaction `killSession()` sets `handle = null`), the next
-`sendPayload` call transparently spawns a fresh session. No explicit session-existence
-check in the executor.
+After session rotation (self-compaction `killSession()` sets `handle = null`), the
+executor's existing first-iteration code path handles re-spawning — `spawnAgent` followed
+by `sendPayloadAndAwaitSignal`. No new API or special-case logic is needed; post-compaction
+re-entry is identical to the first iteration.
 
 All agent operations go through `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). The
-executor is agnostic to session lifecycle — it always calls one method regardless of
-session state.
+executor uses two explicit methods — consistent with the interface defined in
+[`AgentFacade.md`](../core/AgentFacade.md).
 
 **DRY between planning and execution:** The `PartExecutor` is already shared between
 planning (PLANNER↔PLAN_REVIEWER) and execution parts. The self-compaction logic lives in
@@ -415,9 +419,10 @@ The compaction steps execute via `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E):
    and cleans up `SessionsState`.
 
 **Post-compaction:** `handle = null`. No immediate respawn. The next time the executor
-needs this sub-part, it calls `agentFacade.sendPayload(config, null, instructions)` —
-AgentFacade spawns a fresh session transparently (standard spawn flow —
-ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
+needs this sub-part, it detects `handle == null` and calls `agentFacade.spawnAgent(config)`
+— the standard spawn flow (ref.ap.hZdTRho3gQwgIXxoUtTqy.E) — then sends instructions via
+`agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`. This is the same
+first-iteration code path already used by the executor.
 
 ---
 
@@ -442,13 +447,20 @@ happen with a healthy agent, not an exhausted one.
 
 ### Idle Session Death
 
-Self-compaction and idle-session-death both trigger transparent respawn via
-`AgentFacade.sendPayload()`. They differ in intent:
-- Self-compaction: intentional kill (context full) → fresh start with PRIVATE.md context
-- Idle session death: unintentional kill (OOM, external) → fresh start with current instructions
+Self-compaction and idle-session-death both result in a dead session, but differ in intent
+and V1 behavior:
+- Self-compaction: intentional kill (context full) → `handle = null` → executor's
+  first-iteration spawn path (`agentFacade.spawnAgent` → `agentFacade.sendPayloadAndAwaitSignal`)
+  re-creates the session with PRIVATE.md context
+- Idle session death: unintentional kill (OOM, external) → V1 returns
+  `PartResult.AgentCrashed` (no automatic respawn — see `PartExecutor.md`
+  ref.ap.mxIc5IOj6qYI7vgLcpQn5.E). V2 adds automatic respawn via
+  `doc_v2/idle-session-recovery.md`.
 
-Both use the same `sendPayload(config, null, instructions)` code path — DRY by design.
-Neither uses `--resume` (see V2 Resume below for when `--resume` is appropriate).
+When re-spawning occurs (self-compaction in V1, both in V2), the same
+`agentFacade.spawnAgent(config)` → `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`
+code path is used. Neither uses `--resume` (see V2 Resume below for when `--resume` is
+appropriate).
 
 ### V2 Resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E)
 
@@ -543,7 +555,8 @@ Single method for `DONE_BOUNDARY` trigger:
 ### R7: Session Rotation
 - After self-compaction: `agentFacade.killSession()` (internally kills TMUX, cleans
   SessionsState), set `handle = null`
-- Next `agentFacade.sendPayload(config, null, instructions)` transparently spawns fresh session
+- Executor detects `handle == null`, spawns fresh session via `agentFacade.spawnAgent(config)`,
+  then sends instructions via `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`
 - New HandshakeGuid, new session record in `sessionIds` array
 - PRIVATE.md picked up by ContextForAgentProvider in new instructions
 - Works for both planning and execution parts (DRY via shared PartExecutor)
