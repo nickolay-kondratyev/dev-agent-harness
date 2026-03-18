@@ -16,7 +16,7 @@ Add `ensureStructure()` method to `AiOutputStructure` that creates the full `.ai
 
 ## What to Build
 
-A method `ensureStructure(parts: List<PartDefinition>)` on `AiOutputStructure` that creates all directories for a given workflow configuration.
+A method `ensureStructure(parts: List<Part>)` on `AiOutputStructure` that creates all directories for a given workflow configuration.
 
 ### Behavior
 1. Creates `harness_private/` directory
