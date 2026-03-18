@@ -1,11 +1,11 @@
 ---
 id: nid_oyc7uuw0vc6ws2mtszvwez2nr_E
 title: "CONSISTENCY_DECISION: TicketFailureLearningUseCase timeout — 20 min vs 10 min"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T14:02:33Z
-status_updated_iso: 2026-03-18T14:02:33Z
+status_updated_iso: 2026-03-18T14:09:05Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
