@@ -85,7 +85,8 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 
 **`sendPayloadAndAwaitSignal` fully encapsulates the signal lifecycle**, including the
 health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E). The executor owns no deferred
-references and calls no health-ping or context-window methods directly. See
+references and calls no health-ping methods directly. Context window state is read via
+`readContextWindowState(handle)` at done boundaries (not inside the await loop). See
 [`PartExecutor.md`](PartExecutor.md) for the loop pseudocode (marked as internal to this method).
 
 ---
