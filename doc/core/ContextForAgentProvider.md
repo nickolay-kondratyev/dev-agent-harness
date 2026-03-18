@@ -213,49 +213,44 @@ Each logical content block is one `InstructionSection` subtype:
 | `Ticket` | Ticket markdown file content |
 | `PlanMd` | `shared/plan/PLAN.md` — always included for `with-planning` workflows; absent for straightforward workflows |
 | `PriorPublicMd` | Prior completed PUBLIC.md files per [Visibility Rules](#visibility-rules) |
-| `DoerOutputForReview` | Doer's current PUBLIC.md — reviewer only |
 | `StructuredFeedbackFormat` | Static structured-feedback format instruction — reviewer only |
-| `AddressedFeedback` | `__feedback/addressed/*.md` — reviewer, iteration > 1 |
-| `RejectedFeedback` | `__feedback/rejected/*.md` — reviewer, iteration > 1 |
-| `RemainingOptionalFeedback` | `__feedback/pending/optional__*.md` — reviewer, iteration > 1 |
 | `FeedbackWritingInstructions` | Static instructions for writing feedback files — reviewer only |
 | `IterationFeedback` | Reviewer's PUBLIC.md + pushback guidance — doer, iteration > 1 |
 | `FeedbackItem` | Single feedback file + resolution instructions (ADDRESSED/REJECTED/SKIPPED) — doer inner-loop only (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) |
 | `RoleCatalog` | All role definitions (name + description) — planner only |
 | `AvailableAgentTypes` | Supported agent types + models — planner and plan-reviewer |
 | `PlanFormatInstructions` | JSON schema for `plan_flow.json` — planner only |
-| `PlannerFeedback` | Plan reviewer's PUBLIC.md — planner, iteration > 1 |
-| `PlanFlowJsonOutputPath` | Absolute path to `harness_private/plan_flow.json` — planner only |
-| `PlanMdOutputPath` | Absolute path to `shared/plan/PLAN.md` — planner only |
-| `PlanFlowJsonContent` | Read `harness_private/plan_flow.json` — plan-reviewer only |
-| `PlanMdContent` | Read `shared/plan/PLAN.md` — plan-reviewer only |
-| `PlannerPublicMd` | Planner's PUBLIC.md — plan-reviewer only |
-| `PlanReviewerPriorFeedback` | Plan reviewer's own prior PUBLIC.md — plan-reviewer, iteration > 1 |
-| `PublicMdOutputPath` | Computed output path for the agent's PUBLIC.md |
 | `WritingGuidelines` | Static PUBLIC.md writing guidance |
 | `CallbackHelp` | Compaction-survival callback script usage (role-specific done signal) |
+| **`OutputPathSection(label, path)`** | Labeled output path for the agent. Replaces `PlanFlowJsonOutputPath`, `PlanMdOutputPath`, `PublicMdOutputPath` — all were structurally "tell the agent where to write, with a label". |
+| **`InlineFileContentSection(heading, path)`** | Read a file and render its content under a heading. Replaces `PlanFlowJsonContent`, `PlanMdContent`, `PlannerPublicMd`, `DoerOutputForReview`, `PlannerFeedback`, `PlanReviewerPriorFeedback` — all were structurally "read file, render under heading". |
+| **`FeedbackDirectorySection(dir, heading)`** | Glob a feedback directory and render all files under a heading. Replaces `AddressedFeedback`, `RejectedFeedback`, `RemainingOptionalFeedback` — all were structurally "glob feedback dir, render under heading". |
 
 ### InstructionPlan per role
 
 ```
 Doer:         [RoleDefinition, PrivateMd, PartContext, Ticket, PlanMd, PriorPublicMd,
                IterationFeedback, FeedbackItem,
-               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+               OutputPathSection("PUBLIC.md"), WritingGuidelines, CallbackHelp]
 
 Reviewer:     [RoleDefinition, PrivateMd, PartContext, Ticket, PlanMd, PriorPublicMd,
-               DoerOutputForReview, StructuredFeedbackFormat,
-               AddressedFeedback, RejectedFeedback, RemainingOptionalFeedback,
+               InlineFileContentSection("Doer Output"), StructuredFeedbackFormat,
+               FeedbackDirectorySection("addressed"), FeedbackDirectorySection("rejected"),
+               FeedbackDirectorySection("remaining optional"),
                FeedbackWritingInstructions,
-               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+               OutputPathSection("PUBLIC.md"), WritingGuidelines, CallbackHelp]
 
 Planner:      [RoleDefinition, PrivateMd, Ticket, RoleCatalog, AvailableAgentTypes,
-               PlanFormatInstructions, PlannerFeedback,
-               PlanFlowJsonOutputPath, PlanMdOutputPath, PublicMdOutputPath,
+               PlanFormatInstructions, InlineFileContentSection("Reviewer Feedback"),
+               OutputPathSection("plan_flow.json"), OutputPathSection("PLAN.md"),
+               OutputPathSection("PUBLIC.md"),
                WritingGuidelines, CallbackHelp]
 
-PlanReviewer: [RoleDefinition, PrivateMd, Ticket, PlanFlowJsonContent, PlanMdContent,
-               AvailableAgentTypes, PlannerPublicMd, PlanReviewerPriorFeedback,
-               PublicMdOutputPath, WritingGuidelines, CallbackHelp]
+PlanReviewer: [RoleDefinition, PrivateMd, Ticket,
+               InlineFileContentSection("plan_flow.json"), InlineFileContentSection("PLAN.md"),
+               AvailableAgentTypes, InlineFileContentSection("Planner PUBLIC.md"),
+               InlineFileContentSection("Prior Feedback"),
+               OutputPathSection("PUBLIC.md"), WritingGuidelines, CallbackHelp]
 ```
 
 ### assembleFromPlan
