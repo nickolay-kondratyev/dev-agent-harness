@@ -19,5 +19,5 @@ Look at https://alexli18.github.io/binex repository and answer questions:
 3) Would it be hard to extend to enable iteration? 
 4) Would it be hard to extend to enable running Claude code in interactive mode (Tmux like runner).
 
-
-
+Any other questions that I am not asking that would be good to answer.
+Finally put all the findings into this ticket and close it.
