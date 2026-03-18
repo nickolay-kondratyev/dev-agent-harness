@@ -127,7 +127,7 @@ The hook receives sufficient context to build the commit message and author:
 - Sub-part role (doer/reviewer)
 - Result value (`completed`, `pass`, `needs_iteration`)
 - Current iteration number and max
-- Agent type and model (from the session record in `current_state.json`)
+- Agent type and model (from the session record in `CurrentState`)
 
 ---
 

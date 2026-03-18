@@ -132,7 +132,7 @@ Concatenation order (via `AgentInstructionRequest.ExecutionRequest.DoerRequest`)
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
-| 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
+| 2 | **Part context** | Part `name` and `description` from `CurrentState` | Tells the agent which part of the workflow it is executing |
 | 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
 | 4 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
 | 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
@@ -149,7 +149,7 @@ Concatenation order (via `AgentInstructionRequest.ExecutionRequest.ReviewerReque
 | # | Section | Source | Notes |
 |---|---------|--------|-------|
 | 1 | **Role definition** | `RoleDefinition.filePath` — the full `.md` file from `$TICKET_SHEPHERD_AGENTS_DIR` | The role file IS the system-level instruction for the agent |
-| 2 | **Part context** | Part `name` and `description` from `current_state.json` | Tells the agent which part of the workflow it is executing |
+| 2 | **Part context** | Part `name` and `description` from `CurrentState` | Tells the agent which part of the workflow it is executing |
 | 3 | **Ticket** | The ticket markdown file (path from CLI `--ticket`) | Full content including frontmatter |
 | 4 | **PLAN.md** (with-planning only) | `shared/plan/PLAN.md` | Human-readable plan — only present for `with-planning` workflows. |
 | 5 | **Prior PUBLIC.md files** | See [Visibility Rules](#visibility-rules) below | Pointers to relevant prior outputs |
@@ -209,7 +209,7 @@ Each logical content block is one `InstructionSection` subtype:
 |---|---|
 | `RoleDefinition` | Full `.md` file for the role from `$TICKET_SHEPHERD_AGENTS_DIR` |
 | `PrivateMd` | Self-compaction context from prior session (`${sub_part}/private/PRIVATE.md`). Only present after session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Skipped silently if file does not exist. |
-| `PartContext` | Part `name` and `description` from `current_state.json` |
+| `PartContext` | Part `name` and `description` from `CurrentState` |
 | `Ticket` | Ticket markdown file content |
 | `PlanMd` | `shared/plan/PLAN.md` — always included for `with-planning` workflows; absent for straightforward workflows |
 | `PriorPublicMd` | Prior completed PUBLIC.md files per [Visibility Rules](#visibility-rules) |

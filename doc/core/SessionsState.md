@@ -139,13 +139,32 @@ execution makes per-operation synchronization sufficient. Revisit for V2 paralle
 - **Shared with** `ShepherdServer` — the server holds a reference for `lookup` on incoming callbacks
 - **Not accessed by** `PartExecutor` — the executor interacts with agents exclusively through
   the `AgentFacade` interface, which abstracts `SessionsState` away
-- Lifecycle: lives for the duration of one ticket's processing. Not persisted (V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+- Lifecycle: lives for the duration of one ticket's processing. Not persisted — live handles are
+  inherently transient. Session **records** (persistent data) live in `CurrentState`
+  (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E), not here.
 
 ---
 
-## Relationship to current_state.json
+## Relationship to In-Memory CurrentState
 
-`SessionsState` is **runtime-only** (in-memory). `current_state.json`
-(ref.ap.56azZbk7lAMll0D4Ot2G0.E) is the persistent record. V1: the two are independent —
-`SessionsState` reflects live sessions only. No cross-run rebuild
-(V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+`SessionsState` and `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) serve **distinct,
+non-overlapping purposes**:
+
+| | `SessionsState` | `CurrentState` |
+|---|---|---|
+| **Holds** | Live runtime handles: TMUX sessions, CompletableDeferreds, lastActivityTimestamp, isQAPending | Workflow state: parts, sub-parts, statuses, iteration counters, session records (`sessionIds`) |
+| **Purpose** | Callback routing (GUID → live session) | Single source of truth for all workflow state |
+| **Lifecycle** | Transient — entries created on spawn, removed on part completion. Never persisted. | Durable — flushed to `current_state.json` after every mutation. V2 rebuilds from disk on restart. |
+| **Mutated by** | `AgentFacadeImpl` (register/remove), `ShepherdServer` (deferred completion, timestamp updates) | `PartExecutor` (status transitions, session record addition, iteration counter increments) |
+
+When an agent is spawned:
+1. `SessionEntry` is registered in `SessionsState` (for live callback routing)
+2. A session record is added to the sub-part's `sessionIds` in the in-memory `CurrentState`
+3. `CurrentState` is flushed to `current_state.json`
+
+There is no sync between `SessionsState` and `CurrentState` — they hold orthogonal data.
+`SessionsState` never reads from `CurrentState`, and vice versa. This eliminates the
+previous dual-state consistency concern.
+
+`SessionsState` is not rebuilt on restart (V2 — ref.ap.LX1GCIjv6LgmM7AJFas20.E adds
+live session recovery from `CurrentState`'s session records).

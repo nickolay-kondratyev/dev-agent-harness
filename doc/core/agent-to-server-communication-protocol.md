@@ -56,7 +56,7 @@ distinguishable from agent session IDs. This GUID:
 2. Is included in the bootstrap message (delivered as the initial prompt argument on agent
    start) so it's recorded in agent session artifacts for `AgentTypeAdapter.resolveSessionId()` resolution
 3. Is included by the callback scripts in **every** callback to the server
-4. Is stored in `current_state.json` alongside the agent's session ID
+4. Is stored in the in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) alongside the agent's session ID (flushed to `current_state.json`)
 
 ```kotlin
 // HandshakeGuid value class — ref.ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E
