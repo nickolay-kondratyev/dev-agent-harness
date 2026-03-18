@@ -12,6 +12,9 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [simplify, context-window, robustness]
 ---
 
+
+FEEDBACK
+--------------------------------------------------------------------------------
 ## Problem
 
 The ContextWindowStateReader interface (ref.ap.ufavF1Ztk6vm74dLAgANY.E) has two methods:
@@ -55,4 +58,6 @@ Remove `validatePresence()` from the interface:
 ## Specs Affected
 - `doc/use-case/ContextWindowSelfCompactionUseCase.md` (validatePresence() reference)
 - `doc/use-case/SpawnTmuxAgentSessionUseCase.md` (spawn flow steps)
+--------------------------------------------------------------------------------
 
+AS long as first health check runs quite close we can SIMPLIFY.

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:09:34Z
 id: nid_7izsgole14n1hgrnevsw0lqyi_E
 title: "SIMPLIFY_CANDIDATE: Eliminate feedback rejection mechanism — reviewer authority is absolute from start"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:22:27Z
-status_updated_iso: 2026-03-18T02:22:27Z
+status_updated_iso: 2026-03-18T13:09:34Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
