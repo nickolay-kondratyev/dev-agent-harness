@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:26:59Z
 id: nid_mn0nrr1l8817c0kzvsknbrmxj_E
 title: "SIMPLIFY_CANDIDATE: Eliminate healthCheckInterval — check health on every 1-second tick"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:53:30Z
-status_updated_iso: 2026-03-18T13:26:04Z
+status_updated_iso: 2026-03-18T13:26:59Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -32,3 +33,9 @@ The health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) already ticks every
 - `doc/use-case/HealthMonitoring.md` — remove healthCheckInterval from All Health Parameters table
 - `doc/core/PartExecutor.md` — simplify health-aware await loop pseudocode (remove lastHealthCheck variable)
 
+
+## Notes
+
+**2026-03-18T13:27:05Z**
+
+Completed. Removed healthCheckInterval from HarnessTimeoutConfig's 'All Health Parameters' table in doc/use-case/HealthMonitoring.md. Simplified the health-aware await loop pseudocode in doc/core/PartExecutor.md: removed lastHealthCheck variable (both before loop and inside loop), changed awaitSignalWithTimeout(healthCheckInterval) to awaitSignalWithTimeout(1.second). Detection latency now exactly normalActivity (30 min) instead of worst-case 35 min.

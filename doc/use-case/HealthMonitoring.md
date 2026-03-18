@@ -121,7 +121,6 @@ Accessed as `HarnessTimeoutConfig.healthTimeouts: HealthTimeoutLadder`.
 | Parameter | Source | Default | Description |
 |-----------|--------|---------|-------------|
 | `startup` | `healthTimeouts.startup` | 3 min | Time after spawn before declaring startup failure — catches misconfigured env, binary crashes. Applies only until the first callback arrives, then switches to `normalActivity`. |
-| `healthCheckInterval` | `HarnessTimeoutConfig.healthCheckInterval` | 5 min | How often the executor checks `lastActivityTimestamp` while awaiting the deferred |
 | `normalActivity` | `healthTimeouts.normalActivity` | 30 min | Elapsed time since last HTTP callback before triggering a ping. Single global value — applies to all sub-parts. |
 | `pingResponse` | `healthTimeouts.pingResponse` | 3 min | Time to wait after ping before declaring crash (any callback activity resets) |
 
