@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:24:55Z
 id: nid_3vkkp3iid3lwagfrfeqt8avfp_E
 title: "SIMPLIFY_CANDIDATE: Defer JSONL session ID scanning to V2 — V1 only needs TmuxSession handle"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:09:05Z
-status_updated_iso: 2026-03-18T15:09:05Z
+status_updated_iso: 2026-03-18T15:24:55Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
