@@ -157,7 +157,7 @@ high-level.md for the full testing approach.
 | UseCase | Trigger | Action |
 |---|---|---|
 | `AgentUnresponsiveUseCase` | Agent fails to respond — see `DetectionContext` below | Parameterized by `DetectionContext`. Logs structured context (detection reason, session name, durations). Action depends on context — see table below. Single class, single failure-handling path for all unresponsive-agent scenarios. |
-| `FailedToExecutePlanUseCase` | Agent calls `/callback-shepherd/signal/fail-workflow` during plan execution | Print red error to console, kill all TMUX sessions, run `TicketFailureLearningUseCase` (best-effort), exit non-zero. |
+| `FailedToExecutePlanUseCase` | Plan execution hits a blocking failure (`FailedWorkflow`, `AgentCrashed`, or `FailedToConverge` where user chose to abort) | Print red error to console, kill all TMUX sessions, run `TicketFailureLearningUseCase` (best-effort), exit non-zero. |
 | `FailedToConvergeUseCase` | Reviewer sends `needs_iteration` beyond `iteration.max` | Display y/N prompt: `y` grants fixed increment (`HarnessTimeoutConfig.failedToConvergeIterationIncrement`, default: 2), `N` or timeout → `PartResult.FailedToConverge` |
 
 ### AgentUnresponsiveUseCase — DetectionContext
