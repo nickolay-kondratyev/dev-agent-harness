@@ -124,7 +124,7 @@ that owns the full startup sequence:
    results into a `List<String>` and throws once at the end if the list is non-empty.
 1. **`ContextInitializer`** (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
    `ContextInitializer.kt`) → builds `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E):
-   shared infrastructure (tmux, LLM, logging) that outlives any single ticket.
+   shared infrastructure (tmux, logging, use cases) that outlives any single ticket.
 2. **`ShepherdServer`** startup — Ktor CIO HTTP server on the port specified by `TICKET_SHEPHERD_SERVER_PORT` env var.
 3. **`TicketShepherdCreator`** (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — ticket-scoped wiring
    (workflow resolution, branch creation, `SessionsState`, `ContextForAgentProvider`)
@@ -365,17 +365,6 @@ and session schema.
 
 ---
 
-## DirectLLM — Single Interface
-
-Single `DirectLLM` interface. Callers receive the appropriately-configured instance via
-constructor injection (DIP preserved). Model selection is a constructor parameter of the
-implementation, not a type-level distinction. Not used for iteration decisions — the
-reviewer's verdict is authoritative. See
-[DirectLLM](core/DirectLLM.md) (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) for model assignments and
-contract.
-
----
-
 ## Workflow Definition, File Structure, and Iteration Semantics
 
 See:
@@ -539,7 +528,7 @@ layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6L
 | [`doc/core/TicketShepherd.md`](core/TicketShepherd.md) | Central coordinator — delegates to AgentFacade, delegates iteration to PartExecutor, orchestrates use cases |
 | [`doc/core/TicketShepherdCreator.md`](core/TicketShepherdCreator.md) | Wires all dependencies, creates a ready-to-go TicketShepherd for a single run |
 | [`doc/core/git.md`](core/git.md) | Git — branch naming, try-N resolution, commit strategy, author attribution, env var requirements |
-| [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM single interface, V1 model assignments |
+| [`doc/core/DirectLLM.md`](core/DirectLLM.md) | DirectLLM — **deferred to V2** (zero V1 consumers). Full spec: [`doc_v2/DirectLLM.md`](../doc_v2/DirectLLM.md) |
 | [`doc/core/UserQuestionHandler.md`](core/UserQuestionHandler.md) | User-question strategy interface, V1 stdin behavior, flow |
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
 | [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — startup ack, timeout, ping, crash, convergence failure |
@@ -550,6 +539,7 @@ layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6L
 | [`doc/plan/granular-feedback-loop.md`](plan/granular-feedback-loop.md) | Granular per-item feedback loop — `__feedback/` directory (3 dirs: pending/addressed/rejected), harness-owned file movement, resolution markers, per-item rejection negotiation, severity-based processing, part completion guard |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
 | **V2 Design** | |
+| [`doc_v2/DirectLLM.md`](../doc_v2/DirectLLM.md) | V2 DirectLLM — single interface for harness-internal LLM tasks (deferred from V1, zero V1 consumers) |
 | [`doc_v2/resume.md`](../doc_v2/resume.md) | V2 harness-level resume — layered resume design, resume spawn flow, crash recovery |
 | [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md) | V2 harness-controlled emergency interrupt compaction (deferred from V1) |
 | [`doc_v2/idle-session-recovery.md`](../doc_v2/idle-session-recovery.md) | V2 automatic respawn of dead idle sessions |

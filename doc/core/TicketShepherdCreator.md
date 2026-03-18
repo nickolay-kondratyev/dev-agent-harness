@@ -11,7 +11,7 @@ Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-speci
 ## Inputs
 
 - `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in code at
-  `ShepherdContext.kt`) — shared infrastructure (tmux, LLM, logging, use cases). Already
+  `ShepherdContext.kt`) — shared infrastructure (tmux, logging, use cases). Already
   initialized by `ContextInitializer` (ref.ap.9zump9YISPSIcdnxEXZZX.E — defined in code at
   `ContextInitializer.kt`) before the creator runs.
 - Ticket path — the markdown file to process
