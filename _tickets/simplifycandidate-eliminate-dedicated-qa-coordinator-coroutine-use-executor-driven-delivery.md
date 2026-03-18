@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:37:06Z
 id: nid_pcrrocwj7pkx55nnvmbc2c310_E
 title: "SIMPLIFY_CANDIDATE: Eliminate dedicated Q&A coordinator coroutine — use executor-driven delivery"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:10:04Z
-status_updated_iso: 2026-03-18T15:26:10Z
+status_updated_iso: 2026-03-18T15:37:06Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -47,3 +48,9 @@ Merge Q&A handling into the executor's existing signal-await loop:
   - Batch delivery is naturally ordered (executor processes queue, delivers all answers, then resumes)
 - **Preserves all functionality**: Fire-and-forget HTTP endpoint, batch answer delivery, blocking stdin handler — all still work. The change is where the coordination happens, not what coordination happens.
 
+
+## Notes
+
+**2026-03-18T15:37:00Z**
+
+RESOLVED: Updated 7 spec files to replace 3-actor Q&A model (executor + server + coordinator coroutine) with 2-actor model (executor + server). Server appends questions to SessionEntry.questionQueue; executor's health-aware await loop drains queue, collects answers via UserQuestionHandler, batch-delivers via AckedPayloadSender. isQAPending is now a derived property (questionQueue.isNotEmpty()). No dedicated coordinator coroutine lifecycle to manage. Two independent spec reviewers confirmed full consistency across 12+ doc files.

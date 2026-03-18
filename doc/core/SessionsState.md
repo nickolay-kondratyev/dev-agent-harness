@@ -28,13 +28,13 @@ When the server receives `/callback-shepherd/signal/done` with a `handshakeGuid`
 The server does **not** route `/callback-shepherd/signal/done` or `/callback-shepherd/signal/fail-workflow`
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
-`/callback-shepherd/signal/user-question` is handled as a side-channel: server sets
-`SessionEntry.isQAPending = true` and notifies the **Q&A coordinator** — a dedicated per-session
-coroutine that owns the structured question/answer queue internally, collects answers via
-`UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E), and batch-delivers all answers via
-`AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) once the full queue is answered.
-The executor stays suspended; health pings and noActivityTimeout are suppressed while
-`isQAPending` is true.
+`/callback-shepherd/signal/user-question` is handled as a side-channel: server appends the
+question to `SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The executor's
+health-aware await loop detects the non-empty queue on its next tick, collects answers via
+`UserQuestionHandler`, and batch-delivers all answers via `AckedPayloadSender`
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E). The executor stays suspended for signal-await; health
+pings and noActivityTimeout are suppressed while `isQAPending` is true (derived:
+`questionQueue.isNotEmpty()`).
 
 ---
 
@@ -54,7 +54,8 @@ server-side validation and shepherd-side decision making.
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The facade suspends on `.await()` inside `sendPayloadAndAwaitSignal`; `PartExecutor` never holds a raw `Deferred<AgentSignal>` reference. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback. Read by the facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
-| `isQAPending` | `Boolean` | `true` when Q&A is in progress for this session. Set to `true` by the server when `/signal/user-question` arrives. Set to `false` by the Q&A coordinator after all answers are batch-delivered and ACK received. Gates health ping firing and noActivityTimeout — both are **suppressed** while `true` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The structured question/answer queue (`QAPendingState`) is owned internally by the Q&A coordinator — not exposed on `SessionEntry`. |
+| `questionQueue` | `ConcurrentLinkedQueue<PendingQuestion>` | Thread-safe queue of pending questions from the agent. Server appends on `/signal/user-question`. Executor drains and processes in its health-aware await loop (ref.ap.NE4puAzULta4xlOLh5kfD.E). |
+| `isQAPending` | `Boolean` (derived) | **Derived property**: `questionQueue.isNotEmpty()`. `true` when Q&A is in progress — questions have been queued but not yet fully answered and delivered. Gates health ping firing and noActivityTimeout — both are **suppressed** while `true`. No separate actor manages this flag — it follows directly from queue state. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Role is derived on-the-fly from
 `subPartIndex` via `SubPartRole.fromIndex(subPartIndex)` — position 0 maps to `DOER`,
@@ -85,38 +86,31 @@ only require updating `fromIndex()`, not session records or any persisted state.
    directly as the return value of `sendPayloadAndAwaitSignal`; it never holds a raw
    `Deferred<AgentSignal>` reference
 
-### QAPendingState — Coordinator-Owned
-
-`QAPendingState` holds the ordered question queue and collected answers for a session's pending
-Q&A interaction. It is **owned internally by the Q&A coordinator** — not a field on `SessionEntry`.
+### PendingQuestion — Queued on SessionEntry
 
 ```kotlin
-data class QAPendingState(
-    /** Ordered queue of questions from the agent. Questions are appended as they arrive. */
-    val questions: List<PendingQuestion>,
-    /** Answers collected so far, in question order. Size grows as human answers each question. */
-    val answers: List<String>,
-)
-
 data class PendingQuestion(
     val question: String,
     val context: UserQuestionContext,
 )
 ```
 
-The Q&A coordinator processes questions sequentially (one stdin prompt per question). When
-`answers.size == questions.size`, all questions are answered — the coordinator batch-delivers
-all answers together via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E), then sets
-`SessionEntry.isQAPending = false`.
+Questions are queued on `SessionEntry.questionQueue` — a `ConcurrentLinkedQueue<PendingQuestion>`.
+The server appends on every `/signal/user-question`. The executor's health-aware await loop
+(ref.ap.QCjutDexa2UBDaKB3jTcF.E) drains the queue and processes questions sequentially
+(one stdin prompt per question via `UserQuestionHandler`). When all queued questions are
+answered, the executor batch-delivers all answers together via `AckedPayloadSender`
+(ref.ap.tbtBcVN2iCl1xfHJthllP.E).
 
-**Multiple questions:** If a second `/signal/user-question` arrives while the first is still
-unanswered, the server forwards the question to the coordinator, which appends to its internal
-`questions` queue. The coordinator processes each question in order.
+**Multiple questions:** If a second `/signal/user-question` arrives while the executor is
+collecting answers, the server appends to `questionQueue`. The executor continues processing
+until the queue is empty — then delivers.
 
-**Ownership boundary:** The server sets `isQAPending = true` on `SessionEntry` and passes the
-question to the coordinator. The coordinator owns all structured Q&A state (`QAPendingState`)
-and clears `isQAPending = false` after delivery. The server and coordinator never both mutate
-the same `QAPendingState` object — eliminating the previous concurrency surface.
+**Ownership boundary:** The server only appends to the queue. The executor only reads from
+(drains) the queue. `isQAPending` is a derived property (`questionQueue.isNotEmpty()`) — no
+separate flag to keep in sync. This two-actor model (server writes, executor reads) with a
+thread-safe queue eliminates the concurrency surface that a separate coordinator coroutine
+would introduce.
 
 ---
 
@@ -158,7 +152,7 @@ non-overlapping purposes**:
 
 | | `SessionsState` | `CurrentState` |
 |---|---|---|
-| **Holds** | Live runtime handles: TMUX sessions, CompletableDeferreds, lastActivityTimestamp, isQAPending | Workflow state: parts, sub-parts, statuses, iteration counters, session records (`sessionIds`) |
+| **Holds** | Live runtime handles: TMUX sessions, CompletableDeferreds, lastActivityTimestamp, questionQueue | Workflow state: parts, sub-parts, statuses, iteration counters, session records (`sessionIds`) |
 | **Purpose** | Callback routing (GUID → live session) | Single source of truth for all workflow state |
 | **Lifecycle** | Transient — entries created on spawn, removed on part completion. Never persisted. | Durable — flushed to `current_state.json` after every mutation. V2 rebuilds from disk on restart. |
 | **Mutated by** | `AgentFacadeImpl` (register/remove), `ShepherdServer` (deferred completion, timestamp updates) | `PartExecutor` (status transitions, session record addition, iteration counter increments) |

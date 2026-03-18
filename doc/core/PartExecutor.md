@@ -89,7 +89,7 @@ enum class DoneResult {
 | Callback | Why not | Handler |
 |----------|---------|---------|
 | `/callback-shepherd/signal/started` | Side-channel signal — startup acknowledgment only (ref.ap.xVsVi2TgoOJ2eubmoABIC.E) | Updates `lastActivityTimestamp`; confirms agent is alive and env is configured correctly |
-| `/callback-shepherd/signal/user-question` | Side-channel signal — executor stays suspended while Q&A happens | Server sets `SessionEntry.isQAPending = true`, forwards question to Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Executor detects `isQAPending` and **suppresses** health pings, compaction, and noActivityTimeout. Answers batch-delivered via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) by the Q&A coordinator (outside executor scope). |
+| `/callback-shepherd/signal/user-question` | Side-channel signal — executor handles Q&A inline | Server appends question to `SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E). Executor's health-aware await loop detects non-empty queue → pauses signal-await, collects answers via `UserQuestionHandler`, batch-delivers via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E), then resumes signal-await. Health pings and noActivityTimeout **suppressed** while `isQAPending` (derived: `questionQueue.isNotEmpty()`). |
 | `/callback-shepherd/signal/ack-payload` | Side-channel signal — payload delivery confirmation, including health ping ACKs (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E) | Updates `lastActivityTimestamp`; clears `pendingPayloadAck` on `SessionEntry`; facade's ACK-await phase reads this |
 
 All side-channel signals **do** update `SessionEntry.lastActivityTimestamp`
@@ -174,10 +174,12 @@ while (sessionEntry.pendingPayloadAck != null) {
 // at done boundaries only, NOT in this loop. See ContextWindowSelfCompactionUseCase
 // (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
 //
-// Q&A GATE: When sessionEntry.isQAPending is true, health pings and noActivityTimeout
-// are SUPPRESSED. The agent is known-idle awaiting a TMUX answer from the Q&A
-// coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Pinging would waste context window;
-// timeout would kill a healthy idle agent.
+// Q&A HANDLING: When sessionEntry.questionQueue is non-empty (isQAPending == true),
+// the executor pauses signal-await, collects answers via UserQuestionHandler, and
+// batch-delivers them to the agent via AckedPayloadSender. Health pings and
+// noActivityTimeout are SUPPRESSED during Q&A — the agent is known-idle awaiting
+// a TMUX answer. Pinging would waste context window; timeout would kill a healthy
+// idle agent. (ref.ap.NE4puAzULta4xlOLh5kfD.E)
 //
 while (true) {
     signal = awaitSignalWithTimeout(1.second)
@@ -187,9 +189,22 @@ while (true) {
         return signal
     }
 
-    // --- Q&A pending gate: skip health checks while Q&A is active ---
-    if (sessionEntry.isQAPending) {
-        log.debug { "qa_pending — skipping health checks" }
+    // --- Q&A handling: executor-driven answer collection and delivery ---
+    if (sessionEntry.questionQueue.isNotEmpty()) {
+        // Drain queue, collect answers sequentially via UserQuestionHandler
+        questions = sessionEntry.questionQueue.drainAll()
+        answers = []
+        for (q in questions) {
+            answer = userQuestionHandler.handleQuestion(q.context)
+            answers.add(answer)
+            // If more questions arrived during answer collection, drain and continue
+            questions.addAll(sessionEntry.questionQueue.drainAll())
+        }
+        // Write all answers to comm/in/qa_answers.md
+        writeQaAnswersFile(answers)
+        // Batch-deliver answer file path to agent via AckedPayloadSender
+        ackedPayloadSender.sendAndAwaitAck(session, sessionEntry, qaAnswerFilePath)
+        // Queue is now empty → isQAPending is false → health checks resume
         continue
     }
 
@@ -251,12 +266,14 @@ while (true) {
 - **Full audit trail**: Every health check decision is logged with structured values
   (ref.ap.RJWVLgUGjO5zAwupNLhA0.E — Logging Principle).
 
-### Dependencies (Health Monitoring — owned by `AgentFacadeImpl`)
+### Dependencies (Health Monitoring + Q&A — owned by `AgentFacadeImpl`)
 
 These are constructor dependencies of `AgentFacadeImpl`, not `PartExecutorImpl`:
 
 - `AgentUnresponsiveUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — parameterized by `DetectionContext`: sends ping (`NO_ACTIVITY_TIMEOUT`), kills TMUX + provides crash details (`PING_TIMEOUT`, `STARTUP_TIMEOUT`)
+- `UserQuestionHandler` (ref.ap.NE4puAzULta4xlOLh5kfD.E) — strategy for answering user questions. Called by the executor's health-aware await loop when `questionQueue` is non-empty.
 - `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback (sole liveness signal)
+- `SessionEntry.questionQueue` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — thread-safe queue; server appends questions, executor drains and processes them
 - `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `remaining_percentage` for done-boundary compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E); NOT used in the await loop or for liveness
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
 - `HarnessTimeoutConfig` — all timeout and threshold constants

@@ -320,24 +320,23 @@ again with the new instructions payload. Forgetting to reset the deferred is no 
 — the method owns that lifecycle unconditionally. Eliminates the silent-hang class of bugs
 noted in ticket `nid_0o3dqyqe9tlwpi9uroe9tdqpn_E`.
 
-### R2: `UserQuestionHandler` — Decoupled Q&A Coordinator
+### R2: `UserQuestionHandler` — Executor-Driven Q&A Delivery
 
-User questions are side-channel: the HTTP server sets `SessionEntry.isQAPending = true` and
-forwards questions to a dedicated **Q&A coordinator** coroutine per session
-(ref.ap.NE4puAzULta4xlOLh5kfD.E). The coordinator owns the structured question/answer queue
-(`QAPendingState`) internally, collects answers via `UserQuestionHandler` strategy, and
-batch-delivers all answers via `AckedPayloadSender`. This flow runs **outside the executor's
-coroutine scope**.
+User questions are side-channel: the HTTP server appends questions to
+`SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The executor's health-aware
+await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E), which runs inside
+`AgentFacadeImpl.sendPayloadAndAwaitSignal`, checks the queue on each tick. When questions
+are found, the executor pauses signal-await, collects answers via `UserQuestionHandler`
+strategy, batch-delivers all answers via `AckedPayloadSender`, then resumes signal-await.
 
-The Q&A coordinator is independent of `AgentFacade` — it is launched by the server and uses
-`AckedPayloadSender` directly for answer delivery. The executor's health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) only reads `SessionEntry.isQAPending` to suppress health
-pings and noActivityTimeout during Q&A.
+`UserQuestionHandler` is a constructor dependency of `AgentFacadeImpl` (same as
+`AgentUnresponsiveUseCase`, `Clock`, etc.). Health pings and noActivityTimeout are suppressed
+while `isQAPending` is true (derived: `questionQueue.isNotEmpty()`) — trivially implemented
+because the executor is the single owner of both health checks and Q&A processing.
 
 **Impact:** The HTTP server's relationship to AgentFacade is clarified: the server is a
-**collaborator** of AgentFacadeImpl (it triggers deferred completion via `SessionsState`) and
-the **owner** of the Q&A coordinator coroutine. The Q&A coordinator does not use the
-`AgentFacade` interface — it accesses `SessionEntry` and `AckedPayloadSender` directly.
+**collaborator** of AgentFacadeImpl — it triggers deferred completion via `SessionsState` and
+appends questions to `questionQueue`. No separate Q&A coordinator coroutine exists.
 
 **Must resolve at Gate 1.**
 

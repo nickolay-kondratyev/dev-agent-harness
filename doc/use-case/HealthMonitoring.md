@@ -284,8 +284,9 @@ a dedicated ping would duplicate what ACK already does.
 
 ### Health Ping During User-Question — Suppressed
 
-When an agent sends a `/user-question`, the server sets `SessionEntry.isQAPending = true`.
-While Q&A is pending, the health-aware await loop
+When an agent sends a `/user-question`, the server appends the question to
+`SessionEntry.questionQueue`. While Q&A is pending (`isQAPending == true`, derived from
+`questionQueue.isNotEmpty()`), the health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E) **skips all health checks** — no pings, no noActivityTimeout.
 
 **Why suppressed (not "harmless"):** Previously, pings during Q&A were considered harmless
@@ -294,11 +295,11 @@ message that consumes context window capacity. If the human is away for hours (m
 walks, overnight), dozens of pings accumulate — pure context-window waste that degrades
 the agent's ability to work on the actual task after Q&A completes.
 
-With Q&A-aware suppression, the facade knows the agent is in a **known-idle state** (waiting
-for Q&A answer via TMUX). No liveness uncertainty exists — the Q&A coordinator
-(ref.ap.NE4puAzULta4xlOLh5kfD.E) owns the session's Q&A lifecycle independently. If the
-TMUX session dies during Q&A, the coordinator detects this when `AckedPayloadSender` fails
-on answer delivery.
+With executor-driven Q&A, the suppression is trivially correct — the executor is the single
+owner of both health checks and Q&A processing. It knows the agent is in a **known-idle state**
+(waiting for Q&A answer via TMUX) because it is the one collecting answers. If the TMUX
+session dies during Q&A, the executor detects this when `AckedPayloadSender` fails on answer
+delivery (ref.ap.NE4puAzULta4xlOLh5kfD.E).
 
-After Q&A completes (all answers batch-delivered, ACK received), the coordinator sets
-`SessionEntry.isQAPending = false` → health monitoring resumes normally.
+After Q&A completes (all answers batch-delivered, ACK received), the queue is empty →
+`isQAPending` becomes `false` → health monitoring resumes normally.
