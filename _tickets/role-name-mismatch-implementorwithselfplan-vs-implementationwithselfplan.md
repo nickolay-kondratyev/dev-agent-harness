@@ -1,11 +1,11 @@
 ---
 id: nid_9q0r8y2gy8sumlsgmqqgjuqwg_E
 title: "Role name mismatch: IMPLEMENTOR_WITH_SELF_PLAN vs IMPLEMENTATION_WITH_SELF_PLAN"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T15:02:58Z
-status_updated_iso: 2026-03-18T15:02:58Z
+status_updated_iso: 2026-03-18T15:22:12Z
 type: bug
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
