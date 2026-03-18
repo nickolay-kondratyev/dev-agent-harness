@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:48:13Z
 id: nid_tk6as1efs9eb8htwomz33boqq_E
 title: "SIMPLIFY_CANDIDATE: Remove NeedsEscalation from RecoveryOutcome — collapse into Unresolvable"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:54:00Z
-status_updated_iso: 2026-03-18T13:47:13Z
+status_updated_iso: 2026-03-18T13:48:13Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -27,3 +28,9 @@ In `doc/use-case/AutoRecoveryByAgentUseCase.md` (ref.ap.q54vAxzZnmWHuumhIQQWt.E)
 
 **Robustness**: Unchanged — both variants already lead to the same halt behavior. The simplification removes a distinction without a difference.
 
+
+## Notes
+
+**2026-03-18T13:48:20Z**
+
+Resolved by updating doc/use-case/AutoRecoveryByAgentUseCase.md: collapsed NeedsEscalation into Unresolvable(reason: String). RecoveryOutcome now has two variants only — Resolved and Unresolvable. Caller Protocol updated to single branch for halt. Flow section updated: both escalation-marker and Failed/TimedOut paths return Unresolvable(reason).

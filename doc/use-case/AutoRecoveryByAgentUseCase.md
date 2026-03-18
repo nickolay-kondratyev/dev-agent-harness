@@ -58,17 +58,11 @@ sealed class RecoveryOutcome {
     object Resolved : RecoveryOutcome()
 
     /**
-     * The single recovery attempt did not succeed (Failed or TimedOut).
-     * The use case emits a FAIL signal with reason "recovery_failed".
-     * Caller should delegate to FailedToExecutePlanUseCase.
+     * Recovery did not succeed. Either the recovery agent failed/timed out,
+     * or the agent explicitly signalled that the issue requires human intervention.
+     * Caller should delegate to FailedToExecutePlanUseCase with the given [reason].
      */
-    object Unresolvable : RecoveryOutcome()
-
-    /**
-     * Recovery agent explicitly signals the issue requires human intervention.
-     * Caller should halt and escalate with the given [reason].
-     */
-    data class NeedsEscalation(val reason: String) : RecoveryOutcome()
+    data class Unresolvable(val reason: String) : RecoveryOutcome()
 }
 ```
 
@@ -95,9 +89,9 @@ The use case runs the recovery agent **exactly once**:
 
 3. **Interpret result**:
    - `NonInteractiveAgentResult.Success` → return `RecoveryOutcome.Resolved`.
-   - Agent output contains an escalation marker → return `RecoveryOutcome.NeedsEscalation(reason)`.
-   - `NonInteractiveAgentResult.Failed` or `TimedOut` → log FAIL with reason `"recovery_failed"`
-     and return `RecoveryOutcome.Unresolvable`.
+   - Agent output contains an escalation marker → return `RecoveryOutcome.Unresolvable(reason)`.
+   - `NonInteractiveAgentResult.Failed` or `TimedOut` → log FAIL and return
+     `RecoveryOutcome.Unresolvable("recovery_failed")`.
 
 **Rationale for single attempt**: If a recovery agent with full file access and explicit error
 context cannot fix the issue, a second spawn receives identical context and has no reason to
@@ -113,10 +107,8 @@ Callers (e.g., `GitOperationFailureUseCase`) follow this pattern:
 1. Package failure context into `RecoveryRequest`
 2. Call `AutoRecoveryByAgentUseCase.attemptRecovery(request)`
 3. On `RecoveryOutcome.Resolved` → **retry the original operation once**, then continue workflow
-4. On `RecoveryOutcome.Unresolvable` → delegate to `FailedToExecutePlanUseCase`
-   (prints red error, kills all sessions, exits non-zero)
-5. On `RecoveryOutcome.NeedsEscalation(reason)` → delegate to `FailedToExecutePlanUseCase`
-   with the escalation reason
+4. On `RecoveryOutcome.Unresolvable(reason)` → delegate to `FailedToExecutePlanUseCase`
+   with the reason (prints red error, kills all sessions, exits non-zero)
 
 **Single attempt**: The use case spawns the recovery agent exactly once. All exit paths are
 explicit via `RecoveryOutcome` — callers do not implement any retry logic.
