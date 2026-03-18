@@ -1,11 +1,11 @@
 ---
 id: nid_u9dsi8s5duqp0g2fwgpkdhmvu_E
 title: "Add sonar cube reporting"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T21:57:47Z
-status_updated_iso: 2026-03-18T21:57:47Z
+status_updated_iso: 2026-03-18T22:01:15Z
 type: task
 priority: 3
 assignee: nickolaykondratyev
