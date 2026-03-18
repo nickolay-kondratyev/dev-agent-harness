@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:40:31Z
 id: nid_say7nutsfmzpi4hdpi5uwm5tc_E
 title: "SIMPLIFY_CANDIDATE: PayloadId — use HandshakeGuid prefix + sequence counter instead of random 21-char string"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T02:10:14Z
-status_updated_iso: 2026-03-18T13:38:56Z
+status_updated_iso: 2026-03-18T13:40:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -27,3 +28,18 @@ File: doc/core/agent-to-server-communication-protocol.md
 --------------------------------------------------------------------------------
 
 DECISION: Yes lets do this.
+## Notes
+
+**2026-03-18T13:40:27Z**
+
+RESOLVED: Updated PayloadId spec in doc/core/agent-to-server-communication-protocol.md.
+
+Changed format from random 21-char alphanumeric string to {handshakeGuid_short_8chars}-{sequenceN} (e.g., "a1b2c3d4-3" for the 3rd payload in that session).
+
+Changes made:
+- PayloadId section (ap.GWfkDyTJbMpWhPSPnQHlO.E): rewrote format description, added observability rationale, updated Kotlin snippet signature to PayloadId.generate(handshakeGuid, counter)
+- Wrapping Format example: updated example ID from "aB3xK9mR2pL7nQ4wY6jHt" to "a1b2c3d4-3"
+- Signal Request Payloads example: updated payloadId example value
+- Callback scripts: replaced "21-char PayloadId" label with descriptive example
+
+Commit: caf828f
