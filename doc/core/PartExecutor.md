@@ -451,10 +451,11 @@ makes new-transition coverage compiler-enforced.
 
 - **`AgentFacade`** (ref.ap.9h0KS4EOK5yumssRCJdbq.E) — single facade for all agent
   operations: spawn (`spawnAgent`), full payload-and-signal cycle
-  (`sendPayloadAndAwaitSignal`), and kill (`killSession`). Fully encapsulates
-  `SessionsState`, `CompletableDeferred` lifecycle, ACK protocol, health-aware await loop,
-  and context-window compaction. The executor never accesses `SessionsState`,
-  `TmuxCommunicator`, `ContextWindowStateReader`, or `AgentUnresponsiveUseCase` directly.
+  (`sendPayloadAndAwaitSignal`), context window state reading (`readContextWindowState`),
+  and kill (`killSession`). Fully encapsulates `SessionsState`, `CompletableDeferred`
+  lifecycle, ACK protocol, health-aware await loop, and context-window state reading.
+  The executor never accesses `SessionsState`, `TmuxCommunicator`,
+  `ContextWindowStateReader`, or `AgentUnresponsiveUseCase` directly.
   See [`AgentFacade`](AgentFacade.md) for the full interface spec.
 - `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) — assemble instruction files for agents (doer, reviewer, planner, plan-reviewer)
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal

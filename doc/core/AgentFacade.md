@@ -74,6 +74,7 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 |--------|---------------------|---------------------|
 | `spawnAgent(config)` | Bootstrap handshake, session ID resolution, initial `SessionsState` registration, TMUX session start | `AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) + `TmuxSessionManager` + `SessionsState` |
 | `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` | Full signal lifecycle: create fresh `CompletableDeferred`, re-register `SessionEntry`, send payload with ACK (3× retry), run health-aware await loop, return `AgentSignal` | `TmuxCommunicator` + ACK wrapping + `SessionsState` + `AgentUnresponsiveUseCase` |
+| `readContextWindowState(handle): ContextWindowState` | Read context window remaining percentage for an agent session. Used at done boundaries for self-compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Returns `ContextWindowState` with nullable `remainingPercentage` (null = stale/unknown). | `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
 `SpawnedAgentHandle` contains:
@@ -84,7 +85,8 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 
 **`sendPayloadAndAwaitSignal` fully encapsulates the signal lifecycle**, including the
 health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E). The executor owns no deferred
-references and calls no health-ping or context-window methods directly. See
+references and calls no health-ping methods directly. Context window state is read via
+`readContextWindowState(handle)` at done boundaries (not inside the await loop). See
 [`PartExecutor.md`](PartExecutor.md) for the loop pseudocode (marked as internal to this method).
 
 ---
@@ -131,9 +133,10 @@ runTest {
     val fake = FakeAgentFacade()
     val executor = PartExecutorImpl(agentFacade = fake, ...)
 
-    // Program the fake: spawn succeeds, then agent sends COMPLETED
+    // Program the fake: spawn succeeds, context healthy, then agent sends COMPLETED
     fake.onSpawn { handle }
     fake.onSendPayloadAndAwaitSignal { AgentSignal.Done(DoneResult.COMPLETED) }
+    fake.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
 
     val result = executor.execute()
     result shouldBe PartResult.Completed
@@ -191,8 +194,11 @@ Programmable fake for `PartExecutorImpl` unit tests that allows tests to:
 - Control spawn behavior (succeed, fail)
 - Control `sendPayloadAndAwaitSignal` return value — return any `AgentSignal` variant, optionally
   with a `suspend` delay to simulate latency
+- Control `readContextWindowState` return value — return any `ContextWindowState` (programmable
+  `remainingPercentage`: healthy, low, or null/stale) to test done-boundary compaction decisions
 - Control `killSession` (record that it was called)
-- Verify interactions: was `sendPayloadAndAwaitSignal` called? with what payloads? was session killed?
+- Verify interactions: was `sendPayloadAndAwaitSignal` called? with what payloads? was
+  `readContextWindowState` called? was session killed?
 
 The fake does **not** re-run the health-aware loop internally — it simply returns the
 pre-programmed signal. Health-loop edge cases (timeouts, ping, crash, compaction) are tested

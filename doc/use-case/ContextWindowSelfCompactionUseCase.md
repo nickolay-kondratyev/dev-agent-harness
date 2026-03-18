@@ -397,8 +397,9 @@ by `sendPayloadAndAwaitSignal`. No new API or special-case logic is needed; post
 re-entry is identical to the first iteration.
 
 All agent operations go through `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). The
-executor uses two explicit methods — consistent with the interface defined in
-[`AgentFacade.md`](../core/AgentFacade.md).
+executor uses `spawnAgent`, `sendPayloadAndAwaitSignal`, `readContextWindowState`
+(for done-boundary compaction checks), and `killSession` — consistent with the
+interface defined in [`AgentFacade.md`](../core/AgentFacade.md).
 
 **DRY between planning and execution:** The `PartExecutor` is already shared between
 planning (PLANNER↔PLAN_REVIEWER) and execution parts. The self-compaction logic lives in

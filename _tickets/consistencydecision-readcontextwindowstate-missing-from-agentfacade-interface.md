@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:41:04Z
 id: nid_udi17gkfnz6r8xzqk7qyjba41_E
 title: "CONSISTENCY_DECISION: readContextWindowState missing from AgentFacade interface"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:32:28Z
-status_updated_iso: 2026-03-18T14:35:29Z
+status_updated_iso: 2026-03-18T14:41:04Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -22,7 +23,14 @@ The executor needs to read context window state at done boundaries for compactio
 
 DECISION: Add readContextWindowState(handle): ContextWindowState to the AgentFacade interface + update FakeAgentFacade (R3) to support programmable context state
 
-Files:
-- doc/core/AgentFacade.md (interface table, R3 FakeAgentFacade)
-- doc/use-case/ContextWindowSelfCompactionUseCase.md (line 183 pseudocode)
+## Resolution
+
+Added `readContextWindowState(handle): ContextWindowState` to the AgentFacade interface table in `doc/core/AgentFacade.md`. Updated:
+
+1. **AgentFacade.md interface table** — new row with method signature, description (done-boundary compaction decisions), and internal delegation to `ContextWindowStateReader`
+2. **AgentFacade.md R3 FakeAgentFacade** — added programmable context state control and interaction verification
+3. **AgentFacade.md test pseudocode** — added `fake.onReadContextWindowState` to executor test example
+4. **PartExecutor.md Dependencies** — added `readContextWindowState` to the AgentFacade method listing
+
+Cross-spec consistency verified: `high-level.md`, `TicketShepherdCreator.md`, `ContextWindowSelfCompactionUseCase.md` all already referenced context window state reading through the facade — now the interface table matches.
 
