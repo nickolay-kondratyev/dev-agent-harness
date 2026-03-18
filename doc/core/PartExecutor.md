@@ -419,8 +419,8 @@ failure details, then returns `PartResult.AgentCrashed` with a message indicatin
 sub-part's idle session died. `TicketShepherd` delegates to `FailedToExecutePlanUseCase`
 (red error, kills all sessions, exits non-zero).
 
-No automatic respawn in V1. See `doc_v2/idle-session-recovery.md` for V2 design
-(automatic respawn of the dead idle session with `--resume`).
+No automatic respawn in V1. See [`doc_v2/idle-session-recovery.md`](../../doc_v2/idle-session-recovery.md)
+for V2 design (automatic respawn of the dead idle session with `--resume`).
 
 ### Git Commits During Execution
 

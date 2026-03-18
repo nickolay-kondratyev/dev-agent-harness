@@ -182,8 +182,9 @@ human input. This is a deliberate product decision:
 
 **Consequence:** Do not run the harness with `StdinUserQuestionHandler` in fully unattended
 environments (e.g., CI with no interactive terminal). For those use cases, a future
-`LlmUserQuestionHandler` or `TimeoutWithFallbackHandler` (see V2+ table below) is the right
-choice — they are explicitly designed for autonomous operation.
+`LlmUserQuestionHandler` or `TimeoutWithFallbackHandler` (see
+[`doc_v2/user-question-handler-future-strategies.md`](../../doc_v2/user-question-handler-future-strategies.md))
+is the right choice — they are explicitly designed for autonomous operation.
 
 ### WHY Ping Suppression is Safe During Stdin Q&A
 
@@ -201,12 +202,8 @@ actual answer and subsequent work.
 
 ## Future Strategies (V2+)
 
-| Strategy | Description |
-|----------|-------------|
-| `StdinUserQuestionHandler` | V1 — human at terminal |
-| `LlmUserQuestionHandler` | Route to a `DirectLLM` (ref.ap.hnbdrLkRtNSDFArDFd9I2.E) configured with an expensive model for autonomous answers |
-| `SlackUserQuestionHandler` | Post to Slack channel, wait for reply |
-| `TimeoutWithFallbackHandler` | Wait N minutes for human, fall back to LLM |
+V2+ will add autonomous and async question-answering strategies. See
+[`doc_v2/user-question-handler-future-strategies.md`](../../doc_v2/user-question-handler-future-strategies.md).
 
 ---
 

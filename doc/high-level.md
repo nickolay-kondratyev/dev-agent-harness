@@ -145,8 +145,8 @@ stop the other instance first.
 V1 does not support resume-on-restart — if the harness dies, you start over.
 The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is the authoritative workflow
 state; `current_state.json` is a durable disk copy flushed after every mutation — written for
-progress tracking and observability but not consumed on restart in V1.
-See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 resume design.
+progress tracking and observability but not consumed on restart in V1. V2 adds layered resume —
+see [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -482,10 +482,8 @@ attribution), and all env var requirements are fully specified in
 
 ## Harness-Level Resume — V2
 
-V1 does **not** support resume-on-restart — if the harness dies, you start over.
-The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is flushed to
-`current_state.json` for progress tracking but not consumed on restart in V1.
-V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+V1 does **not** support resume-on-restart — if the harness dies, you start over. V2 adds
+layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -551,3 +549,8 @@ V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6Lgm
 | [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, done-boundary self-compaction flow, PRIVATE.md, session rotation |
 | [`doc/plan/granular-feedback-loop.md`](plan/granular-feedback-loop.md) | Granular per-item feedback loop — `__feedback/` directory (3 dirs: pending/addressed/rejected), harness-owned file movement, resolution markers, per-item rejection negotiation, severity-based processing, part completion guard |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
+| **V2 Design** | |
+| [`doc_v2/resume.md`](../doc_v2/resume.md) | V2 harness-level resume — layered resume design, resume spawn flow, crash recovery |
+| [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md) | V2 harness-controlled emergency interrupt compaction (deferred from V1) |
+| [`doc_v2/idle-session-recovery.md`](../doc_v2/idle-session-recovery.md) | V2 automatic respawn of dead idle sessions |
+| [`doc_v2/user-question-handler-future-strategies.md`](../doc_v2/user-question-handler-future-strategies.md) | V2+ UserQuestionHandler strategies (LLM, Slack, timeout-with-fallback) |

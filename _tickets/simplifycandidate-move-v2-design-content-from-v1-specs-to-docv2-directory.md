@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:10:46Z
 id: nid_6o206wjjli6d6xzlw6s38mju2_E
 title: "SIMPLIFY_CANDIDATE: Move V2 design content from V1 specs to doc_v2/ directory"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:47:21Z
-status_updated_iso: 2026-03-18T14:58:59Z
+status_updated_iso: 2026-03-18T15:10:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -45,5 +46,26 @@ This interleaving makes V1 specs 20-30% longer than necessary and creates ambigu
 - doc/high-level.md
 - doc/use-case/SpawnTmuxAgentSessionUseCase.md
 - doc/core/PartExecutor.md
-- Possibly others with V2 references
+- doc/core/UserQuestionHandler.md
+
+## Resolution
+
+Completed. V2 content extracted from V1 specs into doc_v2/ directory:
+
+### What was extracted:
+1. **SpawnTmuxAgentSessionUseCase.md**: Resume Flow section (~28 lines) + resume command template + `--resume` line from ClaudeCodeAdapter → merged into `doc_v2/resume.md`
+2. **ContextWindowSelfCompactionUseCase.md**: V2 Resume section + idle session recovery V2 comparison (~15 lines) → condensed to forward refs pointing to `doc_v2/resume.md` and `doc_v2/idle-session-recovery.md`
+3. **high-level.md**: "Harness-Level Resume — V2" section condensed from 5 lines to 2-line forward ref
+4. **UserQuestionHandler.md**: "Future Strategies (V2+)" strategy table → new `doc_v2/user-question-handler-future-strategies.md`
+5. **PartExecutor.md**: Fixed bare `doc_v2/` reference to proper markdown link
+
+### What was preserved:
+- All "do not revisit" and "rejected approach" sections remained in V1 specs
+- All AP cross-references updated and verified
+- Brief one-liner V2 forward refs across other specs left as-is (appropriate context)
+- Fixed stale "see V2+ table below" reference in UserQuestionHandler.md
+
+### Analysis findings:
+- 12 additional files with V2/doc_v2 references were analyzed — all contained only brief forward references, no substantial V2 design content to extract
+- Some V2 emergency-compression content had already been extracted to `doc_v2/our-own-emergency-compression.md` prior to this ticket
 
