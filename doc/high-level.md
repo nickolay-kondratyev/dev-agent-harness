@@ -542,3 +542,8 @@ layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6L
 | [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, done-boundary self-compaction flow, PRIVATE.md, session rotation |
 | [`doc/plan/granular-feedback-loop.md`](plan/granular-feedback-loop.md) | Granular per-item feedback loop — `__feedback/` directory (3 dirs: pending/addressed/rejected), harness-owned file movement, resolution markers, per-item rejection negotiation, severity-based processing, part completion guard |
 | `ai_input/memory/auto_load/1_core_description.md` | Auto-loaded summary for sub-agents — **update if this doc changes** |
+| **V2 Design** | |
+| [`doc_v2/resume.md`](../doc_v2/resume.md) | V2 harness-level resume — layered resume design, resume spawn flow, crash recovery |
+| [`doc_v2/our-own-emergency-compression.md`](../doc_v2/our-own-emergency-compression.md) | V2 harness-controlled emergency interrupt compaction (deferred from V1) |
+| [`doc_v2/idle-session-recovery.md`](../doc_v2/idle-session-recovery.md) | V2 automatic respawn of dead idle sessions |
+| [`doc_v2/user-question-handler-future-strategies.md`](../doc_v2/user-question-handler-future-strategies.md) | V2+ UserQuestionHandler strategies (LLM, Slack, timeout-with-fallback) |
