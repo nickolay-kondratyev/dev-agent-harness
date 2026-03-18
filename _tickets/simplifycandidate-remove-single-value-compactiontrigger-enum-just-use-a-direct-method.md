@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:41:48Z
 id: nid_85ipssz197fvyewlbral2mli8_E
 title: "SIMPLIFY_CANDIDATE: Remove single-value CompactionTrigger enum — just use a direct method"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:24:32Z
-status_updated_iso: 2026-03-18T14:24:32Z
+status_updated_iso: 2026-03-18T14:41:48Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

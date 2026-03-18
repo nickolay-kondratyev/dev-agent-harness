@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:42:14Z
 id: nid_cqkr90es7s6frccf4arh487an_E
 title: "SIMPLIFY_CANDIDATE: Reuse done signal for self-compaction instead of dedicated SelfCompacted signal"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:24:48Z
-status_updated_iso: 2026-03-18T14:24:48Z
+status_updated_iso: 2026-03-18T14:42:14Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
