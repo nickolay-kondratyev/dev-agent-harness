@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:42:53Z
 id: nid_trmjhura2kt236acs7w7p765e_E
 title: "SIMPLIFY_CANDIDATE: Fail hard on PlanConversionException — remove planning loop restart"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:54:36Z
-status_updated_iso: 2026-03-17T23:54:36Z
+status_updated_iso: 2026-03-18T13:42:53Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
