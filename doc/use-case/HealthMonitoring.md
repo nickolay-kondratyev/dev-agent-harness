@@ -1,5 +1,7 @@
 # Agent Health Monitoring — UseCase Pattern / ap.RJWVLgUGjO5zAwupNLhA0.E
 
+<!-- Ticket coverage: nid_0of6zl2493ctvmy9m23kxnhnl_E (HealthTimeoutLadder), nid_sfgmp7jk8tlnnh2sgblh3npkj_E (AgentUnresponsiveUseCase), nid_o9j8yo1yf76iwrj1x12u19t0z_E (FailedToConvergeUseCase), nid_foubbnsh3vmk1fk34zm75zkg0_E (FailedToExecutePlanUseCase), nid_qdd1w86a415xllfpvcsf8djab_E (Health-Aware Await Loop) -->
+
 Timeout + ping mechanism to detect crashed/hung agents. Failure scenarios are encapsulated
 in UseCase classes — simple, stateless, single-responsibility operations that `AgentFacadeImpl`
 (ref.ap.9h0KS4EOK5yumssRCJdbq.E) invokes from its health-aware await loop
