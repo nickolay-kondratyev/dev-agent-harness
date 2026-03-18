@@ -9,7 +9,7 @@ import kotlinx.coroutines.Dispatchers
  * Inject instead of referencing `Dispatchers.IO` directly — satisfies Sonar S6310 and
  * keeps coroutine scheduling under test control.
  *
- * ap.Dispatcher_Provider_Interface.E
+ * ap.PCmO6HVD8MShEJOnyyVih.E
  */
 fun interface DispatcherProvider {
     fun io(): CoroutineDispatcher
