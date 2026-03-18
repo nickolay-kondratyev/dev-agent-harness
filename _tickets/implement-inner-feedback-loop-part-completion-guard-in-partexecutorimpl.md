@@ -1,6 +1,6 @@
 ---
 id: nid_fq8wn0eb9yrvzcpzdurlmsg7i_E
-title: "Implement Inner Feedback Loop + Part Completion Guard in PartExecutorImpl"
+title: "Implement Inner Feedback Loop in PartExecutorImpl"
 status: open
 deps: [nid_dnelaf98097nicijp4kvjfd1d_E, nid_rnusi51qg9yw7cmszkes0l1ab_E, nid_92vpmdxcn3j8f98gzgu9eln43_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_fjod8du6esers3ajur2h7tvgx_E]
 links: []
@@ -12,7 +12,8 @@ assignee: CC_opus-v4.6_WITH-nickolaykondratyev
 tags: [granular-feedback-loop, part-executor, inner-loop]
 ---
 
-Implement the granular inner feedback loop and part completion guard in `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E).
+Implement the granular inner feedback loop in `PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E).
+Part Completion Guard (R8) split to nid_yzmwosyazxksnr1hafmw87x1m_E.
 
 ## Context
 Spec: `doc/plan/granular-feedback-loop.md` (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E).
@@ -20,7 +21,7 @@ This is the core orchestration change that ties all feedback loop components tog
 
 ## Requirements Covered
 - **R3**: Inner Feedback Loop — after reviewer `needs_iteration`, list files in `pending/`, process in severity order (critical → important → optional, sorted by filename within severity). Feed ONE feedback file at a time to doer via re-instruction.
-- **R8**: Part Completion Guard — on reviewer PASS, validate `__feedback/pending/` contains no `critical__*` or `important__*` files. If found → `PartResult.AgentCrashed`. Remaining `optional__*` → move to `addressed/`.
+- **R8**: ~~Split to nid_yzmwosyazxksnr1hafmw87x1m_E~~
 - **R9**: Feedback Files Presence Guard — after `needs_iteration`, validate at least one file exists in `pending/`. If empty → `PartResult.AgentCrashed`.
 - **R10**: Iteration Counter Unchanged — `iteration.current` increments once per reviewer `needs_iteration`, NOT per individual feedback item.
 - **R11**: Harness-Owned File Movement — after doer `done` + resolution marker read: ADDRESSED → move to `addressed/`, REJECTED → delegate to `RejectionNegotiationUseCase`.
@@ -76,9 +77,7 @@ PROCESS_FEEDBACK_ITEM:
 - Unit test: self-compaction check fires at each done boundary
 - Unit test: iteration.current increments once per needs_iteration (not per item)
 - Unit test: needs_iteration with empty pending → immediate AgentCrashed
-- Unit test: PASS with pending critical → immediate AgentCrashed (part completion guard)
-- Unit test: PASS with only optional in pending → Completed (optional moved to addressed/)
-- Unit test: PASS with empty pending → Completed
+- (R8 PASS guard tests moved to nid_yzmwosyazxksnr1hafmw87x1m_E)
 - Unit test: rejection → delegates to RejectionNegotiationUseCase
 - Unit test: multiple items across all severities processed in correct order
 
@@ -88,7 +87,7 @@ PROCESS_FEEDBACK_ITEM:
 ## Acceptance Criteria
 - All unit tests pass
 - Full inner loop flow works with FakeAgentFacade
-- Part completion guard blocks on pending critical/important
+- (Part completion guard split to nid_yzmwosyazxksnr1hafmw87x1m_E)
 - Feedback files presence guard catches empty pending on needs_iteration
 - Iteration counter unchanged by inner loop processing
 - Harness moves files, never agents
@@ -102,3 +101,7 @@ PROCESS_FEEDBACK_ITEM:
 - Update `doc/core/PartExecutor.md` with inner feedback loop changes
 - Update `doc/high-level.md` sub-part transitions section
 - Update `doc/use-case/ContextWindowSelfCompactionUseCase.md` with inner loop done-boundary source note
+
+**2026-03-18T22:53:25Z**
+
+Split out Part Completion Guard (R8, Gate 5) into separate ticket nid_yzmwosyazxksnr1hafmw87x1m_E to keep this ticket focused on the inner loop orchestration (R3, R9, R10, R11). This ticket no longer covers R8 — the PASS branch guard.

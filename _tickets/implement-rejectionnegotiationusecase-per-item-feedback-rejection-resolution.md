@@ -77,3 +77,9 @@ class RejectionNegotiationUseCase(
 - All unit tests pass including all negotiation scenarios
 - Clean boundary between this use case and PartExecutorImpl
 
+
+## Notes
+
+**2026-03-18T22:53:27Z**
+
+Note: RejectionNegotiationUseCase owns its own message templates for reviewer judgment instructions and doer compliance instructions (inline, not via ContextForAgentProvider). The messages are simple, non-reusable templates specific to the negotiation flow. See spec section 'Reviewer Instructions for Rejection Judgment' for the template.
