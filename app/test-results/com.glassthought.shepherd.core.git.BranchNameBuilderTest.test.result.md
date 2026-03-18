@@ -9,7 +9,7 @@ skipped: 0
   - WHEN called with a long title and id='nid_abc123'
     - [PASS] THEN branch name ends with '__try-1'
     - [PASS] THEN branch name starts with 'nid_abc123__'
-    - [PASS] THEN the slug portion is at most 60 characters
+    - [PASS] THEN the slug portion is at most 50 characters
   - WHEN called with blank id
     - [PASS] THEN throws IllegalArgumentException
   - WHEN called with id='TK-001', title='My Feature', tryNumber=1
@@ -23,8 +23,8 @@ skipped: 0
 - GIVEN slugify
   - WHEN called with a simple title 'My Feature'
     - [PASS] THEN returns 'my-feature'
-  - WHEN called with a title exceeding 60 characters
-    - [PASS] THEN result length is at most 60
+  - WHEN called with a title exceeding 50 characters
+    - [PASS] THEN result length is at most 50
   - WHEN called with a title that truncates to end with a hyphen
     - [PASS] THEN result does not end with a hyphen
   - WHEN called with an empty string

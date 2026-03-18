@@ -40,12 +40,6 @@ dependencies {
     // Coroutines: required for runBlocking in main() and suspend ProcessRunner calls
     implementation(libs.kotlinx.coroutines.core)
 
-    // OkHttp: HTTP client for direct LLM API calls
-    implementation(libs.okhttp)
-
-    // org.json: lightweight JSON construction and parsing for LLM API request/response bodies
-    implementation(libs.json)
-
     // snakeyaml: YAML parsing for ticket and role markdown frontmatter
     implementation(libs.snakeyaml)
 
@@ -59,8 +53,6 @@ dependencies {
     implementation(libs.ktor.server.content.negotiation)
     implementation(libs.ktor.serialization.jackson)
 
-    // MockWebServer: local HTTP server for unit testing OkHttp-based API callers
-    testImplementation(libs.mockwebserver)
 }
 
 // Apply a specific Java toolchain to ease working on different environments.

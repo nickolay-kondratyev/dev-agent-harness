@@ -45,8 +45,9 @@ data class HarnessTimeoutConfig(
   /** Maximum wait time per ACK attempt when delivering an instruction payload. */
   val payloadAckTimeout: Duration = 3.minutes,
 
-  /** Maximum number of delivery attempts before the harness gives up. */
-  val payloadAckRetries: Int = 3,
+  /** Maximum number of delivery attempts before the harness gives up.
+   *  Spec: 3 total attempts (1 initial + 2 retries). Ref: ref.ap.r0us6iYsIRzrqHA5MVO0Q.E */
+  val payloadAckMaxAttempts: Int = 3,
 
   // --- Context-Window Self-Compaction (ref.ap.8nwz2AHf503xwq8fKuLcl.E) ---
 

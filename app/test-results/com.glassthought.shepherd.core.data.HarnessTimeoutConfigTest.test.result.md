@@ -10,7 +10,7 @@ skipped: 0
   - [PASS] THEN contextWindowSoftThresholdPct is 35
   - [PASS] THEN healthCheckInterval is 5 minutes
   - [PASS] THEN noActivityTimeout is 30 minutes
-  - [PASS] THEN payloadAckRetries is 3
+  - [PASS] THEN payloadAckMaxAttempts is 3
   - [PASS] THEN payloadAckTimeout is 3 minutes
   - [PASS] THEN pingTimeout is 3 minutes
   - [PASS] THEN selfCompactionTimeout is 5 minutes

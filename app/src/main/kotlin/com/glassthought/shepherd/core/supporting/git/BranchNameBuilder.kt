@@ -15,7 +15,7 @@ import com.glassthought.shepherd.core.supporting.ticket.TicketData
 object BranchNameBuilder {
 
     private const val DELIMITER = "__"
-    private const val MAX_SLUG_LENGTH = 60
+    private const val MAX_SLUG_LENGTH = 50
     private const val TRY_PREFIX = "try-"
     private const val UNTITLED_FALLBACK = "untitled"
 

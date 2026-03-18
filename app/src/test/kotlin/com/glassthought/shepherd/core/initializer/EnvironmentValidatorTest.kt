@@ -15,10 +15,8 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
     val allEnvVarsPresent: (String) -> String? = { envVarName ->
         when (envVarName) {
             Constants.REQUIRED_ENV_VARS.HOST_USERNAME -> "testuser"
-            Constants.REQUIRED_ENV_VARS.MODEL_VERSION_DIR -> "/tmp/models"
             Constants.REQUIRED_ENV_VARS.TICKET_SHEPHERD_AGENTS_DIR -> "/tmp/agents"
             Constants.REQUIRED_ENV_VARS.MY_ENV -> "/tmp/myenv"
-            Constants.Z_AI_API.API_TOKEN_ENV_VAR -> "test-token"
             else -> null
         }
     }
@@ -66,10 +64,8 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
                     validator.validate()
                 }
                 exception.message shouldContain Constants.REQUIRED_ENV_VARS.HOST_USERNAME
-                exception.message shouldContain Constants.REQUIRED_ENV_VARS.MODEL_VERSION_DIR
                 exception.message shouldContain Constants.REQUIRED_ENV_VARS.TICKET_SHEPHERD_AGENTS_DIR
                 exception.message shouldContain Constants.REQUIRED_ENV_VARS.MY_ENV
-                exception.message shouldContain Constants.Z_AI_API.API_TOKEN_ENV_VAR
             }
         }
     }
