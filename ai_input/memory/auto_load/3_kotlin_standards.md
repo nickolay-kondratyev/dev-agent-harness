@@ -38,3 +38,10 @@
 - **Sealed classes/enums in `when`** — no `else` branch; let compiler enforce exhaustiveness.
 - **Favor compile-time checks** over runtime checks.
 - **No free-floating functions** — favor cohesive classes; for stateless utilities, use a static class (companion object).
+
+### Static Analysis (detekt)
+- Detekt runs as part of `./test.sh` via `:app:test` task dependency.
+- Baseline file at `detekt-baseline.xml` excludes existing issues to keep build green.
+- **When modifying code in a file with baseline exceptions**: fix the issues and remove the corresponding entries from the baseline.
+- Run `./gradlew :app:detektBaseline` to regenerate baseline after fixes (only if needed).
+- Config: `detekt-config.yml` — project-specific overrides on top of detekt defaults.

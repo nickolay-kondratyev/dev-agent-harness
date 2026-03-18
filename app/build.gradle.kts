@@ -11,6 +11,9 @@ plugins {
 
     // Apply the application plugin to add support for building a CLI application in Java.
     application
+
+    // Apply detekt for static analysis
+    alias(libs.plugins.detekt)
 }
 
 repositories {
@@ -82,6 +85,29 @@ application {
 //
 // Self-healing is handled by _prepare_pre_build.sh (ref.ap.gtpABfFlF4RE1SITt7k1P.E),
 // which must be called BEFORE invoking ./gradlew. See test.sh and test_with_integ.sh.
+
+// Detekt configuration for static analysis.
+detekt {
+    // Baseline file allows existing issues to be ignored while preventing new ones.
+    // Location: app module directory (can be moved to root for multi-module projects).
+    baseline = file("$rootDir/detekt-baseline.xml")
+
+    // Build upon default config but allow project-specific overrides.
+    config.setFrom(files("$rootDir/detekt-config.yml"))
+
+    // Parallel execution for faster analysis.
+    parallel = true
+
+    // Fail build on any finding (baseline excluded).
+    buildUponDefaultConfig = true
+    allRules = false
+}
+
+// Wire detekt to run as part of test.
+// This ensures static analysis runs with ./gradlew :app:test.
+tasks.named("test") {
+    dependsOn(tasks.named("detekt"))
+}
 
 tasks.named<Test>("test") {
     // Use JUnit Platform for unit tests.

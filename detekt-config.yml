@@ -1,0 +1,17 @@
+# Detekt configuration - builds upon default config.
+# This file allows project-specific overrides without duplicating all defaults.
+# See: https://detekt.dev/docs/rules/configuration/
+
+complexity:
+  LongParameterList:
+    # Allow more parameters in constructors for data classes and test builders.
+    constructorThreshold: 8
+    functionThreshold: 6
+    ignoreDefaultParameters: true
+    ignoreDataClasses: true
+
+style:
+  # Max line length - keep consistent with Kotlin official style guide.
+  MaxLineLength:
+    maxLineLength: 120
+    excludeCommentStatements: true
