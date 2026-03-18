@@ -478,7 +478,7 @@ attribution), and all env var requirements are fully specified in
 - Branch format: `{TICKET_ID}__{slugified_title}__try-{N}` — owned by `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)
 - Harness owns all git commits — agents never commit. Pluggable `GitCommitStrategy` interface.
 - V1 default: `CommitPerSubPart` — commits the entire working tree (`git add -A`)
-- **Git operation failures** trigger `GitOperationFailureUseCase` → `AutoRecoveryByAgentUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E, ref.ap.q54vAxzZnmWHuumhIQQWt.E) — runs a PI agent (`$AI_MODEL__ZAI__FAST`) via `NonInteractiveAgentRunner` (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) to fix the environment, then retries once. Falls back to `FailedToExecutePlanUseCase` if recovery fails.
+- **Git operation failures** trigger `GitOperationFailureUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E) — index.lock fast-path (deterministic delete + retry) for the most common failure (~80%), then fail-fast to `FailedToExecutePlanUseCase` for all other git failures. Agent-based recovery (`AutoRecoveryByAgentUseCase` ref.ap.q54vAxzZnmWHuumhIQQWt.E) is deferred to V2.
 
 ## Harness-Level Resume — V2
 
@@ -544,7 +544,7 @@ layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6L
 | [`doc/use-case/SpawnTmuxAgentSessionUseCase.md`](use-case/SpawnTmuxAgentSessionUseCase.md) | Agent spawn flow, HandshakeGuid, session ID resolution |
 | [`doc/use-case/HealthMonitoring.md`](use-case/HealthMonitoring.md) | Health monitoring UseCases — startup ack, timeout, ping, crash, convergence failure |
 | [`doc/core/NonInteractiveAgentRunner.md`](core/NonInteractiveAgentRunner.md) | Lightweight subprocess-based agent invocation (`--print` mode) for utility tasks — recovery, failure analysis |
-| [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | Generic agent-based recovery from infrastructure failures (e.g., git commit failure) |
+| [`doc/use-case/AutoRecoveryByAgentUseCase.md`](use-case/AutoRecoveryByAgentUseCase.md) | **V2 — DEFERRED.** Generic agent-based recovery from infrastructure failures. V1 uses index.lock fast-path + fail-fast instead. |
 | [`doc/use-case/TicketFailureLearningUseCase.md`](use-case/TicketFailureLearningUseCase.md) | Records structured failure context + LLM summary into ticket on workflow failure — enables cross-try learning |
 | [`doc/use-case/ContextWindowSelfCompactionUseCase.md`](use-case/ContextWindowSelfCompactionUseCase.md) | Context window exhaustion detection, done-boundary self-compaction flow, PRIVATE.md, session rotation |
 | [`doc/plan/granular-feedback-loop.md`](plan/granular-feedback-loop.md) | Granular per-item feedback loop — `__feedback/` directory (3 dirs: pending/addressed/rejected), harness-owned file movement, resolution markers, per-item rejection negotiation, severity-based processing, part completion guard |

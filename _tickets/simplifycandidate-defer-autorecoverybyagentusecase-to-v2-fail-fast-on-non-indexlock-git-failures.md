@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:36:23Z
 id: nid_bmf7mq2lrusqiibmubwtrvyy0_E
 title: "SIMPLIFY_CANDIDATE: Defer AutoRecoveryByAgentUseCase to V2 — fail-fast on non-index.lock git failures"
-status: in_progress
+status: closed
 deps: []
 links: [nid_o9z2nk2kwqrxwa6g12rlyrihr_E]
 created_iso: 2026-03-18T14:58:24Z
-status_updated_iso: 2026-03-18T15:30:00Z
+status_updated_iso: 2026-03-18T15:36:23Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -45,4 +46,24 @@ Defer agent-based recovery to V2.
 - doc/use-case/AutoRecoveryByAgentUseCase.md (archive or mark V2)
 - doc/core/git.md (simplify GitOperationFailureUseCase to index.lock + fail-fast)
 - doc/core/NonInteractiveAgentRunner.md (remove PI consumer if TicketFailureLearning also deferred)
+
+## Resolution
+
+**Completed.** All spec changes applied:
+
+1. **`doc/use-case/AutoRecoveryByAgentUseCase.md`** — Marked V2 DEFERRED with clear banner. V2 design content preserved under "V2 Design" section for future implementation. Removed V1-specific caller protocol, flow details, and "Not a Retry Mechanism" sections.
+
+2. **`doc/core/git.md`** — `GitOperationFailureUseCase` (ref.ap.AQ8cRaCyiwZWdK5TZiKgJ.E) simplified:
+   - Section renamed from "Git Operation Failure Handling — AutoRecoveryByAgentUseCase" to "Git Operation Failure Handling"
+   - Kept index.lock fast-path (deterministic delete + retry)
+   - Replaced "Standard agent recovery path" with fail-fast to `FailedToExecutePlanUseCase`
+   - Updated failure points table and Git Operations Summary table
+
+3. **`doc/core/NonInteractiveAgentRunner.md`** — Removed `AutoRecoveryByAgentUseCase` from consumers table. Added V1 note that PI consumer is deferred to V2. PI command construction retained for V2 readiness.
+
+4. **`doc/high-level.md`** — Updated git failure handling bullet (line 481) and linked documentation table entry for AutoRecoveryByAgentUseCase.
+
+5. **`ai_input/memory/auto_load/1_core_description.md`** + **`CLAUDE.md`** (regenerated) — Marked AutoRecoveryByAgentUseCase as "V2 — deferred" in spec reference table.
+
+**Verified**: All 20 remaining spec files reviewed — no stale references to AutoRecoveryByAgentUseCase in V1 flow paths.
 
