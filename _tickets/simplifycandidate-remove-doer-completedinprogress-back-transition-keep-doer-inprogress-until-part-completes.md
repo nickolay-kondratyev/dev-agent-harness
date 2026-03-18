@@ -1,11 +1,11 @@
 ---
 id: nid_zm78ycz9pqfty7rzg066dwgyx_E
 title: "SIMPLIFY_CANDIDATE: Remove doer COMPLETED→IN_PROGRESS back-transition — keep doer IN_PROGRESS until part completes"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T00:07:43Z
-status_updated_iso: 2026-03-18T00:07:43Z
+status_updated_iso: 2026-03-18T13:45:26Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
