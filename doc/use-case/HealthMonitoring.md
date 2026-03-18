@@ -1,8 +1,8 @@
 # Agent Health Monitoring — UseCase Pattern / ap.RJWVLgUGjO5zAwupNLhA0.E
 
 Timeout + ping mechanism to detect crashed/hung agents. Failure scenarios are encapsulated
-in UseCase classes — simple, stateless, single-responsibility operations that the `PartExecutor`
-(ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) invokes from its health-aware await loop
+in UseCase classes — simple, stateless, single-responsibility operations that `AgentFacadeImpl`
+invokes from its health-aware await loop
 (ref.ap.QCjutDexa2UBDaKB3jTcF.E).
 
 Liveness is determined **solely by HTTP callback timestamps** (`lastActivityTimestamp`).
@@ -135,7 +135,7 @@ Accessed as `HarnessTimeoutConfig.healthTimeouts: HealthTimeoutLadder`.
 | Post-ping check | `AgentFacadeImpl` | After `healthTimeouts.pingResponse` window: check `lastActivityTimestamp` for advancement |
 | Declare crash, kill TMUX | `AgentFacadeImpl` | Via `killSession()` — delegates internally to `AgentUnresponsiveUseCase` (`PING_TIMEOUT` context) |
 | Complete deferred with `Crashed` | `AgentFacadeImpl` | After kill session executes |
-| Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback (via `SessionsState` internal to `AgentFacadeImpl`) |
+| Complete deferred with `Done`/`FailWorkflow`/`SelfCompacted` | `ShepherdServer` | On `/done`, `/fail-workflow`, or `/self-compacted` callback (via `SessionsState` internal to `AgentFacadeImpl`) |
 
 ### Testability
 
