@@ -45,7 +45,7 @@ main() {
       cdi.repo_root
       git.save
 
-      ai_core --agent CC --model opus --effort medium  "Read and execute instructions in [${tmp_file:?}]"
+      ai_core --agent CC --model opus --effort medium --print "Read and execute instructions in [${tmp_file:?}]"
 
       git.save
   done
