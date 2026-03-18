@@ -48,3 +48,5 @@ Defer DirectLLM entirely to V2. Remove from V1 scope.
 - doc/core/TicketShepherdCreator.md (remove DirectLLM wiring)
 - doc/core/UserQuestionHandler.md (confirm LlmUserQuestionHandler is V2-only)
 
+--------------------------------------------------------------------------------
+CAPTURE what we currently described move to V2 and reference from high level using AP.
