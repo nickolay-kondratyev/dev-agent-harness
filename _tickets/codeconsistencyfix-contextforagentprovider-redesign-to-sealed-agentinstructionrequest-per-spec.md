@@ -85,3 +85,16 @@ PlanReviewer: [RoleDefinition, PrivateMd, Ticket, ...]
 **2026-03-18T18:21:21Z**
 
 Scope clarification: Criterion 7 (PrivateMd in all role plans) — this ticket should only declare the plan position for PrivateMd (i.e., include it in the instruction plan lists). The actual PrivateMd InstructionSection renderer implementation belongs to nid_7vpbal1qdmrvt23g44vpq6hgv_E (InstructionSection engine + shared sections). If implementing before the InstructionSection engine exists, use a placeholder/inline approach that will be replaced when the engine lands.
+
+**2026-03-18T18:50:17Z**
+
+## PrivateMd path source (from review)
+
+All AgentInstructionRequest subtypes should include a `privateMdPath: Path?` field.
+- null when no prior session exists (first spawn, no compaction)
+- Non-null pointing to `${sub_part}/private/PRIVATE.md` when session rotation occurred
+
+The caller (PartExecutor) knows if compaction happened and sets this field accordingly.
+The PrivateMd InstructionSection (ticket nid_7vpbal1qdmrvt23g44vpq6hgv_E) reads from this path if non-null, skips silently if null.
+
+This field belongs in the abstract base of AgentInstructionRequest (all roles can be compacted).

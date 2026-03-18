@@ -2,7 +2,7 @@
 id: nid_gp9rduvxoqf14m95z9bttnaxq_E
 title: "Implement feedback-loop InstructionSection subtypes"
 status: open
-deps: [nid_7vpbal1qdmrvt23g44vpq6hgv_E]
+deps: [nid_7vpbal1qdmrvt23g44vpq6hgv_E, nid_o4gj7swdejriooj5bex3b34vf_E]
 links: [nid_zseecydaikj0f2i2l14nwcfax_E, nid_7vpbal1qdmrvt23g44vpq6hgv_E, nid_r2rdkc0t9jd9597sumbgzp7aw_E]
 created_iso: 2026-03-18T18:17:35Z
 status_updated_iso: 2026-03-18T18:17:35Z
@@ -78,3 +78,32 @@ Depends on the InstructionSection engine being in place (nid_7vpbal1qdmrvt23g44v
 **2026-03-18T18:21:29Z**
 
 Merge note: This ticket and nid_r2rdkc0t9jd9597sumbgzp7aw_E both add subtypes to InstructionSection.kt. If run in parallel, expect a merge conflict on that file. The conflict will be trivial (additive subtypes), but the implementing agent should be aware.
+
+**2026-03-18T18:50:36Z**
+
+## Clarifications from review
+
+### FeedbackItem vs IterationFeedback (mutual exclusion)
+These are mutually exclusive at assembly time:
+- **IterationFeedback**: rendered at the START of a new outer iteration (reviewer PUBLIC.md + pushback guidance)
+- **FeedbackItem**: rendered during the INNER feedback loop (one item at a time)
+
+Both are in the Doer plan list. They are conditional sections: IterationFeedback renders when iterationNumber > 1 AND not in inner-loop mode. FeedbackItem renders when a feedbackItemPath is provided (non-null). At any call site, only one will produce content.
+
+The DoerRequest type will carry a nullable `feedbackItemPath: Path?` and nullable `feedbackItemIsOptional: Boolean?`. When these are set, FeedbackItem renders. When not set but iterationNumber > 1, IterationFeedback renders.
+
+### Inner-loop assembly entry point (R4)
+The same `assembleInstructions(DoerRequest)` method is used for both outer and inner loop. The DoerRequest carries the data that determines which conditional sections render. No separate method needed — the plan is data-driven.
+
+### Compaction survival tags
+The following sections MUST be wrapped in `<critical_to_keep_through_compaction>` tags:
+- `CallbackHelp` (always — all roles)
+- `StructuredFeedbackFormat` (reviewer only)
+- `DoerPushbackGuidance` (within IterationFeedback, doer only)
+
+`FeedbackWritingInstructions` does NOT need compaction tags — it is role-specific operational instructions that do not need to survive compaction.
+
+### Planning phase feedback
+The granular feedback loop applies to PLANNER↔PLAN_REVIEWER per the resolved question in the spec.
+However, the Planner InstructionPlan in the spec does NOT show FeedbackDirectorySection.
+This is intentional — the planning iteration is simpler (plan reviewer feedback arrives via PUBLIC.md, not individual feedback files). If we later need per-item planning feedback, we can add it then. V1 planning uses the simpler pattern.

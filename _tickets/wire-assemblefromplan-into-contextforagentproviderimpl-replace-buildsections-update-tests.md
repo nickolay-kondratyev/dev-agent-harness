@@ -107,3 +107,21 @@ All tests must use the new `AgentInstructionRequest` subtypes instead of `AgentR
 **2026-03-18T18:40:58Z**
 
 GAP from review: Add explicit AC for end-to-end section ordering verification — after wiring, add tests that assemble full instructions.md for each of the 4 roles and verify the section sequence matches the spec (Doer: RoleDefinition→PrivateMd→PartContext→Ticket→..., etc). Existing migrated tests may not verify complete plan ordering since they were written against the old flat API. Suggested AC: 'For each role, an integration-style test assembles a full instructions.md and verifies sections appear in spec-defined order.'
+
+**2026-03-18T18:50:46Z**
+
+## InstructionRenderers.kt disposition (from review)
+
+**DELETE** InstructionRenderers.kt after migration. All rendering logic moves into InstructionSection subtypes.
+
+The functions in InstructionRenderers.kt (partContext, publicMdOutputPath, callbackScriptUsage, feedbackItemInstructions, roleCatalog) are each absorbed by their corresponding InstructionSection subtype renderer.
+
+After this ticket, the context/ package should contain:
+- ContextForAgentProvider.kt (interface + AgentInstructionRequest hierarchy)
+- ContextForAgentProviderImpl.kt (implementation with assembleFromPlan)
+- InstructionSection.kt (sealed class + all subtypes)
+- InstructionText.kt (static text constants — retained)
+- ProtocolVocabulary.kt (protocol constants — retained)
+
+Deleted:
+- InstructionRenderers.kt (absorbed into sections)
