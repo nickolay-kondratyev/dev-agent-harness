@@ -37,16 +37,16 @@ This logging requirement applies to all health monitoring logic described below.
 
 ---
 
-## Monitoring Loop — Executor-Owned / ap.6HIM68gd4kb8D2WmvQDUK.E
+## Monitoring Loop — AgentFacadeImpl-Owned / ap.6HIM68gd4kb8D2WmvQDUK.E
 
-The health monitoring loop is **owned by the executor**, not a separate background component.
-This eliminates race conditions between the monitor and the server competing to complete the
-same `CompletableDeferred<AgentSignal>`. See executor health-aware await loop at
-ref.ap.QCjutDexa2UBDaKB3jTcF.E.
+The health monitoring loop is **owned by `AgentFacadeImpl`** (inside `sendPayloadAndAwaitSignal`),
+not a separate background component. This eliminates race conditions between the monitor and the
+server competing to complete the same `CompletableDeferred<AgentSignal>`. See health-aware await
+loop at ref.ap.QCjutDexa2UBDaKB3jTcF.E.
 
-### Why Executor-Owned
+### Why AgentFacadeImpl-Owned
 
-- **Single control flow**: The executor creates the deferred, registers it, and awaits it.
+- **Single control flow**: The facade creates the deferred, registers it, and awaits it.
   Making the executor also responsible for health checks keeps a single owner for the deferred
   lifecycle. No separate coroutine competing to `complete()` the deferred.
 - **Structured concurrency**: The health check is naturally scoped to the executor's lifetime.
@@ -129,12 +129,12 @@ Accessed as `HarnessTimeoutConfig.healthTimeouts: HealthTimeoutLadder`.
 | Concern | Owner | Mechanism |
 |---------|-------|-----------|
 | Update `lastActivityTimestamp` | `ShepherdServer` | On every incoming callback (including `/started`) |
-| Check startup ack timeout | `PartExecutor` | Health-aware await loop — uses `healthTimeouts.startup` until first callback arrives |
-| Check `lastActivityTimestamp` staleness, trigger ping | `PartExecutor` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `lastActivityTimestamp` stale > `healthTimeouts.normalActivity` |
-| Send ping message via TMUX | `PartExecutor` | Via `AgentFacade.sendHealthPing()` — delegates internally to `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT` context) |
-| Post-ping check | `PartExecutor` | After `healthTimeouts.pingResponse` window: check `lastActivityTimestamp` for advancement |
-| Declare crash, kill TMUX | `PartExecutor` | Via `AgentFacade.killSession()` — delegates internally to `AgentUnresponsiveUseCase` (`PING_TIMEOUT` context) |
-| Complete deferred with `Crashed` | `PartExecutor` | After kill session executes |
+| Check startup ack timeout | `AgentFacadeImpl` | Health-aware await loop — uses `healthTimeouts.startup` until first callback arrives |
+| Check `lastActivityTimestamp` staleness, trigger ping | `AgentFacadeImpl` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) — `lastActivityTimestamp` stale > `healthTimeouts.normalActivity` |
+| Send ping message via TMUX | `AgentFacadeImpl` | Delegates internally to `AgentUnresponsiveUseCase` (`NO_ACTIVITY_TIMEOUT` context) |
+| Post-ping check | `AgentFacadeImpl` | After `healthTimeouts.pingResponse` window: check `lastActivityTimestamp` for advancement |
+| Declare crash, kill TMUX | `AgentFacadeImpl` | Via `killSession()` — delegates internally to `AgentUnresponsiveUseCase` (`PING_TIMEOUT` context) |
+| Complete deferred with `Crashed` | `AgentFacadeImpl` | After kill session executes |
 | Complete deferred with `Done`/`FailWorkflow` | `ShepherdServer` | On `/done` or `/fail-workflow` callback (via `SessionsState` internal to `AgentFacadeImpl`) |
 
 ### Testability

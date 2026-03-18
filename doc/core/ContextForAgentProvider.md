@@ -208,6 +208,7 @@ Each logical content block is one `InstructionSection` subtype:
 | Section type | Description |
 |---|---|
 | `RoleDefinition` | Full `.md` file for the role from `$TICKET_SHEPHERD_AGENTS_DIR` |
+| `PrivateMd` | Self-compaction context from prior session (`${sub_part}/private/PRIVATE.md`). Only present after session rotation (ref.ap.8nwz2AHf503xwq8fKuLcl.E). Skipped silently if file does not exist. |
 | `PartContext` | Part `name` and `description` from `current_state.json` |
 | `Ticket` | Ticket markdown file content |
 | `PlanMd` | `shared/plan/PLAN.md` — always included for `with-planning` workflows; absent for straightforward workflows |
@@ -237,22 +238,22 @@ Each logical content block is one `InstructionSection` subtype:
 ### InstructionPlan per role
 
 ```
-Doer:         [RoleDefinition, PartContext, Ticket, PlanMd, PriorPublicMd,
+Doer:         [RoleDefinition, PrivateMd, PartContext, Ticket, PlanMd, PriorPublicMd,
                IterationFeedback, FeedbackItem,
                PublicMdOutputPath, WritingGuidelines, CallbackHelp]
 
-Reviewer:     [RoleDefinition, PartContext, Ticket, PlanMd, PriorPublicMd,
+Reviewer:     [RoleDefinition, PrivateMd, PartContext, Ticket, PlanMd, PriorPublicMd,
                DoerOutputForReview, StructuredFeedbackFormat,
                AddressedFeedback, RejectedFeedback, RemainingOptionalFeedback,
                FeedbackWritingInstructions,
                PublicMdOutputPath, WritingGuidelines, CallbackHelp]
 
-Planner:      [RoleDefinition, Ticket, RoleCatalog, AvailableAgentTypes,
+Planner:      [RoleDefinition, PrivateMd, Ticket, RoleCatalog, AvailableAgentTypes,
                PlanFormatInstructions, PlannerFeedback,
                PlanFlowJsonOutputPath, PlanMdOutputPath, PublicMdOutputPath,
                WritingGuidelines, CallbackHelp]
 
-PlanReviewer: [RoleDefinition, Ticket, PlanFlowJsonContent, PlanMdContent,
+PlanReviewer: [RoleDefinition, PrivateMd, Ticket, PlanFlowJsonContent, PlanMdContent,
                AvailableAgentTypes, PlannerPublicMd, PlanReviewerPriorFeedback,
                PublicMdOutputPath, WritingGuidelines, CallbackHelp]
 ```

@@ -468,7 +468,7 @@ makes new-transition coverage compiler-enforced.
   `SessionsState`, `CompletableDeferred` lifecycle, ACK protocol, health-aware await loop,
   and context-window compaction. The executor never accesses `SessionsState`,
   `TmuxCommunicator`, `ContextWindowStateReader`, or `AgentUnresponsiveUseCase` directly.
-  See [`AgentFacade`](AgentInteraction.md) for the full interface spec.
+  See [`AgentFacade`](AgentFacade.md) for the full interface spec.
 - `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) — assemble instruction files for agents (doer, reviewer, planner, plan-reviewer)
 - `GitCommitStrategy` (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) — `onSubPartDone` after each signal
 - `FailedToConvergeUseCase` — when iteration budget exceeded
