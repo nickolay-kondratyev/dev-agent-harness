@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-17T23:59:03Z
 id: nid_3nuvvjenh4oa5g37m7tx09vj5_E
 title: "SIMPLIFY_CANDIDATE: Consolidate AgentStarter + AgentSessionIdResolver into single AgentTypeAdapter interface"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:41:20Z
-status_updated_iso: 2026-03-17T23:45:00Z
+status_updated_iso: 2026-03-17T23:59:03Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -50,4 +51,24 @@ interface AgentTypeAdapter {
 ## Why This Improves Robustness
 
 - Impossible to mismatch starter/resolver pairs — they're in the same object\n- Single dispatch point instead of two — fewer opportunities for agent type confusion\n- Simpler wiring in `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E)\n\n## ISP Consideration\n\nISP would argue for separate interfaces. But ISP applies when different callers need different subsets. Here, every caller needs both methods together in the spawn flow. ISP-purity at the cost of coupling prevention is not a good trade.\n\n## Affected Specs\n\n- `doc/use-case/SpawnTmuxAgentSessionUseCase.md` — AgentStarter and AgentSessionIdResolver sections\n- `doc/core/AgentInteraction.md` — interface shape, internal delegation table\n- `doc/core/TicketShepherdCreator.md` — wiring section\n- `doc/high-level.md` — Key Technology Decisions table (Agent start command, Session tracking)
+
+## Resolution
+
+**Completed.** All spec files updated to use unified `AgentTypeAdapter` interface (ap.A0L92SUzkG3gE0gX04ZnK.E).
+
+### Files updated (8 total):
+1. `doc/use-case/SpawnTmuxAgentSessionUseCase.md` — Replaced dual AgentStarter + AgentSessionIdResolver sections with single AgentTypeAdapter section. V1 impl: `ClaudeCodeAdapter`.
+2. `doc/core/AgentInteraction.md` (AgentFacade) — Updated delegation list and architecture diagram.
+3. `doc/core/TicketShepherdCreator.md` — Simplified wiring list (2 deps → 1).
+4. `doc/high-level.md` — Merged 2 Key Technology Decision rows into 1. Updated Sub-Agent Invocation and Session ID Tracking sections.
+5. `doc/core/agent-to-server-communication-protocol.md` — Updated 7 references.
+6. `doc/use-case/ContextWindowSelfCompactionUseCase.md` — Updated 7 references.
+7. `doc/core/NonInteractiveAgentRunner.md` — Updated 3 references.
+8. `ai_input/memory/deep/integ_tests__use_glm_for_agent_spawning.md` — Updated implementation hook references.
+
+### What changed:
+- New AP: `ap.A0L92SUzkG3gE0gX04ZnK.E` (AgentTypeAdapter)
+- Two interface definitions consolidated into one
+- All spec references to `AgentStarter` and `AgentSessionIdResolver` replaced with `AgentTypeAdapter`
+- Historical references in `.ai_out/`, `_tickets/`, `_change_log/` left unchanged (context, not spec)
 

@@ -9,8 +9,8 @@
 Introduce `AgentFacade` as a **single facade interface** that the orchestration layer
 (`PartExecutor`, `TicketShepherd`) uses for **all** interactions with agents: spawn, communicate,
 monitor state, kill, and receive signals. The real implementation delegates to existing infra
-components (`AgentStarter`, `TmuxSessionManager`, `TmuxCommunicator`, `AgentSessionIdResolver`,
-`ContextWindowStateReader`, `SessionsState`). A `FakeAgentFacade` enables comprehensive
+components (`AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E), `TmuxSessionManager`,
+`TmuxCommunicator`, `ContextWindowStateReader`, `SessionsState`). A `FakeAgentFacade` enables comprehensive
 unit testing of the orchestration state machine with **virtual time**, keeping integration tests
 to sanity checks.
 
@@ -72,7 +72,7 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 
 | Method | What it encapsulates | Internal delegation |
 |--------|---------------------|---------------------|
-| `spawnAgent(config)` | Bootstrap handshake, session ID resolution, initial `SessionsState` registration, TMUX session start | `AgentStarter` + `TmuxSessionManager` + `AgentSessionIdResolver` + `SessionsState` |
+| `spawnAgent(config)` | Bootstrap handshake, session ID resolution, initial `SessionsState` registration, TMUX session start | `AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) + `TmuxSessionManager` + `SessionsState` |
 | `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` | Full signal lifecycle: create fresh `CompletableDeferred`, re-register `SessionEntry`, send payload with ACK (3× retry), run health-aware await loop, return `AgentSignal` | `TmuxCommunicator` + ACK wrapping + `SessionsState` + `AgentUnresponsiveUseCase` + `ContextWindowStateReader` + `ContextWindowSelfCompactionUseCase` |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
@@ -390,10 +390,9 @@ AFTER (with AgentFacade):
                         │
                         ├── AgentFacadeImpl (production)
                         │       ├──► SessionsState ◄── ShepherdServer
-                        │       ├──► AgentStarter
+                        │       ├──► AgentTypeAdapter (ref.ap.A0L92SUzkG3gE0gX04ZnK.E)
                         │       ├──► TmuxSessionManager
                         │       ├──► TmuxCommunicator
-                        │       ├──► AgentSessionIdResolver
                         │       └──► ContextWindowStateReader
                         │
                         └── FakeAgentFacade (test)

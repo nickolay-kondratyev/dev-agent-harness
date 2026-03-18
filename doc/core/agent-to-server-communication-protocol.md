@@ -54,7 +54,7 @@ distinguishable from agent session IDs. This GUID:
 
 1. Is exported as `TICKET_SHEPHERD_HANDSHAKE_GUID` env var when the TMUX session is spawned
 2. Is included in the bootstrap message (delivered as the initial prompt argument on agent
-   start) so it's recorded in agent session artifacts for `AgentSessionIdResolver` resolution
+   start) so it's recorded in agent session artifacts for `AgentTypeAdapter.resolveSessionId()` resolution
 3. Is included by the callback scripts in **every** callback to the server
 4. Is stored in `current_state.json` alongside the agent's session ID
 
@@ -272,17 +272,17 @@ instruction to call `callback_shepherd.signal.sh started`. Full work instruction
   signal — no new machinery). Returns 200.
 - **Does NOT flow through `AgentSignal`** — this is a side-channel signal, same as
   `ping-ack` and `user-question`.
-- **On `/signal/started` received**: harness resolves agent session ID via `AgentSessionIdResolver`
+- **On `/signal/started` received**: harness resolves agent session ID via `AgentTypeAdapter.resolveSessionId()`
   (GUID is now guaranteed in JSONL), then sends full instructions via TMUX `send-keys`
 
 ### Two-Phase Flow
 
 ```
 Phase 1: Bootstrap Handshake (initial prompt argument — interactive agent, no -p)
-  Harness ──[TMUX start: AgentStarter.buildStartCommand(bootstrap) — bootstrap
+  Harness ──[TMUX start: AgentTypeAdapter.buildStartCommand(bootstrap) — bootstrap
              is the initial prompt argument, delivered atomically on start]──► Agent
   Agent   ──[POST /signal/started]──────────────────────────────────────────► Server
-  Harness ──[AgentSessionIdResolver: resolves session ID (GUID guaranteed)]
+  Harness ──[AgentTypeAdapter.resolveSessionId(): resolves session ID (GUID guaranteed)]
 
 Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
   Harness ──[send-keys: wrapped payload with PayloadId (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E)]──► Agent
@@ -290,7 +290,7 @@ Phase 2: Work (TMUX send-keys — file pointer, only after /signal/started)
   Agent   ──[works, calls /signal/done]─────────────────────────────────────────────────► Server
 ```
 
-**Claude Code example** (the actual command is built by the agent-specific `AgentStarter` implementation):
+**Claude Code example** (the actual command is built by the agent-specific `AgentTypeAdapter` implementation):
 ```bash
 # New agent — interactive start with bootstrap as initial prompt (no -p):
 claude --system-prompt-file <path> [flags] "<bootstrap_message>"
@@ -298,7 +298,7 @@ claude --system-prompt-file <path> [flags] "<bootstrap_message>"
 claude --resume <id> "<bootstrap_message>"
 ```
 
-See [`AgentStarter` — Interface for Start Command](../use-case/SpawnTmuxAgentSessionUseCase.md#agentstarter--interface-for-start-command)
+See [`AgentTypeAdapter` — Unified Interface](../use-case/SpawnTmuxAgentSessionUseCase.md#agenttypeadapter--unified-interface-for-agent-type-specific-behavior)
 for the abstraction design. Full spawn flow: see [SpawnTmuxAgentSessionUseCase](../use-case/SpawnTmuxAgentSessionUseCase.md)
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
 
@@ -323,7 +323,7 @@ triggers `AgentUnresponsiveUseCase` (`STARTUP_TIMEOUT`) → logs a clear error i
 - **No timing guesswork**: unlike a separate `send-keys` step, the initial prompt argument
   is guaranteed to be available when the agent starts processing. When `/started` arrives,
   the agent has proven it can process input — subsequent `send-keys` (Phase 2) are safe.
-- **Simpler session ID resolution**: `AgentSessionIdResolver` runs after `/started`, when
+- **Simpler session ID resolution**: `AgentTypeAdapter.resolveSessionId()` runs after `/started`, when
   the GUID is guaranteed in the JSONL — no race condition, no polling timeout risk
 - **Universal**: same handshake for new and resumed agents — one protocol to test and debug
 - If env vars are misconfigured, the `/started` call either fails or never fires —
@@ -371,7 +371,7 @@ All structured/formatted content sent to agents is written to the sub-part's
 - Write content to `.ai_out/${branch}/.../${sub_part}/comm/in/instructions.md`
 - Send file path to agent via TMUX `send-keys`: `"Read instructions at <path>"`
 - Instructions are **overwritten** each iteration — git history preserves prior versions
-- **Exception**: Simple single-line messages (e.g., AgentSessionIdResolver GUID handshake) can be sent directly
+- **Exception**: Simple single-line messages (e.g., GUID handshake for session ID resolution) can be sent directly
 
 This replaces the previous temp file pattern. Instructions are now git-tracked alongside
 agent outputs (`comm/out/PUBLIC.md`), providing full communication visibility.

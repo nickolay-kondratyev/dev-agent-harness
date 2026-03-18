@@ -9,7 +9,7 @@ analysis, file cleanup, etc.
 ## Motivation
 
 The full TMUX agent session lifecycle (`SpawnTmuxAgentSessionUseCase` → handshake → health
-monitoring → `SessionsState` registration → `AgentSessionIdResolver` → session kill) is
+monitoring → `SessionsState` registration → `AgentTypeAdapter.resolveSessionId()` → session kill) is
 designed for **long-lived, interactive work sessions**. Using this machinery for short-lived
 utility tasks (e.g., `rm .git/index.lock`, summarizing failure context) is disproportionate
 complexity — a crane to pick up a penny.
@@ -22,7 +22,7 @@ for tasks that complete in minutes, not hours.
 ## Design
 
 Runs an agent as a **subprocess** in `--print` mode (non-interactive, run-and-exit). No TMUX,
-no handshake, no health monitoring, no `SessionsState`, no `AgentSessionIdResolver`.
+no handshake, no health monitoring, no `SessionsState`, no `AgentTypeAdapter.resolveSessionId()`.
 
 The agent receives instructions via CLI args, does its work, and exits. The harness waits for
 the process to complete (with a timeout) and checks the exit code.
@@ -77,7 +77,7 @@ Per agent type:
 claude --print --model {model} -p "{instructions}"
 ```
 
-- Uses the system `claude` binary (same as `ClaudeCodeAgentStarter` ref.ap.RK7bWx3vN8qLfYtJ5dZmQ.E)
+- Uses the system `claude` binary (same as `ClaudeCodeAdapter` ref.ap.A0L92SUzkG3gE0gX04ZnK.E)
 - `--print` flag: non-interactive mode, agent runs and exits
 - No `--system-prompt-file` needed for utility tasks (uses Claude Code defaults)
 - No env var exports needed beyond what the harness process already has
@@ -162,6 +162,6 @@ that need lightweight agent invocation.
 | Handshake | Full HandshakeGuid protocol | None |
 | Health monitoring | Health-aware await loop with ping | Process-level timeout only |
 | Session tracking | `SessionsState` + `current_state.json` | None |
-| Session ID | `AgentSessionIdResolver` | Not applicable |
+| Session ID | `AgentTypeAdapter.resolveSessionId()` | Not applicable |
 | Use case | Long-lived work sessions (implementation, review) | Short-lived utility tasks (recovery, analysis) |
 | Complexity | High (necessary for interactive work) | Low (appropriate for utility tasks) |
