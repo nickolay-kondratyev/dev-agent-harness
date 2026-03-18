@@ -161,73 +161,34 @@ Rules:
 
 ## Commit Author
 
-Each commit's **author name** encodes the coding agent, model, model version, and host user:
+Each commit's **author name** encodes the coding agent, model, and host user:
 
 ```
-${CODING_AGENT}_${CODING_MODEL}-v${VERSION_OF_MODEL}_WITH-${HOST_USERNAME}
+${CODING_AGENT}_${CODING_MODEL}_WITH-${HOST_USERNAME}
 ```
 
 Examples:
 ```
-CC_sonnet-v4.6_WITH-nickolaykondratyev
-CC_opus-v4.1_WITH-nickolaykondratyev
+CC_sonnet_WITH-nickolaykondratyev
+CC_opus_WITH-nickolaykondratyev
 ```
 
 | Component | Source |
 |---|---|
 | `CODING_AGENT` | Short code derived from `agentType` in the session record. Mapping: `ClaudeCode` → `CC`, `PI` → `PI`. |
 | `CODING_MODEL` | `model` field from the session record (e.g., `sonnet`, `opus`, `glm-5`) |
-| `VERSION_OF_MODEL` | Resolved from `config/model-versions.json` (see [Model Version Resolution](#model-version-resolution)) |
 | `HOST_USERNAME` | `${HOST_USERNAME}` environment variable |
 
 **Commit email stays as-is** — uses whatever is configured in the git config for the repo.
 Only the author name is overridden per commit (via `git commit --author`).
 
----
-
-## Model Version Resolution
-
-Model versions are resolved from a structured JSON config file checked into the repo.
-
-**Config file**: `config/model-versions.json` — a single JSON file mapping model names to version
-strings. Located in the repo itself — no external directories, no environment variables.
-
-```json
-{
-  "modelVersions": {
-    "sonnet": "4.6",
-    "opus": "4.1",
-    "glm-5": "1.0",
-    "glm-4.7-flash": "1.0"
-  }
-}
-```
-
-**Lookup**: The `model` field from the session record (e.g., `"sonnet"`) is used as the key in
-the `modelVersions` map. If the key does not exist → fail hard with a clear error naming the
-missing model.
-
-**Loading**: The config file is read **once at harness initialization** (not on every commit).
-If the file is missing or malformed → fail hard at startup with a clear error.
-
-**Why model versions in commit author** (WHY-NOT drop version):
-Model version history in commits enables long-term codebase analysis:
-- **Upgrade targeting**: Identify code authored by older model versions (e.g., `sonnet-v4.6`)
-  that could benefit from re-generation or review with newer versions.
-- **Test coverage prioritization**: Code produced by less capable model versions may warrant
-  additional testing coverage — the version tag in git history makes this queryable.
-- **Quality correlation**: Correlate defect rates and code complexity with specific model
-  versions to inform model selection decisions.
-- **Audit trail**: The exact model version is baked into each commit, not just the model family.
-  While model family (sonnet, opus) is the primary differentiator, the version captures the
-  capability snapshot at the time of authorship. Commit dates alone are insufficient because
-  version upgrades are not instant — different environments may run different versions on the
-  same date.
-
-**Why JSON config over file-per-model directory**: Eliminates the `MODEL_VERSION_DIR` env var,
-removes file I/O at commit time, prevents "file not found" and "wrong content" failure classes,
-and co-locates all model versions in a single version-controlled file. Can be updated without
-recompilation.
+**Why-not include model version in author**: A separate `config/model-versions.json` mapping
+model names to version strings requires manual upkeep and creates a config-drift risk (config
+says `v4.5` while the agent is actually running `v4.6`). It is also a startup failure mode
+if the file is missing or a model key is absent. Version-level analysis tooling does not exist
+in V1, so version granularity in commit author follows YAGNI — add in V2 when the analysis
+tooling exists to consume it. The model family (`sonnet`, `opus`) is the primary differentiator
+and is already captured.
 
 ---
 
