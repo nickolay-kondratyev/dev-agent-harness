@@ -88,7 +88,7 @@ handled internally by `DetailedPlanningUseCase` (ref.ap.cJhuVZTkwfrWUzTmaMbR3.E)
 ## Dependencies
 
 Receives `ShepherdContext` (ref.ap.TkpljsXvwC6JaAVnIq02He98.E — defined in code at
-`ShepherdContext.kt`) for shared infrastructure (tmux, LLM, use cases) plus ticket-scoped
+`ShepherdContext.kt`) for shared infrastructure (tmux, logging, use cases) plus ticket-scoped
 state (parsed workflow, ticket metadata) wired by
 `TicketShepherdCreator` (ref.ap.cJbeC4udcM3J8UFoWXfGh.E). `SessionsState`
 (ref.ap.7V6upjt21tOoCFXA7nqNh.E) is internal to `AgentFacadeImpl` — the shepherd
