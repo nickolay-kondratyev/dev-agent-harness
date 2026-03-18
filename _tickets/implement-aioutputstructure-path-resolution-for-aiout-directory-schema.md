@@ -75,3 +75,23 @@ A class `AiOutputStructure` (package `com.glassthought.shepherd.core.filestructu
 **2026-03-18T21:10:45Z**
 
 Branch name with slashes (e.g., feature/my-ticket): Path.resolve() handles this natively — slashes create nested directories. This is the correct behavior since .ai_out/ is a local directory tree, and Files.createDirectories() will create intermediate dirs. Tests should verify this works correctly with slashes in branch names.
+
+**2026-03-18T21:29:27Z**
+
+Test clarification: add explicit test case for branch names with slashes. E.g., with branch='feature/my-ticket', planningPublicMd("plan") should resolve to .ai_out/feature/my-ticket/planning/plan/comm/out/PUBLIC.md. This converts the existing note about slash behavior into a concrete test assertion.
+
+**2026-03-18T21:37:41Z**
+
+WHY-NOT: AiOutputStructure does NOT include deletion logic for plan_flow.json (or any other file). plan_flow.json is 'deleted after conversion' per the spec, but that deletion belongs to SetupPlanUseCase/DetailedPlanningUseCase — not to AiOutputStructure. This class is purely about path resolution and directory creation.
+
+**2026-03-18T21:51:40Z**
+
+WHY-NOT: No convenience method for individual feedback file paths (e.g., feedbackFilePath(partName, filename)). Callers compose from feedbackPendingDir(partName).resolve(filename) at call sites — keeping AiOutputStructure focused on directory-level path resolution. Individual file paths within feedback dirs are the caller's concern.
+
+**2026-03-18T21:56:58Z**
+
+Add concrete test case for feedbackDir family: feedbackPendingDir("backend") → .ai_out/my_branch/execution/backend/__feedback/pending/ — verifying __feedback/ sits at part level (between execution/${partName}/ and ${subPartName}/), not nested under a sub-part.
+
+**2026-03-18T22:08:36Z**
+
+WHY-NOT: AiOutputStructure.feedbackPendingDir() uses "pending/" (per spec doc/schema/ai-out-directory.md). The existing codebase has ProtocolVocabulary.FeedbackStatus.UNADDRESSED = "unaddressed" which is a pre-existing naming inconsistency being cleaned up separately in nid_o4gj7swdejriooj5bex3b34vf_E. Do NOT attempt to reconcile these names in this ticket — use "pending" as the spec says.
