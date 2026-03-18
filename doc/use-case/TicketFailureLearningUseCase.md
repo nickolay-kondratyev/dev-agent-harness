@@ -96,7 +96,7 @@ data class PartResultFailureContext(
    (ref.ap.ad4vG4G2xMPiMHRreoYVr.E) with:
    - **Agent type**: `ClaudeCode` — needs file reading capability for artifact analysis
    - **Model**: `sonnet` — cost-effective but capable enough for analysis
-   - **Timeout**: 10 minutes — agent reads files and generates summary
+   - **Timeout**: 20 minutes — agent reads files and generates summary
 
 3. **Process agent output** — on `Success`:
    a. Build the `### TRY-{N}` section by combining structured facts from
