@@ -38,7 +38,7 @@ parts/sub-parts schema. One parser handles everything.
 enum class SubPartStatus {
     NOT_STARTED,   // initial state — sub-part has not been attempted
     IN_PROGRESS,   // agent has been spawned and is working
-    COMPLETED,     // agent signaled done successfully (doer: "completed", reviewer: "pass")
+    COMPLETED,     // part completed successfully — doer-only done, or reviewer "pass" (marks both reviewer and doer COMPLETED simultaneously)
     FAILED,        // unrecoverable failure (fail-workflow, crash, failed-to-converge)
 }
 ```
@@ -47,11 +47,15 @@ enum class SubPartStatus {
 
 ```
 NOT_STARTED → IN_PROGRESS    (harness spawns agent for this sub-part)
-IN_PROGRESS → COMPLETED      (doer: "completed", reviewer: "pass")
+IN_PROGRESS → COMPLETED      (doer-only "completed"; or reviewer "pass" — marks both reviewer and doer COMPLETED)
 IN_PROGRESS → FAILED         (fail-workflow, agent crash, or failed-to-converge)
-IN_PROGRESS → IN_PROGRESS    (reviewer: "needs_iteration" — counter increments, status stays)
-COMPLETED   → IN_PROGRESS    (doer on re-iteration: reviewer signaled "needs_iteration", doer resumes work)
+IN_PROGRESS → IN_PROGRESS    (reviewer: "needs_iteration" — counter increments, status stays; doer stays IN_PROGRESS throughout all iterations)
 ```
+
+State machine is strictly forward-only — no back-transitions. In doer+reviewer parts, the doer's
+per-round completion is an internal event that does NOT change SubPartStatus. The doer stays
+`IN_PROGRESS` until the entire part completes (reviewer PASS), at which point the executor marks
+both the reviewer and the doer `COMPLETED` simultaneously.
 
 **Part-level status is derived** — no explicit part status field:
 - All sub-parts `COMPLETED` → part complete
@@ -80,8 +84,11 @@ sealed class SubPartStateTransition {
     /**
      * IN_PROGRESS → COMPLETED
      * Triggers:
-     *   - doer:     AgentSignal.Done(DoneResult.COMPLETED)
-     *   - reviewer: AgentSignal.Done(DoneResult.PASS)
+     *   - doer (doer-only part):    AgentSignal.Done(DoneResult.COMPLETED)
+     *   - reviewer:                 AgentSignal.Done(DoneResult.PASS)
+     *   - doer (doer+reviewer part): applied by executor simultaneously with reviewer PASS —
+     *     the doer does NOT signal COMPLETED per iteration; it stays IN_PROGRESS until the
+     *     part completes, then the executor marks both reviewer and doer COMPLETED.
      */
     object Complete : SubPartStateTransition()
 
@@ -100,19 +107,12 @@ sealed class SubPartStateTransition {
      */
     object IterateContinue : SubPartStateTransition()
 
-    /**
-     * COMPLETED → IN_PROGRESS  (doer sub-part only)
-     * Trigger: harness resumes the doer after reviewer signaled NEEDS_ITERATION.
-     * No AgentSignal is involved; the executor calls validateCanResumeForIteration()
-     * explicitly before re-instructing the idle doer session.
-     */
-    object ResumeForIteration : SubPartStateTransition()
 }
 ```
 
 #### Validator Functions
 
-Three validator functions cover all five transitions. All throw `IllegalStateException` on an
+Two validator functions cover all four transitions. All throw `IllegalStateException` on an
 invalid (status, trigger) combination — crash fast, no silent fallback.
 
 ```kotlin
@@ -123,6 +123,9 @@ invalid (status, trigger) combination — crash fast, no silent fallback.
  * @throws IllegalStateException if the (status, signal) pair is not a valid transition.
  * Note: AgentSignal.SelfCompacted does NOT trigger a SubPart status change — it is handled
  *       inside the facade's health-aware await loop and is invisible to PartExecutorImpl.
+ * Note: In doer+reviewer parts, the executor does NOT call this for the doer's Done(COMPLETED)
+ *       signal — the doer stays IN_PROGRESS; the executor just proceeds to instruct the reviewer.
+ *       The doer's COMPLETED transition happens separately when reviewer sends PASS.
  */
 fun SubPartStatus.transitionTo(signal: AgentSignal): SubPartStateTransition {
     return when (this) {
@@ -139,7 +142,7 @@ fun SubPartStatus.transitionTo(signal: AgentSignal): SubPartStateTransition {
         NOT_STARTED ->
             error("Cannot apply AgentSignal to NOT_STARTED; call validateCanSpawn() before spawning")
         COMPLETED ->
-            error("Cannot apply AgentSignal to COMPLETED; call validateCanResumeForIteration() for doer resume")
+            error("COMPLETED is terminal — no further transitions allowed")
         FAILED ->
             error("FAILED is terminal — no further transitions allowed")
     }
@@ -155,15 +158,6 @@ fun SubPartStatus.validateCanSpawn(): SubPartStateTransition.Spawn {
     return SubPartStateTransition.Spawn
 }
 
-/**
- * Validates that this sub-part is COMPLETED before the harness resumes it for another iteration.
- * Returns SubPartStateTransition.ResumeForIteration on success.
- * @throws IllegalStateException if status != COMPLETED.
- */
-fun SubPartStatus.validateCanResumeForIteration(): SubPartStateTransition.ResumeForIteration {
-    check(this == COMPLETED) { "resume-for-iteration requires COMPLETED, got $this" }
-    return SubPartStateTransition.ResumeForIteration
-}
 ```
 
 #### Adding New Transitions
@@ -289,7 +283,7 @@ This means:
           "role": "UI_DESIGNER",
           "agentType": "ClaudeCode",
           "model": "sonnet",
-          "status": "COMPLETED",
+          "status": "IN_PROGRESS",
           "sessionIds": [
             {
               "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
@@ -345,8 +339,10 @@ This means:
 }
 ```
 
-In this example: `ui_design` doer is done, reviewer is on its second pass (`current: 1` means
-one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
+In this example: `ui_design` doer is working on its second pass (reviewer signaled
+`needs_iteration` once — `current: 1`). Both doer and reviewer are `IN_PROGRESS` — the doer
+is not marked `COMPLETED` until the entire part completes (reviewer PASS). `backend_impl`
+hasn't started yet.
 
 **Example `current_state.json` (mid-planning — planning part is first in the parts array):**
 
@@ -363,7 +359,7 @@ one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
           "role": "PLANNER",
           "agentType": "ClaudeCode",
           "model": "opus",
-          "status": "COMPLETED",
+          "status": "IN_PROGRESS",
           "sessionIds": [
             {
               "handshakeGuid": "handshake.c3d4e5f6-a7b8-9012-cdef-123456789012",
@@ -397,9 +393,10 @@ one `needs_iteration` has occurred). `backend_impl` hasn't started yet.
 }
 ```
 
-In this example: the planner completed, the plan reviewer ran once and signaled `needs_iteration`
-(`current: 1`), and the planner is about to receive reviewer feedback for a second pass. No
-execution parts exist yet in the array — they will be appended from `plan_flow.json` after
+In this example: the planner is working on its second pass (plan reviewer signaled
+`needs_iteration` once — `current: 1`). Both planner and plan reviewer are `IN_PROGRESS` —
+the planner is not marked `COMPLETED` until the planning part converges (plan reviewer PASS).
+No execution parts exist yet in the array — they will be appended from `plan_flow.json` after
 planning converges.
 
 ### plan_flow.json → current_state.json Lifecycle
@@ -583,7 +580,7 @@ running a planning-phase part or an execution part.
 | Event | What changes | Written by |
 |-------|-------------|------------|
 | Agent spawned | `status` → `IN_PROGRESS`, new entry in `sessionIds` | `PartExecutor` (after spawn + session ID resolution) |
-| Agent signals `done` (any result) | `status` → `COMPLETED` (doer/reviewer pass) or stays `IN_PROGRESS` (needs_iteration), `iteration.current` incremented | `PartExecutor` (after processing `AgentSignal.Done`) |
+| Agent signals `done` (any result) | Reviewer `PASS`: reviewer + doer both → `COMPLETED`. Doer-only `COMPLETED`: doer → `COMPLETED`. Reviewer `NEEDS_ITERATION`: stays `IN_PROGRESS`, `iteration.current` incremented. Doer `COMPLETED` in doer+reviewer: doer stays `IN_PROGRESS` (internal event, no status change). | `PartExecutor` (after processing `AgentSignal.Done`) |
 | Agent signals `fail-workflow` | `status` → `FAILED` | `PartExecutor` (after processing `AgentSignal.FailWorkflow`) |
 | Agent crash detected | `status` → `FAILED` | `PartExecutor` (after health-aware await loop returns `Crashed`) |
 | With-planning workflow init | `current_state.json` created with `parts` containing the planning part (`phase: "planning"`) from workflow JSON `planningParts` | `TicketShepherdCreator` |
