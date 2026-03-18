@@ -1,6 +1,6 @@
 ---
 id: nid_rbk6jzzqoz9qvkr3l4s7hgnwk_E
-title: "analyze whether it makes sense to extend binex"
+title: "Analyze whether it makes sense to extend binex"
 status: open
 deps: []
 links: []
@@ -11,6 +11,13 @@ priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 ---
 
+READ specs under FOLDER=[./doc]. FOCUS on specs not code.
 
-https://alexli18.github.io/binex/#features
+Look at https://alexli18.github.io/binex repository and answer questions:
+1) Is it able to run Claude code in interactive mode?
+2) Is it able to run Claude code CLI at all?
+3) Would it be hard to extend to enable iteration? 
+4) Would it be hard to extend to enable running Claude code in interactive mode (Tmux like runner).
+
+
 
