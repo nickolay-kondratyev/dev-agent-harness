@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:50:27Z
 id: nid_83wpq96se2x8p43xyufkmcmzd_E
 title: "SIMPLIFY_CANDIDATE: Defer DirectLLM to V2 — no V1 consumers remain"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:58:56Z
-status_updated_iso: 2026-03-18T15:31:29Z
+status_updated_iso: 2026-03-18T15:50:27Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
