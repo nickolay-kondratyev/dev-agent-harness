@@ -11,6 +11,8 @@ priority: 3
 assignee: nickolaykondratyev
 ---
 
-See /home/nickolaykondratyev/git_repos/nickolay-kondratyev_dev-agent-harness-mirror-2/_reports/sonar_issues.jsonl
+See ./_reports/sonar_issues.jsonl
 
 FIX the issues by dividing them into sub-agents to with self implementation.
+
+After fixing the issue re-run ./run_sonar.sh to make sure issues are fixed.
