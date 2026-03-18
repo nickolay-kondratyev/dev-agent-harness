@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T14:41:08Z
 id: nid_aij16hhr7snq2m72q40n6y3w7_E
 title: "SIMPLIFY_CANDIDATE: Merge ping-ack into generic ack-payload — eliminate dedicated ping ACK endpoint"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:24:59Z
-status_updated_iso: 2026-03-18T14:28:41Z
+status_updated_iso: 2026-03-18T14:41:08Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -38,3 +39,19 @@ Wrap health pings in the same `<payload>` XML with `PayloadId`, reuse `/signal/a
 - **More robust**: Pings use the same battle-tested ACK retry logic as work payloads instead of a separate code path.
 - **DRY**: Eliminates duplicate ACK handling logic between ping-ack and ack-payload.
 
+
+## Notes
+
+**2026-03-18T14:41:18Z**
+
+## Resolution
+
+Merged `/signal/ping-ack` into the generic `/signal/ack-payload` mechanism across all 5 spec files:
+
+- **agent-to-server-communication-protocol.md**: Removed `/signal/ping-ack` endpoint row, removed `ping-ack` callback command, updated scope table (health pings now "Yes"), added health ping to AckedPayloadSender callers table, reduced acknowledgment mechanisms from 3 to 2, updated all prose references.
+- **HealthMonitoring.md**: Pings now sent via AckedPayloadSender, proof-of-life uses ack-payload, updated liveness signal list.
+- **ContextForAgentProvider.md**: Replaced `callback_shepherd.signal.sh ping-ack` instruction with explanation that pings arrive wrapped in payload XML.
+- **PartExecutor.md**: Consolidated ping-ack row into existing ack-payload row in side-channel signals table.
+- **high-level.md**: Updated payload delivery ACK description from "except pings" to "including health pings".
+
+`/signal/started` remains separate (bootstrap uses initial-prompt-argument delivery, not send-keys).
