@@ -44,3 +44,9 @@ Uses the `Part`/`SubPart` data classes from ticket nid_m3cm8xizw5qhu1cu3454rca79
 - doc/schema/ai-out-directory.md (ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 - "Initial Creation" section: TicketShepherdCreator calls this as part of ticket setup.
 
+
+## Notes
+
+**2026-03-18T21:20:15Z**
+
+Phase filtering: When iterating `parts: List<Part>`, filter by `phase == Phase.PLANNING` for the `planning/` tree and `phase == Phase.EXECUTION` for the `execution/` tree. Do NOT create planning directories for execution parts or vice versa.

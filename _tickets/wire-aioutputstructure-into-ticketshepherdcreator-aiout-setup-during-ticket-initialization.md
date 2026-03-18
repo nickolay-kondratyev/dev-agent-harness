@@ -35,3 +35,9 @@ Wire AiOutputStructure into TicketShepherdCreator so that the .ai_out/ directory
 - doc/schema/ai-out-directory.md, "Initial Creation" section (ref.ap.BXQlLDTec7cVVOrzXWfR7.E)
 - doc/core/TicketShepherdCreator.md (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) — "Sets up .ai_out/ directory structure for the branch"
 
+
+## Notes
+
+**2026-03-18T21:20:18Z**
+
+Test clarity: The directory-existence verification belongs in ticket nid_fjod8du6esers3ajur2h7tvgx_E's scope (ensureStructure tests). This ticket's unit tests should focus on: (1) verifying AiOutputStructure is correctly injected as constructor dependency into ContextForAgentProviderImpl and TicketShepherd, (2) verifying ensureStructure() is called with correct parts list during setup. Read nid_8ts4qxw2wevxwep3yk2gvqwja_E to see finalized ContextForAgentProviderImpl constructor before adding aiOutputStructure as a parameter.
