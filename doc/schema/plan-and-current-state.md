@@ -463,7 +463,7 @@ Static workflow definitions (`config/workflows/*.json`) use the **same** sub-par
       "phase": "execution",
       "description": "Implement and review",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTOR_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },
+        { "name": "impl", "role": "IMPLEMENTATION_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },
         { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]

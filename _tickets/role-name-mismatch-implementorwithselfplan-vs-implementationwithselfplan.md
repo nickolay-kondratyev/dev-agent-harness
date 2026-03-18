@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:25:25Z
 id: nid_9q0r8y2gy8sumlsgmqqgjuqwg_E
 title: "Role name mismatch: IMPLEMENTOR_WITH_SELF_PLAN vs IMPLEMENTATION_WITH_SELF_PLAN"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:02:58Z
-status_updated_iso: 2026-03-18T15:22:12Z
+status_updated_iso: 2026-03-18T15:25:25Z
 type: bug
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -22,3 +23,9 @@ One of these needs to be aligned. Per the spec, roles are auto-discovered from $
 
 The fail-fast at startup (ref.ap.iF4zXT5FUcqOzclp5JVHj.E) would catch this at runtime.
 
+
+## Notes
+
+**2026-03-18T15:25:25Z**
+
+Resolved by updating workflow JSON and spec doc to use IMPLEMENTATION_WITH_SELF_PLAN (matching actual role file names). Changed: config/workflows/straightforward.json line 8 and doc/schema/plan-and-current-state.md line 466. No Kotlin source changes needed.
