@@ -24,7 +24,7 @@ cat >> "${tmp_file:?}" <<EOF
 
     Review the tickets created to make sure the split makes the most sense.
 
-    IF there is no more tickets to be created write [$HOME/done_with_ticket_creation.md] marker file.
+    Make sure to remove #need-tickets tag after you have added tickets from the spec_to_process.
 
   IN **sub-agent** REVIEW the tickets that were created.
   THEN address the sub-agents feedback.
@@ -41,19 +41,7 @@ main() {
   #need-tickets
   local tmp_file="$(ei2 _make_instructions)"
 
-
-
-  local stop_file="$HOME/done_with_ticket_creation.md"
-  if [[ -f "${stop_file}" ]]; then
-    rm "${stop_file:?}"
-  fi
-
   for i in {1..20} ; do
-      if [[ -f "${stop_file:?}" ]]; then
-        echo.green "${stop_file:?} file exists. Exiting."
-      	exit 1
-      fi
-
       cdi.repo_root
       git.save
 
