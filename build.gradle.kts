@@ -1,5 +1,21 @@
 import org.gradle.api.GradleException
 
+plugins {
+    alias(libs.plugins.sonarqube)
+}
+
+sonar {
+    properties {
+        property("sonar.host.url", "https://sonarcloud.io")
+        property("sonar.organization", "nickolay-kondratyev")
+        property("sonar.projectKey", "nickolay-kondratyev_dev-agent-harness")
+        property("sonar.token", System.getenv("SONAR_TOKEN") ?: "")
+        property("sonar.sources", "app/src/main/kotlin")
+        property("sonar.tests", "app/src/test/kotlin")
+        property("sonar.exclusions", "**/build/**,**/.gradle/**,**/.kotlin/**,**/node_modules/**")
+    }
+}
+
 /**
  * Lists all Gradle tasks from all subprojects as JSON, written to build/tasks-json/tasks.json.
  *
