@@ -17,5 +17,13 @@ In `doc/use-case/AutoRecoveryByAgentUseCase.md` (ref.ap.q54vAxzZnmWHuumhIQQWt.E)
 **Problem**: `NeedsEscalation` and `Unresolvable` result in the identical caller behavior — delegate to `FailedToExecutePlanUseCase` (prints red error, halts). The only difference is the reason string. Having two variants that lead to the same outcome:
 - Forces callers to handle two branches that do the same thing
 - Adds a sealed class variant and its associated matching boilerplate
-- Creates an unnecessary distinction: "agent couldn't fix it" vs "agent says human must fix it" — both result in human intervention\n\n**Simplification**: Collapse `NeedsEscalation(reason)` into `Unresolvable(reason: String)`. The `Unresolvable` variant gains an optional reason field. Callers have a simple binary outcome: `Resolved` → retry, `Unresolvable` → halt.\n\n**What changes**:\n- `doc/use-case/AutoRecoveryByAgentUseCase.md` — `RecoveryOutcome` becomes two variants: `Resolved` and `Unresolvable(reason: String)`. Remove NeedsEscalation documentation. Update caller protocol section.\n- When the recovery agent signals escalation, the use case returns `Unresolvable(reason)` immediately (same early-exit behavior as NeedsEscalation had).\n\n**Robustness**: Unchanged — both variants already lead to the same halt behavior. The simplification removes a distinction without a difference.
+- Creates an unnecessary distinction: "agent couldn't fix it" vs "agent says human must fix it" — both result in human intervention
+
+**Simplification**: Collapse `NeedsEscalation(reason)` into `Unresolvable(reason: String)`. The `Unresolvable` variant gains an optional reason field. Callers have a simple binary outcome: `Resolved` → retry, `Unresolvable` → halt.
+
+**What changes**:
+- `doc/use-case/AutoRecoveryByAgentUseCase.md` — `RecoveryOutcome` becomes two variants: `Resolved` and `Unresolvable(reason: String)`. Remove NeedsEscalation documentation. Update caller protocol section.
+- When the recovery agent signals escalation, the use case returns `Unresolvable(reason)` immediately (same early-exit behavior as NeedsEscalation had).
+
+**Robustness**: Unchanged — both variants already lead to the same halt behavior. The simplification removes a distinction without a difference.
 

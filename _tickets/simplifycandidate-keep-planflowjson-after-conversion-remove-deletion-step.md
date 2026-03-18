@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T13:46:31Z
 id: nid_nabagnd7enkuyunsrbzaljeol_E
 title: "SIMPLIFY_CANDIDATE: Keep plan_flow.json after conversion — remove deletion step"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-17T23:53:45Z
-status_updated_iso: 2026-03-17T23:53:45Z
+status_updated_iso: 2026-03-18T13:46:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
