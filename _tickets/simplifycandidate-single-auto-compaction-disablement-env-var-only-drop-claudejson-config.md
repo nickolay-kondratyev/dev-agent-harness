@@ -1,11 +1,11 @@
 ---
 id: nid_6n35nlejj5yy8iu4q7efxzbej_E
 title: "SIMPLIFY_CANDIDATE: Single auto-compaction disablement — env var only, drop .claude.json config"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:22:59Z
-status_updated_iso: 2026-03-18T02:22:59Z
+status_updated_iso: 2026-03-18T13:15:28Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
