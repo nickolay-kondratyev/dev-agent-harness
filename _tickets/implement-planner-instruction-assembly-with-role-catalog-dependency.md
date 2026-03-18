@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:38:16Z
 id: nid_zsypyth6m472zk1qg5r1cnl6o_E
 title: "Implement planner instruction assembly with role catalog dependency"
-status: open
+status: closed
 deps: [nid_m5e0q3oslsihsxsz1h6no6nwr_E]
 links: []
 created_iso: 2026-03-12T23:20:03Z
-status_updated_iso: 2026-03-12T23:20:03Z
+status_updated_iso: 2026-03-18T15:38:16Z
 type: feature
 priority: 2
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
