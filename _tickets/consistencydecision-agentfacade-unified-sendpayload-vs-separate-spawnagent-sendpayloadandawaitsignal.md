@@ -23,8 +23,6 @@ The compaction spec envisions a combined spawn-if-null + send pattern that does 
 
 Options:
 1. Update AgentFacade to add a unified `sendPayload(config, handle?, instructions)` method
-2. Update ContextWindowSelfCompactionUseCase to use the existing separate methods
-3. Let PartExecutor own the spawn-if-null logic and call spawnAgent + sendPayloadAndAwaitSignal separately
 
 Files:
 - doc/use-case/ContextWindowSelfCompactionUseCase.md
