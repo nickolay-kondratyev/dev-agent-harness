@@ -4,6 +4,8 @@ plugins {
     alias(libs.plugins.sonarqube)
 }
 
+// Sonar plugin is NOT compatible with Gradle configuration cache.
+// Run via: ./run_sonar.sh (which passes --no-configuration-cache).
 sonar {
     properties {
         property("sonar.host.url", "https://sonarcloud.io")

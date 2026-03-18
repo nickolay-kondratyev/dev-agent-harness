@@ -23,19 +23,43 @@ echo "Running SonarCloud analysis..."
 echo ""
 echo "Analysis uploaded. Fetching report from SonarCloud API..."
 
+# fetch_sonar_api: fetches a SonarCloud API endpoint with error handling.
+# Usage: fetch_sonar_api <label> <url>
+# Returns JSON via stdout. Exits non-zero with clear message on failure.
+fetch_sonar_api() {
+  local label="$1"
+  local url="$2"
+  local response
+
+  if ! response=$(curl -sf \
+    -H "Authorization: Bearer ${SONAR_TOKEN}" \
+    "${url}"); then
+    echo "ERROR: Failed to fetch ${label} from SonarCloud API."
+    echo "  URL: ${url}"
+    echo "  Check that SONAR_TOKEN is valid and SonarCloud is reachable."
+    exit 1
+  fi
+
+  # Validate response is valid JSON before returning
+  if ! echo "${response}" | jq empty 2>/dev/null; then
+    echo "ERROR: ${label} returned non-JSON response."
+    echo "  Response body (first 500 chars): ${response:0:500}"
+    exit 1
+  fi
+
+  echo "${response}"
+}
+
 # Fetch quality gate status
-quality_gate=$(curl -s \
-  -H "Authorization: Bearer ${SONAR_TOKEN}" \
+quality_gate=$(fetch_sonar_api "quality gate status" \
   "https://sonarcloud.io/api/qualitygates/project_status?projectKey=${PROJECT_KEY}")
 
 # Fetch key metrics
-metrics=$(curl -s \
-  -H "Authorization: Bearer ${SONAR_TOKEN}" \
+metrics=$(fetch_sonar_api "metrics" \
   "https://sonarcloud.io/api/measures/component?component=${PROJECT_KEY}&metricKeys=bugs,vulnerabilities,code_smells,coverage,duplicated_lines_density,ncloc")
 
 # Fetch open issues (first page, up to 500)
-issues=$(curl -s \
-  -H "Authorization: Bearer ${SONAR_TOKEN}" \
+issues=$(fetch_sonar_api "issues" \
   "https://sonarcloud.io/api/issues/search?componentKeys=${PROJECT_KEY}&resolved=false&ps=500&p=1")
 
 # Combine all three API responses into a single JSON report
