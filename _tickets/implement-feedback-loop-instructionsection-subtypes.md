@@ -107,3 +107,8 @@ The following sections MUST be wrapped in `<critical_to_keep_through_compaction>
 The granular feedback loop applies to PLANNER↔PLAN_REVIEWER per the resolved question in the spec.
 However, the Planner InstructionPlan in the spec does NOT show FeedbackDirectorySection.
 This is intentional — the planning iteration is simpler (plan reviewer feedback arrives via PUBLIC.md, not individual feedback files). If we later need per-item planning feedback, we can add it then. V1 planning uses the simpler pattern.
+
+**2026-03-18T22:34:08Z**
+
+## Spec Doc to Update During Implementation
+- Update `doc/core/ContextForAgentProvider.md` with per-feedback-item instruction assembly and reviewer instruction sections 6a-6e

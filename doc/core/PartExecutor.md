@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # PartExecutor / ap.fFr7GUmCYQEV5SJi8p6AS.E
 
 The abstraction for executing a single Part (one or two sub-parts). Owns the agent spawn →
