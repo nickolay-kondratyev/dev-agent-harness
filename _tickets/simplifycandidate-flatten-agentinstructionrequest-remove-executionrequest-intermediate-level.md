@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:34:50Z
 id: nid_wxj0ewdf3fn6gqjzooqgdhec4_E
 title: "SIMPLIFY_CANDIDATE: Flatten AgentInstructionRequest — remove ExecutionRequest intermediate level"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:29:24Z
-status_updated_iso: 2026-03-18T15:32:12Z
+status_updated_iso: 2026-03-18T15:34:50Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -48,4 +49,16 @@ Shared fields between `DoerRequest` and `ReviewerRequest` can be extracted into 
 
 ## Affected Specs
 - `doc/core/ContextForAgentProvider.md` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
+
+## Resolution
+
+Completed. Updated `doc/core/ContextForAgentProvider.md` with:
+
+1. **Removed `ExecutionRequest` intermediate sealed class** — `DoerRequest` and `ReviewerRequest` are now direct subtypes of `AgentInstructionRequest`.
+2. **Introduced `ExecutionContext` data class** — holds shared fields (`partName`, `partDescription`, `planMdPath`, `priorPublicMdPaths`) via composition. Both `DoerRequest` and `ReviewerRequest` hold it as `val executionContext: ExecutionContext`.
+3. **Updated `when` expression** — matches 4 flat types directly (`is AgentInstructionRequest.DoerRequest`, etc.) instead of nested `is AgentInstructionRequest.ExecutionRequest.DoerRequest`.
+4. **Updated Doer/Reviewer section headers** — removed `ExecutionRequest.` prefix from qualified type references.
+5. **Updated explanatory text** — describes the flat hierarchy and composition approach.
+
+No other spec files required changes — `DetailedPlanningUseCase.md` only references `PlannerRequest`/`PlanReviewerRequest` which were already direct subtypes.
 
