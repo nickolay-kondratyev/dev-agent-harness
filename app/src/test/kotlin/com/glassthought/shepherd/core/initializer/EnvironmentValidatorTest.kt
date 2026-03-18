@@ -4,12 +4,17 @@ import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.shepherd.core.Constants
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.string.shouldContain
+import java.nio.file.Files
 import java.nio.file.Path
 
 class EnvironmentValidatorTest : AsgardDescribeSpec({
 
     // A path that will never exist — used to simulate "not in Docker".
     val nonExistentDockerEnvPath = Path.of("/tmp/nonexistent_dockerenv_sentinel_${System.nanoTime()}")
+
+    // A real temp file — simulates "in Docker" without relying on /.dockerenv existing.
+    val existingDockerEnvFile: Path = Files.createTempFile("dockerenv_sentinel_", null)
+        .also { it.toFile().deleteOnExit() }
 
     // An env var reader that returns values for all required env vars.
     val allEnvVarsPresent: (String) -> String? = { envVarName ->
@@ -39,9 +44,8 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN EnvironmentValidator running in Docker with all env vars present") {
-        // /.dockerenv exists in our Docker environment
         val validator = EnvironmentValidatorImpl(
-            dockerEnvFilePath = Path.of("/.dockerenv"),
+            dockerEnvFilePath = existingDockerEnvFile,
             envVarReader = allEnvVarsPresent,
         )
 
@@ -54,7 +58,7 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
 
     describe("GIVEN EnvironmentValidator with missing env vars") {
         val validator = EnvironmentValidatorImpl(
-            dockerEnvFilePath = Path.of("/.dockerenv"),
+            dockerEnvFilePath = existingDockerEnvFile,
             envVarReader = { null },
         )
 
@@ -72,7 +76,7 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
 
     describe("GIVEN EnvironmentValidator with one blank env var") {
         val validatorWithBlank = EnvironmentValidatorImpl(
-            dockerEnvFilePath = Path.of("/.dockerenv"),
+            dockerEnvFilePath = existingDockerEnvFile,
             envVarReader = { envVarName ->
                 if (envVarName == Constants.REQUIRED_ENV_VARS.HOST_USERNAME) "   "
                 else allEnvVarsPresent(envVarName)
