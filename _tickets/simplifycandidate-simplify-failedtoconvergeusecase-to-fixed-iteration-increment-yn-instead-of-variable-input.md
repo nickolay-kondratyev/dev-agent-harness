@@ -1,11 +1,11 @@
 ---
 id: nid_vaqvylypsr1xoz8j03fhkut3a_E
 title: "SIMPLIFY_CANDIDATE: Simplify FailedToConvergeUseCase to fixed iteration increment — y/N instead of variable input"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-17T23:40:52Z
-status_updated_iso: 2026-03-17T23:40:52Z
+status_updated_iso: 2026-03-18T14:09:54Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
