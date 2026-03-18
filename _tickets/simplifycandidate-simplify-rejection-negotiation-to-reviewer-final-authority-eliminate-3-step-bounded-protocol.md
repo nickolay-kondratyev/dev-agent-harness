@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:27:02Z
 id: nid_du35igvdo2740zd0g6m8wa2mz_E
 title: "SIMPLIFY_CANDIDATE: Simplify rejection negotiation to reviewer-final-authority — eliminate 3-step bounded protocol"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:09:28Z
-status_updated_iso: 2026-03-18T15:09:28Z
+status_updated_iso: 2026-03-18T15:27:02Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

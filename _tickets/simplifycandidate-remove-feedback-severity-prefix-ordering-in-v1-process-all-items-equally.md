@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:26:42Z
 id: nid_zvk8lbj61cxakb6rh6szncdfk_E
 title: "SIMPLIFY_CANDIDATE: Remove feedback severity prefix ordering in V1 — process all items equally"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:09:45Z
-status_updated_iso: 2026-03-18T15:09:45Z
+status_updated_iso: 2026-03-18T15:26:42Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

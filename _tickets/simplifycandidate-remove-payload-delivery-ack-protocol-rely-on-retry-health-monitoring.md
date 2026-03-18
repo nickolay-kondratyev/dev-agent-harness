@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:26:53Z
 id: nid_y0sqymwju41un34graunce3i2_E
 title: "SIMPLIFY_CANDIDATE: Remove Payload Delivery ACK Protocol — rely on retry + health monitoring"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:08:39Z
-status_updated_iso: 2026-03-18T15:08:39Z
+status_updated_iso: 2026-03-18T15:26:53Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
