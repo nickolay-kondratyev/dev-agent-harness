@@ -133,16 +133,16 @@ controlled self-compaction at done boundaries (soft threshold).
 ### V2 Change: Disable Auto-Compaction
 
 When implementing this V2 feature, auto-compaction must be disabled to give the harness
-sole control:
+sole control. Use **only `DISABLE_AUTO_COMPACT=true`** — exported per TMUX session by
+`ClaudeCodeAdapter`.
 
-- **Config file: `~/.claude.json`** — set `autoCompactEnabled: false` using Jackson
-  (ref.ap.7bD0uLeoQQSFS16TQeCRF.E)
-- **Env var: `DISABLE_AUTO_COMPACT=true`** — exported per TMUX session
-- Written once at harness startup by `EnvironmentValidator`
-- Per-spawn env var export by `ClaudeCodeAdapter`
+- **No `.claude.json` config required** — env var is set per-session, not per-machine.
+  Single source of truth: if compaction isn't disabled, check the env var.
+- No host-level setup dependency — harness is self-contained.
 
-> **Note:** `~/.claude/settings.json` silently ignores `autoCompactEnabled` — only
-> `~/.claude.json` works (ref: github.com/anthropics/claude-code/issues/6689).
+<!-- WHY-NOT .claude.json: file-system dependency outside repo/harness control; per-machine
+     not per-session; `.claude/settings.json` silently ignores `autoCompactEnabled` making
+     it easy to misconfigure. Env var is explicit, per-session, and logged. -->
 
 ---
 
