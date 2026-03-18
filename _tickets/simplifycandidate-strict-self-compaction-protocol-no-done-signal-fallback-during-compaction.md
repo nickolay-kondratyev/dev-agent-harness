@@ -1,11 +1,11 @@
 ---
 id: nid_kz0l9iajekpnfyfc2bnk5lnsd_E
 title: "SIMPLIFY_CANDIDATE: Strict self-compaction protocol — no done-signal fallback during compaction"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T02:23:14Z
-status_updated_iso: 2026-03-18T02:23:14Z
+status_updated_iso: 2026-03-18T13:27:34Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
