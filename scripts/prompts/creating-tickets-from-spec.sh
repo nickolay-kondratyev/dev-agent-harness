@@ -26,7 +26,7 @@ cat >> "${tmp_file:?}" <<EOF
 
     IF there is no more tickets to be created write [$HOME/done_with_ticket_creation.md] marker file.
 
-  IN sub-agent review the tickets were created.
+  IN **sub-agent** REVIEW the tickets that were created.
   THEN address the sub-agents feedback.
 EOF
 
