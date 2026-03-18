@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:29:39Z
 id: nid_h24qmpdftobp7k2jtnd88bw98_E
 title: "CONSISTENCY: AgentFacade.md has stale 'Status: PLAN' header"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T15:24:39Z
-status_updated_iso: 2026-03-18T15:24:39Z
+status_updated_iso: 2026-03-18T15:29:39Z
 type: chore
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
