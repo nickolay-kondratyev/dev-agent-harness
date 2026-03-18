@@ -80,6 +80,32 @@ The same layered resume applies to `NoReplyToPingUseCase` (agent crashes while h
 **V1 behavior:** On agent crash, harness starts a new agent session (Layer 2 only, no Layer 1
 attempt). This avoids the complexity of the handshake verification protocol.
 
+## Resume Spawn Flow — Bootstrap Handshake
+
+> Extracted from `doc/use-case/SpawnTmuxAgentSessionUseCase.md` — the resume spawn flow
+> uses the **same bootstrap handshake** as a new agent (ref.ap.hZdTRho3gQwgIXxoUtTqy.E),
+> only the TMUX start command differs (uses `--resume` instead of a fresh start).
+
+1. Harness generates a **new** `HandshakeGuid` for this resumed session
+2. Harness builds the TMUX start command for **interactive resume** (no `-p`) with
+   **bootstrap as initial prompt argument**:
+   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --resume <session_id> "<bootstrap_message>"`
+3. Harness creates TMUX session running the command — agent resumes in **interactive mode**
+   and immediately receives the bootstrap message as its first input
+4–11. **Identical to new session flow** (steps 5–11 in SpawnTmuxAgentSessionUseCase spawn flow)
+
+The new HandshakeGuid ensures the server can distinguish this resumed session from the
+previous one. The agent gets a fresh callback identity while retaining its conversation
+history via `--resume`.
+
+### ClaudeCodeAdapter — Resume Command (V2)
+
+`buildStartCommand` for resumed sessions adds `--resume <session_id>` to the Claude CLI
+command instead of starting a fresh session. All other flags (`--system-prompt-file`,
+`TICKET_SHEPHERD_HANDSHAKE_GUID`, etc.) remain identical.
+
+---
+
 ## Open Questions
 
 - Should Layer 1 resume reuse the same TMUX session name or create a new one?

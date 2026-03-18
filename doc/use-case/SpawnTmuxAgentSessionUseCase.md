@@ -67,10 +67,6 @@ Contents:
 # New agent — interactive start with bootstrap as initial prompt (no -p):
 export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 \
   && claude --system-prompt-file <resolved_path> [flags] "<bootstrap_message>"
-
-# Resumed agent — interactive resume with bootstrap as initial prompt (no -p):
-export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 \
-  && claude --resume <session_id> "<bootstrap_message>"
 ```
 
 **Heavy instructions come later** via TMUX `send-keys` as a **file pointer**
@@ -120,22 +116,12 @@ The spawn flow has two distinct phases: **bootstrap** (identity + liveness hands
 13. Agent calls `callback_shepherd.signal.sh done <result>` → server receives `/callback-shepherd/signal/done` with GUID + result
 14. Harness validates result against sub-part role, proceeds accordingly
 
-## Resume Flow
+## Resume Flow — V2
 
-Resuming an existing agent session uses the **same bootstrap handshake** — only the TMUX
-start command differs (uses `--resume` instead of a fresh start).
-
-1. Harness generates a **new** `HandshakeGuid` for this resumed session
-2. Harness builds the TMUX start command for **interactive resume** (no `-p`) with
-   **bootstrap as initial prompt argument**:
-   `export TICKET_SHEPHERD_HANDSHAKE_GUID=handshake.xxx && export TICKET_SHEPHERD_SERVER_PORT=8347 && claude --resume <session_id> "<bootstrap_message>"`
-3. Harness creates TMUX session running the command — agent resumes in **interactive mode**
-   and immediately receives the bootstrap message as its first input
-4–11. **Identical to new session flow** (steps 5–11 above)
-
-The new HandshakeGuid ensures the server can distinguish this resumed session from the
-previous one. The agent gets a fresh callback identity while retaining its conversation
-history via `--resume`.
+V2 adds `--resume` support for resuming existing agent sessions. The resume flow uses the
+**same bootstrap handshake** as a new agent — only the TMUX start command differs. See
+[`doc_v2/resume.md`](../../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for the
+full resume spawn flow and ClaudeCodeAdapter resume command.
 
 ### Why Two Phases
 
@@ -222,7 +208,6 @@ cost of coupling prevention is not a good trade.
 - `unset CLAUDECODE` (nested-session detection workaround)
 - `--system-prompt-file <path>` — **required** (see [System Prompt File Resolution](#system-prompt-file-resolution))
 - Model, tools, dangerously-skip-permissions flags
-- For resumed sessions: `--resume <session_id>`
 - Bootstrap message embedded as a positional initial prompt argument
 - **No `-p` flag** — agent starts interactively
 

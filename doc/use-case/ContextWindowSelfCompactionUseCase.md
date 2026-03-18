@@ -455,21 +455,12 @@ and V1 behavior:
   re-creates the session with PRIVATE.md context
 - Idle session death: unintentional kill (OOM, external) → V1 returns
   `PartResult.AgentCrashed` (no automatic respawn — see `PartExecutor.md`
-  ref.ap.mxIc5IOj6qYI7vgLcpQn5.E). V2 adds automatic respawn via
-  `doc_v2/idle-session-recovery.md`.
-
-When re-spawning occurs (self-compaction in V1, both in V2), the same
-`agentFacade.spawnAgent(config)` → `agentFacade.sendPayloadAndAwaitSignal(handle, instructions)`
-code path is used. Neither uses `--resume` (see V2 Resume below for when `--resume` is
-appropriate).
-
-### V2 Resume (ref.ap.LX1GCIjv6LgmM7AJFas20.E)
+  ref.ap.mxIc5IOj6qYI7vgLcpQn5.E). V2 adds automatic respawn — see
+  [`doc_v2/idle-session-recovery.md`](../../doc_v2/idle-session-recovery.md).
 
 Self-compaction does NOT use `--resume`. The whole point is a fresh context window.
 `--resume` preserves the conversation (and its context usage). These are complementary
-strategies:
-- Self-compaction: context is filling up → summarize and start fresh
-- Resume: harness crashed → restore where we left off
+strategies — see [`doc_v2/resume.md`](../../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 

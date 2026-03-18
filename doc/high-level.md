@@ -145,8 +145,8 @@ stop the other instance first.
 V1 does not support resume-on-restart — if the harness dies, you start over.
 The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is the authoritative workflow
 state; `current_state.json` is a durable disk copy flushed after every mutation — written for
-progress tracking and observability but not consumed on restart in V1.
-See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E) for V2 resume design.
+progress tracking and observability but not consumed on restart in V1. V2 adds layered resume —
+see [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
@@ -478,10 +478,8 @@ attribution), and all env var requirements are fully specified in
 
 ## Harness-Level Resume — V2
 
-V1 does **not** support resume-on-restart — if the harness dies, you start over.
-The in-memory `CurrentState` (ref.ap.K3vNzHqR8wYm5pJdL2fXa.E) is flushed to
-`current_state.json` for progress tracking but not consumed on restart in V1.
-V2 resume design: [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
+V1 does **not** support resume-on-restart — if the harness dies, you start over. V2 adds
+layered resume. See [`doc_v2/resume.md`](../doc_v2/resume.md) (ref.ap.LX1GCIjv6LgmM7AJFas20.E).
 
 ---
 
