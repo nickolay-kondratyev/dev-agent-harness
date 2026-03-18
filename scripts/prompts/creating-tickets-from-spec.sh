@@ -21,6 +21,8 @@ cat >> "${tmp_file:?}" <<EOF
       Focus on addition of tickets for just one spec. Separate iteration will create tickets for another spec.
 
       Review the tickets created to make sure the split makes the most sense.
+
+      IF there is no more tickets to be created write [$HOME/done_with_ticket_creation.md] marker file.
 EOF
 
   local stop_file="$HOME/done_with_ticket_creation.md"
