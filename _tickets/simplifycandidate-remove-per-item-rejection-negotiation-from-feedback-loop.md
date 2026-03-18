@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-18T15:00:37Z
 id: nid_7rwask6soqyhgdvrg6tr0nyyy_E
 title: "SIMPLIFY_CANDIDATE: Remove per-item rejection negotiation from feedback loop"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T14:46:44Z
-status_updated_iso: 2026-03-18T14:46:44Z
+status_updated_iso: 2026-03-18T15:00:37Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
