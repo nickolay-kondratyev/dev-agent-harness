@@ -1,9 +1,14 @@
 # Context Window Self-Compaction — UseCase / ap.8nwz2AHf503xwq8fKuLcl.E
 
 Detects context window exhaustion in TMUX-powered agents and performs controlled
-self-compaction — killing the old session and spawning a fresh one with a `PRIVATE.md`
-context summary. Replaces Claude Code's built-in auto-compaction (which is disabled)
-with harness-controlled compaction at predictable boundaries.
+self-compaction at **done boundaries** — killing the old session and spawning a fresh one
+with a `PRIVATE.md` context summary.
+
+**V1 approach:** Claude Code's built-in auto-compaction remains **enabled** for emergency
+mid-task compaction. The harness performs **controlled self-compaction only at done
+boundaries** (soft threshold). This eliminates the complex Ctrl+C emergency interrupt path.
+See [`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md)
+for the deferred V2 harness-controlled emergency compression design.
 
 **Scope: all TMUX-powered sub-parts** — planning (PLANNER, PLAN_REVIEWER) and execution
 (doers and reviewers). The logic lives in `PartExecutor` (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E),
@@ -20,15 +25,21 @@ compaction state machine via `FakeAgentFacade` + virtual time.
 ## Why This Exists
 
 After many doer↔reviewer iterations, the agent's context fills up. Claude Code compacts
-automatically, but instructions and accumulated conversation can exceed limits. The agent
-degrades silently — it may miss instructions, produce garbage, or loop. The existing health
-monitor (ref.ap.6HIM68gd4kb8D2WmvQDUK.E) only checks "alive," not "functional."
+automatically, but its automatic compaction happens at unpredictable times and the
+summarization is not guided. The agent may degrade silently — missing instructions,
+producing garbage, or looping. The existing health monitor
+(ref.ap.6HIM68gd4kb8D2WmvQDUK.E) only checks "alive," not "functional."
 
-**Solution:** Disable Claude Code's auto-compaction entirely. Monitor context window state
-via an external hook that writes `context_window_slim.json`. At predictable thresholds,
-the harness asks the agent to summarize its context into `PRIVATE.md`, kills the session,
+**Solution:** Monitor context window state via an external hook that writes
+`context_window_slim.json`. At done boundaries, when the context is running low, the
+harness asks the agent to summarize its context into `PRIVATE.md`, kills the session,
 and spawns a fresh one. The new session receives `PRIVATE.md` as part of its instructions —
 a clean context window with compressed but complete prior knowledge.
+
+**Emergency fallback:** If the agent exhausts its context between done boundaries, Claude
+Code's native auto-compaction handles it. This is less controlled but adequate for V1 —
+the granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) creates frequent done
+boundaries, making mid-task exhaustion rare.
 
 ---
 
@@ -39,19 +50,15 @@ a clean context window with compressed but complete prior knowledge.
 | **Self-compaction** | Harness-controlled process: agent summarizes context → writes `PRIVATE.md` → signals `self-compacted` → harness kills session → spawns fresh session with `PRIVATE.md`. |
 | **context_window_slim.json** | External hook artifact at `${HOME}/.vintrin_env/claude_code/session/<SessionID>/context_window_slim.json`. Written by a hook outside Shepherd after every conversation turn (when the agent stops thinking). Format: `{"file_updated_timestamp": "<ISO-8601 UTC>", "remaining_percentage": N}` where N is 0–100 (100 = fresh, 0 = exhausted). The `file_updated_timestamp` field is used for staleness detection — if the timestamp is older than `contextFileStaleTimeout`, the value is treated as stale (unknown). |
 | **Soft threshold** | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35). Triggers when the agent has **used 65%** of its context (35% remaining). Checked at `done` boundaries — proactive compaction while the agent still has room to produce a quality summary. |
-| **Hard threshold** | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20). Triggers when the agent has **used 80%** of its context (20% remaining). Checked continuously (1-second poll). Triggers emergency mid-task interrupt + forced self-compaction. |
 | **Session rotation** | Kill old TMUX session → spawn new one for the same sub-part. New HandshakeGuid, new session record in `sessionIds` array. |
 | **PRIVATE.md** | Agent's self-compaction summary. Written to `${sub_part}/private/PRIVATE.md` in `.ai_out/`. Contains compressed but context-rich summary of the agent's work, decisions, and challenges. |
 
 ---
 
-## Two Thresholds, One Flow
+## Single Threshold — Done Boundary Only
 
-Both thresholds trigger the **same** core compaction flow — `performCompaction()`. The only
-differences are the **entry conditions** (how the compaction is triggered) and the
-**post-compaction behavior** (lazy vs immediate respawn). Unifying these into a single flow
-eliminates the risk of the two paths diverging over time and makes compaction testable as
-one well-exercised code path.
+V1 uses a single compaction trigger: **`DONE_BOUNDARY`** — checked after every
+`AgentSignal.Done` (any result: `COMPLETED`, `PASS`, `NEEDS_ITERATION`).
 
 ### CompactionTrigger
 
@@ -59,54 +66,39 @@ one well-exercised code path.
 enum class CompactionTrigger {
     /** Agent at done boundary with ≤35% context remaining. No interrupt needed. */
     DONE_BOUNDARY,
-    /** Agent mid-task with ≤20% context remaining. Requires Ctrl+C interrupt first. */
-    EMERGENCY_INTERRUPT,
 }
 ```
 
+> **V2:** A `EMERGENCY_INTERRUPT` trigger with continuous 1-second polling and Ctrl+C
+> interrupt is designed in
+> [`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md).
+
 ### Trigger Detection
 
-| Trigger | Where detected | Condition | Q&A gate |
-|---------|---------------|-----------|----------|
-| `DONE_BOUNDARY` | After `AgentSignal.Done` + PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35) | N/A — done boundary implies no Q&A pending |
-| `EMERGENCY_INTERRUPT` | Health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E), every ~1 second | `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default: 20) | **Skipped** when `SessionEntry.isQAPending` is true (ref.ap.NE4puAzULta4xlOLh5kfD.E) |
+| Trigger | Where detected | Condition |
+|---------|---------------|-----------|
+| `DONE_BOUNDARY` | After `AgentSignal.Done` + PUBLIC.md validation (ref.ap.THDW9SHzs1x2JN9YP9OYU.E) | `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default: 35) |
 
-**Q&A suppression:** When Q&A is pending (`isQAPending == true`), the agent is idle awaiting
-a TMUX answer — its context window is not growing. Emergency compaction is unnecessary and
-would interfere with the Q&A coordinator's answer delivery. The health-aware await loop skips
-the entire compaction + health check block while `isQAPending` is true.
-
-### Unified Compaction Flow — `performCompaction(handle, trigger)`
+### Compaction Flow — `performCompaction(handle, trigger)`
 
 ```
-performCompaction(handle, trigger: CompactionTrigger):
+performCompaction(handle, trigger: CompactionTrigger.DONE_BOUNDARY):
     │
-    ├─ 1. Pre-compaction (trigger-dependent):
-    │   ├─ DONE_BOUNDARY: no-op (agent already idle at done boundary)
-    │   └─ EMERGENCY_INTERRUPT:
-    │       ├─ Race condition guard: if signalDeferred.isCompleted → return signal (skip compaction)
-    │       ├─ Send Ctrl+C via AgentFacade (interrupt agent mid-task)
-    │       └─ Brief pause (1-2 seconds) for interrupt to take effect
+    ├─ 1. Pre-compaction: no-op (agent already idle at done boundary)
     │
-    ├─ 2. Core compaction (shared — identical for both triggers):
+    ├─ 2. Core compaction:
     │   ├─ Send self-compaction instruction via AgentFacade.sendPayload(config, handle, payload)
     │   │   (creates fresh signal deferred implicitly — ref.ap.9h0KS4EOK5yumssRCJdbq.E)
-    │   │   (EMERGENCY_INTERRUPT: prepend interrupt acknowledgment prefix — see Instruction Message)
     │   │   → update handle with returned value
     │   ├─ Await AgentSignal.SelfCompacted on handle.signal (with timeout: SELF_COMPACTION_TIMEOUT)
     │   ├─ Validate PRIVATE.md exists and is non-empty
     │   ├─ Git commit — captures PRIVATE.md + any changes before compaction
     │   └─ Kill session via AgentFacade.killSession(handle) → set handle = null
     │
-    └─ 3. Post-compaction (trigger-dependent):
-        ├─ DONE_BOUNDARY: handle is now null. Continue normal flow (next sub-part, iteration
-        │   restart, etc.). The next sendPayload call will transparently spawn a fresh session.
-        └─ EMERGENCY_INTERRUPT: immediate respawn via sendPayload:
-            ├─ handle = agentFacade.sendPayload(config, null, instructions)
-            │   (null handle → AgentFacade spawns fresh session — ref.ap.hZdTRho3gQwgIXxoUtTqy.E)
-            │   (new session receives instructions including PRIVATE.md via
-            │   ContextForAgentProvider — ref.ap.9HksYVzl1KkR9E1L2x8Tx.E)
-            └─ Enter new health-aware await loop on handle.signal
+    └─ 3. Post-compaction:
+        └─ handle is now null. Continue normal flow (next sub-part, iteration
+           restart, etc.). The next sendPayload call will transparently spawn
+           a fresh session.
 ```
 
 ### Entry Point: Done Boundary (Soft Threshold)
@@ -128,27 +120,6 @@ The next time the executor needs this sub-part (e.g., doer on iteration > 1), it
 no live session and spawns a new one via the standard spawn flow
 (ref.ap.hZdTRho3gQwgIXxoUtTqy.E). The new session's instructions include `PRIVATE.md`
 via `ContextForAgentProvider` (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E).
-
-### Entry Point: Health-Aware Await Loop (Hard Threshold)
-
-```
-Health-aware await loop (polling every 1 second)
-    │
-    ├─ Check: signal arrived? → return signal (normal path)
-    │
-    ├─ Read context_window_slim.json
-    │   ├─ remaining_percentage > SELF_COMPACTION_HARD_THRESHOLD → continue await loop
-    │   └─ remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD:
-    │       └─ performCompaction(sessionEntry, EMERGENCY_INTERRUPT)
-    │
-    └─ Regular health checks (at normal intervals — ref.ap.6HIM68gd4kb8D2WmvQDUK.E)
-```
-
-**Race condition: `done` arrives between detection and interrupt.** The `performCompaction()`
-pre-compaction step for `EMERGENCY_INTERRUPT` checks if the deferred was completed before
-sending Ctrl+C. If `Done` arrived, it returns the signal — the executor then falls through
-to the done-boundary path which may trigger `performCompaction(DONE_BOUNDARY)` if the soft
-threshold is also crossed. No interrupt sent.
 
 ---
 
@@ -213,8 +184,7 @@ Reads from `${HOME}/.vintrin_env/claude_code/session/<agentSessionId>/context_wi
 
 ### Caller Behavior on Stale State
 
-Both compaction trigger sites (done-boundary check and emergency-interrupt poll) must handle
-`remainingPercentage == null`:
+The done-boundary compaction check must handle `remainingPercentage == null`:
 
 ```
 contextState = agentFacade.readContextWindowState(handle)
@@ -223,7 +193,7 @@ if (contextState.remainingPercentage == null) {
     // Do NOT trigger compaction. Continue normal flow.
     continue
 }
-if (contextState.remainingPercentage <= threshold) {
+if (contextState.remainingPercentage <= SELF_COMPACTION_SOFT_THRESHOLD) {
     // trigger compaction
 }
 ```
@@ -289,7 +259,7 @@ If the agent misunderstands the compaction instruction and signals `done` instea
 ## Self-Compaction Instruction Message / ap.kY4yu9B3HGvN66RoDi0Fb.E
 
 Sent to the agent via `AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E) when
-self-compaction is triggered (either threshold).
+self-compaction is triggered at a done boundary.
 
 ### Template
 
@@ -308,13 +278,6 @@ Make the summary as **concise** as possible but context rich.
 
 After writing the file, signal completion:
 `callback_shepherd.signal.sh self-compacted`
-```
-
-**For `EMERGENCY_INTERRUPT` trigger**, the message is prepended with:
-
-```markdown
-You were interrupted because your context window is critically low.
-Do NOT continue your previous task. Focus only on writing the summary below.
 ```
 
 ### Compaction Timeout
@@ -393,178 +356,16 @@ If it does not exist, skip silently (no error — most sub-parts will never self
 
 ---
 
-## Auto-Compaction Disabled — Prerequisite
+## Health-Aware Await Loop — No Emergency Compaction Check (V1)
 
-### Why Disable Auto-Compaction
+V1's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does **NOT** poll context
+window state continuously. Context window state is read **only at done boundaries**.
 
-Claude Code has built-in auto-compaction that triggers when the context window fills up.
-This compaction:
-- Happens at unpredictable times
-- Loses quality (summarization is automatic, not guided)
-- Interferes with our controlled self-compaction
+The loop structure remains focused on health monitoring (liveness detection via
+`lastActivityTimestamp`). No 1-second context window polling. No emergency interrupt path.
 
-By disabling auto-compaction, the harness becomes the **sole controller** of context
-management. Self-compaction happens at predictable thresholds with guided summarization.
-
-### How Auto-Compaction Is Disabled / ap.7bD0uLeoQQSFS16TQeCRF.E
-
-Two mechanisms are required (belt and suspenders):
-
-**1. Config file: `~/.claude.json`** (the **app-state** file) must contain
-`"autoCompactEnabled": false`.
-
-Written **once at harness startup** by `EnvironmentValidator` using Kotlin/Jackson JSON
-handling (no jq dependency). The logic:
-- If `~/.claude.json` does not exist → create it with `{"autoCompactEnabled":false}`
-- If it exists → parse as JSON (Jackson `ObjectMapper`), set `autoCompactEnabled = false`,
-  write back atomically (write to temp file, rename)
-
-<!-- WHY-NOT(2026-03-14): Do NOT use ~/.claude/settings.json for autoCompactEnabled —
-     it silently ignores this key. Only ~/.claude.json (the app-state file) works.
-     Ref: https://github.com/anthropics/claude-code/issues/6689 -->
-
-> **`~/.claude/settings.json` silently ignores `autoCompactEnabled`.** Only `~/.claude.json`
-> works. This is a known Claude Code behavior
-> (ref: https://github.com/anthropics/claude-code/issues/6689).
-
-<!-- WHY-NOT(2026-03-17): Do NOT use jq for ~/.claude.json manipulation — the harness is
-     a Kotlin/JVM application and already has Jackson on the classpath. Using jq would add
-     an external binary dependency to the spawn path, introduce file I/O failure modes on
-     every spawn, and create race conditions when concurrent agents spawn simultaneously.
-     Jackson handles JSON natively, runs in-process, and the write happens once at startup. -->
-
-**2. Env var: `DISABLE_AUTO_COMPACT=true`** must be exported in the TMUX session
-environment.
-
-```bash
-export DISABLE_AUTO_COMPACT=true
-```
-
-Both are required. The config file persists the setting; the env var is the runtime
-enforcement per session.
-
-### Harness Responsibilities — Startup + Per-Spawn
-
-| When | What | Where |
-|------|------|-------|
-| **Harness startup** | `EnvironmentValidator` (ref.ap.A8WqG9oplNTpsW7YqoIyX.E) reads `~/.claude.json`, ensures `autoCompactEnabled == false` is set. If the key is missing or `true`, writes the correct value using Jackson (read → merge → atomic write). Hard fail if the file is unparseable. This is the **only place** that writes `~/.claude.json`. | `EnvironmentValidator.validate()` |
-| **Every agent spawn** | `ClaudeCodeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) exports `DISABLE_AUTO_COMPACT=true` in the TMUX session env (alongside `TICKET_SHEPHERD_HANDSHAKE_GUID` and `TICKET_SHEPHERD_SERVER_PORT`). No config file write — that was done once at startup. | `ClaudeCodeAdapter.buildStartCommand()` |
-| **Every session rotation** | Same as "Every agent spawn" — env var export is inherent in the spawn command. | Implicit — covered by spawn flow |
-
-<!-- WHY(2026-03-17): Config file write moved from per-spawn to startup-only.
-     Rationale:
-     - The harness is the sole manager of Claude Code sessions; no external process
-       re-enables auto-compaction mid-run.
-     - The env var (DISABLE_AUTO_COMPACT=true) is the per-session runtime guarantee.
-     - Writing once at startup eliminates: jq dependency, per-spawn file I/O failure modes,
-       race conditions on concurrent spawns.
-     - If somehow the file is modified externally, the env var still prevents auto-compaction. -->
-
----
-
-## Health-Aware Await Loop Change / ref.ap.QCjutDexa2UBDaKB3jTcF.E
-
-### Current Loop Structure (Before This Change)
-
-```
-while (true) {
-    signal = awaitSignalWithTimeout(healthCheckInterval)  // 5 min
-    if (signal != null) return signal
-    // health checks at 5-minute intervals...
-}
-```
-
-### Updated Loop Structure
-
-The loop now polls every **1 second** for context window state while maintaining the
-existing health check intervals:
-
-```
-// Phase B (updated): Signal-Await with Context Window Monitoring + Health Checks
-lastHealthCheck = now()
-while (true) {
-    signal = awaitSignalWithTimeout(1.second)
-
-    if (signal != null) {
-        return signal  // Done, FailWorkflow, SelfCompacted
-    }
-
-    // --- Q&A pending gate: skip compaction + health checks while Q&A is active ---
-    // Agent is known-idle awaiting TMUX answer — context not growing, pings waste context.
-    // See UserQuestionHandler (ref.ap.NE4puAzULta4xlOLh5kfD.E).
-    if (sessionEntry.isQAPending) {
-        continue
-    }
-
-    // --- Context window check for compaction (every iteration = every ~1 second) ---
-    contextState = agentFacade.readContextWindowState(handle)
-    if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-        // performCompaction handles race condition guard (isCompleted check),
-        // Ctrl+C interrupt, and immediate respawn internally.
-        return performCompaction(sessionEntry, CompactionTrigger.EMERGENCY_INTERRUPT)
-    }
-
-    // --- Health checks: lastActivityTimestamp only (at normal intervals) ---
-    // Liveness is determined solely by HTTP callbacks — see HealthMonitoring.md
-    // (ref.ap.dnc1m7qKXVw2zJP8yFRE.E). context_window_slim.json is used for
-    // compaction decisions (above) only, NOT for liveness.
-    elapsed = now() - lastHealthCheck
-    if (elapsed >= healthCheckInterval) {
-        lastHealthCheck = now()
-        // health check logic: lastActivityTimestamp staleness, ping, crash detection
-        ...
-    }
-}
-```
-
-**Key:** The 1-second poll interval applies to `awaitSignalWithTimeout`, NOT to health
-checks. Health checks still fire at their normal intervals (5 min default). Context window
-state is checked every iteration (~1 second) for compaction purposes. File I/O overhead
-is negligible — the file is a single-line JSON on local filesystem.
-
----
-
-## Hard Constraint Modification / ref.ap.NAVMACFCbnE7L6Geutwyk.E (high-level.md)
-
-### Before
-
-> **One TMUX session per sub-part.** A sub-part gets exactly one TMUX session, spawned on
-> first run and kept alive across iteration loops. The session is killed only when the
-> **part** completes.
-
-### After
-
-> **One TMUX session per sub-part at a time.** A sub-part gets exactly one TMUX session,
-> spawned on first run and kept alive across iteration loops. The session is killed when the
-> **part** completes, or when **self-compaction** triggers session rotation
-> (ref.ap.8nwz2AHf503xwq8fKuLcl.E). After session rotation, a new session is spawned for
-> the same sub-part. No two sessions are alive simultaneously for the same sub-part.
-
----
-
-## Impact on PartExecutor — Unified Session Lifecycle
-
-`PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) uses a single call for all
-instruction delivery — first run, re-instruction, and post-compaction are identical:
-
-```kotlin
-handle = agentFacade.sendPayload(config, handle, instructions)
-// handle is null on first run and after compaction kill
-// AgentFacade transparently: spawns if null/dead, re-uses if alive
-```
-
-After session rotation (self-compaction `killSession()` sets `handle = null`), the next
-`sendPayload` call transparently spawns a fresh session. No explicit session-existence
-check in the executor. This also covers idle session death: if `send-keys` fails, the
-facade respawns transparently — no `if/else` branching needed.
-
-All agent operations go through `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). The
-executor is agnostic to session lifecycle — it always calls one method regardless of
-session state.
-
-**DRY between planning and execution:** The `PartExecutor` is already shared between
-planning (PLANNER↔PLAN_REVIEWER) and execution parts. The self-compaction logic lives in
-the executor, so it applies to both without duplication.
+> **V2:** Adds 1-second context window polling and emergency interrupt.
+> See [`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md).
 
 ---
 
@@ -588,10 +389,44 @@ discovering it later when we need to read the context state.
 
 ---
 
+## Hard Constraint Modification / ref.ap.NAVMACFCbnE7L6Geutwyk.E (high-level.md)
+
+> **One TMUX session per sub-part at a time.** A sub-part gets exactly one TMUX session,
+> spawned on first run and kept alive across iteration loops. The session is killed when the
+> **part** completes, or when **self-compaction** triggers session rotation
+> (ref.ap.8nwz2AHf503xwq8fKuLcl.E). After session rotation, a new session is spawned for
+> the same sub-part. No two sessions are alive simultaneously for the same sub-part.
+
+---
+
+## Impact on PartExecutor — Unified Session Lifecycle
+
+`PartExecutorImpl` (ref.ap.mxIc5IOj6qYI7vgLcpQn5.E) uses a single call for all
+instruction delivery — first run, re-instruction, and post-compaction are identical:
+
+```kotlin
+handle = agentFacade.sendPayload(config, handle, instructions)
+// handle is null on first run and after compaction kill
+// AgentFacade transparently: spawns if null/dead, re-uses if alive
+```
+
+After session rotation (self-compaction `killSession()` sets `handle = null`), the next
+`sendPayload` call transparently spawns a fresh session. No explicit session-existence
+check in the executor.
+
+All agent operations go through `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E). The
+executor is agnostic to session lifecycle — it always calls one method regardless of
+session state.
+
+**DRY between planning and execution:** The `PartExecutor` is already shared between
+planning (PLANNER↔PLAN_REVIEWER) and execution parts. The self-compaction logic lives in
+the executor, so it applies to both without duplication.
+
+---
+
 ## Session Rotation Detail
 
-The **core compaction steps** (shared by both triggers) execute via `AgentFacade`
-(ref.ap.9h0KS4EOK5yumssRCJdbq.E):
+The compaction steps execute via `AgentFacade` (ref.ap.9h0KS4EOK5yumssRCJdbq.E):
 
 1. **Validate PRIVATE.md:** Check `${sub_part}/private/PRIVATE.md` exists and is non-empty.
    If missing after one retry → `PartResult.AgentCrashed`.
@@ -600,20 +435,10 @@ The **core compaction steps** (shared by both triggers) execute via `AgentFacade
 3. **Kill session:** `agentFacade.killSession(handle)` — internally kills TMUX session
    and cleans up `SessionsState`.
 
-**Post-compaction — trigger-dependent:**
-
-**`DONE_BOUNDARY`:** `handle = null`. No immediate respawn. The next time the executor
+**Post-compaction:** `handle = null`. No immediate respawn. The next time the executor
 needs this sub-part, it calls `agentFacade.sendPayload(config, null, instructions)` —
 AgentFacade spawns a fresh session transparently (standard spawn flow —
 ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
-
-**`EMERGENCY_INTERRUPT`:** Immediate respawn via unified call:
-4. **Spawn + send instructions:** `handle = agentFacade.sendPayload(config, null, instructions)`
-   — null handle triggers AgentFacade to spawn a fresh session (new `HandshakeGuid`, new TMUX
-   session, bootstrap handshake, session ID resolution + context_window_slim.json validation,
-   new entry in `sessionIds` array). `ContextForAgentProvider` assembles instructions including
-   `PRIVATE.md`. Returns a fresh `SpawnedAgentHandle` with a fresh signal deferred.
-5. **Enter health-aware await loop:** Normal monitoring resumes on the new `handle.signal`.
 
 ---
 
@@ -623,10 +448,8 @@ ref.ap.hZdTRho3gQwgIXxoUtTqy.E).
 
 The inner feedback loop creates **frequent done boundaries** — one after each feedback item,
 and additional boundaries during per-item rejection negotiation. Each done boundary is a
-natural soft-compaction checkpoint. This significantly reduces the need for emergency
-compaction (hard threshold): the doer processes one item, hits a done boundary, compacts if
-needed, then starts fresh on the next item. Without the inner loop, the doer processes ALL
-feedback in one go, making mid-task context exhaustion more likely.
+natural soft-compaction checkpoint. The doer processes one item, hits a done boundary,
+compacts if needed, then starts fresh on the next item.
 
 **The inner feedback loop makes self-compaction proactive rather than reactive.** See
 [`granular-feedback-loop.md`](../plan/granular-feedback-loop.md) for the full spec.
@@ -665,9 +488,8 @@ strategies:
 | Threshold | `HarnessTimeoutConfig` field | Default | Meaning |
 |-----------|------------------------------|---------|---------|
 | `SELF_COMPACTION_SOFT_THRESHOLD` | `contextWindowSoftThresholdPct` | 35 | Compact at done boundary when `remaining_percentage ≤ 35` (i.e., 65% of context used, 35% remaining) |
-| `SELF_COMPACTION_HARD_THRESHOLD` | `contextWindowHardThresholdPct` | 20 | Emergency interrupt when `remaining_percentage ≤ 20` (i.e., 80% of context used, 20% remaining) |
 | `SELF_COMPACTION_TIMEOUT` | `selfCompactionTimeout` | 5 min | Max time for agent to write PRIVATE.md and signal |
-| `contextFileStaleTimeout` | `HarnessTimeoutConfig` field | 5 min | Maximum age of `file_updated_timestamp` in `context_window_slim.json` before the value is considered stale. When stale: `remainingPercentage` is treated as null (unknown) — no compaction is triggered, a warning is logged. This guards against the hook silently stopping mid-session and the harness acting on a frozen `remaining_percentage` that looks healthy but is minutes old. Uses `file_updated_timestamp` from the JSON body (not OS file mtime). |
+| `contextFileStaleTimeout` | `HarnessTimeoutConfig` field | 5 min | Maximum age of `file_updated_timestamp` in `context_window_slim.json` before the value is considered stale. When stale: `remainingPercentage` is treated as null (unknown) — no compaction is triggered, a warning is logged. Uses `file_updated_timestamp` from the JSON body (not OS file mtime). |
 
 **Centralized constants:** All threshold values are fields of `HarnessTimeoutConfig`
 (`com.glassthought.shepherd.core.data.HarnessTimeoutConfig`) — never as magic numbers in the
@@ -683,14 +505,14 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 | Document | Change |
 |----------|--------|
 | `doc/high-level.md` | Hard Constraint modification ("one session at a time"), add Context Window Monitoring section, link to this spec |
-| `doc/core/PartExecutor.md` | Health-aware await loop updated structure, session existence check in re-instruction path, self-compaction step after done |
-| `doc/use-case/HealthMonitoring.md` | New use case reference, 1-second poll integration |
+| `doc/core/PartExecutor.md` | Self-compaction step after done in executor flow |
+| `doc/use-case/HealthMonitoring.md` | Reference compaction at done boundaries |
 | `doc/core/ContextForAgentProvider.md` | PRIVATE.md in instruction concatenation (position 1b) |
 | `doc/schema/ai-out-directory.md` | New `private/PRIVATE.md` in directory tree, supersede "No PRIVATE.md" section |
 | `doc/core/agent-to-server-communication-protocol.md` | New `/signal/self-compacted` endpoint |
 | `doc/use-case/SpawnTmuxAgentSessionUseCase.md` | context_window_slim.json validation after session ID resolution |
 | `doc/core/SessionsState.md` | Clarification: multiple session records per sub-part after rotation |
-| `doc/high-level.md` (Key Technology Decisions) | Auto-compaction disabled entry, context window monitoring entry |
+| `doc/high-level.md` (Key Technology Decisions) | Context window monitoring entry |
 
 ---
 
@@ -703,43 +525,27 @@ Configured via environment variables or harness config. Not per-sub-part in V1.
 - File malformed (missing required fields or unparseable JSON) → same exception with parse error details
 - File present, `file_updated_timestamp` older than `contextFileStaleTimeout` → `ContextWindowState(remainingPercentage = null)` + log warning (not an exception)
 - `ContextWindowState.remainingPercentage` is nullable (`Int?`); null = stale/unknown
-- Callers (done-boundary check, emergency-interrupt poll): skip compaction trigger when `remainingPercentage == null`, log warning instead
+- Callers (done-boundary check): skip compaction trigger when `remainingPercentage == null`, log warning instead
 - Verifiable: unit test with fake file (fresh timestamp → value returned); unit test (stale timestamp → null returned + warning logged); unit test (file missing → exception); integration test confirming file presence after real Claude Code session
 
-### R2: Auto-Compaction Disabled — Startup Write + Per-Spawn Env Var
-- Full mechanism spec: ref.ap.7bD0uLeoQQSFS16TQeCRF.E
-- `EnvironmentValidator` at harness startup: reads `~/.claude.json`, ensures `autoCompactEnabled == false` using Jackson (Kotlin/JVM JSON — no jq dependency). If missing or wrong, writes the correct value (read → merge → atomic write). Hard fail if unparseable.
-- `ClaudeCodeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) on **every spawn** (including session rotations): exports `DISABLE_AUTO_COMPACT=true` in TMUX session env. No config file write — that was done once at startup.
-- NOT `~/.claude/settings.json` — that file silently ignores `autoCompactEnabled` (ref: github.com/anthropics/claude-code/issues/6689)
-- Verifiable: startup validation test (write + verify); unit test: starter command includes `DISABLE_AUTO_COMPACT=true`; integration test confirming Claude Code does not auto-compact
-
-### R3: context_window_slim.json Validation After Session ID Resolution
+### R2: context_window_slim.json Validation After Session ID Resolution
 - After `AgentTypeAdapter.resolveSessionId()` resolves session ID, call `contextWindowStateReader.validatePresence()`
 - Missing file → `PartResult.AgentCrashed` with clear error about hook misconfiguration
 - Verifiable: unit test — mock resolver returns ID, mock reader throws → executor returns AgentCrashed
 
-### R4: Health-Aware Await Loop Polls Context State Every 1 Second
-- `awaitSignalWithTimeout(1.second)` replaces `awaitSignalWithTimeout(healthCheckInterval)`
-- Context window state read on every iteration
-- Hard threshold check: `remaining_percentage ≤ 20` → emergency compaction
-- Regular health checks still fire at normal intervals (tracked by elapsed time)
-- Verifiable: unit test — mock reader returning decreasing values → executor triggers emergency compaction at threshold
+### R3: `performCompaction()` — Done-Boundary Compaction Flow
+Single method for `DONE_BOUNDARY` trigger:
+- No pre-compaction interrupt
+- Core steps: send instruction → await `SelfCompacted` → validate PRIVATE.md → git commit → kill session
+- Post-compaction = lazy respawn (handle = null)
+- Verifiable: unit test — done → low context → compaction instruction → SelfCompacted → session killed
 
-### R5: `performCompaction()` — Unified Compaction Flow
+### R4: Trigger Detection — Done Boundary
+- After `AgentSignal.Done` + PUBLIC.md validation, read context window state
+- If `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → call `performCompaction(DONE_BOUNDARY)`
+- Verifiable: unit test — done signal → low context → compaction → session killed; done signal → healthy context → no compaction
 
-Single method handling both triggers via `CompactionTrigger` enum:
-- `DONE_BOUNDARY`: no pre-compaction interrupt; post-compaction = lazy respawn
-- `EMERGENCY_INTERRUPT`: pre-compaction = race guard + Ctrl+C + pause; post-compaction = immediate respawn + send instructions + resume monitoring
-- Core steps shared: reset deferred → send instruction → await `SelfCompacted` → validate PRIVATE.md → git commit → kill session
-- Instruction message uses interrupt-acknowledgment prefix for `EMERGENCY_INTERRUPT`
-- Verifiable: unit test — both trigger variants exercise the same core steps; only pre/post differ
-
-### R6: Trigger Detection
-- **Done boundary** (`DONE_BOUNDARY`): after `AgentSignal.Done` + PUBLIC.md validation, read context window state; if `remaining_percentage ≤ SELF_COMPACTION_SOFT_THRESHOLD` (default 35) → call `performCompaction(DONE_BOUNDARY)`
-- **Emergency interrupt** (`EMERGENCY_INTERRUPT`): health-aware await loop detects `remaining_percentage ≤ SELF_COMPACTION_HARD_THRESHOLD` (default 20) → call `performCompaction(EMERGENCY_INTERRUPT)`
-- Verifiable: unit test — done signal → low context → `DONE_BOUNDARY` compaction → session killed; unit test — polling detects hard threshold → `EMERGENCY_INTERRUPT` compaction
-
-### R7: Self-Compacted Signal Endpoint
+### R5: Self-Compacted Signal Endpoint
 - New endpoint `/callback-shepherd/signal/self-compacted`
 - New `AgentSignal.SelfCompacted` variant
 - Server completes `signalDeferred` with `SelfCompacted`
@@ -747,21 +553,21 @@ Single method handling both triggers via `CompactionTrigger` enum:
 - Callback script: `callback_shepherd.signal.sh self-compacted`
 - Verifiable: unit test — server receives self-compacted → deferred completed correctly
 
-### R8: PRIVATE.md in .ai_out/ Directory Structure
+### R6: PRIVATE.md in .ai_out/ Directory Structure
 - New path: `${sub_part}/private/PRIVATE.md`
 - Created by agent during self-compaction
 - Overwritten on subsequent self-compactions (git preserves history)
 - `AiOutputStructure` creates `private/` directory alongside `comm/`
 - Verifiable: directory creation test
 
-### R9: ContextForAgentProvider Includes PRIVATE.md
+### R7: ContextForAgentProvider Includes PRIVATE.md
 - Check for `private/PRIVATE.md` in sub-part directory
 - If exists and non-empty → include in instruction assembly at position 1b (after role def, before part context)
 - If not exists → skip silently (no error)
 - Applies to all instruction assembly methods (execution, planner, plan-reviewer)
 - Verifiable: unit test — instructions with/without PRIVATE.md present
 
-### R10: Session Rotation
+### R8: Session Rotation
 - After self-compaction: `agentFacade.killSession()` (internally kills TMUX, cleans
   SessionsState), set `handle = null`
 - Next `agentFacade.sendPayload(config, null, instructions)` transparently spawns fresh session
@@ -771,31 +577,25 @@ Single method handling both triggers via `CompactionTrigger` enum:
 - Verifiable: unit test via `FakeAgentFacade` — full rotation sequence;
   integration test — real session rotation
 
-### R11: Self-Compaction Instruction Message
+### R9: Self-Compaction Instruction Message
 - Template includes: PRIVATE.md path, summarization guidelines, signal instruction
-- Emergency variant includes interrupt acknowledgment prefix
 - Verifiable: template renders correct paths and signal commands
 
 ---
 
 ## Implementation Gates
 
-### Gate 1: Foundation — Reader + Validation + Auto-Compaction Off
-**Scope:** R1, R2, R3
-**What:** ContextWindowStateReader interface + ClaudeCode impl. EnvironmentValidator
-writes `~/.claude.json` with `autoCompactEnabled: false` at startup (Jackson, no jq).
-ClaudeCodeAdapter (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) exports `DISABLE_AUTO_COMPACT=true` env var per spawn.
+### Gate 1: Foundation — Reader + Validation
+**Scope:** R1, R2
+**What:** ContextWindowStateReader interface + ClaudeCode impl.
 context_window_slim.json validated after session ID resolution.
 **Verify:**
 - Unit tests: reader parses valid/invalid/missing JSON
-- Unit test: startup validation rejects missing/wrong `~/.claude.json`
-- Unit test: starter command includes `DISABLE_AUTO_COMPACT=true`
 - Integration test: real Claude Code session has context_window_slim.json present
-**Proceed when:** Reader reliably reads context state, auto-compaction is confirmed disabled,
-presence validation catches missing hook.
+**Proceed when:** Reader reliably reads context state, presence validation catches missing hook.
 
 ### Gate 2: Signal + Directory + Instructions
-**Scope:** R7, R8, R9, R11
+**Scope:** R5, R6, R7, R9
 **What:** New `/signal/self-compacted` endpoint. `private/PRIVATE.md` directory structure.
 ContextForAgentProvider includes PRIVATE.md. Self-compaction instruction template.
 **Verify:**
@@ -806,27 +606,22 @@ ContextForAgentProvider includes PRIVATE.md. Self-compaction instruction templat
 **Proceed when:** Signal flows through server → deferred, instructions include PRIVATE.md,
 template produces correct messages.
 
-### Gate 3: `performCompaction()` — Unified Compaction Flow + Trigger Detection
-**Scope:** R4, R5, R6, R10
-**What:** `CompactionTrigger` enum, `performCompaction()` with shared core + trigger-specific
-pre/post steps. Done-boundary trigger detection. 1-second polling loop with emergency trigger detection.
+### Gate 3: `performCompaction()` — Done-Boundary Flow + Trigger Detection
+**Scope:** R3, R4, R8
+**What:** `performCompaction()` for `DONE_BOUNDARY`. Done-boundary trigger detection.
 **Verify:**
 - Unit test: `DONE_BOUNDARY` — done → low context → compaction instruction → SelfCompacted → session killed (lazy respawn)
 - Unit test: `DONE_BOUNDARY` — done → healthy context → no compaction (normal flow)
-- Unit test: `EMERGENCY_INTERRUPT` — polling detects hard threshold → Ctrl+C → compaction → rotate → respawn → resume
-- Unit test: `EMERGENCY_INTERRUPT` race condition guard — done arrives before interrupt → no Ctrl+C sent
 - Unit test: session rotation → next use spawns new session with PRIVATE.md
 - Unit test: fallback when agent signals `done` instead of `self-compacted`
-- Unit test: health checks still fire at normal intervals despite 1-second loop
-**Proceed when:** Both trigger variants of `performCompaction()` work in unit tests.
+**Proceed when:** Done-boundary compaction works in unit tests.
 
 ### Gate 4: Integration Validation
 **Scope:** All requirements end-to-end
 **What:** Integration test with real Claude Code agent confirming full flow.
 **Verify:**
-- Session spawns with auto-compaction disabled
 - context_window_slim.json is present and readable
-- Self-compaction can be triggered (may require synthetic context filling)
+- Self-compaction can be triggered at done boundary
 - Session rotation produces a working new session with PRIVATE.md
 **Proceed when:** Full flow works against real Claude Code.
 
@@ -836,12 +631,11 @@ pre/post steps. Done-boundary trigger detection. 1-second polling loop with emer
 
 | Risk | Impact | Mitigation |
 |------|--------|------------|
-| **Ctrl+C timing corrupts files** | Agent mid-tool-use when interrupted; files may be partially written | Git commit before compaction captures last-known-good state. Agent's first task in new session can detect and fix corruption via `git status`. |
 | **PRIVATE.md quality varies** | Poor summarization → degraded agent performance in new session | Structured prompt template with specific sections. Iterate on template based on real-world results. |
-| **1-second polling overhead** | Continuous file reads during entire agent work period | File is ~30 bytes JSON on local filesystem. Measured overhead: negligible (< 0.1ms per read). |
-| **Self-compaction itself fails** | Agent at 20% remaining may not have enough context to summarize | 5-minute timeout. If fails → `AgentCrashed` → `FailedToExecutePlanUseCase`. Consider shorter PRIVATE.md template for emergency compaction. |
-| **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files (file_updated_timestamp > contextFileStaleTimeout) → `remainingPercentage` returned as null → compaction is skipped with a logged warning → health monitoring's existing noActivityTimeout eventually catches a truly dead/silent agent. |
+| **Self-compaction itself fails** | Agent may not have enough context to summarize | 5-minute timeout. If fails → `AgentCrashed` → `FailedToExecutePlanUseCase`. |
+| **External hook stops writing** | context_window_slim.json stale or missing mid-session | Validation after spawn catches missing files. Stale files → `remainingPercentage` returned as null → compaction is skipped with a logged warning → health monitoring's existing noActivityTimeout eventually catches a truly dead/silent agent. |
 | **35% remaining triggers too early for some workloads** | Frequent unnecessary self-compactions | Threshold is a centralized constant, easily adjustable. Monitor in practice and tune. Each compaction adds ~2 minutes overhead. |
+| **Context exhausted between done boundaries** | Agent degrades or crashes mid-task | Claude Code's native auto-compaction handles this. Health monitoring detects dead sessions. Granular feedback loop (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) minimizes the gap between done boundaries. V2 adds harness-controlled emergency interrupt — see [`doc_v2/our-own-emergency-compression.md`](../../doc_v2/our-own-emergency-compression.md). |
 
 ---
 

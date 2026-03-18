@@ -74,7 +74,7 @@ The `context_window_slim.json` file is used for **context window compaction deci
 | Signal | Source | Purpose |
 |--------|--------|---------|
 | `lastActivityTimestamp` | Agent → Server HTTP callbacks | **Liveness detection** — updated on every callback (started, done, ping-ack, ack-payload, user-question, self-compacted) |
-| `context_window_slim.json` | External hook (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | **Compaction decisions only** — remaining_percentage drives self-compaction thresholds (ref.ap.8nwz2AHf503xwq8fKuLcl.E). NOT used for liveness. |
+| `context_window_slim.json` | External hook (ref.ap.ufavF1Ztk6vm74dLAgANY.E) | **Done-boundary compaction decisions only** — remaining_percentage drives self-compaction at done boundaries (ref.ap.8nwz2AHf503xwq8fKuLcl.E). NOT used for liveness. NOT polled continuously in the health-aware await loop. |
 
 #### Simplification Tradeoff
 

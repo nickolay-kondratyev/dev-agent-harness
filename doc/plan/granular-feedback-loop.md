@@ -374,16 +374,13 @@ and additional boundaries during rejection negotiation. Each done boundary is a 
 soft-compaction checkpoint. The harness reads `context_window_slim.json` after every item and
 compacts before feeding the next if the threshold is crossed.
 
-This is a significant improvement over the current design where the doer processes ALL
-reviewer feedback in one go. In the current design:
-- If the doer runs out of context mid-re-work → emergency interrupt (Ctrl+C), forced
-  compaction, session rotation, agent must resume from PRIVATE.md
-- The emergency path is disruptive and risks lost work
+This is a significant improvement over the alternative of processing ALL
+reviewer feedback in one go, where the doer could run out of context mid-re-work.
 
 With the inner feedback loop:
 - Soft compaction triggers between items while the agent has ample room to summarize
 - The agent finishes one item, compacts, starts fresh on the next
-- Emergency interrupts become rare — the soft threshold (35% remaining / 65% used) catches most cases
+- Claude Code's native auto-compaction handles the rare case of mid-task exhaustion
 
 **The inner loop makes self-compaction proactive rather than reactive.**
 

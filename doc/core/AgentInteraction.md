@@ -73,7 +73,7 @@ The methods model **what the orchestration layer needs**, not the raw infra oper
 | Method | What it encapsulates | Internal delegation |
 |--------|---------------------|---------------------|
 | `spawnAgent(config)` | Bootstrap handshake, session ID resolution, initial `SessionsState` registration, TMUX session start | `AgentTypeAdapter` (ref.ap.A0L92SUzkG3gE0gX04ZnK.E) + `TmuxSessionManager` + `SessionsState` |
-| `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` | Full signal lifecycle: create fresh `CompletableDeferred`, re-register `SessionEntry`, send payload with ACK (3× retry), run health-aware await loop, return `AgentSignal` | `TmuxCommunicator` + ACK wrapping + `SessionsState` + `AgentUnresponsiveUseCase` + `ContextWindowStateReader` + `ContextWindowSelfCompactionUseCase` |
+| `sendPayloadAndAwaitSignal(handle, payload): AgentSignal` | Full signal lifecycle: create fresh `CompletableDeferred`, re-register `SessionEntry`, send payload with ACK (3× retry), run health-aware await loop, return `AgentSignal` | `TmuxCommunicator` + ACK wrapping + `SessionsState` + `AgentUnresponsiveUseCase` |
 | `killSession(handle)` | Kill TMUX session, cleanup | `TmuxSessionManager` |
 
 `SpawnedAgentHandle` contains:
@@ -277,7 +277,7 @@ doer+reviewer paths:
 - Timeout / crash detection (no activity → ping → no reply → crashed)
 - Iteration loop (doer → reviewer → needs_iteration → doer → reviewer → pass)
 - ACK failure (payload delivery exhausted → crashed)
-- Context window exhaustion (emergency compaction)
+- Context window exhaustion at done boundary (soft compaction)
 - Late fail-workflow detection
 
 **Verify:**

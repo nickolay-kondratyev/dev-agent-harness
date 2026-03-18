@@ -34,7 +34,7 @@ data class UserQuestionContext(
 
 Q&A handling is **decoupled from the executor's coroutine scope**. The executor's health-aware
 await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) does not participate in Q&A — it only checks
-`SessionEntry.isQAPending` to suppress health pings, compaction triggers, and noActivityTimeout.
+`SessionEntry.isQAPending` to suppress health pings and noActivityTimeout.
 
 ### Why Decoupled
 
@@ -218,7 +218,6 @@ The following executor health-aware await loop behaviors are **suppressed** when
 | Check | Normal behavior | When Q&A pending |
 |-------|----------------|-----------------|
 | Health ping firing | Fire when `lastActivityTimestamp` stale > `normalActivity` | **Skip** — agent is known-idle awaiting TMUX answer |
-| Context window compaction trigger | Check `remaining_percentage` against thresholds | **Skip** — agent is idle, context not growing |
 | noActivityTimeout | Declare crash when stale > `normalActivity` + no ping response | **Skip** — agent is known-idle, not crashed |
 
 These gates are documented in the health-aware await loop pseudocode

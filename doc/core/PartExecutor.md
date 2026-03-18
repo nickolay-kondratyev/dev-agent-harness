@@ -113,7 +113,7 @@ Executor              AgentFacade (sendPayloadAndAwaitSignal)   SessionsState   
    │                         ├─ send payload via send-keys             │           │
    │                         ├─ ACK-await phase                        │           │
    │                         ├─ health-aware signal-await loop         │ ◄─ /done  │
-   │                         │    (1s ticks, ping, compaction)         │ lookup ──►│
+   │                         │    (health checks, ping)                │ lookup ──►│
    │                         │                                         │ complete()│
    │                         ◄─ deferred completes → loop exits        │           │
    ◄─ AgentSignal ──────────┤                                         │           │
@@ -162,84 +162,74 @@ while (sessionEntry.pendingPayloadAck != null) {
     waitForAck(ackTimeout = 3 minutes, sessionEntry)
 }
 
-// Phase B: Signal-Await with Health Monitoring + Context Window Compaction
+// Phase B: Signal-Await with Health Monitoring
 //
 // PRECONDITION: This phase runs AFTER the bootstrap handshake (/signal/started received)
 // and AFTER contextWindowStateReader.validatePresence() has confirmed
 // context_window_slim.json exists. The file is guaranteed present.
 //
 // Liveness: determined solely by lastActivityTimestamp (HTTP callbacks).
-// Compaction: determined by context_window_slim.json (remaining_percentage).
-// These are independent concerns — see HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E).
+// Compaction: determined by context_window_slim.json (remaining_percentage) — checked
+// at done boundaries only, NOT in this loop. See ContextWindowSelfCompactionUseCase
+// (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
 //
-// Q&A GATE: When sessionEntry.isQAPending is true, health pings, compaction triggers,
-// and noActivityTimeout are ALL SUPPRESSED. The agent is known-idle awaiting a TMUX
-// answer from the Q&A coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Pinging would
-// waste context window; timeout would kill a healthy idle agent.
+// Q&A GATE: When sessionEntry.isQAPending is true, health pings and noActivityTimeout
+// are SUPPRESSED. The agent is known-idle awaiting a TMUX answer from the Q&A
+// coordinator (ref.ap.NE4puAzULta4xlOLh5kfD.E). Pinging would waste context window;
+// timeout would kill a healthy idle agent.
 //
 lastHealthCheck = now()
 while (true) {
-    signal = awaitSignalWithTimeout(1.second)
+    signal = awaitSignalWithTimeout(healthCheckInterval)
 
     if (signal != null) {
         // Agent sent Done / FailWorkflow / SelfCompacted via server → deferred completed
         return signal
     }
 
-    // --- Q&A pending gate: skip compaction + health checks while Q&A is active ---
+    // --- Q&A pending gate: skip health checks while Q&A is active ---
     if (sessionEntry.isQAPending) {
-        log.debug { "qa_pending — skipping compaction and health checks" }
+        log.debug { "qa_pending — skipping health checks" }
         continue
     }
 
-    // --- Read context window state for compaction decisions (every ~1 second) ---
-    contextState = contextWindowStateReader.read(agentSessionId)
-    if (contextState.remainingPercentage <= HARD_THRESHOLD) {
-        // performCompaction handles the race condition guard (isCompleted check),
-        // Ctrl+C interrupt, and immediate respawn — see ContextWindowSelfCompactionUseCase
-        // (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
-        return performCompaction(sessionEntry, CompactionTrigger.EMERGENCY_INTERRUPT)
-    }
-
     // --- Health check: lastActivityTimestamp only ---
-    if (now() - lastHealthCheck >= healthCheckInterval) {
-        lastHealthCheck = now()
-        callbackAge = now() - sessionEntry.lastActivityTimestamp
+    lastHealthCheck = now()
+    callbackAge = now() - sessionEntry.lastActivityTimestamp
 
-        if (callbackAge >= healthTimeouts.normalActivity) {
-            log.warn("last_activity_stale — triggering ping",
-                Val(callbackAge, STALE_DURATION),
-                Val(healthTimeouts.normalActivity, NO_ACTIVITY_TIMEOUT))
+    if (callbackAge >= healthTimeouts.normalActivity) {
+        log.warn("last_activity_stale — triggering ping",
+            Val(callbackAge, STALE_DURATION),
+            Val(healthTimeouts.normalActivity, NO_ACTIVITY_TIMEOUT))
 
-            // --- Send ping and check for proof of life ---
-            prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
+        // --- Send ping and check for proof of life ---
+        prePingCallbackTimestamp = sessionEntry.lastActivityTimestamp
 
-            log.info("sending_health_ping",
-                Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME),
-                Val(callbackAge, STALE_DURATION))
-            AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.NO_ACTIVITY_TIMEOUT)  // sends ping via TMUX
+        log.info("sending_health_ping",
+            Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME),
+            Val(callbackAge, STALE_DURATION))
+        AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.NO_ACTIVITY_TIMEOUT)  // sends ping via TMUX
 
-            // Wait for ping response timeout, then re-check
-            signal = awaitSignalWithTimeout(healthTimeouts.pingResponse)
+        // Wait for ping response timeout, then re-check
+        signal = awaitSignalWithTimeout(healthTimeouts.pingResponse)
 
-            if (signal != null) {
-                return signal  // Agent responded with Done/FailWorkflow during ping window
-            }
-
-            // Did any callback arrive during the ping window?
-            callbackAdvanced = sessionEntry.lastActivityTimestamp > prePingCallbackTimestamp
-
-            if (callbackAdvanced) {
-                log.info("proof_of_life_after_ping")
-                continue  // Agent is alive — loop back to monitoring
-            }
-
-            // No callback → agent is dead
-            log.error("crash_detected — no activity after ping",
-                Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
-            AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.PING_TIMEOUT)  // kills TMUX session
-            return AgentSignal.Crashed(details)
+        if (signal != null) {
+            return signal  // Agent responded with Done/FailWorkflow during ping window
         }
+
+        // Did any callback arrive during the ping window?
+        callbackAdvanced = sessionEntry.lastActivityTimestamp > prePingCallbackTimestamp
+
+        if (callbackAdvanced) {
+            log.info("proof_of_life_after_ping")
+            continue  // Agent is alive — loop back to monitoring
+        }
+
+        // No callback → agent is dead
+        log.error("crash_detected — no activity after ping",
+            Val(sessionEntry.tmuxAgentSession.tmuxSession.name, TMUX_SESSION_NAME))
+        AgentUnresponsiveUseCase.execute(sessionEntry, DetectionContext.PING_TIMEOUT)  // kills TMUX session
+        return AgentSignal.Crashed(details)
     }
 }
 ```
@@ -253,9 +243,9 @@ while (true) {
   `lastActivityTimestamp` for advancement. If any callback arrived during the ping window,
   the agent is alive. Simple 2-case model (fresh callback / stale callback).
   See HealthMonitoring.md (ref.ap.dnc1m7qKXVw2zJP8yFRE.E) for the simplification tradeoff.
-- **Separate compaction concern**: `context_window_slim.json` is polled every ~1 second for
-  `remaining_percentage` to drive compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
-  This is independent of liveness — compaction checks run regardless of callback freshness.
+- **Compaction at done boundaries only**: `context_window_slim.json` is read at done
+  boundaries (not in this loop) for compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
+  Liveness monitoring in this loop is independent of compaction.
 - **Scoped to sendPayloadAndAwaitSignal call**: The loop runs inside one
   `sendPayloadAndAwaitSignal` invocation. When the method returns, monitoring stops.
   No orphaned watchers.
@@ -268,7 +258,7 @@ These are constructor dependencies of `AgentFacadeImpl`, not `PartExecutorImpl`:
 
 - `AgentUnresponsiveUseCase` (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) — parameterized by `DetectionContext`: sends ping (`NO_ACTIVITY_TIMEOUT`), kills TMUX + provides crash details (`PING_TIMEOUT`, `STARTUP_TIMEOUT`)
 - `SessionEntry.lastActivityTimestamp` (ref.ap.igClEuLMC0bn7mDrK41jQ.E) — updated by server on every callback (sole liveness signal)
-- `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `remaining_percentage` for compaction decisions only (ref.ap.8nwz2AHf503xwq8fKuLcl.E); NOT used for liveness
+- `ContextWindowStateReader` (ref.ap.ufavF1Ztk6vm74dLAgANY.E) — reads `remaining_percentage` for done-boundary compaction decisions (ref.ap.8nwz2AHf503xwq8fKuLcl.E); NOT used in the await loop or for liveness
 - `Clock` (ref.ap.whDS8M5aD2iggmIjDIgV9.E) — wall-clock abstraction for timestamp comparisons
 - `HarnessTimeoutConfig` — all timeout and threshold constants
 
