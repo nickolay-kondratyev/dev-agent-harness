@@ -1,11 +1,11 @@
 ---
 id: nid_fv7og578z80kw90kb7bnst9sm_E
 title: "Use AiOutputStructure in ContextForAgentProviderImpl for path resolution and remove @Suppress"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T22:51:36Z
-status_updated_iso: 2026-03-19T22:51:36Z
+status_updated_iso: 2026-03-19T22:59:28Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
