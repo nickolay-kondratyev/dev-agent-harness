@@ -13,6 +13,7 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
+import com.glassthought.shepherd.core.agent.adapter.GlmConfig
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.Constants
 import java.nio.file.Path
@@ -67,7 +68,14 @@ fun interface ContextInitializer {
   ): ShepherdContext
 
   companion object {
+    /** Production wiring — GLM is NOT enabled; agents use the real Anthropic API. */
     fun standard(): ContextInitializer = ContextInitializerImpl()
+
+    /**
+     * Integration test wiring — GLM IS enabled; agents are redirected to GLM (Z.AI).
+     * See `ai_input/memory/deep/integ_tests__use_glm_for_agent_spawning.md` for rationale.
+     */
+    fun forIntegTest(): ContextInitializer = ContextInitializerImpl(glmEnabled = true)
   }
 }
 
@@ -83,6 +91,7 @@ class ContextInitializerImpl(
   private val envVarReader: (String) -> String? = System::getenv,
   private val fileReader: (Path) -> String = { it.toFile().readText() },
   private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
+  private val glmEnabled: Boolean = false,
 ) : ContextInitializer {
 
   override suspend fun initialize(
@@ -99,6 +108,8 @@ class ContextInitializerImpl(
   private fun initializeImpl(
     outFactory: OutFactory,
   ): ShepherdContext {
+    val zaiApiKey = readZaiApiKey()
+
     val commandRunner = TmuxCommandRunner()
     val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
     val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
@@ -109,10 +120,16 @@ class ContextInitializerImpl(
       sessionManager = sessionManager,
     )
 
+    // GLM config redirects spawned Claude Code agents to GLM (Z.AI) instead of real Anthropic API.
+    // Only enabled for integration tests — production agents use the real Anthropic API.
+    // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
+    val glmConfig = if (glmEnabled) GlmConfig.standard(authToken = zaiApiKey) else null
+
     val claudeCodeInfra = ClaudeCodeInfra(
       agentTypeAdapter = ClaudeCodeAdapter.create(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
+        glmConfig = glmConfig,
       ),
     )
 
@@ -122,7 +139,7 @@ class ContextInitializerImpl(
       claudeCode = claudeCodeInfra,
     )
 
-    val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory)
+    val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory, zaiApiKey)
 
     return ShepherdContext(
       infra = infra,
@@ -130,7 +147,7 @@ class ContextInitializerImpl(
     )
   }
 
-  private fun createNonInteractiveAgentRunner(outFactory: OutFactory): NonInteractiveAgentRunner {
+  private fun readZaiApiKey(): String {
     val myEnv = envVarReader(Constants.REQUIRED_ENV_VARS.MY_ENV)
       ?: error("${Constants.REQUIRED_ENV_VARS.MY_ENV} env var is not set")
 
@@ -149,6 +166,13 @@ class ContextInitializerImpl(
       "ZAI API key file at [$zaiApiKeyPath] is empty."
     }
 
+    return zaiApiKey
+  }
+
+  private fun createNonInteractiveAgentRunner(
+    outFactory: OutFactory,
+    zaiApiKey: String,
+  ): NonInteractiveAgentRunner {
     val processRunner = processRunnerFactory(outFactory)
 
     return NonInteractiveAgentRunnerImpl(

@@ -70,6 +70,7 @@ private class FilesystemGuidScanner(
 class ClaudeCodeAdapter internal constructor(
     private val guidScanner: GuidScanner,
     outFactory: OutFactory,
+    private val glmConfig: GlmConfig? = null,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
 ) : AgentTypeAdapter {
@@ -115,7 +116,12 @@ class ClaudeCodeAdapter internal constructor(
         //
         // [TICKET_SHEPHERD_HANDSHAKE_GUID]: exported so callback scripts can include it in every
         // HTTP callback, identifying this agent session to the harness server.
-        val innerCommand = "cd ${params.workingDir} && " +
+        //
+        // [GLM env vars]: When glmConfig is provided, env var exports are prepended to redirect
+        // the spawned `claude` CLI to the GLM (Z.AI) Anthropic-compatible endpoint.
+        // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
+        val glmPrefix = if (glmConfig != null) "${glmConfig.toEnvVarExports()} && " else ""
+        val innerCommand = "${glmPrefix}cd ${params.workingDir} && " +
             "unset CLAUDECODE && " +
             "export ${Constants.AGENT_COMM.HANDSHAKE_GUID_ENV_VAR}=${params.handshakeGuid.value} && " +
             claudeCommand
@@ -195,12 +201,14 @@ class ClaudeCodeAdapter internal constructor(
         fun create(
             claudeProjectsDir: Path,
             outFactory: OutFactory,
+            glmConfig: GlmConfig? = null,
             resolveTimeoutMs: Long = 45_000L,
             pollIntervalMs: Long = 500L,
             dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
             guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
             outFactory = outFactory,
+            glmConfig = glmConfig,
             resolveTimeoutMs = resolveTimeoutMs,
             pollIntervalMs = pollIntervalMs,
         )
