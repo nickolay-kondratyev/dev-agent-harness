@@ -13,7 +13,7 @@ import java.time.Instant
  *
  * ap.xR4kT7vNcW9pLmQjY2bFs.E
  */
-interface Clock {
+fun interface Clock {
     fun now(): Instant
 }
 
