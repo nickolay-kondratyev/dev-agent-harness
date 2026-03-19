@@ -1,11 +1,11 @@
 ---
 id: nid_5z93biuqub3mhcejfpofjmj39_E
 title: "Implement PartExecutorImpl — core doer/reviewer execution loop with FakeAgentFacade tests"
-status: open
+status: in_progress
 deps: [nid_g3e2bkvqepf2wzipadayt9in8_E, nid_m7oounvwb31ra53ivu7btoj5v_E, nid_fwf09ycnd4d8wdoqd1atuohgb_E, nid_smb6zudqraf0hkp3u9kjx855e_E, nid_o9j8yo1yf76iwrj1x12u19t0z_E]
 links: []
 created_iso: 2026-03-19T00:34:27Z
-status_updated_iso: 2026-03-19T18:39:24Z
+status_updated_iso: 2026-03-19T18:39:53Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
