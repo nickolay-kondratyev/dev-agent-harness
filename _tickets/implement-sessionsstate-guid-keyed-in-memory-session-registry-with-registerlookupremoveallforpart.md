@@ -1,11 +1,11 @@
 ---
 id: nid_v14amda2uv5nedrp9hvb8xlfq_E
 title: "Implement SessionsState — GUID-keyed in-memory session registry with register/lookup/removeAllForPart"
-status: open
+status: in_progress
 deps: [nid_89bw63qr6qyewthjq4wp3x0so_E, nid_5o5wyxuzoz7qrkuq4wuo2gnjr_E]
 links: [nid_erd0khe8sg0vqbnwtg23aqzw9_E]
 created_iso: 2026-03-19T00:40:11Z
-status_updated_iso: 2026-03-19T00:40:11Z
+status_updated_iso: 2026-03-19T18:43:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
