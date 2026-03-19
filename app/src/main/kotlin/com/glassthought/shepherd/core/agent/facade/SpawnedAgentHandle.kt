@@ -13,8 +13,13 @@ import java.time.Instant
  * [readContextWindowState][AgentFacade.readContextWindowState],
  * [killSession][AgentFacade.killSession]).
  *
+ * **Identity semantics:** Two handles are equal iff they share the same [guid]. This is
+ * intentional — [lastActivityTimestamp] is mutable (updated on every HTTP callback) and
+ * must not participate in equality/hashing. Using a regular class (not `data class`) avoids
+ * the auto-generated `equals`/`hashCode`/`copy` that would include the mutable field.
+ *
  * The [lastActivityTimestamp] is updated by the real facade implementation on every HTTP
- * callback from the agent. In [FakeAgentFacade] tests, it is controlled directly by the test.
+ * callback from the agent. In `FakeAgentFacade` tests, it is controlled directly by the test.
  * Uses `@Volatile` for visibility across coroutines — sufficient for single-writer patterns
  * where only the facade (or test) updates the value.
  *
@@ -26,8 +31,19 @@ import java.time.Instant
  *   from the agent. Updated by the facade on every callback. Initialized to the spawn time.
  */
 @AnchorPoint("ap.kWchUPtTLqu73qXLHbKMs.E")
-data class SpawnedAgentHandle(
+class SpawnedAgentHandle(
     val guid: HandshakeGuid,
     val sessionId: ResumableAgentSessionId,
     @Volatile var lastActivityTimestamp: Instant,
-)
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (other !is SpawnedAgentHandle) return false
+        return guid == other.guid
+    }
+
+    override fun hashCode(): Int = guid.hashCode()
+
+    override fun toString(): String =
+        "SpawnedAgentHandle(guid=$guid, sessionId=$sessionId, lastActivityTimestamp=$lastActivityTimestamp)"
+}

@@ -49,7 +49,7 @@ sealed class AgentSignal {
      *
      * The executor should re-register with the new session and continue the current work cycle.
      */
-    object SelfCompacted : AgentSignal()
+    data object SelfCompacted : AgentSignal()
 }
 
 /**
