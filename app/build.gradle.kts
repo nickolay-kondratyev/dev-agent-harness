@@ -119,6 +119,12 @@ tasks.named<Test>("test") {
     systemProperty("runIntegTests", runIntegTests)
 }
 
+// Kover auto-wires koverVerify into check→build lifecycle.
+// Disable it so coverage stays an explicit opt-in task (run via coverage.sh).
+tasks.matching { it.name.startsWith("koverVerify") || it.name.startsWith("koverCachedVerify") }.configureEach {
+    enabled = false
+}
+
 // Kover configuration: XML coverage report output to repo-root .out/ directory.
 // Kover does not support JSON — XML is its machine-readable format.
 // NOT wired as dependency of any other task — run explicitly via `coverage.sh`.
