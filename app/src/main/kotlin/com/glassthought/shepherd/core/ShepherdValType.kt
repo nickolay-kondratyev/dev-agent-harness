@@ -102,6 +102,13 @@ object ShepherdValType {
         expectedValClass = String::class,
     )
 
+    /** Compaction trigger type (e.g., DONE_BOUNDARY). */
+    val COMPACTION_TRIGGER = ValTypeV2(
+        typeName = "COMPACTION_TRIGGER",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
     /** Number of feedback files in the pending directory. */
     val FEEDBACK_FILE_COUNT = ValTypeV2(
         typeName = "FEEDBACK_FILE_COUNT",
