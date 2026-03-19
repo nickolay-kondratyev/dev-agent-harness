@@ -10,7 +10,7 @@ import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
  *
  * Implemented by [TmuxSessionManager].
  */
-interface TmuxSessionCreator {
+fun interface TmuxSessionCreator {
 
     /**
      * Creates a new detached tmux session running the specified command.

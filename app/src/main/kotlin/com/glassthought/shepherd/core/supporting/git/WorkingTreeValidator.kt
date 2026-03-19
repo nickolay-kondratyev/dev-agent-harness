@@ -12,7 +12,7 @@ import java.nio.file.Path
  * This is a startup guard (ref.ap.QL051Wl21jmmYqTQTLglf.E) invoked by TicketShepherdCreator
  * before branch creation to prevent mixing pre-existing uncommitted work with agent output.
  */
-interface WorkingTreeValidator {
+fun interface WorkingTreeValidator {
 
     /**
      * Validates the working tree is clean.
