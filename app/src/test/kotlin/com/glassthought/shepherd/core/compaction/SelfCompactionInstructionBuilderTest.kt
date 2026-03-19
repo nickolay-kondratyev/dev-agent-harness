@@ -18,6 +18,10 @@ class SelfCompactionInstructionBuilderTest : AsgardDescribeSpec({
                 result shouldContain privateMdPath.toString()
             }
 
+            it("THEN wraps the PRIVATE.md path in backticks") {
+                result shouldContain "`$privateMdPath`"
+            }
+
             it("THEN contains the callback signal script name") {
                 result shouldContain ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
             }
@@ -29,6 +33,11 @@ class SelfCompactionInstructionBuilderTest : AsgardDescribeSpec({
             it("THEN contains the full callback command") {
                 result shouldContain
                     "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
+            }
+
+            it("THEN wraps the callback command in backticks") {
+                result shouldContain
+                    "`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}`"
             }
 
             it("THEN contains guideline to preserve what we're doing and why") {

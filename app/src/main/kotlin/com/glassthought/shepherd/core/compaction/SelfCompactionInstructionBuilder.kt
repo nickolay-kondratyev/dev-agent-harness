@@ -21,8 +21,7 @@ class SelfCompactionInstructionBuilder {
         val callbackCommand =
             "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
 
-        return """
-            |Your context window is running low. Summarize this chat into
+        return """Your context window is running low. Summarize this chat into
             |`$privateMdAbsolutePath` so work can continue in a new chat.
             |
             |Preserve all context needed for a new chat to understand:
@@ -35,7 +34,6 @@ class SelfCompactionInstructionBuilder {
             |Make the summary as **concise** as possible but context rich.
             |
             |After writing the file, signal completion:
-            |`$callbackCommand`
-        """.trimMargin()
+            |`$callbackCommand`""".trimMargin()
     }
 }

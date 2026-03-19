@@ -17,3 +17,5 @@ skipped: 0
     - [PASS] THEN contains the self-compacted signal name
     - [PASS] THEN instructs the agent to make the summary concise
     - [PASS] THEN renders the correct PRIVATE.md absolute path
+    - [PASS] THEN wraps the PRIVATE.md path in backticks
+    - [PASS] THEN wraps the callback command in backticks
