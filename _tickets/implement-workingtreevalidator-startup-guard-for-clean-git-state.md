@@ -1,11 +1,11 @@
 ---
 id: nid_00027pdr09egw4v9btb4vl6z7_E
 title: "Implement WorkingTreeValidator — startup guard for clean git state"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T23:43:56Z
-status_updated_iso: 2026-03-18T23:43:56Z
+status_updated_iso: 2026-03-19T17:47:13Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
