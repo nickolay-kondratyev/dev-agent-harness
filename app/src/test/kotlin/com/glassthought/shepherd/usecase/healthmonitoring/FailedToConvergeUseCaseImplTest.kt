@@ -62,7 +62,7 @@ class FailedToConvergeUseCaseImplTest : AsgardDescribeSpec(
             }
 
             describe("WHEN prompt is displayed") {
-                it("THEN prompt contains correct iteration counts and increment") {
+                it("THEN prompt contains iteration counts") {
                     val result = buildAndAsk(
                         userInput = "N",
                         config = defaultConfig,
@@ -70,8 +70,24 @@ class FailedToConvergeUseCaseImplTest : AsgardDescribeSpec(
                         iterationsUsed = 10,
                     )
                     result.fakeConsole.printedMessages.first() shouldContain "10/10"
+                }
+
+                it("THEN prompt contains grant-more-iterations text with increment") {
+                    val result = buildAndAsk(
+                        userInput = "N",
+                        config = defaultConfig,
+                        currentMax = 10,
+                        iterationsUsed = 10,
+                    )
                     result.fakeConsole.printedMessages.first() shouldContain
                         "Grant ${defaultConfig.failedToConvergeIterationIncrement} more iterations?"
+                }
+            }
+
+            describe("WHEN user enters \" y \" with whitespace") {
+                it("THEN returns true (input is trimmed)") {
+                    val result = buildAndAsk(userInput = " y ", config = defaultConfig)
+                    result.returnValue shouldBe true
                 }
             }
 
