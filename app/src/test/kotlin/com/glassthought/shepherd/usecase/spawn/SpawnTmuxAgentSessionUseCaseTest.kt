@@ -31,6 +31,11 @@ import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
 import kotlin.time.Duration.Companion.seconds
 
+// ── Test Data Classes ────────────────────────────────────────────────────────
+
+/** Captures a single [TmuxSessionCreator.createSession] invocation for test verification. */
+private data class CreatedSessionCall(val sessionName: String, val startCommand: TmuxStartCommand)
+
 // ── Test Fakes ──────────────────────────────────────────────────────────────
 
 /** Records [buildStartCommand] calls and returns a fixed [TmuxStartCommand]. */
@@ -54,10 +59,10 @@ private class FakeAgentTypeAdapter(
 
 /** Always succeeds; records created sessions for verification. */
 private class FakeTmuxSessionCreator : TmuxSessionCreator {
-    val createdSessions = mutableListOf<Pair<String, TmuxStartCommand>>()
+    val createdSessions = mutableListOf<CreatedSessionCall>()
 
     override suspend fun createSession(sessionName: String, startCommand: TmuxStartCommand): TmuxSession {
-        createdSessions.add(sessionName to startCommand)
+        createdSessions.add(CreatedSessionCall(sessionName, startCommand))
         return TmuxSession(
             name = TmuxSessionName(sessionName),
             paneTarget = "$sessionName:0.0",
@@ -99,7 +104,6 @@ private const val TEST_SUB_PART_NAME = "impl"
 private const val TEST_MODEL = "sonnet"
 private const val TEST_WORKING_DIR = "/tmp/test-workdir"
 private const val TEST_BOOTSTRAP_MESSAGE = "Bootstrap: call started"
-private const val TEST_SERVER_PORT = 8347
 private const val TEST_RESOLVED_SESSION_ID = "resolved-session-abc"
 private val TEST_FIXED_INSTANT = Instant.parse("2026-03-19T12:00:00Z")
 private const val EXPECTED_SESSION_NAME = "shepherd_${TEST_PART_NAME}_${TEST_SUB_PART_NAME}"
@@ -140,7 +144,6 @@ private fun createTestParams(
         systemPromptFilePath = "/path/to/system-prompt.md",
         appendSystemPrompt = false,
         bootstrapMessage = TEST_BOOTSTRAP_MESSAGE,
-        serverPort = TEST_SERVER_PORT,
         startedDeferred = startedDeferred,
     )
 }
@@ -426,7 +429,7 @@ class SpawnTmuxAgentSessionUseCaseTest : AsgardDescribeSpec(
                     useCase.execute(createTestParams(startedDeferred))
 
                     fakeTmuxCreator.createdSessions.size shouldBe 1
-                    fakeTmuxCreator.createdSessions.first().first shouldBe EXPECTED_SESSION_NAME
+                    fakeTmuxCreator.createdSessions.first().sessionName shouldBe EXPECTED_SESSION_NAME
                 }
             }
         }

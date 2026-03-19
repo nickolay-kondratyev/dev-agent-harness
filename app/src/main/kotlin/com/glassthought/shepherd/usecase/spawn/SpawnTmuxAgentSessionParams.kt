@@ -16,7 +16,6 @@ import kotlinx.coroutines.CompletableDeferred
  * @property systemPromptFilePath Absolute path to the system prompt file, or null to use default.
  * @property appendSystemPrompt When true, uses `--append-system-prompt-file`; when false, uses `--system-prompt-file`.
  * @property bootstrapMessage Initial message containing handshake GUID and startup instruction.
- * @property serverPort Port of the harness HTTP server — passed through for server-side routing context.
  * @property startedDeferred Completed by the server when `/callback-shepherd/signal/started` is received.
  */
 data class SpawnTmuxAgentSessionParams(
@@ -29,6 +28,5 @@ data class SpawnTmuxAgentSessionParams(
     val systemPromptFilePath: String?,
     val appendSystemPrompt: Boolean,
     val bootstrapMessage: String,
-    val serverPort: Int,
     val startedDeferred: CompletableDeferred<Unit>,
 )

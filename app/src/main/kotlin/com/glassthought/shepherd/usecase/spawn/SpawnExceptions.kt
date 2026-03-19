@@ -1,5 +1,8 @@
 package com.glassthought.shepherd.usecase.spawn
 
+import com.asgard.core.data.value.Val
+import com.asgard.core.data.value.ValType
+import com.asgard.core.exception.base.AsgardBaseException
 import kotlin.time.Duration
 
 /**
@@ -13,9 +16,10 @@ import kotlin.time.Duration
 class TmuxSessionCreationException(
     val sessionName: String,
     cause: Throwable,
-) : RuntimeException(
-    "Failed to create TMUX session [$sessionName]",
+) : AsgardBaseException(
+    "failed_to_create_tmux_session",
     cause,
+    Val(sessionName, ValType.STRING_USER_AGNOSTIC),
 )
 
 /**
@@ -32,7 +36,9 @@ class StartupTimeoutException(
     val sessionName: String,
     val timeout: Duration,
     cause: Throwable? = null,
-) : RuntimeException(
-    "Agent startup timed out after [$timeout] for TMUX session [$sessionName]",
+) : AsgardBaseException(
+    "agent_startup_timed_out",
     cause,
+    Val(sessionName, ValType.STRING_USER_AGNOSTIC),
+    Val(timeout.toString(), ValType.STRING_USER_AGNOSTIC),
 )
