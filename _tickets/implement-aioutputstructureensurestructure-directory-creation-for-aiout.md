@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T02:11:59Z
 id: nid_fjod8du6esers3ajur2h7tvgx_E
 title: "Implement AiOutputStructure.ensureStructure() — directory creation for .ai_out/"
-status: open
+status: closed
 deps: [nid_9kic96nh6mb8r5legcsvt46uy_E, nid_m3cm8xizw5qhu1cu3454rca79_E]
 links: []
 created_iso: 2026-03-18T20:44:44Z
-status_updated_iso: 2026-03-18T20:44:44Z
+status_updated_iso: 2026-03-19T02:11:59Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

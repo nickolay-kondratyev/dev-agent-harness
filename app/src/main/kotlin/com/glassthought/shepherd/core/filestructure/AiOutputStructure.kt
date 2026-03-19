@@ -1,5 +1,8 @@
 package com.glassthought.shepherd.core.filestructure
 
+import com.glassthought.shepherd.core.state.Part
+import com.glassthought.shepherd.core.state.Phase
+import java.nio.file.Files
 import java.nio.file.Path
 
 /**
@@ -100,6 +103,49 @@ class AiOutputStructure(
 
     fun executionPublicMd(partName: String, subPartName: String): Path =
         executionCommOutDir(partName, subPartName).resolve(PUBLIC_MD)
+
+    // -- directory skeleton creation ----------------------------------------
+
+    /**
+     * Creates the full directory skeleton under `.ai_out/` for the given parts.
+     *
+     * Always creates `harness_private/` and `shared/plan/`.
+     * For [Phase.PLANNING] parts: creates `planning/${subPart}/private/` and `planning/${subPart}/comm/{in,out}/`.
+     * For [Phase.EXECUTION] parts: creates `execution/${part}/__feedback/{pending,addressed,rejected}/`
+     * and `execution/${part}/${subPart}/private/` and `execution/${part}/${subPart}/comm/{in,out}/`.
+     *
+     * Uses [Files.createDirectories] — idempotent, safe to call multiple times.
+     * Creates directories only, no files.
+     */
+    fun ensureStructure(parts: List<Part>) {
+        // Always-present directories
+        Files.createDirectories(harnessPrivateDir())
+        Files.createDirectories(sharedPlanDir())
+
+        for (part in parts) {
+            when (part.phase) {
+                Phase.PLANNING -> {
+                    for (subPart in part.subParts) {
+                        Files.createDirectories(planningSubPartPrivateDir(subPart.name))
+                        Files.createDirectories(planningCommInDir(subPart.name))
+                        Files.createDirectories(planningCommOutDir(subPart.name))
+                    }
+                }
+
+                Phase.EXECUTION -> {
+                    Files.createDirectories(feedbackPendingDir(part.name))
+                    Files.createDirectories(feedbackAddressedDir(part.name))
+                    Files.createDirectories(feedbackRejectedDir(part.name))
+
+                    for (subPart in part.subParts) {
+                        Files.createDirectories(executionSubPartPrivateDir(part.name, subPart.name))
+                        Files.createDirectories(executionCommInDir(part.name, subPart.name))
+                        Files.createDirectories(executionCommOutDir(part.name, subPart.name))
+                    }
+                }
+            }
+        }
+    }
 
     companion object {
         private const val AI_OUT_DIR = ".ai_out"
