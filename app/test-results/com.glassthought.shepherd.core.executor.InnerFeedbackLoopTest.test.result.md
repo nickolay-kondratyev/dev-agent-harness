@@ -50,6 +50,10 @@ skipped: 0
 - GIVEN multiple pending feedback files
   - WHEN inner loop processes them
     - [PASS] THEN readContextWindowState is called for each item
+- GIVEN pending/ contains a file with unrecognized severity prefix
+  - WHEN inner feedback loop executes
+    - [PASS] THEN error message contains the unrecognized filename
+    - [PASS] THEN result is Terminate(AgentCrashed) mentioning the bad filename
 - GIVEN pending/ directory is empty
   - WHEN inner feedback loop executes
     - [PASS] THEN result is Terminate(AgentCrashed)

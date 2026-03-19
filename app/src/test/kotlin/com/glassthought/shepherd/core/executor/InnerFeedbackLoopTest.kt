@@ -198,6 +198,38 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
         }
     }
 
+    // ── Unrecognized severity prefix → AgentCrashed ─────────────────
+
+    describe("GIVEN pending/ contains a file with unrecognized severity prefix") {
+        describe("WHEN inner feedback loop executes") {
+            it("THEN result is Terminate(AgentCrashed) mentioning the bad filename") {
+                val feedbackDir = createFeedbackDir()
+                // Typo: "critcal__" instead of "critical__"
+                writePendingFile(feedbackDir, "critcal__typo-issue.md")
+                writePendingFile(feedbackDir, "important__valid.md")
+
+                val loop = buildLoop()
+                val result = loop.execute(buildCtx(feedbackDir))
+
+                result.shouldBeInstanceOf<InnerLoopOutcome.Terminate>()
+                val partResult = (result as InnerLoopOutcome.Terminate).result
+                partResult.shouldBeInstanceOf<PartResult.AgentCrashed>()
+            }
+
+            it("THEN error message contains the unrecognized filename") {
+                val feedbackDir = createFeedbackDir()
+                writePendingFile(feedbackDir, "critcal__typo-issue.md")
+
+                val loop = buildLoop()
+                val result = loop.execute(buildCtx(feedbackDir))
+
+                val crashed = (result as InnerLoopOutcome.Terminate).result
+                    as PartResult.AgentCrashed
+                crashed.details.contains("critcal__typo-issue.md") shouldBe true
+            }
+        }
+    }
+
     // ── Severity ordering ─────────────────────────────────────────────
 
     describe("GIVEN critical, important, and optional files in pending/") {

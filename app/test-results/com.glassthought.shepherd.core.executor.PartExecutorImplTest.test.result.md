@@ -60,6 +60,10 @@ skipped: 0
 - GIVEN a doer+reviewer executor
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor with InnerFeedbackLoop wired
+  - WHEN reviewer sends NEEDS_ITERATION and inner loop processes feedback
+    - [PASS] THEN inner loop moves feedback file from pending to addressed
+    - [PASS] THEN the result is PartResult.Completed
 - GIVEN a doer+reviewer executor with iteration
   - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS
     - [PASS] THEN readContextWindowState is called 3 times (once per Done signal)

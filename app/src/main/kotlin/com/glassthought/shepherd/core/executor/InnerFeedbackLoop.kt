@@ -122,6 +122,17 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
             )
         }
 
+        // Validate all files have recognized severity prefixes (typo guard)
+        val unrecognized = findUnrecognizedPrefixFiles(pendingFiles)
+        if (unrecognized.isNotEmpty()) {
+            return InnerLoopOutcome.Terminate(
+                PartResult.AgentCrashed(
+                    "Feedback files with unrecognized severity prefix " +
+                        "in ${ctx.pendingDir}: ${unrecognized.map { it.name }}"
+                )
+            )
+        }
+
         // Process files in severity order: critical -> important -> optional
         val sortedFiles = sortBySeverity(pendingFiles)
 
@@ -379,6 +390,24 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
                 .sorted()
             return critical + important + optional
         }
+
+        /**
+         * Returns true if the file has a recognized severity prefix
+         * (critical__, important__, or optional__).
+         */
+        fun hasRecognizedSeverityPrefix(file: Path): Boolean {
+            val name = file.name
+            return name.startsWith(ProtocolVocabulary.SeverityPrefix.CRITICAL) ||
+                name.startsWith(ProtocolVocabulary.SeverityPrefix.IMPORTANT) ||
+                name.startsWith(ProtocolVocabulary.SeverityPrefix.OPTIONAL)
+        }
+
+        /**
+         * Returns files that do NOT have a recognized severity prefix.
+         * A non-empty result indicates a reviewer bug (e.g., typo in prefix).
+         */
+        fun findUnrecognizedPrefixFiles(files: List<Path>): List<Path> =
+            files.filterNot { hasRecognizedSeverityPrefix(it) }
 
         /**
          * Returns true if the file has a blocking severity prefix

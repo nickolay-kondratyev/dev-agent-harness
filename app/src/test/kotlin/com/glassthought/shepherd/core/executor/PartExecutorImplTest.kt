@@ -21,6 +21,10 @@ import com.glassthought.shepherd.core.state.SubPartRole
 import com.glassthought.shepherd.core.supporting.git.GitCommitStrategy
 import com.glassthought.shepherd.core.supporting.git.SubPartDoneContext
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToConvergeUseCase
+import com.glassthought.shepherd.usecase.reinstructandawait.ReInstructAndAwait
+import com.glassthought.shepherd.usecase.reinstructandawait.ReInstructOutcome
+import com.glassthought.shepherd.usecase.rejectionnegotiation.FeedbackFileReader
+import com.glassthought.shepherd.usecase.rejectionnegotiation.RejectionNegotiationUseCase
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
@@ -899,6 +903,178 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 // 3 signals: doer instructions, reviewer instructions, reviewer re-instructions.
                 // Inner loop doer re-instruction is handled by InnerFeedbackLoop (null here).
                 facade.sendPayloadCalls shouldHaveSize 3
+            }
+        }
+    }
+
+    // ── Doer+Reviewer with InnerFeedbackLoop wired ─────────────────────
+    // Exercises the full path: doer COMPLETED → reviewer NEEDS_ITERATION →
+    // inner loop processes feedback → reviewer re-instructed → reviewer PASS → Completed
+
+    describe("GIVEN a doer+reviewer executor with InnerFeedbackLoop wired") {
+        describe("WHEN reviewer sends NEEDS_ITERATION and inner loop processes feedback") {
+
+            it("THEN the result is PartResult.Completed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val doerConfig = buildDoerConfig(doerPublicMd)
+
+                // Create feedback directory with a pending file
+                val feedbackDir = Files.createTempDirectory("feedback-integ")
+                val pendingDir = feedbackDir.resolve("pending")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(feedbackDir.resolve("addressed"))
+                val feedbackFile = pendingDir.resolve("critical__test-issue.md")
+                Files.writeString(feedbackFile, "# Feedback\nSome issue.")
+
+                val reviewerCfg = buildReviewerConfig(
+                    reviewerPublicMd,
+                    feedbackDir = feedbackDir,
+                )
+
+                val doerHandle = buildHandle("doer")
+                val reviewerHandle = buildHandle("reviewer", sessionId = "session-2")
+
+                // Signal queue: doer COMPLETED, reviewer NEEDS_ITERATION,
+                // (inner loop re-instructs doer via ReInstructAndAwait — not through facade),
+                // reviewer PASS
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer after inner loop
+                    )
+                )
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(doerHandle, reviewerHandle))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 70) }
+
+                // FeedbackFileReader that returns ADDRESSED resolution after doer processes
+                val feedbackFileReader = FeedbackFileReader { _ ->
+                    "## Resolution: ADDRESSED\nFixed the issue."
+                }
+
+                val innerLoopGitStrategy = RecordingGitCommitStrategy()
+
+                val innerFeedbackLoop = InnerFeedbackLoop(
+                    InnerFeedbackLoopDeps(
+                        reInstructAndAwait = ReInstructAndAwait { _, _ ->
+                            ReInstructOutcome.Responded(
+                                AgentSignal.Done(DoneResult.COMPLETED),
+                            )
+                        },
+                        rejectionNegotiationUseCase = RejectionNegotiationUseCase { _, _, _ ->
+                            error("rejection not expected")
+                        },
+                        contextForAgentProvider = fakeContextProvider(),
+                        agentFacade = facade,
+                        gitCommitStrategy = innerLoopGitStrategy,
+                        publicMdValidator = PublicMdValidator(),
+                        feedbackFileReader = feedbackFileReader,
+                        outFactory = outFactory,
+                    )
+                )
+
+                val outerGitStrategy = RecordingGitCommitStrategy()
+                val executor = PartExecutorImpl(
+                    doerConfig = doerConfig,
+                    reviewerConfig = reviewerCfg,
+                    deps = PartExecutorDeps(
+                        agentFacade = facade,
+                        contextForAgentProvider = fakeContextProvider(),
+                        gitCommitStrategy = outerGitStrategy,
+                        failedToConvergeUseCase = abortingFailedToConverge,
+                        outFactory = outFactory,
+                        innerFeedbackLoop = innerFeedbackLoop,
+                    ),
+                    iterationConfig = IterationConfig(max = 3),
+                )
+
+                val result = executor.execute()
+                result shouldBe PartResult.Completed
+            }
+
+            it("THEN inner loop moves feedback file from pending to addressed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val doerConfig = buildDoerConfig(doerPublicMd)
+
+                val feedbackDir = Files.createTempDirectory("feedback-integ2")
+                val pendingDir = feedbackDir.resolve("pending")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(feedbackDir.resolve("addressed"))
+                val feedbackFile = pendingDir.resolve("important__check.md")
+                Files.writeString(feedbackFile, "# Feedback\nCheck this.")
+
+                val reviewerCfg = buildReviewerConfig(
+                    reviewerPublicMd,
+                    feedbackDir = feedbackDir,
+                )
+
+                val doerHandle = buildHandle("doer")
+                val reviewerHandle = buildHandle("reviewer", sessionId = "session-2")
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(doerHandle, reviewerHandle))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 70) }
+
+                val feedbackFileReader = FeedbackFileReader { _ ->
+                    "## Resolution: ADDRESSED\nDone."
+                }
+
+                val innerFeedbackLoop = InnerFeedbackLoop(
+                    InnerFeedbackLoopDeps(
+                        reInstructAndAwait = ReInstructAndAwait { _, _ ->
+                            ReInstructOutcome.Responded(
+                                AgentSignal.Done(DoneResult.COMPLETED),
+                            )
+                        },
+                        rejectionNegotiationUseCase = RejectionNegotiationUseCase { _, _, _ ->
+                            error("rejection not expected")
+                        },
+                        contextForAgentProvider = fakeContextProvider(),
+                        agentFacade = facade,
+                        gitCommitStrategy = RecordingGitCommitStrategy(),
+                        publicMdValidator = PublicMdValidator(),
+                        feedbackFileReader = feedbackFileReader,
+                        outFactory = outFactory,
+                    )
+                )
+
+                val executor = PartExecutorImpl(
+                    doerConfig = doerConfig,
+                    reviewerConfig = reviewerCfg,
+                    deps = PartExecutorDeps(
+                        agentFacade = facade,
+                        contextForAgentProvider = fakeContextProvider(),
+                        gitCommitStrategy = RecordingGitCommitStrategy(),
+                        failedToConvergeUseCase = abortingFailedToConverge,
+                        outFactory = outFactory,
+                        innerFeedbackLoop = innerFeedbackLoop,
+                    ),
+                    iterationConfig = IterationConfig(max = 3),
+                )
+
+                executor.execute()
+
+                // Feedback file should have moved from pending/ to addressed/
+                Files.exists(feedbackFile) shouldBe false
+                Files.exists(
+                    feedbackDir.resolve("addressed/important__check.md"),
+                ) shouldBe true
             }
         }
     }
