@@ -55,6 +55,9 @@ dependencies {
     implementation(libs.jackson.databind)
     implementation(libs.jackson.module.kotlin)
 
+    // picocli: CLI argument parsing for 'shepherd run' command.
+    implementation(libs.picocli)
+
     // Ktor: embedded HTTP server for agent-to-harness communication.
     implementation(libs.ktor.server.core)
     implementation(libs.ktor.server.cio)
