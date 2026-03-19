@@ -10,7 +10,7 @@ import java.nio.file.Path
  * `.ai_out/` is the single source of truth for try-N resolution (see doc/core/git.md).
  * N is the first value where the corresponding `.ai_out/{branchName}/` directory does not exist.
  */
-interface TryNResolver {
+fun interface TryNResolver {
 
     /**
      * Returns the next available try number for the given [ticketData].
