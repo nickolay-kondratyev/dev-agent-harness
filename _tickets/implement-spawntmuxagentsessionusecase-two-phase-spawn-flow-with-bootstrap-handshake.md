@@ -1,11 +1,11 @@
 ---
 id: nid_t7dnd545hf343i2v7jqcke3x7_E
 title: "Implement SpawnTmuxAgentSessionUseCase — Phase 1 bootstrap spawn flow"
-status: open
+status: in_progress
 deps: [nid_3rw8eoib2wseydcyhnj648d2a_E, nid_m3cm8xizw5qhu1cu3454rca79_E, nid_0of6zl2493ctvmy9m23kxnhnl_E, nid_gpfjqkfrmfbvhm1gan31rlvs9_E]
 links: []
 created_iso: 2026-03-19T00:17:35Z
-status_updated_iso: 2026-03-19T00:17:35Z
+status_updated_iso: 2026-03-19T19:24:47Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
