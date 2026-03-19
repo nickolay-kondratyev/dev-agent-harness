@@ -1,11 +1,11 @@
 ---
 id: nid_mz3z9d5obd79qbmrr6fr0jluo_E
 title: "DRY: Consolidate test fixture duplication in QaDrainAndDeliverUseCaseTest and AckedPayloadSenderTest"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T19:18:14Z
-status_updated_iso: 2026-03-19T19:18:14Z
+status_updated_iso: 2026-03-19T19:39:08Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
