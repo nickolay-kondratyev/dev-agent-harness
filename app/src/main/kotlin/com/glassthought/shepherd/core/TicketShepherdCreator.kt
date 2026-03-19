@@ -39,15 +39,15 @@ data class TicketShepherdCreatorResult(
  * One creation per run — called once from the CLI entry point.
  *
  * ### Current scope
- * Wires [InterruptHandler] (ref.ap.yWFAwVrZdx1UTDqDJmDpe.E) with all production dependencies.
- * Pure wiring only — no side effects. The caller is responsible for calling
- * [InterruptHandler.install] on the returned result before the main execution loop starts.
+ * Wires [InterruptHandler] (ref.ap.yWFAwVrZdx1UTDqDJmDpe.E) with all production dependencies
+ * and sets up the `.ai_out/` directory structure via [AiOutputStructure.ensureStructure].
+ * The caller is responsible for calling [InterruptHandler.install] on the returned result
+ * before the main execution loop starts.
  *
  * ### Future responsibilities (TODOs)
  * - Workflow JSON resolution
  * - Ticket parsing and validation
  * - Git branch creation (try-N resolution)
- * - `.ai_out/` directory structure setup
  * - AgentFacadeImpl construction
  * - Full TicketShepherd construction
  *
@@ -57,7 +57,7 @@ data class TicketShepherdCreatorResult(
 fun interface TicketShepherdCreator {
 
     /**
-     * Wires ticket-scoped dependencies. Pure wiring — no side effects.
+     * Wires ticket-scoped dependencies and sets up the `.ai_out/` directory structure.
      *
      * The caller must call [TicketShepherdCreatorResult.interruptHandler].[InterruptHandler.install]
      * before the main execution loop starts.
