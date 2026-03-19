@@ -202,7 +202,9 @@ class AiOutputStructureEnsureStructureTest : AsgardDescribeSpec({
 
         it("THEN no __feedback directory exists anywhere") {
             val branchRoot = structure.branchRoot()
-            val hasFeedback = Files.walk(branchRoot).anyMatch { it.fileName?.toString() == "__feedback" }
+            val hasFeedback = Files.walk(branchRoot).use { stream ->
+                stream.anyMatch { it.fileName?.toString() == "__feedback" }
+            }
             hasFeedback shouldBe false
         }
 
@@ -251,6 +253,37 @@ class AiOutputStructureEnsureStructureTest : AsgardDescribeSpec({
 
         it("THEN execution/frontend/review/private exists") {
             Files.isDirectory(structure.executionSubPartPrivateDir("frontend", "review")) shouldBe true
+        }
+
+        afterSpec {
+            tempDir.toFile().deleteRecursively()
+        }
+    }
+
+    // -- empty parts list -------------------------------------------------
+
+    describe("GIVEN ensureStructure with empty parts list") {
+        val tempDir = Files.createTempDirectory("ai-out-empty-parts-test")
+        val structure = AiOutputStructure(repoRoot = tempDir, branch = "empty_branch")
+
+        structure.ensureStructure(emptyList())
+
+        it("THEN harness_private exists") {
+            Files.isDirectory(structure.harnessPrivateDir()) shouldBe true
+        }
+
+        it("THEN shared/plan exists") {
+            Files.isDirectory(structure.sharedPlanDir()) shouldBe true
+        }
+
+        it("THEN planning directory does NOT exist") {
+            val planningDir = structure.branchRoot().resolve("planning")
+            Files.exists(planningDir) shouldBe false
+        }
+
+        it("THEN execution directory does NOT exist") {
+            val executionDir = structure.branchRoot().resolve("execution")
+            Files.exists(executionDir) shouldBe false
         }
 
         afterSpec {

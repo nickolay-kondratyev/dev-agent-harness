@@ -10,6 +10,11 @@ skipped: 0
   - [PASS] THEN execution/backend/impl/private still exists
   - [PASS] THEN harness_private still exists
   - [PASS] THEN planning/plan/private still exists
+- GIVEN ensureStructure with empty parts list
+  - [PASS] THEN execution directory does NOT exist
+  - [PASS] THEN harness_private exists
+  - [PASS] THEN planning directory does NOT exist
+  - [PASS] THEN shared/plan exists
 - GIVEN ensureStructure with only execution parts
   - [PASS] THEN execution/backend/__feedback/pending exists
   - [PASS] THEN execution/backend/impl/comm/in exists
