@@ -272,6 +272,38 @@ class CurrentStateMutationTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a reviewer sub-part already at max iterations") {
+
+        val state = CurrentState(
+            parts = mutableListOf(
+                Part(
+                    name = "ui_design",
+                    phase = Phase.EXECUTION,
+                    description = "Design the UI",
+                    subParts = listOf(
+                        SubPart(
+                            name = "review",
+                            role = "UI_REVIEWER",
+                            agentType = "ClaudeCode",
+                            model = "sonnet",
+                            status = SubPartStatus.IN_PROGRESS,
+                            iteration = IterationConfig(max = 3, current = 3),
+                        ),
+                    ),
+                ),
+            ),
+        )
+
+        describe("WHEN incrementing iteration beyond max") {
+            it("THEN throws IllegalStateException") {
+                val ex = shouldThrow<IllegalStateException> {
+                    state.incrementIteration("ui_design", "review")
+                }
+                ex.message shouldContain "already at max"
+            }
+        }
+    }
+
     describe("GIVEN a sub-part without iteration config (doer)") {
         val state = CurrentState(
             parts = mutableListOf(

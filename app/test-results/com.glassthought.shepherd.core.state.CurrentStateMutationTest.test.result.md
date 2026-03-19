@@ -49,6 +49,9 @@ skipped: 0
   - WHEN updating only impl sub-part status
     - [PASS] THEN review sub-part iteration is unchanged
     - [PASS] THEN review sub-part status is unchanged
+- GIVEN a reviewer sub-part already at max iterations
+  - WHEN incrementing iteration beyond max
+    - [PASS] THEN throws IllegalStateException
 - GIVEN a sub-part without iteration config (doer)
   - WHEN incrementing iteration
     - [PASS] THEN throws IllegalArgumentException

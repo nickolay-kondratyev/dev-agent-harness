@@ -27,8 +27,7 @@ data class CurrentState(
      * Updates the status of a specific sub-part identified by part name and sub-part name.
      *
      * @throws IllegalArgumentException if the part or sub-part is not found.
-     * @throws IllegalStateException if the transition is invalid (via [SubPartStatus.validateCanSpawn]
-     *         or [SubPartStatus.transitionTo]).
+     * @throws IllegalStateException if the transition is invalid (via [SubPartStatus.validateTransitionTo]).
      */
     fun updateSubPartStatus(partName: String, subPartName: String, newStatus: SubPartStatus) {
         val partIndex = findPartIndex(partName)
@@ -41,7 +40,7 @@ data class CurrentState(
                 "status is null (not initialized)"
         }
 
-        validateStatusTransition(currentStatus, newStatus)
+        currentStatus.validateTransitionTo(newStatus)
 
         val updatedSubPart = subPart.copy(status = newStatus)
         val updatedSubParts = part.subParts.toMutableList().apply { set(subPartIndex, updatedSubPart) }
@@ -62,6 +61,10 @@ data class CurrentState(
         val iteration = requireNotNull(subPart.iteration) {
             "Cannot increment iteration of sub-part [$subPartName] in part [$partName]: " +
                 "no iteration config (not a reviewer)"
+        }
+
+        check(iteration.current < iteration.max) {
+            "iteration.current (${iteration.current}) already at max (${iteration.max})"
         }
 
         val updatedSubPart = subPart.copy(iteration = iteration.copy(current = iteration.current + 1))
@@ -139,34 +142,5 @@ data class CurrentState(
         val index = part.subParts.indexOfFirst { it.name == subPartName }
         require(index >= 0) { "SubPart not found: [$subPartName] in part [${part.name}]" }
         return index
-    }
-
-    companion object {
-        private fun validateStatusTransition(from: SubPartStatus, to: SubPartStatus) {
-            when (from) {
-                SubPartStatus.NOT_STARTED -> {
-                    check(to == SubPartStatus.IN_PROGRESS) {
-                        "Invalid transition from NOT_STARTED to $to; only IN_PROGRESS is allowed"
-                    }
-                }
-                SubPartStatus.IN_PROGRESS -> {
-                    check(to in VALID_FROM_IN_PROGRESS) {
-                        "Invalid transition from IN_PROGRESS to $to; " +
-                            "allowed: $VALID_FROM_IN_PROGRESS"
-                    }
-                }
-                SubPartStatus.COMPLETED -> {
-                    error("COMPLETED is terminal — no further transitions allowed")
-                }
-                SubPartStatus.FAILED -> {
-                    error("FAILED is terminal — no further transitions allowed")
-                }
-            }
-        }
-
-        private val VALID_FROM_IN_PROGRESS = setOf(
-            SubPartStatus.COMPLETED,
-            SubPartStatus.FAILED,
-        )
     }
 }

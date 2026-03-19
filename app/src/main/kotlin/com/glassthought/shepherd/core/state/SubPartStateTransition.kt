@@ -104,3 +104,42 @@ fun SubPartStatus.validateCanSpawn(): SubPartStateTransition.Spawn {
     check(this == NOT_STARTED) { "spawn requires NOT_STARTED, got $this" }
     return SubPartStateTransition.Spawn
 }
+
+/**
+ * Validates a raw (from → to) status transition against the authoritative [SubPartStateTransition]
+ * state machine. This is the single source of truth for transition validity.
+ *
+ * Used by [com.glassthought.shepherd.core.state.CurrentState.updateSubPartStatus] to validate
+ * mutations without re-encoding the state machine rules.
+ *
+ * Note: [SubPartStateTransition.IterateContinue] (IN_PROGRESS → IN_PROGRESS) is not reachable
+ * through this method since it requires an actual status change. Iteration continuation goes
+ * through [com.glassthought.shepherd.core.state.CurrentState.incrementIteration] instead.
+ *
+ * @throws IllegalStateException if the transition is not valid.
+ */
+fun SubPartStatus.validateTransitionTo(targetStatus: SubPartStatus) {
+    val isValid = VALID_STATUS_TRANSITIONS.contains(this to targetStatus)
+    check(isValid) {
+        when {
+            this == COMPLETED -> "COMPLETED is terminal — no further transitions allowed"
+            this == FAILED -> "FAILED is terminal — no further transitions allowed"
+            else -> "Invalid transition from $this to $targetStatus"
+        }
+    }
+}
+
+/**
+ * Exhaustive set of valid (from, to) status pairs, derived from [SubPartStateTransition].
+ *
+ * - [SubPartStateTransition.Spawn]: NOT_STARTED → IN_PROGRESS
+ * - [SubPartStateTransition.Complete]: IN_PROGRESS → COMPLETED
+ * - [SubPartStateTransition.Fail]: IN_PROGRESS → FAILED
+ *
+ * [SubPartStateTransition.IterateContinue] is excluded — it does not change status.
+ */
+private val VALID_STATUS_TRANSITIONS: Set<Pair<SubPartStatus, SubPartStatus>> = setOf(
+    NOT_STARTED to IN_PROGRESS,     // Spawn
+    IN_PROGRESS to COMPLETED,       // Complete
+    IN_PROGRESS to FAILED,          // Fail
+)
