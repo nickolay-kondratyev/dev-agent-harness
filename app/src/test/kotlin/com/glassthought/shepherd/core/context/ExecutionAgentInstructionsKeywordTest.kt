@@ -109,8 +109,8 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             // -- Feedback status keywords --
-            it("THEN contains 'unaddressed' feedback status") {
-                text shouldContain ProtocolVocabulary.FeedbackStatus.UNADDRESSED
+            it("THEN contains 'pending' feedback status") {
+                text shouldContain ProtocolVocabulary.FeedbackStatus.PENDING
             }
 
             it("THEN contains 'addressed' feedback status") {
@@ -119,6 +119,10 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
 
             it("THEN contains 'rejected' feedback status") {
                 text shouldContain ProtocolVocabulary.FeedbackStatus.REJECTED
+            }
+
+            it("THEN contains 'skipped' feedback status") {
+                text shouldContain ProtocolVocabulary.FeedbackStatus.SKIPPED
             }
 
             // -- Severity keywords --
@@ -134,9 +138,17 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.Severity.OPTIONAL
             }
 
-            // -- Feedback file protocol --
-            it("THEN contains Movement Log reference") {
-                text shouldContain ProtocolVocabulary.MOVEMENT_LOG
+            // -- Severity prefix protocol --
+            it("THEN contains severity prefix for critical") {
+                text shouldContain ProtocolVocabulary.SeverityPrefix.CRITICAL
+            }
+
+            it("THEN contains severity prefix for important") {
+                text shouldContain ProtocolVocabulary.SeverityPrefix.IMPORTANT
+            }
+
+            it("THEN contains severity prefix for optional") {
+                text shouldContain ProtocolVocabulary.SeverityPrefix.OPTIONAL
             }
 
             // -- WHY-NOT protocol in structured feedback --

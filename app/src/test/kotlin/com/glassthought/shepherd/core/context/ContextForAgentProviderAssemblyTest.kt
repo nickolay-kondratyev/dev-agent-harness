@@ -137,6 +137,14 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
             it("THEN includes rejected feedback header") {
                 text shouldContain "Rejected Feedback"
             }
+
+            it("THEN includes skipped optional feedback section") {
+                text shouldContain "consider-logging-improvement"
+            }
+
+            it("THEN includes skipped optional feedback header") {
+                text shouldContain "Skipped ${ProtocolVocabulary.Severity.OPTIONAL} Feedback"
+            }
         }
     }
 

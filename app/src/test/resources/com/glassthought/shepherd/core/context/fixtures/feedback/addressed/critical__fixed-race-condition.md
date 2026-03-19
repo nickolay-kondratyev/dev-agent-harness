@@ -6,7 +6,5 @@ The session manager has a TOCTOU race condition.
 
 ---
 
-## Movement Log
-
-### [2026-03-14T10:00:00Z] Moved by: impl | From: unaddressed/critical → To: addressed/critical
+## Resolution: ADDRESSED
 Fixed by adding mutex around session lookup.

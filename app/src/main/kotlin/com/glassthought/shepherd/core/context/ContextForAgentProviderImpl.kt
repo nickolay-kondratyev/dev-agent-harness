@@ -255,21 +255,24 @@ class ContextForAgentProviderImpl(
         "# Reviewer Feedback\n\n${reviewerPublicMdPath.readText()}"
 
     private fun feedbackStateSections(feedbackDir: Path): List<String> = buildList {
-        // 7a. Addressed feedback
-        val addressed = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.ADDRESSED)
+        // 7a. Addressed feedback (flat dir with severity-prefixed filenames)
+        val addressed = collectFeedbackFilesInFlatDir(
+            feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.ADDRESSED)
+        )
         if (addressed.isNotEmpty()) {
             add(InstructionText.ADDRESSED_FEEDBACK_HEADER + "\n\n" + addressed)
         }
-        // 7b. Rejected feedback
-        val rejected = collectFeedbackFiles(feedbackDir, ProtocolVocabulary.FeedbackStatus.REJECTED)
+        // 7b. Rejected feedback (flat dir with severity-prefixed filenames)
+        val rejected = collectFeedbackFilesInFlatDir(
+            feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.REJECTED)
+        )
         if (rejected.isNotEmpty()) {
             add(InstructionText.REJECTED_FEEDBACK_HEADER + "\n\n" + rejected)
         }
-        // 7c. Skipped optional
-        val skippedOptional = collectFeedbackFilesInDir(
-            feedbackDir
-                .resolve(ProtocolVocabulary.FeedbackStatus.UNADDRESSED)
-                .resolve(ProtocolVocabulary.Severity.OPTIONAL)
+        // 7c. Skipped optional — optional-prefixed files still in pending/
+        val skippedOptional = collectFeedbackFilesInFlatDir(
+            feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.PENDING),
+            filenamePrefix = ProtocolVocabulary.SeverityPrefix.OPTIONAL,
         )
         if (skippedOptional.isNotEmpty()) {
             add(InstructionText.SKIPPED_OPTIONAL_HEADER + "\n\n" + skippedOptional)
@@ -277,31 +280,17 @@ class ContextForAgentProviderImpl(
     }
 
     /**
-     * Collects all feedback files under `feedbackDir/{status}/` across all severity levels.
+     * Reads all `.md` files in a flat directory, optionally filtered by filename prefix.
      */
-    private fun collectFeedbackFiles(feedbackDir: Path, status: String): String {
-        val severities = listOf(
-            ProtocolVocabulary.Severity.CRITICAL,
-            ProtocolVocabulary.Severity.IMPORTANT,
-            ProtocolVocabulary.Severity.OPTIONAL,
-        )
-        return severities
-            .map { severity -> feedbackDir.resolve(status).resolve(severity) }
-            .flatMap { dir -> collectMarkdownFilesInDir(dir) }
-            .joinToString(SECTION_SEPARATOR)
-    }
+    private fun collectFeedbackFilesInFlatDir(dir: Path, filenamePrefix: String? = null): String =
+        collectMarkdownFilesInDir(dir, filenamePrefix).joinToString(SECTION_SEPARATOR)
 
-    /**
-     * Reads all `.md` files in a directory and returns their content concatenated.
-     */
-    private fun collectFeedbackFilesInDir(dir: Path): String =
-        collectMarkdownFilesInDir(dir).joinToString(SECTION_SEPARATOR)
-
-    private fun collectMarkdownFilesInDir(dir: Path): List<String> =
+    private fun collectMarkdownFilesInDir(dir: Path, filenamePrefix: String? = null): List<String> =
         if (Files.exists(dir) && Files.isDirectory(dir)) {
             Files.list(dir).use { stream ->
                 stream
                     .filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }
+                    .filter { filenamePrefix == null || it.fileName.toString().startsWith(filenamePrefix) }
                     .sorted()
                     .map { "### ${it.fileName}\n\n${it.readText()}" }
                     .toList()

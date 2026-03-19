@@ -87,13 +87,13 @@ object InstructionText {
         In addition to PUBLIC.md, write **individual feedback files** — one per actionable issue.
 
         ### Where to write
-        Write each file to the appropriate severity directory:
-        - `__feedback/${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/${ProtocolVocabulary.Severity.CRITICAL}/` — must be fixed, blocks completion
-        - `__feedback/${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/${ProtocolVocabulary.Severity.IMPORTANT}/` — must be fixed, blocks completion
-        - `__feedback/${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/${ProtocolVocabulary.Severity.OPTIONAL}/` — nice-to-have, does not block
+        Write each file to `__feedback/${ProtocolVocabulary.FeedbackStatus.PENDING}/` with a severity
+        prefix in the filename:
+        - `${ProtocolVocabulary.SeverityPrefix.CRITICAL}<descriptive-slug>.md` — must be fixed, blocks completion
+        - `${ProtocolVocabulary.SeverityPrefix.IMPORTANT}<descriptive-slug>.md` — must be fixed, blocks completion
+        - `${ProtocolVocabulary.SeverityPrefix.OPTIONAL}<descriptive-slug>.md` — nice-to-have, does not block
 
         ### File format
-        Name each file with a descriptive slug (e.g., `missing-null-check-in-parser.md`).
 
         ```markdown
         # <issue title>
@@ -104,10 +104,14 @@ object InstructionText {
 
         ---
 
-        ## ${ProtocolVocabulary.MOVEMENT_LOG}
-
-        <!-- Appended by whoever moves this file between directories -->
+        ## Resolution:
+        <!-- Left empty by reviewer. Doer writes ADDRESSED, REJECTED, or SKIPPED here. -->
         ```
+
+        ### Resolution markers (written by doer, not reviewer)
+        - `## Resolution: ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}` — doer fixed the issue
+        - `## Resolution: ${ProtocolVocabulary.FeedbackStatus.REJECTED}` — doer disagrees, with ${ProtocolVocabulary.WHY_NOT} justification
+        - `## Resolution: ${ProtocolVocabulary.FeedbackStatus.SKIPPED}` — ${ProtocolVocabulary.Severity.OPTIONAL} item the doer chose not to address
     """.trimIndent()
 
     // ── Section 8: Doer iteration feedback ───────────────────────────────────
@@ -209,8 +213,8 @@ object InstructionText {
         ## Rejected Feedback (${ProtocolVocabulary.FeedbackStatus.REJECTED})
 
         The doer ${ProtocolVocabulary.FeedbackStatus.REJECTED} the following items.
-        Review the ${ProtocolVocabulary.WHY_NOT} reasoning. If you disagree, move the file
-        back to `${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/` with a movement record.
+        Review the ${ProtocolVocabulary.WHY_NOT} reasoning. If you disagree, re-file to
+        `${ProtocolVocabulary.FeedbackStatus.PENDING}/` with a new severity if escalating.
     """.trimIndent()
 
     /**
@@ -219,8 +223,8 @@ object InstructionText {
     val SKIPPED_OPTIONAL_HEADER: String = """
         ## Skipped ${ProtocolVocabulary.Severity.OPTIONAL} Feedback
 
-        These ${ProtocolVocabulary.Severity.OPTIONAL} items remain in
-        `${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/${ProtocolVocabulary.Severity.OPTIONAL}/`.
-        You may accept or escalate to `${ProtocolVocabulary.Severity.IMPORTANT}` by moving them.
+        These ${ProtocolVocabulary.Severity.OPTIONAL} items in `${ProtocolVocabulary.FeedbackStatus.PENDING}/`
+        (prefixed `${ProtocolVocabulary.SeverityPrefix.OPTIONAL}`) were skipped by the doer.
+        You may accept or escalate to `${ProtocolVocabulary.Severity.IMPORTANT}` by re-filing with a new severity prefix.
     """.trimIndent()
 }

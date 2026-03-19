@@ -6,7 +6,5 @@ GlobalScope should be replaced with structured concurrency.
 
 ---
 
-## Movement Log
-
-### [2026-03-14T11:00:00Z] Moved by: impl | From: unaddressed/important → To: rejected/important
+## Resolution: REJECTED
 WHY-NOT: GlobalScope is intentional here — this is the top-level launcher that outlives all child coroutines.
