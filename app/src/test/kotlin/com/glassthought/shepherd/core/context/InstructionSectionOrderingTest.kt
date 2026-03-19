@@ -43,7 +43,7 @@ private fun assertSectionsInOrder(text: String, sectionNames: List<String>) {
 class InstructionSectionOrderingTest : AsgardDescribeSpec({
 
     describe("GIVEN a doer request (iteration 2 with reviewer feedback and plan)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("ordering-doer-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -88,7 +88,7 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer feedback item request") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("ordering-doer-feedback-item-test")
         val request = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
 
@@ -110,7 +110,7 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a reviewer request (iteration 2 with feedback state)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("ordering-reviewer-test")
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
@@ -135,7 +135,7 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a planner request (iteration 1)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("ordering-planner-test")
         val request = ContextTestFixtures.plannerRequest(tempDir)
 
@@ -160,7 +160,7 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a plan reviewer request (iteration 1)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("ordering-plan-reviewer-test")
         val request = ContextTestFixtures.planReviewerRequest(tempDir)
 

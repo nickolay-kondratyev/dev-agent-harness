@@ -14,7 +14,7 @@ import kotlin.io.path.readText
 class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
 
     describe("GIVEN a planner instruction request on iteration 1") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("planner-keyword-test")
         val request = ContextTestFixtures.plannerRequest(tempDir)
 

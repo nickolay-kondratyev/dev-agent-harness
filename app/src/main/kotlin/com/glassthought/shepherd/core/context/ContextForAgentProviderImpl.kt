@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.context
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Path
 
 /**
@@ -18,6 +19,8 @@ import java.nio.file.Path
 class ContextForAgentProviderImpl(
     outFactory: OutFactory,
     private val assembler: InstructionPlanAssembler,
+    @Suppress("UnusedPrivateProperty") // Wired for future use — path resolution during instruction assembly.
+    private val aiOutputStructure: AiOutputStructure,
 ) : ContextForAgentProvider {
 
     companion object {

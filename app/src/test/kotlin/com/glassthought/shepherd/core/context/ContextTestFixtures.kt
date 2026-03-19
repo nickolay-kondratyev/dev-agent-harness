@@ -1,6 +1,7 @@
 package com.glassthought.shepherd.core.context
 
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Files
 import java.nio.file.Path
 
@@ -11,6 +12,12 @@ import java.nio.file.Path
  * method sets up a self-contained filesystem structure under the provided [tempDir].
  */
 object ContextTestFixtures {
+
+    /** Shared test [AiOutputStructure] for context provider tests. */
+    val TEST_AI_OUTPUT_STRUCTURE = AiOutputStructure(
+        repoRoot = Path.of("/tmp/test-repo"),
+        branch = "test-branch",
+    )
 
     fun resourceDir(name: String): Path =
         Path.of(

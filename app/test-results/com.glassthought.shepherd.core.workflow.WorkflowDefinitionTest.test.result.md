@@ -9,12 +9,18 @@ skipped: 0
   - [PASS] THEN isStraightforward is true
   - [PASS] THEN isWithPlanning is false
   - [PASS] THEN parts is not null
+- GIVEN a straightforward WorkflowDefinition with allPartsForStructure()
+  - [PASS] THEN allPartsForStructure() returns execution parts
+  - [PASS] THEN allPartsForStructure() returns the expected number of parts
 - GIVEN a straightforward workflow with executionPhasesFrom specified
   - [PASS] THEN construction fails with IllegalArgumentException
 - GIVEN a with-planning WorkflowDefinition
   - [PASS] THEN executionPhasesFrom is set
   - [PASS] THEN isStraightforward is false
   - [PASS] THEN isWithPlanning is true
+- GIVEN a with-planning WorkflowDefinition with allPartsForStructure()
+  - [PASS] THEN allPartsForStructure() returns planning parts
+  - [PASS] THEN allPartsForStructure() returns the expected number of parts
 - GIVEN both parts and planningParts are provided
   - [PASS] THEN construction fails with IllegalArgumentException
 - GIVEN neither parts nor planningParts are provided
