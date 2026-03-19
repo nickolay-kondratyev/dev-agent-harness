@@ -121,6 +121,10 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
                 text shouldContain ProtocolVocabulary.FeedbackStatus.REJECTED
             }
 
+            it("THEN contains 'skipped' feedback status") {
+                text shouldContain ProtocolVocabulary.FeedbackStatus.SKIPPED
+            }
+
             // -- Severity keywords --
             it("THEN contains 'critical' severity") {
                 text shouldContain ProtocolVocabulary.Severity.CRITICAL
@@ -137,6 +141,14 @@ class ExecutionAgentInstructionsKeywordTest : AsgardDescribeSpec({
             // -- Severity prefix protocol --
             it("THEN contains severity prefix for critical") {
                 text shouldContain ProtocolVocabulary.SeverityPrefix.CRITICAL
+            }
+
+            it("THEN contains severity prefix for important") {
+                text shouldContain ProtocolVocabulary.SeverityPrefix.IMPORTANT
+            }
+
+            it("THEN contains severity prefix for optional") {
+                text shouldContain ProtocolVocabulary.SeverityPrefix.OPTIONAL
             }
 
             // -- WHY-NOT protocol in structured feedback --

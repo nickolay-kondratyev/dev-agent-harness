@@ -31,8 +31,11 @@ skipped: 0
     - [PASS] THEN contains 'pass' done result
     - [PASS] THEN contains 'pending' feedback status
     - [PASS] THEN contains 'rejected' feedback status
+    - [PASS] THEN contains 'skipped' feedback status
     - [PASS] THEN contains WHY-NOT in feedback format
     - [PASS] THEN contains addressed feedback file content
     - [PASS] THEN contains doer's PUBLIC.md content
     - [PASS] THEN contains rejected feedback file content
     - [PASS] THEN contains severity prefix for critical
+    - [PASS] THEN contains severity prefix for important
+    - [PASS] THEN contains severity prefix for optional
