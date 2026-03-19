@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T01:47:09Z
 id: nid_smb6zudqraf0hkp3u9kjx855e_E
 title: "Implement SubPartStatus enum + SubPartStateTransition sealed class with validators"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T18:02:12Z
-status_updated_iso: 2026-03-19T01:37:17Z
+status_updated_iso: 2026-03-19T01:47:09Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
