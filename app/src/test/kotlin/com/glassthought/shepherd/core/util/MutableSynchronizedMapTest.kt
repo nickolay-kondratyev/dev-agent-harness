@@ -5,22 +5,23 @@ import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.collections.shouldContainExactlyInAnyOrder
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.runBlocking
 
 class MutableSynchronizedMapTest : AsgardDescribeSpec({
 
   describe("GIVEN empty map") {
-    val map = MutableSynchronizedMap<String, Int>()
-
     describe("WHEN get(key)") {
       it("THEN returns null") {
+        val map = MutableSynchronizedMap<String, Int>()
         map.get("missing") shouldBe null
       }
     }
 
     describe("WHEN size()") {
       it("THEN returns 0") {
+        val map = MutableSynchronizedMap<String, Int>()
         map.size() shouldBe 0
       }
     }
@@ -178,31 +179,28 @@ class MutableSynchronizedMapTest : AsgardDescribeSpec({
 
   describe("GIVEN concurrent access") {
     it("THEN map is not corrupted by concurrent put and remove operations") {
-      runTest {
-        val map = MutableSynchronizedMap<Int, Int>()
-        val coroutineCount = 100
+      val map = MutableSynchronizedMap<Int, Int>()
+      val coroutineCount = 100
 
-        // Launch coroutines that put values
-        val putJobs = (0 until coroutineCount).map { i ->
-          launch {
+      runBlocking {
+        (0 until coroutineCount).map { i ->
+          launch(Dispatchers.Default) {
             map.put(i, i * 10)
           }
-        }
-        putJobs.forEach { it.join() }
+        }.forEach { it.join() }
+      }
 
+      runBlocking {
         map.size() shouldBe coroutineCount
 
-        // Launch coroutines that remove even keys
-        val removeJobs = (0 until coroutineCount).filter { it % 2 == 0 }.map { i ->
-          launch {
+        (0 until coroutineCount).filter { it % 2 == 0 }.map { i ->
+          launch(Dispatchers.Default) {
             map.remove(i)
           }
-        }
-        removeJobs.forEach { it.join() }
+        }.forEach { it.join() }
 
         map.size() shouldBe coroutineCount / 2
 
-        // Verify only odd keys remain
         val values = map.values()
         values shouldContainExactlyInAnyOrder (0 until coroutineCount).filter { it % 2 != 0 }.map { it * 10 }
       }
