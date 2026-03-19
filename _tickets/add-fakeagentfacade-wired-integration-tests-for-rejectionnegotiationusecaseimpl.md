@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T19:38:38Z
 id: nid_f9u9xgyfnfhnjdga74163o1ak_E
 title: "Add FakeAgentFacade-wired integration tests for RejectionNegotiationUseCaseImpl"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T18:57:24Z
-status_updated_iso: 2026-03-19T19:24:16Z
+status_updated_iso: 2026-03-19T19:38:38Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
