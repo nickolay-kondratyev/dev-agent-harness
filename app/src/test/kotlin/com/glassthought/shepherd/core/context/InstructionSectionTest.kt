@@ -818,7 +818,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.createDirectories(emptyDir)
         val section = InstructionSection.FeedbackDirectorySection(
             dir = emptyDir,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -839,7 +839,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(dirWithNonMd.resolve("data.json"), "{}")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = dirWithNonMd,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -856,7 +856,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         val tempDir = Files.createTempDirectory("section-feedbackdir-noexist-test")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = tempDir.resolve("does-not-exist"),
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -877,7 +877,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(feedbackDir.resolve("important__error-handling.md"), "Added error handling.")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = feedbackDir,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -922,7 +922,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(pendingDir.resolve("critical__bug.md"), "Critical bug found.")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = pendingDir,
-            heading = "Skipped Optional Feedback",
+            header = "## Skipped Optional Feedback",
             filenamePrefix = ProtocolVocabulary.SeverityPrefix.OPTIONAL,
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)

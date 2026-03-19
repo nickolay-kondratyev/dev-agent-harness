@@ -493,19 +493,19 @@ sealed class InstructionSection {
 
     /**
      * Globs `*.md` files in [dir] (optionally filtered by [filenamePrefix]), renders each
-     * file as `### filename\n\ncontent`, and joins them under a `## [heading]` header.
+     * file as `### filename\n\ncontent`, and joins them under the [header] text.
      *
      * Returns `null` when the directory does not exist, is not a directory, or contains no
      * matching `.md` files — the assembler skips absent feedback directories silently.
      *
-     * @param headerBody optional paragraph text to include between the heading and the file contents.
-     *        Used to provide context (e.g. "The doer addressed the following items. Verify fixes.").
+     * @param header the full header text rendered above the file contents. Typically a multi-line
+     *        string containing a markdown heading and contextual paragraph (e.g. from [InstructionText]
+     *        constants). For simple cases, callers can pass `"## My Heading"` directly.
      */
     data class FeedbackDirectorySection(
         val dir: Path,
-        val heading: String,
+        val header: String,
         val filenamePrefix: String? = null,
-        val headerBody: String? = null,
     ) : InstructionSection() {
 
         companion object {
@@ -516,11 +516,7 @@ sealed class InstructionSection {
             val renderedFiles = collectMarkdownFiles()
             if (renderedFiles.isEmpty()) return null
             val joinedContent = renderedFiles.joinToString(FILE_SEPARATOR)
-            return if (headerBody != null) {
-                "$headerBody\n\n$joinedContent"
-            } else {
-                "## $heading\n\n$joinedContent"
-            }
+            return "$header\n\n$joinedContent"
         }
 
         private fun collectMarkdownFiles(): List<String> =

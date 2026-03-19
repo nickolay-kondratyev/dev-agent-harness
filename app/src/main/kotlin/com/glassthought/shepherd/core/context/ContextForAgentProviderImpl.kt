@@ -81,23 +81,20 @@ class ContextForAgentProviderImpl(
             add(
                 InstructionSection.FeedbackDirectorySection(
                     dir = request.feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.ADDRESSED),
-                    heading = "Addressed Feedback",
-                    headerBody = InstructionText.ADDRESSED_FEEDBACK_HEADER,
+                    header = InstructionText.ADDRESSED_FEEDBACK_HEADER,
                 )
             )
             add(
                 InstructionSection.FeedbackDirectorySection(
                     dir = request.feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.REJECTED),
-                    heading = "Rejected Feedback",
-                    headerBody = InstructionText.REJECTED_FEEDBACK_HEADER,
+                    header = InstructionText.REJECTED_FEEDBACK_HEADER,
                 )
             )
             add(
                 InstructionSection.FeedbackDirectorySection(
                     dir = request.feedbackDir.resolve(ProtocolVocabulary.FeedbackStatus.PENDING),
-                    heading = "Skipped optional Feedback",
+                    header = InstructionText.SKIPPED_OPTIONAL_HEADER,
                     filenamePrefix = ProtocolVocabulary.SeverityPrefix.OPTIONAL,
-                    headerBody = InstructionText.SKIPPED_OPTIONAL_HEADER,
                 )
             )
         }

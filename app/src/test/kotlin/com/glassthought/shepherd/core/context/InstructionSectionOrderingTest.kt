@@ -1,7 +1,8 @@
 package com.glassthought.shepherd.core.context
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
-import io.kotest.matchers.shouldBe
+import io.kotest.matchers.ints.shouldBeGreaterThan
+import io.kotest.matchers.shouldNotBe
 import java.nio.file.Files
 import kotlin.io.path.readText
 
@@ -15,6 +16,30 @@ import kotlin.io.path.readText
  * See ContextForAgentProvider spec (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E) for authoritative
  * concatenation tables.
  */
+/**
+ * Asserts that all [sectionNames] are found in [text] and appear in the given order.
+ * On failure, the assertion message identifies WHICH section is missing or misordered.
+ */
+private fun assertSectionsInOrder(text: String, sectionNames: List<String>) {
+    val indices = sectionNames.map { text.indexOf(it) }
+
+    // Every section must be found
+    sectionNames.zip(indices).forEach { (name, idx) ->
+        io.kotest.assertions.withClue("Section '$name' not found in rendered instructions") {
+            idx shouldNotBe -1
+        }
+    }
+
+    // Each section must appear before the next
+    indices.zipWithNext().forEachIndexed { i, (a, b) ->
+        io.kotest.assertions.withClue(
+            "'${sectionNames[i]}' (at index $a) should appear before '${sectionNames[i + 1]}' (at index $b)"
+        ) {
+            b shouldBeGreaterThan a
+        }
+    }
+}
+
 class InstructionSectionOrderingTest : AsgardDescribeSpec({
 
     describe("GIVEN a doer request (iteration 2 with reviewer feedback and plan)") {
@@ -47,21 +72,17 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
             val text = provider.assembleInstructions(request).readText()
 
             it("THEN doer sections appear in spec-defined order") {
-                val indices = listOf(
-                    text.indexOf("# Role:"),
-                    text.indexOf("## Part Context"),
-                    text.indexOf("# Ticket"),
-                    text.indexOf("# Plan"),
-                    text.indexOf("# Prior Agent Outputs"),
-                    text.indexOf("## Reviewer Feedback"),
-                    text.indexOf("PUBLIC.md Output Path"),
-                    text.indexOf("PUBLIC.md Writing Guidelines"),
-                    text.indexOf("Communicating with the Harness"),
-                )
-                // All must be found
-                indices.none { it == -1 } shouldBe true
-                // Each index must be strictly less than the next
-                indices.zipWithNext().all { (a, b) -> a < b } shouldBe true
+                assertSectionsInOrder(text, listOf(
+                    "# Role:",
+                    "## Part Context",
+                    "# Ticket",
+                    "# Plan",
+                    "# Prior Agent Outputs",
+                    "## Reviewer Feedback",
+                    "PUBLIC.md Output Path",
+                    "PUBLIC.md Writing Guidelines",
+                    "Communicating with the Harness",
+                ))
             }
         }
     }
@@ -75,20 +96,18 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
             val text = provider.assembleInstructions(request).readText()
 
             it("THEN reviewer sections appear in spec-defined order") {
-                val indices = listOf(
-                    text.indexOf("# Role:"),
-                    text.indexOf("## Part Context"),
-                    text.indexOf("# Ticket"),
-                    text.indexOf("Doer Output (for review)"),
-                    text.indexOf("Structured Feedback Format"),
-                    text.indexOf("Addressed Feedback"),
-                    text.indexOf("Writing Feedback Files"),
-                    text.indexOf("PUBLIC.md Output Path"),
-                    text.indexOf("PUBLIC.md Writing Guidelines"),
-                    text.indexOf("Communicating with the Harness"),
-                )
-                indices.none { it == -1 } shouldBe true
-                indices.zipWithNext().all { (a, b) -> a < b } shouldBe true
+                assertSectionsInOrder(text, listOf(
+                    "# Role:",
+                    "## Part Context",
+                    "# Ticket",
+                    "Doer Output (for review)",
+                    "Structured Feedback Format",
+                    "Addressed Feedback",
+                    "Writing Feedback Files",
+                    "PUBLIC.md Output Path",
+                    "PUBLIC.md Writing Guidelines",
+                    "Communicating with the Harness",
+                ))
             }
         }
     }
@@ -102,20 +121,18 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
             val text = provider.assembleInstructions(request).readText()
 
             it("THEN planner sections appear in spec-defined order") {
-                val indices = listOf(
-                    text.indexOf("# Role:"),
-                    text.indexOf("# Ticket"),
-                    text.indexOf("## Available Roles"),
-                    text.indexOf("Available Agent Types"),
-                    text.indexOf("## Plan Format"),
-                    text.indexOf("plan_flow.json Output Path"),
-                    text.indexOf("PLAN.md Output Path"),
-                    text.indexOf("PUBLIC.md Output Path"),
-                    text.indexOf("PUBLIC.md Writing Guidelines"),
-                    text.indexOf("Communicating with the Harness"),
-                )
-                indices.none { it == -1 } shouldBe true
-                indices.zipWithNext().all { (a, b) -> a < b } shouldBe true
+                assertSectionsInOrder(text, listOf(
+                    "# Role:",
+                    "# Ticket",
+                    "## Available Roles",
+                    "Available Agent Types",
+                    "## Plan Format",
+                    "plan_flow.json Output Path",
+                    "PLAN.md Output Path",
+                    "PUBLIC.md Output Path",
+                    "PUBLIC.md Writing Guidelines",
+                    "Communicating with the Harness",
+                ))
             }
         }
     }
@@ -129,19 +146,17 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
             val text = provider.assembleInstructions(request).readText()
 
             it("THEN plan reviewer sections appear in spec-defined order") {
-                val indices = listOf(
-                    text.indexOf("# Role:"),
-                    text.indexOf("# Ticket"),
-                    text.indexOf("## plan_flow.json"),
-                    text.indexOf("## PLAN.md"),
-                    text.indexOf("Available Agent Types"),
-                    text.indexOf("Planner's Rationale"),
-                    text.indexOf("PUBLIC.md Output Path"),
-                    text.indexOf("PUBLIC.md Writing Guidelines"),
-                    text.indexOf("Communicating with the Harness"),
-                )
-                indices.none { it == -1 } shouldBe true
-                indices.zipWithNext().all { (a, b) -> a < b } shouldBe true
+                assertSectionsInOrder(text, listOf(
+                    "# Role:",
+                    "# Ticket",
+                    "## plan_flow.json",
+                    "## PLAN.md",
+                    "Available Agent Types",
+                    "Planner's Rationale",
+                    "PUBLIC.md Output Path",
+                    "PUBLIC.md Writing Guidelines",
+                    "Communicating with the Harness",
+                ))
             }
         }
     }
