@@ -31,13 +31,11 @@ sealed class ParseResult {
  *
  * Part of the Granular Feedback Loop feature (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E).
  */
-class FeedbackResolutionParser {
+object FeedbackResolutionParser {
 
-    companion object {
-        // [## Resolution:] header pattern — matches the markdown H2 marker followed by optional keyword.
-        // Group 1 captures everything after the colon (may be empty/blank).
-        private val RESOLUTION_LINE_REGEX = Regex("""^##\s+Resolution:\s*(.*)$""", RegexOption.MULTILINE)
-    }
+    // [## Resolution:] header pattern — matches the markdown H2 marker followed by optional keyword.
+    // Group 1 captures everything after the colon (may be empty/blank).
+    private val RESOLUTION_LINE_REGEX = Regex("""^##\s+Resolution:\s*(.*)$""", RegexOption.MULTILINE)
 
     /**
      * Parses the `## Resolution:` marker from [fileContent].

@@ -6,8 +6,6 @@ import io.kotest.matchers.types.shouldBeInstanceOf
 
 class FeedbackResolutionParserTest : AsgardDescribeSpec({
 
-    val parser = FeedbackResolutionParser()
-
     describe("GIVEN feedback file with '## Resolution: ADDRESSED'") {
         val content = """
             # Race condition in session manager
@@ -23,7 +21,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is Found") {
                 result.shouldBeInstanceOf<ParseResult.Found>()
@@ -50,7 +48,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is Found") {
                 result.shouldBeInstanceOf<ParseResult.Found>()
@@ -77,7 +75,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is Found") {
                 result.shouldBeInstanceOf<ParseResult.Found>()
@@ -99,7 +97,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is MissingMarker") {
                 result shouldBe ParseResult.MissingMarker
@@ -118,7 +116,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is InvalidMarker") {
                 result.shouldBeInstanceOf<ParseResult.InvalidMarker>()
@@ -141,7 +139,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is Found with ADDRESSED") {
                 result shouldBe ParseResult.Found(FeedbackResolution.ADDRESSED)
@@ -170,7 +168,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is Found") {
                 result.shouldBeInstanceOf<ParseResult.Found>()
@@ -192,7 +190,7 @@ class FeedbackResolutionParserTest : AsgardDescribeSpec({
         """.trimIndent()
 
         describe("WHEN parse is called") {
-            val result = parser.parse(content)
+            val result = FeedbackResolutionParser.parse(content)
 
             it("THEN result is MissingMarker") {
                 result shouldBe ParseResult.MissingMarker
