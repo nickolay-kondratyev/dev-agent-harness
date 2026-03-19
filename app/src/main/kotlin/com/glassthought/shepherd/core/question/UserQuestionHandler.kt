@@ -12,7 +12,7 @@ package com.glassthought.shepherd.core.question
  *
  * Spec: ref.ap.NE4puAzULta4xlOLh5kfD.E
  */
-interface UserQuestionHandler {
+fun interface UserQuestionHandler {
     /**
      * Handle a question from an agent. Returns the answer text.
      * May suspend indefinitely (e.g., waiting for human input).

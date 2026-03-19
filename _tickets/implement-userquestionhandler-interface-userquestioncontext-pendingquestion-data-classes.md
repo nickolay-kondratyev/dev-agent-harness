@@ -1,11 +1,11 @@
 ---
 id: nid_wnpjmnowllgk9oy5ccufgfyr1_E
 title: "Implement UserQuestionHandler interface + UserQuestionContext data class"
-status: in_progress
+status: closed
 deps: []
 links: [nid_d1qyvonxndnk9yp68czrb98ki_E, nid_y4ick5sgbafgwgeauhu385xq2_E]
 created_iso: 2026-03-19T00:39:38Z
-status_updated_iso: 2026-03-19T17:44:49Z
+status_updated_iso: 2026-03-19T17:50:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
