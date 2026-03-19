@@ -133,6 +133,31 @@ class PartExecutorImpl(
 
     // ── Doer+Reviewer path ─────────────────────────────────────────────
 
+    /** Non-null handle pair produced after each iteration's compaction-and-respawn step. */
+    private data class HandleState(
+        val doerHandle: SpawnedAgentHandle,
+        val reviewerHandle: SpawnedAgentHandle,
+    )
+
+    /**
+     * After the reviewer signal is processed: marks compacted reviewer handle as null, then
+     * respawns any killed handles so both are live for the next iteration.
+     *
+     * Extracted to keep [executeDoerWithReviewer] within cognitive-complexity limits.
+     */
+    private suspend fun updateHandlesAfterReviewerSignal(
+        revResult: ReviewerSignalResult,
+        doerHandle: SpawnedAgentHandle?,
+        reviewerHandle: SpawnedAgentHandle,
+        revConfig: SubPartConfig,
+    ): HandleState {
+        val liveReviewer =
+            if (revResult is ReviewerSignalResult.Continue && revResult.reviewerCompacted) null else reviewerHandle
+        val finalDoer = doerHandle ?: respawnAfterCompaction(doerConfig)
+        val finalReviewer = liveReviewer ?: respawnAfterCompaction(revConfig)
+        return HandleState(finalDoer, finalReviewer)
+    }
+
     @Suppress("ReturnCount")
     private suspend fun executeDoerWithReviewer(revConfig: SubPartConfig): PartResult {
         var doerHandle: SpawnedAgentHandle? = spawnSubPart(doerConfig, isDoer = true)
@@ -144,39 +169,28 @@ class PartExecutorImpl(
             if (doerResult is DoerSignalResult.Terminal) return doerResult.partResult
 
             // After afterDone, doerHandle may have been compacted
-            if (doerResult is DoerSignalResult.Continue && doerResult.doerCompacted) {
-                doerHandle = null
-            }
+            if (doerResult is DoerSignalResult.Continue && doerResult.doerCompacted) doerHandle = null
 
             // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
             // Subsequent iterations reuse the already-alive reviewer session.
-            if (reviewerHandle == null) {
-                reviewerHandle = spawnSubPart(revConfig, isDoer = false)
-            }
+            // `liveReviewer` is a non-null local — avoids !! on the nullable var.
+            val liveReviewer = reviewerHandle ?: spawnSubPart(revConfig, isDoer = false)
 
             val revResult = mapReviewerSignal(
-                sendReviewerInstructions(reviewerHandle, revConfig), doerHandle, reviewerHandle, revConfig
+                sendReviewerInstructions(liveReviewer, revConfig), doerHandle, liveReviewer, revConfig
             )
             if (revResult is ReviewerSignalResult.Terminal) return revResult.partResult
 
-            // After reviewer afterDone, reviewer may have been compacted
-            if (revResult is ReviewerSignalResult.Continue && revResult.reviewerCompacted) {
-                reviewerHandle = null
-            }
-
-            // Respawn compacted sub-parts before inner loop (needs active handles)
-            if (doerHandle == null) {
-                doerHandle = respawnAfterCompaction(doerConfig)
-            }
-            if (reviewerHandle == null) {
-                reviewerHandle = respawnAfterCompaction(revConfig)
-            }
+            // Mark reviewer compacted + respawn any killed handles — both guaranteed non-null after this.
+            val handles = updateHandlesAfterReviewerSignal(revResult, doerHandle, liveReviewer, revConfig)
+            doerHandle = handles.doerHandle
+            reviewerHandle = handles.reviewerHandle
 
             // NEEDS_ITERATION: processNeedsIteration handles budget check + inner loop.
-            val needsIterResult = processNeedsIteration(doerHandle, reviewerHandle, revConfig)
+            val needsIterResult = processNeedsIteration(handles.doerHandle, handles.reviewerHandle, revConfig)
             if (needsIterResult != null) return needsIterResult
 
-            doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
+            doerSignal = sendDoerInstructions(handles.doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
         }
     }
 
