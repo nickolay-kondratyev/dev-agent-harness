@@ -7,10 +7,15 @@ import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.interrupt.InterruptHandlerImpl
 import com.glassthought.shepherd.core.state.CurrentStatePersistenceImpl
+import com.glassthought.shepherd.core.state.Phase
+import com.glassthought.shepherd.core.state.Part
+import com.glassthought.shepherd.core.state.SubPart
 import com.glassthought.shepherd.core.time.TestClock
+import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.types.shouldBeInstanceOf
+import java.nio.file.Files
 import java.nio.file.Path
 
 // ── Test Fakes ─────────────────────────────────────────────────────────
@@ -67,9 +72,23 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
     body = {
 
         // Shared test infrastructure
+        val testTempDir = Files.createTempDirectory("creator-test")
         val testAiOutputStructure = AiOutputStructure(
-            repoRoot = Path.of("/tmp/test-repo"),
+            repoRoot = testTempDir,
             branch = "test-branch",
+        )
+        val testWorkflowDefinition = WorkflowDefinition(
+            name = "test-straightforward",
+            parts = listOf(
+                Part(
+                    name = "part_1",
+                    phase = Phase.EXECUTION,
+                    description = "test part",
+                    subParts = listOf(
+                        SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet"),
+                    ),
+                ),
+            ),
         )
 
         describe("GIVEN a TicketShepherdCreatorImpl with test dependencies") {
@@ -81,6 +100,7 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
                 val creator = TicketShepherdCreatorImpl(
                     shepherdContext = createTestShepherdContext(),
                     aiOutputStructure = testAiOutputStructure,
+                    workflowDefinition = testWorkflowDefinition,
                     clock = TestClock(),
                     consoleOutput = FakeConsoleOutput(),
                     processExiter = FakeProcessExiter(),
@@ -113,6 +133,7 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
                     val creator = TicketShepherdCreatorImpl(
                         shepherdContext = createTestShepherdContext(),
                         aiOutputStructure = testAiOutputStructure,
+                        workflowDefinition = testWorkflowDefinition,
                         clock = TestClock(),
                         consoleOutput = fakeConsole,
                         processExiter = FakeProcessExiter(),
@@ -125,6 +146,67 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
                     (result.interruptHandler as InterruptHandlerImpl).handleSignal()
 
                     fakeConsole.messages.size shouldBe 1
+                }
+            }
+        }
+
+        describe("GIVEN a TicketShepherdCreatorImpl with a straightforward workflow") {
+
+            describe("WHEN create() is called") {
+                val tempDir = Files.createTempDirectory("ensure-structure-test")
+                val aiOutputStructure = AiOutputStructure(
+                    repoRoot = tempDir,
+                    branch = "structure-test-branch",
+                )
+                val workflowDef = WorkflowDefinition(
+                    name = "test-straightforward",
+                    parts = listOf(
+                        Part(
+                            name = "part_1",
+                            phase = Phase.EXECUTION,
+                            description = "test part",
+                            subParts = listOf(
+                                SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet"),
+                                SubPart(name = "review", role = "REVIEWER", agentType = "ClaudeCode", model = "opus"),
+                            ),
+                        ),
+                    ),
+                )
+                val creator = TicketShepherdCreatorImpl(
+                    shepherdContext = createTestShepherdContext(),
+                    aiOutputStructure = aiOutputStructure,
+                    workflowDefinition = workflowDef,
+                    clock = TestClock(),
+                    consoleOutput = FakeConsoleOutput(),
+                    processExiter = FakeProcessExiter(),
+                    allSessionsKillerFactory = TrackingKillerFactory().create(),
+                )
+                creator.create()
+
+                it("THEN creates the harness_private directory") {
+                    Files.isDirectory(aiOutputStructure.harnessPrivateDir()) shouldBe true
+                }
+
+                it("THEN creates the shared/plan directory") {
+                    Files.isDirectory(aiOutputStructure.sharedPlanDir()) shouldBe true
+                }
+
+                it("THEN creates the execution part directory with feedback subdirs") {
+                    Files.isDirectory(aiOutputStructure.feedbackPendingDir("part_1")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.feedbackAddressedDir("part_1")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.feedbackRejectedDir("part_1")) shouldBe true
+                }
+
+                it("THEN creates the execution sub-part comm directories") {
+                    Files.isDirectory(aiOutputStructure.executionCommInDir("part_1", "impl")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.executionCommOutDir("part_1", "impl")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.executionCommInDir("part_1", "review")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.executionCommOutDir("part_1", "review")) shouldBe true
+                }
+
+                it("THEN creates the execution sub-part private directories") {
+                    Files.isDirectory(aiOutputStructure.executionSubPartPrivateDir("part_1", "impl")) shouldBe true
+                    Files.isDirectory(aiOutputStructure.executionSubPartPrivateDir("part_1", "review")) shouldBe true
                 }
             }
         }

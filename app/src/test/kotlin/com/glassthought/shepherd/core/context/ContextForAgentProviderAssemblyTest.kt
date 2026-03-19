@@ -17,7 +17,7 @@ import kotlin.io.path.readText
 class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
 
     describe("GIVEN a doer request with a plan (with-planning workflow)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-plan-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -39,7 +39,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request without a plan (no-planning workflow)") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-no-plan-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -53,7 +53,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request on iteration 1") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-doer-iter1-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -71,7 +71,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request on iteration 2 with reviewer feedback") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-doer-iter2-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -100,7 +100,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     // -- DoerFeedbackItemRequest tests --
 
     describe("GIVEN a doer feedback item request") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-doer-feedback-item-test")
         val request = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
 
@@ -134,7 +134,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer feedback item request with optional feedback") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-doer-feedback-optional-test")
         val baseRequest = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
 
@@ -164,7 +164,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a reviewer request on iteration 1") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-reviewer-iter1-test")
         val request = ContextTestFixtures.reviewerInstructionRequest(tempDir)
 
@@ -190,7 +190,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a reviewer request on iteration 2 with feedback state") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-reviewer-iter2-test")
         val request = ContextTestFixtures.reviewerInstructionRequestWithFeedback(tempDir)
 
@@ -216,7 +216,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request with prior PUBLIC.md files") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-prior-outputs-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -244,7 +244,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN instructions are assembled for any agent") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-file-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -264,7 +264,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     // -- PrivateMd tests --
 
     describe("GIVEN a doer request with privateMdPath pointing to existing non-empty file") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-privatemd-present-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -296,7 +296,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request with privateMdPath = null") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-privatemd-null-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -310,7 +310,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request with privateMdPath pointing to non-existent file") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-privatemd-nonexistent-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -327,7 +327,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a doer request with privateMdPath pointing to empty file") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-privatemd-empty-test")
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -346,7 +346,7 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a planner request with privateMdPath pointing to existing file") {
-        val provider = ContextForAgentProvider.standard(outFactory)
+        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
         val tempDir = Files.createTempDirectory("assembly-planner-privatemd-test")
         val baseRequest = ContextTestFixtures.plannerRequest(tempDir)
 

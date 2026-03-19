@@ -4,6 +4,7 @@ import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
 import com.glassthought.shepherd.core.executor.PartExecutor
 import com.glassthought.shepherd.core.executor.PartExecutorFactory
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.interrupt.InterruptHandler
@@ -21,6 +22,7 @@ import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
+import java.nio.file.Path
 
 // ── Test Fakes (prefixed with "Ts" to avoid redeclaration with same-package test files) ─────
 
@@ -129,6 +131,11 @@ private class TsPartExecutorFactory(
 
 // ── Test Helpers ────────────────────────────────────────────────────────────
 
+private val testAiOutputStructure = AiOutputStructure(
+    repoRoot = Path.of("/tmp/test-repo"),
+    branch = "test-branch",
+)
+
 private fun createTestPart(name: String): Part =
     Part(
         name = name,
@@ -173,6 +180,7 @@ private fun createFixture(
         processExiter = TsProcessExiter(),
         finalCommitUseCase = fakeFinalCommit,
         ticketStatusUpdater = fakeStatusUpdater,
+        aiOutputStructure = testAiOutputStructure,
         out = outFactory.getOutForClass(TicketShepherd::class),
         ticketId = "test-ticket-42",
     )
@@ -418,6 +426,7 @@ class TicketShepherdTest : AsgardDescribeSpec(
                         processExiter = TsProcessExiter(),
                         finalCommitUseCase = TsFinalCommitUseCase(),
                         ticketStatusUpdater = TsTicketStatusUpdater(),
+                        aiOutputStructure = testAiOutputStructure,
                         out = outFactory.getOutForClass(TicketShepherd::class),
                         ticketId = "test-ticket-42",
                     )
@@ -470,6 +479,7 @@ class TicketShepherdTest : AsgardDescribeSpec(
                         },
                         finalCommitUseCase = FinalCommitUseCase { orderTracker.add("final_commit") },
                         ticketStatusUpdater = TicketStatusUpdater { orderTracker.add("mark_done") },
+                        aiOutputStructure = testAiOutputStructure,
                         out = outFactory.getOutForClass(TicketShepherd::class),
                         ticketId = "test-ticket-42",
                     )
