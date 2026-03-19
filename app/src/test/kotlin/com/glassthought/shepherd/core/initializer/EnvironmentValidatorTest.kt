@@ -22,6 +22,7 @@ class EnvironmentValidatorTest : AsgardDescribeSpec({
             Constants.REQUIRED_ENV_VARS.HOST_USERNAME -> "testuser"
             Constants.REQUIRED_ENV_VARS.TICKET_SHEPHERD_AGENTS_DIR -> "/tmp/agents"
             Constants.REQUIRED_ENV_VARS.MY_ENV -> "/tmp/myenv"
+            Constants.REQUIRED_ENV_VARS.AI_MODEL_ZAI_FAST -> "test-fast-model"
             else -> null
         }
     }
