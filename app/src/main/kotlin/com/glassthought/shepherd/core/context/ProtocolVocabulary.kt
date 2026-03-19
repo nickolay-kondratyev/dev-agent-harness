@@ -72,6 +72,7 @@ object ProtocolVocabulary {
         const val ACK_PAYLOAD = "ack-payload"
         const val USER_QUESTION = "user-question"
         const val PING_ACK = "ping-ack"
+        const val SELF_COMPACTED = "self-compacted"
     }
 
     /** WHY-NOT comment protocol marker used in agent instructions and feedback. */
