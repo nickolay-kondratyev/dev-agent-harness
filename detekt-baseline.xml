@@ -10,6 +10,7 @@
     <ID>NewLineAtEndOfFile:TmuxSessionName.kt$com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName.kt</ID>
     <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("checkout", "-b", branchName))</ID>
     <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("rev-parse", "--abbrev-ref", "HEAD"))</ID>
+    <ID>SpreadOperator:WorkingTreeValidator.kt$WorkingTreeValidatorImpl$(*gitCommand("status", "--porcelain"))</ID>
     <ID>TooManyFunctions:AiOutputStructure.kt$AiOutputStructure</ID>
     <ID>TooManyFunctions:ContextForAgentProviderImpl.kt$ContextForAgentProviderImpl : ContextForAgentProvider</ID>
   </CurrentIssues>
