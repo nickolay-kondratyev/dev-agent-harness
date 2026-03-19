@@ -1,11 +1,11 @@
 ---
 id: nid_jgp6ocwb2csmxvgntb8f8su9c_E
 title: "Integration test for granular feedback loop — end-to-end validation"
-status: in_progress
+status: open
 deps: [nid_fq8wn0eb9yrvzcpzdurlmsg7i_E, nid_yzmwosyazxksnr1hafmw87x1m_E, nid_gp9rduvxoqf14m95z9bttnaxq_E]
 links: []
 created_iso: 2026-03-18T22:33:56Z
-status_updated_iso: 2026-03-19T20:26:23Z
+status_updated_iso: 2026-03-19T23:28:47Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
