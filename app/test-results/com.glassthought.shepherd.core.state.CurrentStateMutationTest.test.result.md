@@ -1,0 +1,62 @@
+---
+spec: "com.glassthought.shepherd.core.state.CurrentStateMutationTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a CurrentState with COMPLETED sub-part (terminal)
+  - WHEN attempting any transition
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+- GIVEN a CurrentState with FAILED sub-part (terminal)
+  - WHEN attempting any transition
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+- GIVEN a CurrentState with IN_PROGRESS sub-part
+  - WHEN transitioning from IN_PROGRESS to COMPLETED
+    - [PASS] THEN sub-part status is COMPLETED
+  - WHEN transitioning from IN_PROGRESS to FAILED
+    - [PASS] THEN sub-part status is FAILED
+  - WHEN transitioning from IN_PROGRESS to NOT_STARTED (invalid)
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a CurrentState with NOT_STARTED sub-parts
+  - WHEN transitioning NOT_STARTED to COMPLETED (invalid)
+    - [PASS] THEN throws IllegalStateException
+  - WHEN transitioning NOT_STARTED to FAILED (invalid)
+    - [PASS] THEN throws IllegalStateException
+  - WHEN transitioning from NOT_STARTED to IN_PROGRESS
+    - [PASS] THEN sub-part status is IN_PROGRESS
+- GIVEN a CurrentState with a reviewer sub-part at iteration 0
+  - WHEN incrementing iteration once
+    - [PASS] THEN iteration.current is 1
+    - [PASS] THEN iteration.max is unchanged
+  - WHEN incrementing iteration twice
+    - [PASS] THEN iteration.current is 2
+- GIVEN a CurrentState with no session records
+  - WHEN adding a session record
+    - [PASS] THEN session record matches the added record
+    - [PASS] THEN sessionIds has one entry
+  - WHEN adding two session records
+    - [PASS] THEN first record is the original
+    - [PASS] THEN second record is the newly added one
+    - [PASS] THEN sessionIds has two entries
+- GIVEN a CurrentState with one planning part
+  - WHEN appending execution parts
+    - [PASS] THEN first part is still the planning part
+    - [PASS] THEN parts list has three entries (1 planning + 2 execution)
+    - [PASS] THEN second part is ui_design execution part
+    - [PASS] THEN third part is backend execution part
+- GIVEN a part with two sub-parts
+  - WHEN updating only impl sub-part status
+    - [PASS] THEN review sub-part iteration is unchanged
+    - [PASS] THEN review sub-part status is unchanged
+- GIVEN a reviewer sub-part already at max iterations
+  - WHEN incrementing iteration beyond max
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a sub-part without iteration config (doer)
+  - WHEN incrementing iteration
+    - [PASS] THEN throws IllegalArgumentException
+- GIVEN an invalid part name
+  - WHEN updating with non-existent part name
+    - [PASS] THEN throws IllegalArgumentException
+  - WHEN updating with non-existent sub-part name
+    - [PASS] THEN throws IllegalArgumentException
