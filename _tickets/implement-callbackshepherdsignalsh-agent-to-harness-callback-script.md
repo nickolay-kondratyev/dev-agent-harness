@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T14:49:02Z
 id: nid_yrxjoh46cua15t9ktvdksi48t_E
 title: "Implement callback_shepherd.signal.sh — agent-to-harness callback script"
-status: in_progress
+status: closed
 deps: []
 links: [nid_gpfjqkfrmfbvhm1gan31rlvs9_E]
 created_iso: 2026-03-19T00:41:14Z
-status_updated_iso: 2026-03-19T15:08:16Z
+status_updated_iso: 2026-03-19T14:49:02Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
