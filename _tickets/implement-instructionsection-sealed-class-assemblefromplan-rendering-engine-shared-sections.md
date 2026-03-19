@@ -1,11 +1,11 @@
 ---
 id: nid_7vpbal1qdmrvt23g44vpq6hgv_E
 title: "Implement InstructionSection sealed class + assembleFromPlan rendering engine + shared sections"
-status: open
+status: in_progress
 deps: [nid_o4gj7swdejriooj5bex3b34vf_E]
 links: [nid_zseecydaikj0f2i2l14nwcfax_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_r2rdkc0t9jd9597sumbgzp7aw_E]
 created_iso: 2026-03-18T18:16:34Z
-status_updated_iso: 2026-03-18T18:16:34Z
+status_updated_iso: 2026-03-19T15:15:31Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
