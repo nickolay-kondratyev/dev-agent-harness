@@ -19,7 +19,8 @@ import java.nio.file.Path
  * ap.9HksYVzl1KkR9E1L2x8Tx.E
  *
  * @see InstructionText for static text constants
- * @see InstructionRenderers for dynamic rendering functions
+ * @see InstructionSection for section subtypes and their rendering logic
+ * @see InstructionPlanAssembler for the rendering engine
  * @see ProtocolVocabulary for protocol keyword constants
  */
 fun interface ContextForAgentProvider {
@@ -33,7 +34,10 @@ fun interface ContextForAgentProvider {
 
     companion object {
         fun standard(outFactory: OutFactory): ContextForAgentProvider =
-            ContextForAgentProviderImpl(outFactory)
+            ContextForAgentProviderImpl(
+                outFactory = outFactory,
+                assembler = InstructionPlanAssembler(outFactory),
+            )
     }
 }
 
@@ -119,9 +123,9 @@ sealed class AgentInstructionRequest {
 /**
  * Minimal role info for the planner's role catalog section.
  *
- * A top-level data model type — independent of [InstructionRenderers] (the rendering layer).
- * Avoids coupling to [com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition] which
- * carries heavy implementation details the planner does not need.
+ * A top-level data model type — lightweight projection of
+ * [com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition] containing only
+ * the fields the planner needs.
  */
 data class RoleCatalogEntry(
     val name: String,

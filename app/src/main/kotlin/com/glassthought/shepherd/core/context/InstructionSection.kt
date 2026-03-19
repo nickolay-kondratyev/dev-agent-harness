@@ -71,7 +71,6 @@ sealed class InstructionSection {
      * Renders part name and description for execution-phase agents (doer/reviewer).
      *
      * Returns `null` for planner/plan-reviewer requests which do not have an execution context.
-     * Delegates to [InstructionRenderers.partContext].
      */
     data object PartContext : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String? {
@@ -80,10 +79,17 @@ sealed class InstructionSection {
                 is AgentInstructionRequest.ReviewerRequest -> request.executionContext
                 is AgentInstructionRequest.PlannerRequest -> null
                 is AgentInstructionRequest.PlanReviewerRequest -> null
-            }
-            return executionContext?.let {
-                InstructionRenderers.partContext(it.partName, it.partDescription)
-            }
+            } ?: return null
+
+            return """
+                ## Part Context
+
+                **Part:** ${executionContext.partName}
+                **Description:** ${executionContext.partDescription}
+
+                You are executing one part of a larger workflow. The ticket below describes the full task,
+                but your responsibility is limited to this part.
+            """.trimIndent()
         }
     }
 
@@ -144,11 +150,62 @@ sealed class InstructionSection {
         val forReviewer: Boolean,
         val includePlanValidation: Boolean,
     ) : InstructionSection() {
-        override fun render(request: AgentInstructionRequest): String =
-            InstructionRenderers.callbackScriptUsage(
-                forReviewer = forReviewer,
-                includePlanValidation = includePlanValidation,
-            )
+        override fun render(request: AgentInstructionRequest): String {
+            val doneExamples = if (forReviewer) {
+                """
+                |When you complete your review:
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.PASS}`             (if work passes)
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.NEEDS_ITERATION}`  (if work needs changes)
+                """.trimMargin()
+            } else {
+                """
+                |When you complete your task:
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
+                """.trimMargin()
+            }
+
+            val querySection = if (includePlanValidation) {
+                """
+                |
+                |### Queries (read the response from stdout):
+                |
+                |Validate plan before signaling done:
+                |`${ProtocolVocabulary.CALLBACK_QUERY_SCRIPT} validate-plan /absolute/path/to/plan_flow.json`
+                """.trimMargin()
+            } else {
+                ""
+            }
+
+            return """
+                |<${ProtocolVocabulary.PAYLOAD_ACK_TAG}>
+                |## Communicating with the Harness
+                |
+                |Two scripts on your ${'$'}PATH — one for fire-and-forget signals, one for queries that return data.
+                |
+                |### Signals (fire-and-forget — ignore stdout):
+                |
+                |**Payload ACK — MUST do first when you receive a wrapped payload:**
+                |When you receive input wrapped in `<${ProtocolVocabulary.PAYLOAD_ACK_TAG}>` XML tags, you MUST
+                |call the command in the `MUST_ACK_BEFORE_PROCEEDING` attribute BEFORE processing the
+                |payload content:
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.ACK_PAYLOAD} <payload_id>`
+                |The `payload_id` and exact command are in the XML wrapper — copy it exactly.
+                |
+                |$doneExamples
+                |
+                |If you have a question for the human:
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.USER_QUESTION} "Your question here"`
+                |Wait for the answer — it will arrive via your input.
+                |
+                |If you hit an unrecoverable error:
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.FAIL_WORKFLOW} "Reason for failure"`
+                |
+                |Health ping acknowledgment (when asked):
+                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.PING_ACK}`
+                |$querySection
+                |</${ProtocolVocabulary.PAYLOAD_ACK_TAG}>
+            """.trimMargin()
+        }
     }
 
     // ── 8. Plan (PLAN.md) — execution agents only ─────────────────────────
@@ -201,11 +258,18 @@ sealed class InstructionSection {
                 is AgentInstructionRequest.PlanReviewerRequest -> null
             }?.takeIf { it.isNotEmpty() } ?: return null
 
-            return paths.joinToString("\n\n") { path ->
-                check(Files.exists(path)) {
-                    "Prior PUBLIC.md must exist at [$path] but was not found"
+            return buildString {
+                appendLine("# Prior Agent Outputs")
+                appendLine()
+                paths.forEachIndexed { index, path ->
+                    check(Files.exists(path)) {
+                        "Prior PUBLIC.md must exist at [$path] but was not found"
+                    }
+                    appendLine("## Prior Output ${index + 1}: ${path.name}")
+                    appendLine()
+                    appendLine(path.readText())
+                    appendLine()
                 }
-                "## ${path.name}\n\n${path.readText()}"
             }
         }
     }
@@ -272,12 +336,23 @@ sealed class InstructionSection {
      * Renders the available roles catalog for the planner.
      *
      * Only applies to [AgentInstructionRequest.PlannerRequest] — returns `null` for all others.
-     * Delegates to [InstructionRenderers.roleCatalog].
      */
     data object RoleCatalog : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String? {
             if (request !is AgentInstructionRequest.PlannerRequest) return null
-            return InstructionRenderers.roleCatalog(request.roleCatalogEntries)
+            return buildString {
+                appendLine("## Available Roles")
+                appendLine()
+                request.roleCatalogEntries.forEach { role ->
+                    appendLine("### ${role.name}")
+                    appendLine(role.description)
+                    role.descriptionLong?.let {
+                        appendLine()
+                        appendLine(it)
+                    }
+                    appendLine()
+                }
+            }
         }
     }
 
@@ -323,8 +398,39 @@ sealed class InstructionSection {
         val currentPath: Path,
         val isOptional: Boolean,
     ) : InstructionSection() {
-        override fun render(request: AgentInstructionRequest): String =
-            InstructionRenderers.feedbackItemInstructions(feedbackContent, currentPath, isOptional)
+        override fun render(request: AgentInstructionRequest): String {
+            val optionalNote = if (isOptional) {
+                """
+                |
+                |**This feedback is ${ProtocolVocabulary.Severity.OPTIONAL}.** You may choose to skip it.
+                |If skipping, write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.SKIPPED}` in the feedback file.
+                |${ProtocolVocabulary.Severity.OPTIONAL} items do NOT block part completion.
+                """.trimMargin()
+            } else {
+                ""
+            }
+
+            return """
+                |## Feedback Item to Address
+                |
+                |$feedbackContent
+                |
+                |## Instructions
+                |
+                |1. Address the feedback item above in the codebase.
+                |2. Write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}` in the feedback file,
+                |   followed by a brief description of what you did.
+                |3. If you disagree with this feedback, write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.REJECTED}`
+                |   instead, with a ${ProtocolVocabulary.WHY_NOT} justification explaining why.
+                |4. Update your PUBLIC.md with a brief one-liner noting this item was
+                |   ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}/${ProtocolVocabulary.FeedbackStatus.REJECTED}.
+                |5. Signal done: `${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
+                |$optionalNote
+                |
+                |### Feedback file path
+                |`$currentPath`
+            """.trimMargin()
+        }
     }
 
     // ── 16. Structured feedback format (reviewer) ───────────────────────────
@@ -355,20 +461,50 @@ sealed class InstructionSection {
             InstructionText.FEEDBACK_WRITING_INSTRUCTIONS
     }
 
-    // ── 18. Feedback directory section (reviewer iteration > 1) ────────────
+    // ── 19. Inline string content (not file-backed) ──────────────────────
+
+    /**
+     * Renders inline string content under the given [heading].
+     *
+     * Unlike [InlineFileContentSection] which reads from a file path, this section renders
+     * directly from a [content] string. Used when the caller already has the content in memory
+     * (e.g. PlanReviewer's planJsonContent and planMdContent which arrive as strings, not paths).
+     *
+     * @param heading the section heading (rendered as `## heading`)
+     * @param content the raw content to render
+     * @param codeBlockLanguage if non-null, wraps [content] in a fenced code block with this language tag.
+     */
+    data class InlineStringContentSection(
+        val heading: String,
+        val content: String,
+        val codeBlockLanguage: String? = null,
+    ) : InstructionSection() {
+        override fun render(request: AgentInstructionRequest): String {
+            val formattedContent = if (codeBlockLanguage != null) {
+                "```$codeBlockLanguage\n$content\n```"
+            } else {
+                content
+            }
+            return "## $heading\n\n$formattedContent"
+        }
+    }
+
+    // ── 20. Feedback directory section (reviewer iteration > 1) ────────────
 
     /**
      * Globs `*.md` files in [dir] (optionally filtered by [filenamePrefix]), renders each
-     * file as `### filename\n\ncontent`, and joins them under a `## [heading]` header.
+     * file as `### filename\n\ncontent`, and joins them under the [header] text.
      *
      * Returns `null` when the directory does not exist, is not a directory, or contains no
      * matching `.md` files — the assembler skips absent feedback directories silently.
      *
-     * Pattern reused from `ContextForAgentProviderImpl.collectMarkdownFilesInDir()`.
+     * @param header the full header text rendered above the file contents. Typically a multi-line
+     *        string containing a markdown heading and contextual paragraph (e.g. from [InstructionText]
+     *        constants). For simple cases, callers can pass `"## My Heading"` directly.
      */
     data class FeedbackDirectorySection(
         val dir: Path,
-        val heading: String,
+        val header: String,
         val filenamePrefix: String? = null,
     ) : InstructionSection() {
 
@@ -380,7 +516,7 @@ sealed class InstructionSection {
             val renderedFiles = collectMarkdownFiles()
             if (renderedFiles.isEmpty()) return null
             val joinedContent = renderedFiles.joinToString(FILE_SEPARATOR)
-            return "## $heading\n\n$joinedContent"
+            return "$header\n\n$joinedContent"
         }
 
         private fun collectMarkdownFiles(): List<String> =

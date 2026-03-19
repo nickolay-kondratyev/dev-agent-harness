@@ -445,7 +445,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
             }
 
             it("THEN includes first prior file name as heading") {
-                result!! shouldContain "## part_0_PUBLIC.md"
+                result!! shouldContain "## Prior Output 1: part_0_PUBLIC.md"
             }
 
             it("THEN includes first prior file content") {
@@ -453,7 +453,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
             }
 
             it("THEN includes second prior file name as heading") {
-                result!! shouldContain "## part_1_PUBLIC.md"
+                result!! shouldContain "## Prior Output 2: part_1_PUBLIC.md"
             }
 
             it("THEN includes second prior file content") {
@@ -818,7 +818,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.createDirectories(emptyDir)
         val section = InstructionSection.FeedbackDirectorySection(
             dir = emptyDir,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -839,7 +839,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(dirWithNonMd.resolve("data.json"), "{}")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = dirWithNonMd,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -856,7 +856,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         val tempDir = Files.createTempDirectory("section-feedbackdir-noexist-test")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = tempDir.resolve("does-not-exist"),
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -877,7 +877,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(feedbackDir.resolve("important__error-handling.md"), "Added error handling.")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = feedbackDir,
-            heading = "Addressed Feedback",
+            header = "## Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -922,7 +922,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.writeString(pendingDir.resolve("critical__bug.md"), "Critical bug found.")
         val section = InstructionSection.FeedbackDirectorySection(
             dir = pendingDir,
-            heading = "Skipped Optional Feedback",
+            header = "## Skipped Optional Feedback",
             filenamePrefix = ProtocolVocabulary.SeverityPrefix.OPTIONAL,
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
@@ -940,6 +940,58 @@ class InstructionSectionTest : AsgardDescribeSpec({
 
             it("THEN does NOT include non-matching files") {
                 result!! shouldNotContain "critical__bug.md"
+            }
+        }
+    }
+
+    // ── InlineStringContentSection ────────────────────────────────────────
+
+    describe("GIVEN an InlineStringContentSection with plain content") {
+        val section = InstructionSection.InlineStringContentSection(
+            heading = "PLAN.md",
+            content = "# Plan\n\nThree-part implementation.",
+        )
+        val tempDir = Files.createTempDirectory("section-inlinestring-plain-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN includes the heading") {
+                result shouldContain "## PLAN.md"
+            }
+
+            it("THEN includes the content verbatim") {
+                result shouldContain "Three-part implementation."
+            }
+
+            it("THEN does NOT wrap in code block") {
+                result shouldNotContain "```"
+            }
+        }
+    }
+
+    describe("GIVEN an InlineStringContentSection with json code block") {
+        val jsonContent = """{"parts": []}"""
+        val section = InstructionSection.InlineStringContentSection(
+            heading = "plan_flow.json",
+            content = jsonContent,
+            codeBlockLanguage = "json",
+        )
+        val tempDir = Files.createTempDirectory("section-inlinestring-json-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN includes the heading") {
+                result shouldContain "## plan_flow.json"
+            }
+
+            it("THEN wraps content in json code block") {
+                result shouldContain "```json"
+                result shouldContain jsonContent
+                result shouldContain "```"
             }
         }
     }
