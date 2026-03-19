@@ -45,7 +45,7 @@ sealed class ReInstructOutcome {
  *
  * See spec: ref.ap.QZYYZ2gTi1D2SQ5IYxOU6.E (ReInstructAndAwait.md)
  */
-interface ReInstructAndAwait {
+fun interface ReInstructAndAwait {
     /**
      * Delivers an instruction message to an existing agent session and awaits
      * the next signal.
