@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:11:05Z
 id: nid_0of6zl2493ctvmy9m23kxnhnl_E
 title: "Implement HealthTimeoutLadder + Refactor HarnessTimeoutConfig"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T17:36:03Z
-status_updated_iso: 2026-03-19T17:04:27Z
+status_updated_iso: 2026-03-19T17:11:05Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
