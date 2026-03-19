@@ -85,4 +85,7 @@ object ProtocolVocabulary {
 
     /** Payload delivery ACK XML tag name. See ref.ap.r0us6iYsIRzrqHA5MVO0Q.E. */
     const val PAYLOAD_ACK_TAG = "payload_from_shepherd_must_ack"
+
+    /** XML tag name for content that must survive context window compaction. */
+    const val COMPACTION_SURVIVAL_TAG = "critical_to_keep_through_compaction"
 }
