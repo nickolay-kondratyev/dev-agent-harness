@@ -1,11 +1,11 @@
 ---
 id: nid_a93jjhotbiv75jqm9ts3ne3e0_E
 title: "Implement CommitAuthorBuilder + CommitMessageBuilder — git commit metadata utilities"
-status: open
+status: in_progress
 deps: [nid_m3cm8xizw5qhu1cu3454rca79_E]
 links: []
 created_iso: 2026-03-18T23:44:37Z
-status_updated_iso: 2026-03-18T23:44:37Z
+status_updated_iso: 2026-03-19T15:26:39Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
