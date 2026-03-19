@@ -47,12 +47,18 @@ object Constants {
      *  See [SpawnTmuxAgentSessionUseCase — System Prompt File Resolution]. */
     const val MY_ENV = "MY_ENV"
 
+    /** Model identifier for the ZAI (Z.AI / GLM) fast model.
+     *  Used by [com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner]
+     *  when spawning non-interactive agent subprocesses via PI CLI. */
+    const val AI_MODEL_ZAI_FAST = "AI_MODEL__ZAI__FAST"
+
     /** All required environment variables. Used by [com.glassthought.shepherd.core.initializer.EnvironmentValidator]
      *  for startup validation. */
     val ALL: List<String> = listOf(
       HOST_USERNAME,
       TICKET_SHEPHERD_AGENTS_DIR,
       MY_ENV,
+      AI_MODEL_ZAI_FAST,
     )
   }
 }

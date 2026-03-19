@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.initializer.data
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.AsgardCloseable
+import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.initializer.Infra
 
@@ -22,5 +23,6 @@ import com.glassthought.shepherd.core.initializer.Infra
 // for logging — we may want to log during shutdown.
 class ShepherdContext(
   val infra: Infra,
+  val nonInteractiveAgentRunner: NonInteractiveAgentRunner,
   val timeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
 ) : AsgardCloseable by infra

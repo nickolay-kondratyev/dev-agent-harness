@@ -4,6 +4,9 @@ import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.lifecycle.AsgardCloseable
 import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
+import com.asgard.core.processRunner.ProcessRunner
+import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner
+import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunnerImpl
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
@@ -12,6 +15,7 @@ import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.Constants
+import java.nio.file.Path
 
 /**
  * Groups tmux-related dependencies.
@@ -67,7 +71,19 @@ fun interface ContextInitializer {
   }
 }
 
-class ContextInitializerImpl : ContextInitializer {
+/**
+ * @param envVarReader Function to read environment variables. Default: [System.getenv].
+ *   Injectable for unit testing without depending on real env vars.
+ * @param fileReader Function to read file content as a string. Default: reads via [java.nio.file.Path.toFile].
+ *   Injectable for unit testing without touching the real filesystem.
+ * @param processRunnerFactory Factory to create [ProcessRunner]. Default: [ProcessRunner.standard].
+ *   Injectable for unit testing without spawning real processes.
+ */
+class ContextInitializerImpl(
+  private val envVarReader: (String) -> String? = System::getenv,
+  private val fileReader: (Path) -> String = { it.toFile().readText() },
+  private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
+) : ContextInitializer {
 
   override suspend fun initialize(
     outFactory: OutFactory,
@@ -106,8 +122,39 @@ class ContextInitializerImpl : ContextInitializer {
       claudeCode = claudeCodeInfra,
     )
 
+    val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory)
+
     return ShepherdContext(
       infra = infra,
+      nonInteractiveAgentRunner = nonInteractiveAgentRunner,
+    )
+  }
+
+  private fun createNonInteractiveAgentRunner(outFactory: OutFactory): NonInteractiveAgentRunner {
+    val myEnv = envVarReader(Constants.REQUIRED_ENV_VARS.MY_ENV)
+      ?: error("${Constants.REQUIRED_ENV_VARS.MY_ENV} env var is not set")
+
+    val zaiApiKeyPath = Path.of(myEnv, ".secrets", "Z_AI_GLM_API_TOKEN")
+    val zaiApiKey = try {
+      fileReader(zaiApiKeyPath).trim()
+    } catch (e: java.io.IOException) {
+      throw IllegalStateException(
+        "Failed to read ZAI API key from [$zaiApiKeyPath]. " +
+          "Ensure the file exists and is readable.",
+        e,
+      )
+    }
+
+    check(zaiApiKey.isNotEmpty()) {
+      "ZAI API key file at [$zaiApiKeyPath] is empty."
+    }
+
+    val processRunner = processRunnerFactory(outFactory)
+
+    return NonInteractiveAgentRunnerImpl(
+      processRunner = processRunner,
+      outFactory = outFactory,
+      zaiApiKey = zaiApiKey,
     )
   }
 }
