@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:01:05Z
 id: nid_d1qyvonxndnk9yp68czrb98ki_E
 title: "Implement StdinUserQuestionHandler — V1 stdin/stdout question answering"
-status: in_progress
+status: closed
 deps: [nid_wnpjmnowllgk9oy5ccufgfyr1_E]
 links: [nid_y4ick5sgbafgwgeauhu385xq2_E, nid_wnpjmnowllgk9oy5ccufgfyr1_E]
 created_iso: 2026-03-19T00:39:58Z
-status_updated_iso: 2026-03-19T17:51:21Z
+status_updated_iso: 2026-03-19T18:01:05Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
