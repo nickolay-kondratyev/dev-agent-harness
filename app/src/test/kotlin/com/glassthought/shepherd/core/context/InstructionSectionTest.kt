@@ -363,8 +363,13 @@ class InstructionSectionTest : AsgardDescribeSpec({
         describe("WHEN rendered") {
             val result = InstructionSection.StructuredFeedbackFormat.render(request)
 
-            it("THEN returns the REVIEWER_FEEDBACK_FORMAT text exactly") {
-                result shouldBe InstructionText.REVIEWER_FEEDBACK_FORMAT
+            it("THEN contains the REVIEWER_FEEDBACK_FORMAT text") {
+                result shouldContain InstructionText.REVIEWER_FEEDBACK_FORMAT
+            }
+
+            it("THEN is wrapped in compaction-survival tags") {
+                result shouldStartWith "<${ProtocolVocabulary.COMPACTION_SURVIVAL_TAG}>"
+                result shouldContain "</${ProtocolVocabulary.COMPACTION_SURVIVAL_TAG}>"
             }
         }
     }
@@ -392,6 +397,27 @@ class InstructionSectionTest : AsgardDescribeSpec({
         Files.createDirectories(emptyDir)
         val section = InstructionSection.FeedbackDirectorySection(
             dir = emptyDir,
+            heading = "Addressed Feedback",
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN returns null") {
+                result.shouldBeNull()
+            }
+        }
+    }
+
+    describe("GIVEN a FeedbackDirectorySection with only non-.md files") {
+        val tempDir = Files.createTempDirectory("section-feedbackdir-nonmd-test")
+        val dirWithNonMd = tempDir.resolve("addressed")
+        Files.createDirectories(dirWithNonMd)
+        Files.writeString(dirWithNonMd.resolve("notes.txt"), "Not a markdown file.")
+        Files.writeString(dirWithNonMd.resolve("data.json"), "{}")
+        val section = InstructionSection.FeedbackDirectorySection(
+            dir = dirWithNonMd,
             heading = "Addressed Feedback",
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)

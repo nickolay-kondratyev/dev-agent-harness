@@ -174,13 +174,16 @@ sealed class InstructionSection {
     // ── 9. Structured feedback format (reviewer) ───────────────────────────
 
     /**
-     * Returns the static structured feedback format guidance for reviewers.
+     * Returns the static structured feedback format guidance for reviewers, wrapped in
+     * compaction-survival tags so it persists through context window compaction.
      *
      * Spec: Structured Reviewer Feedback Contract (ref.ap.EslyJMFQq8BBrFXCzYw5P.E).
      */
     data object StructuredFeedbackFormat : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String =
-            InstructionText.REVIEWER_FEEDBACK_FORMAT
+            "<${ProtocolVocabulary.COMPACTION_SURVIVAL_TAG}>\n" +
+                InstructionText.REVIEWER_FEEDBACK_FORMAT +
+                "\n</${ProtocolVocabulary.COMPACTION_SURVIVAL_TAG}>"
     }
 
     // ── 10. Feedback writing instructions (reviewer) ───────────────────────

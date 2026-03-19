@@ -26,6 +26,9 @@ skipped: 0
     - [PASS] THEN does NOT include non-matching files
     - [PASS] THEN includes the optional file
     - [PASS] THEN returns non-null
+- GIVEN a FeedbackDirectorySection with only non-.md files
+  - WHEN rendered
+    - [PASS] THEN returns null
 - GIVEN a FeedbackDirectorySection with populated directory
   - WHEN rendered
     - [PASS] THEN includes the first file content
@@ -84,7 +87,8 @@ skipped: 0
     - [PASS] THEN starts with role heading including role name
 - GIVEN a StructuredFeedbackFormat section
   - WHEN rendered
-    - [PASS] THEN returns the REVIEWER_FEEDBACK_FORMAT text exactly
+    - [PASS] THEN contains the REVIEWER_FEEDBACK_FORMAT text
+    - [PASS] THEN is wrapped in compaction-survival tags
 - GIVEN a Ticket section
   - WHEN rendered
     - [PASS] THEN includes the ticket content
