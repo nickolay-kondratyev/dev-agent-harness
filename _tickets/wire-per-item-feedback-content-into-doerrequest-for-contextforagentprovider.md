@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T20:47:23Z
 id: nid_5hbndodsljf2i7kku0qcd9kgm_E
 title: "Wire per-item feedback content into DoerRequest for ContextForAgentProvider"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T20:03:45Z
-status_updated_iso: 2026-03-19T20:31:07Z
+status_updated_iso: 2026-03-19T20:47:23Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

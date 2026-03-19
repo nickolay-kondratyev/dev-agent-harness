@@ -5,6 +5,18 @@ failed: 0
 skipped: 0
 ---
 
+- GIVEN a doer feedback item request
+  - WHEN instructions are assembled
+    - [PASS] THEN does NOT include IterationFeedback (reviewer PUBLIC.md)
+    - [PASS] THEN includes feedback file path
+    - [PASS] THEN includes feedback item heading
+    - [PASS] THEN includes resolution instructions for addressed
+    - [PASS] THEN includes resolution instructions for rejected
+    - [PASS] THEN includes the feedback content
+- GIVEN a doer feedback item request with optional feedback
+  - WHEN instructions are assembled
+    - [PASS] THEN includes optional note with skipped guidance
+    - [PASS] THEN includes optional severity note
 - GIVEN a doer request on iteration 1
   - WHEN instructions are assembled
     - [PASS] THEN contains WHY-NOT keyword

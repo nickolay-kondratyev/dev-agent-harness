@@ -76,6 +76,7 @@ sealed class InstructionSection {
         override fun render(request: AgentInstructionRequest): String? {
             val executionContext = when (request) {
                 is AgentInstructionRequest.DoerRequest -> request.executionContext
+                is AgentInstructionRequest.DoerFeedbackItemRequest -> request.executionContext
                 is AgentInstructionRequest.ReviewerRequest -> request.executionContext
                 is AgentInstructionRequest.PlannerRequest -> null
                 is AgentInstructionRequest.PlanReviewerRequest -> null
@@ -224,6 +225,7 @@ sealed class InstructionSection {
         override fun render(request: AgentInstructionRequest): String? {
             val planMdPath = when (request) {
                 is AgentInstructionRequest.DoerRequest -> request.executionContext.planMdPath
+                is AgentInstructionRequest.DoerFeedbackItemRequest -> request.executionContext.planMdPath
                 is AgentInstructionRequest.ReviewerRequest -> request.executionContext.planMdPath
                 is AgentInstructionRequest.PlannerRequest -> null
                 is AgentInstructionRequest.PlanReviewerRequest -> null
@@ -253,6 +255,7 @@ sealed class InstructionSection {
         override fun render(request: AgentInstructionRequest): String? {
             val paths = when (request) {
                 is AgentInstructionRequest.DoerRequest -> request.executionContext.priorPublicMdPaths
+                is AgentInstructionRequest.DoerFeedbackItemRequest -> request.executionContext.priorPublicMdPaths
                 is AgentInstructionRequest.ReviewerRequest -> request.executionContext.priorPublicMdPaths
                 is AgentInstructionRequest.PlannerRequest -> null
                 is AgentInstructionRequest.PlanReviewerRequest -> null

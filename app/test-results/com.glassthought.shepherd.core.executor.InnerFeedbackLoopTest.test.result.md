@@ -8,6 +8,9 @@ skipped: 0
 - (1) GIVEN a feedback file
   - WHEN doer resolves as REJECTED and reviewer accepts
     - [PASS] THEN file is moved to rejected/ directory
+- (1) GIVEN an optional feedback file
+  - WHEN buildFeedbackItemRequest is called with isOptional=true
+    - [PASS] THEN feedbackItem.isOptional is true
 - (1) GIVEN multiple pending feedback files
   - WHEN inner loop completes
     - [PASS] THEN iteration number in git commits stays constant
@@ -32,6 +35,9 @@ skipped: 0
 - GIVEN a feedback file
   - WHEN doer does not write resolution marker
     - [PASS] THEN result is Terminate(AgentCrashed)
+- GIVEN a feedback file in the inner loop
+  - WHEN the doer processes it
+    - [PASS] THEN ContextForAgentProvider receives a DoerFeedbackItemRequest with feedback content
 - GIVEN a single critical feedback file
   - WHEN doer resolves as ADDRESSED
     - [PASS] THEN file is moved to addressed/ directory
@@ -44,6 +50,13 @@ skipped: 0
 - GIVEN critical, important, and optional files in pending/
   - WHEN inner feedback loop executes
     - [PASS] THEN files are processed in order: critical → important → optional
+- GIVEN doer config and feedback file details
+  - WHEN buildFeedbackItemRequest is called
+    - [PASS] THEN feedbackItem contains the feedback content
+    - [PASS] THEN feedbackItem contains the feedback file path
+    - [PASS] THEN feedbackItem.isOptional matches the input
+    - [PASS] THEN iterationNumber matches the input
+    - [PASS] THEN returns a DoerFeedbackItemRequest
 - GIVEN files: 2 critical, 1 important, 1 optional
   - WHEN inner loop processes them
     - [PASS] THEN all are moved to addressed/ in severity order

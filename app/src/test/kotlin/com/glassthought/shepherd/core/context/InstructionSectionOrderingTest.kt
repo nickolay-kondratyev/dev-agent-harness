@@ -87,6 +87,28 @@ class InstructionSectionOrderingTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a doer feedback item request") {
+        val provider = ContextForAgentProvider.standard(outFactory)
+        val tempDir = Files.createTempDirectory("ordering-doer-feedback-item-test")
+        val request = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN doer feedback item sections appear in spec-defined order") {
+                assertSectionsInOrder(text, listOf(
+                    "# Role:",
+                    "## Part Context",
+                    "# Ticket",
+                    "## Feedback Item to Address",
+                    "PUBLIC.md Output Path",
+                    "PUBLIC.md Writing Guidelines",
+                    "Communicating with the Harness",
+                ))
+            }
+        }
+    }
+
     describe("GIVEN a reviewer request (iteration 2 with feedback state)") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("ordering-reviewer-test")

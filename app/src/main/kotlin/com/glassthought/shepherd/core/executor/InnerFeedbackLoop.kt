@@ -184,10 +184,19 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
             )
         }
 
+        // Read feedback file content to include in doer instructions
+        val feedbackContent = deps.feedbackFileReader.readContent(file)
+
         // Assemble and send doer instructions for this single feedback item
         val instructionPath = deps.contextForAgentProvider
             .assembleInstructions(
-                buildFeedbackItemRequest(ctx.doerConfig, ctx.currentIteration)
+                buildFeedbackItemRequest(
+                    doerConfig = ctx.doerConfig,
+                    currentIteration = ctx.currentIteration,
+                    feedbackFile = file,
+                    feedbackContent = feedbackContent,
+                    isOptional = isOptional,
+                )
             )
 
         val reInstructOutcome = deps.reInstructAndAwait
@@ -433,18 +442,21 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
         }
 
         /**
-         * Builds a [DoerRequest][com.glassthought.shepherd.core.context.AgentInstructionRequest.DoerRequest]
+         * Builds a [DoerFeedbackItemRequest][com.glassthought.shepherd.core.context.AgentInstructionRequest.DoerFeedbackItemRequest]
          * for a single feedback item.
          *
-         * WHY reviewerPublicMdPath=null: This is not iteration feedback
-         * from the reviewer's PUBLIC.md. The inner loop instructs the doer
-         * per-item, not with the reviewer's overall feedback.
+         * Carries the feedback file content and metadata so that
+         * [ContextForAgentProviderImpl] can include the per-item
+         * [InstructionSection.FeedbackItem] in the assembled instructions.
          */
         fun buildFeedbackItemRequest(
             doerConfig: SubPartConfig,
             currentIteration: Int,
+            feedbackFile: Path,
+            feedbackContent: String,
+            isOptional: Boolean,
         ) = com.glassthought.shepherd.core.context.AgentInstructionRequest
-            .DoerRequest(
+            .DoerFeedbackItemRequest(
                 roleDefinition = doerConfig.roleDefinition,
                 ticketContent = doerConfig.ticketContent,
                 iterationNumber = currentIteration,
@@ -452,7 +464,11 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
                 publicMdOutputPath = doerConfig.publicMdOutputPath,
                 privateMdPath = doerConfig.privateMdPath,
                 executionContext = doerConfig.executionContext,
-                reviewerPublicMdPath = null,
+                feedbackItem = com.glassthought.shepherd.core.context.InstructionSection.FeedbackItem(
+                    feedbackContent = feedbackContent,
+                    currentPath = feedbackFile,
+                    isOptional = isOptional,
+                ),
             )
     }
 }

@@ -97,6 +97,72 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
+    // -- DoerFeedbackItemRequest tests --
+
+    describe("GIVEN a doer feedback item request") {
+        val provider = ContextForAgentProvider.standard(outFactory)
+        val tempDir = Files.createTempDirectory("assembly-doer-feedback-item-test")
+        val request = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN includes feedback item heading") {
+                text shouldContain "Feedback Item to Address"
+            }
+
+            it("THEN includes the feedback content") {
+                text shouldContain "Add null check before accessing result"
+            }
+
+            it("THEN includes feedback file path") {
+                text shouldContain "critical__missing-null-check.md"
+            }
+
+            it("THEN includes resolution instructions for addressed") {
+                text shouldContain "Resolution: addressed"
+            }
+
+            it("THEN includes resolution instructions for rejected") {
+                text shouldContain "Resolution: rejected"
+            }
+
+            it("THEN does NOT include IterationFeedback (reviewer PUBLIC.md)") {
+                text shouldNotContain "Reviewer Feedback"
+            }
+        }
+    }
+
+    describe("GIVEN a doer feedback item request with optional feedback") {
+        val provider = ContextForAgentProvider.standard(outFactory)
+        val tempDir = Files.createTempDirectory("assembly-doer-feedback-optional-test")
+        val baseRequest = ContextTestFixtures.doerFeedbackItemRequest(tempDir)
+
+        val optionalFeedbackFile = tempDir.resolve("feedback/pending/optional__style-nit.md")
+        Files.createDirectories(optionalFeedbackFile.parent)
+        Files.writeString(optionalFeedbackFile, "Consider renaming variable.")
+
+        val request = baseRequest.copy(
+            feedbackItem = InstructionSection.FeedbackItem(
+                feedbackContent = "Consider renaming variable.",
+                currentPath = optionalFeedbackFile,
+                isOptional = true,
+            ),
+        )
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN includes optional note with skipped guidance") {
+                text shouldContain "skipped"
+            }
+
+            it("THEN includes optional severity note") {
+                text shouldContain "optional"
+            }
+        }
+    }
+
     describe("GIVEN a reviewer request on iteration 1") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-reviewer-iter1-test")

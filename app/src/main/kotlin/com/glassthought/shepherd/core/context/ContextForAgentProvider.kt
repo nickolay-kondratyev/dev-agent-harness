@@ -81,6 +81,26 @@ sealed class AgentInstructionRequest {
         val reviewerPublicMdPath: Path?,     // null on iteration 1
     ) : AgentInstructionRequest()
 
+    /**
+     * Request for a doer processing a single feedback item in the inner feedback loop.
+     *
+     * Distinct from [DoerRequest] because the doer receives per-item feedback content
+     * (via [feedbackItem]) instead of the reviewer's overall PUBLIC.md (via
+     * [DoerRequest.reviewerPublicMdPath]).
+     *
+     * See granular-feedback-loop spec (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E).
+     */
+    data class DoerFeedbackItemRequest(
+        override val roleDefinition: RoleDefinition,
+        override val ticketContent: String,
+        override val iterationNumber: Int,
+        override val outputDir: Path,
+        override val publicMdOutputPath: Path,
+        override val privateMdPath: Path? = null,
+        val executionContext: ExecutionContext,
+        val feedbackItem: InstructionSection.FeedbackItem,
+    ) : AgentInstructionRequest()
+
     data class ReviewerRequest(
         override val roleDefinition: RoleDefinition,
         override val ticketContent: String,
