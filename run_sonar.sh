@@ -12,6 +12,7 @@ fi
 mkdir -p .tmp/
 
 # Run SonarCloud analysis (configuration cache is incompatible with sonar plugin)
+# Coverage is generated automatically: sonar dependsOn :app:koverXmlReport (see build.gradle.kts).
 echo "Running SonarCloud analysis..."
 ./gradlew sonar --no-configuration-cache 2>&1 | tee .tmp/sonar_analysis.txt
 

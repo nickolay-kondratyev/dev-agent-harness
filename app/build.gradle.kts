@@ -127,7 +127,7 @@ tasks.matching { it.name.startsWith("koverVerify") || it.name.startsWith("koverC
 
 // Kover configuration: XML coverage report output to repo-root .out/ directory.
 // Kover does not support JSON — XML is its machine-readable format.
-// NOT wired as dependency of any other task — run explicitly via `coverage.sh`.
+// sonar dependsOn koverXmlReport (wired in root build.gradle.kts) so coverage is always fresh.
 kover {
     reports {
         // [rootDir]: resolves to repo root, so report lands at <repo>/.out/ (not app/.out/).
