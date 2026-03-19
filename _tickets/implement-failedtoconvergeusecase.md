@@ -1,11 +1,11 @@
 ---
 id: nid_o9j8yo1yf76iwrj1x12u19t0z_E
 title: "Implement FailedToConvergeUseCase"
-status: in_progress
+status: open
 deps: [nid_smb6zudqraf0hkp3u9kjx855e_E]
 links: []
 created_iso: 2026-03-18T17:36:44Z
-status_updated_iso: 2026-03-19T16:52:53Z
+status_updated_iso: 2026-03-18T17:36:44Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
