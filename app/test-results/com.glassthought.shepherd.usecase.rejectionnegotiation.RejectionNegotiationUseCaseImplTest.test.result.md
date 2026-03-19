@@ -21,13 +21,29 @@ skipped: 0
   - WHEN execute is called
     - [PASS] THEN crash details mention doer defied authority
     - [PASS] THEN returns RejectionResult.AgentCrashed
+- GIVEN execute is called with a specific feedbackFilePath
+  - WHEN execute is called
+    - [PASS] THEN feedbackFileReader receives the exact path
 - GIVEN reviewer crashes during judgment
   - WHEN execute is called
     - [PASS] THEN crash details contain reviewer crash info
     - [PASS] THEN returns RejectionResult.AgentCrashed
+- GIVEN reviewer insists and doer complies (call count verification)
+  - WHEN execute is called
+    - [PASS] THEN fakeReInstruct receives exactly 2 calls
+    - [PASS] THEN first call is to reviewerHandle
+    - [PASS] THEN second call is to doerHandle
 - GIVEN reviewer insists and doer responds but leaves no resolution marker
   - WHEN execute is called
     - [PASS] THEN crash details mention missing resolution marker
+    - [PASS] THEN returns RejectionResult.AgentCrashed
+- GIVEN reviewer insists and doer writes SKIPPED resolution
+  - WHEN execute is called
+    - [PASS] THEN crash details mention SKIPPED
+    - [PASS] THEN returns RejectionResult.AgentCrashed
+- GIVEN reviewer insists and doer writes invalid resolution marker
+  - WHEN execute is called
+    - [PASS] THEN crash details mention invalid resolution marker
     - [PASS] THEN returns RejectionResult.AgentCrashed
 - GIVEN reviewer insists but doer crashes during compliance
   - WHEN execute is called
@@ -41,6 +57,10 @@ skipped: 0
   - [PASS] THEN message contains the feedback content
   - [PASS] THEN message contains the feedback file path
   - [PASS] THEN message instructs reviewer to choose pass or needs_iteration
+- GIVEN reviewer responds with Done(COMPLETED) during rejection negotiation
+  - WHEN execute is called
+    - [PASS] THEN crash details mention unexpected COMPLETED signal
+    - [PASS] THEN returns RejectionResult.AgentCrashed
 - GIVEN reviewer signals fail-workflow during judgment
   - WHEN execute is called
     - [PASS] THEN FailedWorkflow contains the reason

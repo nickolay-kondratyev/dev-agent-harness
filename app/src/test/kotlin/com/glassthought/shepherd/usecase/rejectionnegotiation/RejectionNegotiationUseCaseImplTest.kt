@@ -377,4 +377,173 @@ class RejectionNegotiationUseCaseImplTest : AsgardDescribeSpec({
             msg shouldContain "/feedback/item.md"
         }
     }
+
+    // ── Test 9: Reviewer sends Done(COMPLETED) during judgment → AgentCrashed ──
+
+    describe("GIVEN reviewer responds with Done(COMPLETED) during rejection negotiation") {
+        val doerHandle = buildHandle("doer")
+        val reviewerHandle = buildHandle("reviewer")
+
+        val fakeReInstruct = FakeReInstructAndAwait()
+        fakeReInstruct.onHandle(reviewerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.COMPLETED))
+        }
+
+        val fileReader = buildFileReader(rejectedFeedbackContent)
+        val sut = buildSut(fakeReInstruct, fileReader)
+
+        describe("WHEN execute is called") {
+            it("THEN returns RejectionResult.AgentCrashed") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                result.shouldBeInstanceOf<RejectionResult.AgentCrashed>()
+            }
+
+            it("THEN crash details mention unexpected COMPLETED signal") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                (result as RejectionResult.AgentCrashed).details shouldContain "unexpected COMPLETED signal"
+            }
+        }
+    }
+
+    // ── Test 10: Reviewer insists → doer writes SKIPPED resolution → AgentCrashed ──
+
+    describe("GIVEN reviewer insists and doer writes SKIPPED resolution") {
+        val doerHandle = buildHandle("doer")
+        val reviewerHandle = buildHandle("reviewer")
+
+        val fakeReInstruct = FakeReInstructAndAwait()
+        fakeReInstruct.onHandle(reviewerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.NEEDS_ITERATION))
+        }
+        fakeReInstruct.onHandle(doerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.COMPLETED))
+        }
+
+        val skippedFeedbackContent = """
+            |## Feedback Item: Fix the bug in parser
+            |
+            |The parser does not handle edge case X.
+            |
+            |## Resolution: SKIPPED
+            |
+            |Skipping this for now.
+        """.trimMargin()
+
+        val fileReader = buildFileReader(rejectedFeedbackContent, skippedFeedbackContent)
+        val sut = buildSut(fakeReInstruct, fileReader)
+
+        describe("WHEN execute is called") {
+            it("THEN returns RejectionResult.AgentCrashed") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                result.shouldBeInstanceOf<RejectionResult.AgentCrashed>()
+            }
+
+            it("THEN crash details mention SKIPPED") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                (result as RejectionResult.AgentCrashed).details shouldContain "SKIPPED"
+            }
+        }
+    }
+
+    // ── Test 11: Reviewer insists → doer writes invalid resolution marker → AgentCrashed ──
+
+    describe("GIVEN reviewer insists and doer writes invalid resolution marker") {
+        val doerHandle = buildHandle("doer")
+        val reviewerHandle = buildHandle("reviewer")
+
+        val fakeReInstruct = FakeReInstructAndAwait()
+        fakeReInstruct.onHandle(reviewerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.NEEDS_ITERATION))
+        }
+        fakeReInstruct.onHandle(doerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.COMPLETED))
+        }
+
+        val invalidMarkerContent = """
+            |## Feedback Item: Fix the bug in parser
+            |
+            |The parser does not handle edge case X.
+            |
+            |## Resolution: MAYBE_LATER
+            |
+            |Will look at this later.
+        """.trimMargin()
+
+        val fileReader = buildFileReader(rejectedFeedbackContent, invalidMarkerContent)
+        val sut = buildSut(fakeReInstruct, fileReader)
+
+        describe("WHEN execute is called") {
+            it("THEN returns RejectionResult.AgentCrashed") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                result.shouldBeInstanceOf<RejectionResult.AgentCrashed>()
+            }
+
+            it("THEN crash details mention invalid resolution marker") {
+                val result = sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                (result as RejectionResult.AgentCrashed).details shouldContain "invalid resolution marker"
+            }
+        }
+    }
+
+    // ── Test 12: Verify exact call count on FakeReInstructAndAwait ──
+
+    describe("GIVEN reviewer insists and doer complies (call count verification)") {
+        val doerHandle = buildHandle("doer")
+        val reviewerHandle = buildHandle("reviewer")
+
+        val fakeReInstruct = FakeReInstructAndAwait()
+        fakeReInstruct.onHandle(reviewerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.NEEDS_ITERATION))
+        }
+        fakeReInstruct.onHandle(doerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.COMPLETED))
+        }
+
+        val fileReader = buildFileReader(rejectedFeedbackContent, addressedFeedbackContent)
+        val sut = buildSut(fakeReInstruct, fileReader)
+
+        describe("WHEN execute is called") {
+            it("THEN fakeReInstruct receives exactly 2 calls") {
+                sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                fakeReInstruct.calls.size shouldBe 2
+            }
+
+            it("THEN first call is to reviewerHandle") {
+                sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                fakeReInstruct.calls[0].first shouldBe reviewerHandle
+            }
+
+            it("THEN second call is to doerHandle") {
+                sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
+                fakeReInstruct.calls[1].first shouldBe doerHandle
+            }
+        }
+    }
+
+    // ── Test 13: Verify feedbackFilePath is forwarded to feedbackFileReader ──
+
+    describe("GIVEN execute is called with a specific feedbackFilePath") {
+        val doerHandle = buildHandle("doer")
+        val reviewerHandle = buildHandle("reviewer")
+        val specificPath = Path.of("/custom/path/to/feedback-item.md")
+
+        val fakeReInstruct = FakeReInstructAndAwait()
+        fakeReInstruct.onHandle(reviewerHandle) {
+            ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.PASS))
+        }
+
+        val capturedPaths = mutableListOf<Path>()
+        val capturingFileReader = FeedbackFileReader { path ->
+            capturedPaths.add(path)
+            rejectedFeedbackContent
+        }
+        val sut = buildSut(fakeReInstruct, capturingFileReader)
+
+        describe("WHEN execute is called") {
+            it("THEN feedbackFileReader receives the exact path") {
+                sut.execute(doerHandle, reviewerHandle, specificPath)
+                capturedPaths.first() shouldBe specificPath
+            }
+        }
+    }
 })
