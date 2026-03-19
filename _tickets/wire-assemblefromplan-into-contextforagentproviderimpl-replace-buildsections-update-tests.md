@@ -1,11 +1,11 @@
 ---
 id: nid_zseecydaikj0f2i2l14nwcfax_E
 title: "Wire assembleFromPlan into ContextForAgentProviderImpl — replace build*Sections + update tests"
-status: open
+status: in_progress
 deps: [nid_r2rdkc0t9jd9597sumbgzp7aw_E, nid_gp9rduvxoqf14m95z9bttnaxq_E]
 links: [nid_7vpbal1qdmrvt23g44vpq6hgv_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_r2rdkc0t9jd9597sumbgzp7aw_E, nid_7xzhkw4pw5sc5hqh80cvsotdc_E]
 created_iso: 2026-03-18T18:18:07Z
-status_updated_iso: 2026-03-18T18:18:07Z
+status_updated_iso: 2026-03-19T16:59:59Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
