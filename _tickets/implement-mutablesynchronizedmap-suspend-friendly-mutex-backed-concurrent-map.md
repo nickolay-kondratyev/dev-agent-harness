@@ -1,11 +1,11 @@
 ---
 id: nid_89bw63qr6qyewthjq4wp3x0so_E
 title: "Implement MutableSynchronizedMap — suspend-friendly Mutex-backed concurrent map"
-status: in_progress
+status: open
 deps: []
 links: []
 created_iso: 2026-03-19T00:38:57Z
-status_updated_iso: 2026-03-19T17:40:38Z
+status_updated_iso: 2026-03-19T18:26:16Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
