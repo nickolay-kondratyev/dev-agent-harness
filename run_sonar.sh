@@ -11,6 +11,10 @@ fi
 
 mkdir -p .tmp/
 
+# Generate coverage XML first so Sonar picks it up via sonar.coverage.jacoco.xmlReportPaths.
+echo "Generating coverage report..."
+./gradlew :app:koverXmlReport 2>&1 | tee .tmp/coverage.txt
+
 # Run SonarCloud analysis (configuration cache is incompatible with sonar plugin)
 echo "Running SonarCloud analysis..."
 ./gradlew sonar --no-configuration-cache 2>&1 | tee .tmp/sonar_analysis.txt

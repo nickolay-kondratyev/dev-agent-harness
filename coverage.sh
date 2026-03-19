@@ -10,4 +10,4 @@ mkdir -p .tmp/
 ./gradlew :app:koverXmlReport 2>&1 | tee .tmp/coverage.txt
 
 echo ""
-echo "Coverage report: .out/coverage.xml"
+echo "Coverage report: .out/coverage.xml (picked up by run_sonar.sh via sonar.coverage.jacoco.xmlReportPaths)"
