@@ -4,7 +4,7 @@ object Constants {
   /** Claude Code CLI configuration. */
   object CLAUDE_CODE {
     /** Root directory where Claude Code stores JSONL session files.
-     *  Used by [ClaudeCodeAgentSessionIdResolver] to scan for HandshakeGuid matches. */
+     *  Used by [com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter] to scan for HandshakeGuid matches. */
     fun defaultProjectsDir(): java.nio.file.Path =
       java.nio.file.Path.of(System.getProperty("user.home"), ".claude", "projects")
   }

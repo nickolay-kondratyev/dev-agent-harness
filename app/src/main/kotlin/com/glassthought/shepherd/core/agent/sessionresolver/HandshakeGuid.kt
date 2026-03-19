@@ -12,7 +12,7 @@ import java.util.UUID
  * Always create instances via [generate] to ensure the required `handshake.` prefix is present.
  * The prefix makes GUIDs greppable in logs and distinguishable from agent session IDs.
  *
- * This is used by [AgentSessionIdResolver]/ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E to resolve the agent session ID from the GUID.
+ * This is used by [com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter]/ref.ap.hhP3gT9qK2mR8vNwX5dYa.E to resolve the agent session ID from the GUID.
  */
 @AnchorPoint("ap.tzGA4RjdwGjQr9oZ0U2PsjhW.E")
 @JvmInline
