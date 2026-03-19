@@ -1,11 +1,11 @@
 ---
 id: nid_89a09ady4m86saemw4rul5b4s_E
 title: "Implement SetupPlanUseCase — route to straightforward or detailed planning"
-status: open
+status: in_progress
 deps: [nid_kavqh23pdfq56cdli0fv4sm3u_E, nid_m3cm8xizw5qhu1cu3454rca79_E, nid_7uh4ju2nel6sqqyuhqrp8ouny_E]
 links: []
 created_iso: 2026-03-19T00:39:32Z
-status_updated_iso: 2026-03-19T00:39:32Z
+status_updated_iso: 2026-03-19T19:56:42Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
