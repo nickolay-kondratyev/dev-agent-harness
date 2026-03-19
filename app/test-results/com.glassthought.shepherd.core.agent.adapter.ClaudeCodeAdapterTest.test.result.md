@@ -38,6 +38,28 @@ skipped: 0
   - AND workingDir containing single quote
     - WHEN buildStartCommand is called
       - [PASS] THEN single quote in workingDir is properly escaped
+- GIVEN ClaudeCodeAdapter with GlmConfig
+  - WHEN buildStartCommand is called
+    - [PASS] THEN GLM exports appear before cd to working directory
+    - [PASS] THEN command contains ANTHROPIC_AUTH_TOKEN export with the token value
+    - [PASS] THEN command contains ANTHROPIC_BASE_URL export
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export
+    - [PASS] THEN command contains CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 export
+    - [PASS] THEN command still contains the cd and claude command after GLM exports
+- GIVEN ClaudeCodeAdapter without GlmConfig (null)
+  - WHEN buildStartCommand is called
+    - [PASS] THEN command does NOT contain ANTHROPIC_AUTH_TOKEN
+    - [PASS] THEN command does NOT contain ANTHROPIC_BASE_URL
+    - [PASS] THEN command does NOT contain CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC
+    - [PASS] THEN command starts with bash -c and cd (no GLM prefix)
+- GIVEN GlmConfig.standard factory
+  - [PASS] THEN authToken matches provided token
+  - [PASS] THEN baseUrl is the Z.AI endpoint
+  - [PASS] THEN defaultHaikuModel is glm-4-flash
+  - [PASS] THEN defaultOpusModel is glm-5
+  - [PASS] THEN defaultSonnetModel is glm-5
 - GIVEN a ClaudeCodeAdapter with a fake GuidScanner
   - AND the scanner always returns empty and timeout is very short
     - WHEN resolveSessionId is called

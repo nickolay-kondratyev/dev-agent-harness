@@ -13,6 +13,7 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
+import com.glassthought.shepherd.core.agent.adapter.GlmConfig
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.Constants
 import java.nio.file.Path
@@ -99,6 +100,8 @@ class ContextInitializerImpl(
   private fun initializeImpl(
     outFactory: OutFactory,
   ): ShepherdContext {
+    val zaiApiKey = readZaiApiKey()
+
     val commandRunner = TmuxCommandRunner()
     val communicator = TmuxCommunicatorImpl(outFactory, commandRunner)
     val sessionManager = TmuxSessionManager(outFactory, commandRunner, communicator)
@@ -109,10 +112,15 @@ class ContextInitializerImpl(
       sessionManager = sessionManager,
     )
 
+    // GLM config is wired so that spawned Claude Code agents can be redirected to GLM (Z.AI).
+    // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
+    val glmConfig = GlmConfig.standard(authToken = zaiApiKey)
+
     val claudeCodeInfra = ClaudeCodeInfra(
       agentTypeAdapter = ClaudeCodeAdapter.create(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
+        glmConfig = glmConfig,
       ),
     )
 
@@ -122,7 +130,7 @@ class ContextInitializerImpl(
       claudeCode = claudeCodeInfra,
     )
 
-    val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory)
+    val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory, zaiApiKey)
 
     return ShepherdContext(
       infra = infra,
@@ -130,7 +138,7 @@ class ContextInitializerImpl(
     )
   }
 
-  private fun createNonInteractiveAgentRunner(outFactory: OutFactory): NonInteractiveAgentRunner {
+  private fun readZaiApiKey(): String {
     val myEnv = envVarReader(Constants.REQUIRED_ENV_VARS.MY_ENV)
       ?: error("${Constants.REQUIRED_ENV_VARS.MY_ENV} env var is not set")
 
@@ -149,6 +157,13 @@ class ContextInitializerImpl(
       "ZAI API key file at [$zaiApiKeyPath] is empty."
     }
 
+    return zaiApiKey
+  }
+
+  private fun createNonInteractiveAgentRunner(
+    outFactory: OutFactory,
+    zaiApiKey: String,
+  ): NonInteractiveAgentRunner {
     val processRunner = processRunnerFactory(outFactory)
 
     return NonInteractiveAgentRunnerImpl(

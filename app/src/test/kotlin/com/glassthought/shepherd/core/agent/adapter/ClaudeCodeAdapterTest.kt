@@ -245,6 +245,134 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
     }
 
+    // -- GLM config injection tests --
+
+    describe("GIVEN ClaudeCodeAdapter with GlmConfig") {
+        val glmConfig = GlmConfig(
+            baseUrl = "https://api.z.ai/api/anthropic",
+            authToken = "test-token-abc123",
+            defaultOpusModel = "glm-5",
+            defaultSonnetModel = "glm-5",
+            defaultHaikuModel = "glm-4-flash",
+        )
+
+        val adapter = ClaudeCodeAdapter(
+            guidScanner = GuidScanner { emptyList() },
+            outFactory = outFactory,
+            glmConfig = glmConfig,
+        )
+
+        val params = BuildStartCommandParams(
+            bootstrapMessage = bootstrapMessage,
+            handshakeGuid = testGuid,
+            workingDir = "/home/user/project",
+            model = "sonnet",
+            tools = listOf("Read"),
+            systemPromptFilePath = null,
+            appendSystemPrompt = false,
+        )
+
+        describe("WHEN buildStartCommand is called") {
+            val command = adapter.buildStartCommand(params).command
+
+            it("THEN command contains ANTHROPIC_BASE_URL export") {
+                command shouldContain "export ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic"
+            }
+
+            it("THEN command contains ANTHROPIC_AUTH_TOKEN export with the token value") {
+                command shouldContain "export ANTHROPIC_AUTH_TOKEN=test-token-abc123"
+            }
+
+            it("THEN command contains CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 export") {
+                command shouldContain "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
+            }
+
+            it("THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export") {
+                command shouldContain "export ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5"
+            }
+
+            it("THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export") {
+                command shouldContain "export ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5"
+            }
+
+            it("THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export") {
+                command shouldContain "export ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-4-flash"
+            }
+
+            it("THEN GLM exports appear before cd to working directory") {
+                val glmIndex = command.indexOf("export ANTHROPIC_BASE_URL")
+                val cdIndex = command.indexOf("cd /home/user/project")
+                (glmIndex < cdIndex) shouldBe true
+            }
+
+            it("THEN command still contains the cd and claude command after GLM exports") {
+                command shouldContain "cd /home/user/project && unset CLAUDECODE"
+            }
+        }
+    }
+
+    describe("GIVEN ClaudeCodeAdapter without GlmConfig (null)") {
+        val adapter = ClaudeCodeAdapter(
+            guidScanner = GuidScanner { emptyList() },
+            outFactory = outFactory,
+            glmConfig = null,
+        )
+
+        val params = BuildStartCommandParams(
+            bootstrapMessage = bootstrapMessage,
+            handshakeGuid = testGuid,
+            workingDir = "/home/user/project",
+            model = "sonnet",
+            tools = listOf("Read"),
+            systemPromptFilePath = null,
+            appendSystemPrompt = false,
+        )
+
+        describe("WHEN buildStartCommand is called") {
+            val command = adapter.buildStartCommand(params).command
+
+            it("THEN command does NOT contain ANTHROPIC_BASE_URL") {
+                command shouldNotContain "ANTHROPIC_BASE_URL"
+            }
+
+            it("THEN command does NOT contain ANTHROPIC_AUTH_TOKEN") {
+                command shouldNotContain "ANTHROPIC_AUTH_TOKEN"
+            }
+
+            it("THEN command does NOT contain CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC") {
+                command shouldNotContain "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC"
+            }
+
+            it("THEN command starts with bash -c and cd (no GLM prefix)") {
+                command shouldContain "bash -c 'cd /home/user/project && unset CLAUDECODE"
+            }
+        }
+    }
+
+    describe("GIVEN GlmConfig.standard factory") {
+        val config = GlmConfig.standard(authToken = "my-secret-token")
+
+        it("THEN baseUrl is the Z.AI endpoint") {
+            config.baseUrl shouldBe "https://api.z.ai/api/anthropic"
+        }
+
+        it("THEN authToken matches provided token") {
+            config.authToken shouldBe "my-secret-token"
+        }
+
+        it("THEN defaultOpusModel is glm-5") {
+            config.defaultOpusModel shouldBe "glm-5"
+        }
+
+        it("THEN defaultSonnetModel is glm-5") {
+            config.defaultSonnetModel shouldBe "glm-5"
+        }
+
+        it("THEN defaultHaikuModel is glm-4-flash") {
+            config.defaultHaikuModel shouldBe "glm-4-flash"
+        }
+    }
+
     // -- resolveSessionId tests --
 
     describe("GIVEN a ClaudeCodeAdapter with a temp projects directory") {
