@@ -41,11 +41,11 @@ skipped: 0
 - GIVEN ClaudeCodeAdapter with GlmConfig
   - WHEN buildStartCommand is called
     - [PASS] THEN GLM exports appear before cd to working directory
-    - [PASS] THEN command contains ANTHROPIC_AUTH_TOKEN export with the token value
-    - [PASS] THEN command contains ANTHROPIC_BASE_URL export
-    - [PASS] THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export
-    - [PASS] THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export
-    - [PASS] THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export
+    - [PASS] THEN command contains ANTHROPIC_AUTH_TOKEN export with quoted token value
+    - [PASS] THEN command contains ANTHROPIC_BASE_URL export with quoted value
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export with quoted value
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export with quoted value
+    - [PASS] THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export with quoted value
     - [PASS] THEN command contains CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 export
     - [PASS] THEN command still contains the cd and claude command after GLM exports
 - GIVEN ClaudeCodeAdapter without GlmConfig (null)

@@ -275,28 +275,28 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         describe("WHEN buildStartCommand is called") {
             val command = adapter.buildStartCommand(params).command
 
-            it("THEN command contains ANTHROPIC_BASE_URL export") {
-                command shouldContain "export ANTHROPIC_BASE_URL=https://api.z.ai/api/anthropic"
+            it("THEN command contains ANTHROPIC_BASE_URL export with quoted value") {
+                command shouldContain """export ANTHROPIC_BASE_URL="https://api.z.ai/api/anthropic""""
             }
 
-            it("THEN command contains ANTHROPIC_AUTH_TOKEN export with the token value") {
-                command shouldContain "export ANTHROPIC_AUTH_TOKEN=test-token-abc123"
+            it("THEN command contains ANTHROPIC_AUTH_TOKEN export with quoted token value") {
+                command shouldContain """export ANTHROPIC_AUTH_TOKEN="test-token-abc123""""
             }
 
             it("THEN command contains CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1 export") {
                 command shouldContain "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1"
             }
 
-            it("THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export") {
-                command shouldContain "export ANTHROPIC_DEFAULT_OPUS_MODEL=glm-5"
+            it("THEN command contains ANTHROPIC_DEFAULT_OPUS_MODEL export with quoted value") {
+                command shouldContain """export ANTHROPIC_DEFAULT_OPUS_MODEL="glm-5""""
             }
 
-            it("THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export") {
-                command shouldContain "export ANTHROPIC_DEFAULT_SONNET_MODEL=glm-5"
+            it("THEN command contains ANTHROPIC_DEFAULT_SONNET_MODEL export with quoted value") {
+                command shouldContain """export ANTHROPIC_DEFAULT_SONNET_MODEL="glm-5""""
             }
 
-            it("THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export") {
-                command shouldContain "export ANTHROPIC_DEFAULT_HAIKU_MODEL=glm-4-flash"
+            it("THEN command contains ANTHROPIC_DEFAULT_HAIKU_MODEL export with quoted value") {
+                command shouldContain """export ANTHROPIC_DEFAULT_HAIKU_MODEL="glm-4-flash""""
             }
 
             it("THEN GLM exports appear before cd to working directory") {

@@ -33,7 +33,7 @@ object SharedContextIntegFactory {
      *  Meant to be shared between the integration tests to keep the wire up of tests faster.
      *  */
     internal val shepherdContext: ShepherdContext = runBlocking {
-        ContextInitializer.standard().initialize(
+        ContextInitializer.forIntegTest().initialize(
             outFactory = testOutManager.outFactory,
         )
     }

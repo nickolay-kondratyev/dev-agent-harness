@@ -37,12 +37,12 @@ data class GlmConfig(
      * concatenation with the rest of the inner command.
      */
     fun toEnvVarExports(): String = listOf(
-        "export ANTHROPIC_BASE_URL=$baseUrl",
-        "export ANTHROPIC_AUTH_TOKEN=$authToken",
+        "export ANTHROPIC_BASE_URL=\"$baseUrl\"",
+        "export ANTHROPIC_AUTH_TOKEN=\"$authToken\"",
         "export CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC=1",
-        "export ANTHROPIC_DEFAULT_OPUS_MODEL=$defaultOpusModel",
-        "export ANTHROPIC_DEFAULT_SONNET_MODEL=$defaultSonnetModel",
-        "export ANTHROPIC_DEFAULT_HAIKU_MODEL=$defaultHaikuModel",
+        "export ANTHROPIC_DEFAULT_OPUS_MODEL=\"$defaultOpusModel\"",
+        "export ANTHROPIC_DEFAULT_SONNET_MODEL=\"$defaultSonnetModel\"",
+        "export ANTHROPIC_DEFAULT_HAIKU_MODEL=\"$defaultHaikuModel\"",
     ).joinToString(" && ")
 
     companion object {

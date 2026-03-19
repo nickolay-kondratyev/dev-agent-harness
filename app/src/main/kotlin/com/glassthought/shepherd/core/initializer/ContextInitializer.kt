@@ -68,7 +68,14 @@ fun interface ContextInitializer {
   ): ShepherdContext
 
   companion object {
+    /** Production wiring — GLM is NOT enabled; agents use the real Anthropic API. */
     fun standard(): ContextInitializer = ContextInitializerImpl()
+
+    /**
+     * Integration test wiring — GLM IS enabled; agents are redirected to GLM (Z.AI).
+     * See `ai_input/memory/deep/integ_tests__use_glm_for_agent_spawning.md` for rationale.
+     */
+    fun forIntegTest(): ContextInitializer = ContextInitializerImpl(glmEnabled = true)
   }
 }
 
@@ -84,6 +91,7 @@ class ContextInitializerImpl(
   private val envVarReader: (String) -> String? = System::getenv,
   private val fileReader: (Path) -> String = { it.toFile().readText() },
   private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
+  private val glmEnabled: Boolean = false,
 ) : ContextInitializer {
 
   override suspend fun initialize(
@@ -112,9 +120,10 @@ class ContextInitializerImpl(
       sessionManager = sessionManager,
     )
 
-    // GLM config is wired so that spawned Claude Code agents can be redirected to GLM (Z.AI).
+    // GLM config redirects spawned Claude Code agents to GLM (Z.AI) instead of real Anthropic API.
+    // Only enabled for integration tests — production agents use the real Anthropic API.
     // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
-    val glmConfig = GlmConfig.standard(authToken = zaiApiKey)
+    val glmConfig = if (glmEnabled) GlmConfig.standard(authToken = zaiApiKey) else null
 
     val claudeCodeInfra = ClaudeCodeInfra(
       agentTypeAdapter = ClaudeCodeAdapter.create(
