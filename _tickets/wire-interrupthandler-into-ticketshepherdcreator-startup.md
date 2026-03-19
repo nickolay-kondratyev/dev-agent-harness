@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:20:51Z
 id: nid_gclq0es4q9fxjekl3czp9xtyw_E
 title: "Wire InterruptHandler into TicketShepherdCreator startup"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T17:55:49Z
-status_updated_iso: 2026-03-19T18:03:37Z
+status_updated_iso: 2026-03-19T18:20:51Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
