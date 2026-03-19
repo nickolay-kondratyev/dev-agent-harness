@@ -27,8 +27,8 @@ class QaAnswersFileWriterTest : AsgardDescribeSpec({
                 filePath.fileName.toString() shouldBe "qa_answers.md"
             }
 
-            it("THEN content starts with QA Answers header") {
-                content shouldContain "## QA Answers"
+            it("THEN content starts with Q&A Answers header") {
+                content shouldContain "## Q&A Answers"
             }
 
             it("THEN content contains Question 1 heading") {
@@ -79,6 +79,29 @@ class QaAnswersFileWriterTest : AsgardDescribeSpec({
                 content shouldContain "**Answer:** Answer A."
                 content shouldContain "**Answer:** Answer B."
                 content shouldContain "**Answer:** Answer C."
+            }
+        }
+    }
+
+    describe("GIVEN QA pair with multiline question") {
+        val qaList = listOf(
+            QuestionAndAnswer(
+                question = "First line of question\nSecond line of question\nThird line of question",
+                answer = "Answer to multiline question.",
+            ),
+        )
+
+        describe("WHEN written to file") {
+            val tempDir = Files.createTempDirectory("qa-writer-test")
+            val filePath = writer.write(qaList, tempDir)
+            val content = filePath.readText()
+
+            it("THEN each line of the question is prefixed with blockquote marker") {
+                content shouldContain "> First line of question\n> Second line of question\n> Third line of question"
+            }
+
+            it("THEN answer is present after blockquote") {
+                content shouldContain "**Answer:** Answer to multiline question."
             }
         }
     }

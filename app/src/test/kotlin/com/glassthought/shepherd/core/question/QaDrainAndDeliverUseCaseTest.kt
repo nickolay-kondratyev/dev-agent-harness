@@ -100,9 +100,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             }
 
             it("THEN questions were received in order") {
-                fakeHandler.receivedQuestions[0] shouldBe "Q1?"
-                fakeHandler.receivedQuestions[1] shouldBe "Q2?"
-                fakeHandler.receivedQuestions[2] shouldBe "Q3?"
+                fakeHandler.receivedQuestions shouldBe listOf("Q1?", "Q2?", "Q3?")
             }
         }
     }
@@ -212,7 +210,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             val content = tempDir.resolve("qa_answers.md").toFile().readText()
 
             it("THEN qa_answers.md matches spec format with header") {
-                content shouldContain "## QA Answers"
+                content shouldContain "## Q&A Answers"
             }
 
             it("THEN question 1 blockquote is correct") {

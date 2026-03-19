@@ -23,7 +23,7 @@ interface QaAnswersFileWriter {
  *
  * Renders the markdown format specified in the agent-to-server communication protocol:
  * ```
- * ## QA Answers
+ * ## Q&A Answers
  *
  * ### Question 1
  * > question text
@@ -42,12 +42,14 @@ class QaAnswersFileWriterImpl : QaAnswersFileWriter {
 
     private fun renderMarkdown(qaList: List<QuestionAndAnswer>): String {
         val sb = StringBuilder()
-        sb.appendLine("## QA Answers")
+        sb.appendLine("## Q&A Answers")
 
         qaList.forEachIndexed { index, qa ->
             sb.appendLine()
             sb.appendLine("### Question ${index + 1}")
-            sb.appendLine("> ${qa.question}")
+            qa.question.lines().forEach { line ->
+                sb.appendLine("> $line")
+            }
             sb.appendLine()
             sb.appendLine("**Answer:** ${qa.answer}")
         }

@@ -42,7 +42,7 @@ class QaDrainAndDeliverUseCase(
 
             out.info(
                 "processing_pending_question",
-                Val((collectedQAs.size + 1).toString(), ValType.STRING_USER_AGNOSTIC),
+                Val(collectedQAs.size + 1, ValType.COUNT),
             )
 
             val questionContext = toQuestionContext(pending.context)
@@ -57,7 +57,7 @@ class QaDrainAndDeliverUseCase(
 
         out.info(
             "writing_qa_answers_file",
-            Val(collectedQAs.size.toString(), ValType.STRING_USER_AGNOSTIC),
+            Val(collectedQAs.size, ValType.COUNT),
         )
 
         val filePath = qaAnswersFileWriter.write(collectedQAs, commInDir)
@@ -66,7 +66,7 @@ class QaDrainAndDeliverUseCase(
 
         out.info(
             "delivering_qa_answers_to_agent",
-            Val(filePath.toAbsolutePath().toString(), ValType.STRING_USER_AGNOSTIC),
+            Val(filePath.toAbsolutePath().toString(), ValType.FILE_PATH_STRING),
         )
 
         ackedPayloadSender.sendAndAwaitAck(
