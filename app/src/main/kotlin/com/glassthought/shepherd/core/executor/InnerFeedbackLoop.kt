@@ -462,7 +462,7 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
                 iterationNumber = currentIteration,
                 outputDir = doerConfig.outputDir,
                 publicMdOutputPath = doerConfig.publicMdOutputPath,
-                privateMdPath = doerConfig.privateMdPath,
+                subPartName = doerConfig.subPartName,
                 executionContext = doerConfig.executionContext,
                 feedbackItem = com.glassthought.shepherd.core.context.InstructionSection.FeedbackItem(
                     feedbackContent = feedbackContent,

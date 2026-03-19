@@ -40,12 +40,13 @@ class InstructionSectionTest : AsgardDescribeSpec({
 
     // ── PrivateMd ────────────────────────────────────────────────────────────
 
-    describe("GIVEN a PrivateMd section with privateMdPath = null") {
+    describe("GIVEN a PrivateMd section with resolvedPath = null") {
         val tempDir = Files.createTempDirectory("section-privatemd-null-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val section = InstructionSection.PrivateMd(resolvedPath = null)
 
         describe("WHEN rendered") {
-            val result = InstructionSection.PrivateMd.render(request)
+            val result = section.render(request)
 
             it("THEN returns null") {
                 result.shouldBeNull()
@@ -55,11 +56,11 @@ class InstructionSectionTest : AsgardDescribeSpec({
 
     describe("GIVEN a PrivateMd section with non-existent file") {
         val tempDir = Files.createTempDirectory("section-privatemd-noexist-test")
-        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
-        val request = baseRequest.copy(privateMdPath = tempDir.resolve("does-not-exist.md"))
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val section = InstructionSection.PrivateMd(resolvedPath = tempDir.resolve("does-not-exist.md"))
 
         describe("WHEN rendered") {
-            val result = InstructionSection.PrivateMd.render(request)
+            val result = section.render(request)
 
             it("THEN returns null") {
                 result.shouldBeNull()
@@ -69,14 +70,14 @@ class InstructionSectionTest : AsgardDescribeSpec({
 
     describe("GIVEN a PrivateMd section with blank file") {
         val tempDir = Files.createTempDirectory("section-privatemd-blank-test")
-        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         val blankFile = tempDir.resolve("PRIVATE.md")
         Files.writeString(blankFile, "   \n  ")
-        val request = baseRequest.copy(privateMdPath = blankFile)
+        val section = InstructionSection.PrivateMd(resolvedPath = blankFile)
 
         describe("WHEN rendered") {
-            val result = InstructionSection.PrivateMd.render(request)
+            val result = section.render(request)
 
             it("THEN returns null") {
                 result.shouldBeNull()
@@ -86,14 +87,14 @@ class InstructionSectionTest : AsgardDescribeSpec({
 
     describe("GIVEN a PrivateMd section with existing non-blank file") {
         val tempDir = Files.createTempDirectory("section-privatemd-present-test")
-        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         val privateMdFile = tempDir.resolve("PRIVATE.md")
         Files.writeString(privateMdFile, "Prior session context content.")
-        val request = baseRequest.copy(privateMdPath = privateMdFile)
+        val section = InstructionSection.PrivateMd(resolvedPath = privateMdFile)
 
         describe("WHEN rendered") {
-            val result = InstructionSection.PrivateMd.render(request)
+            val result = section.render(request)
 
             it("THEN returns non-null") {
                 result.shouldNotBeNull()

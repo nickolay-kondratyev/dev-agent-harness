@@ -118,7 +118,7 @@ skipped: 0
 - GIVEN a PrivateMd section with non-existent file
   - WHEN rendered
     - [PASS] THEN returns null
-- GIVEN a PrivateMd section with privateMdPath = null
+- GIVEN a PrivateMd section with resolvedPath = null
   - WHEN rendered
     - [PASS] THEN returns null
 - GIVEN a RoleCatalog section with a DoerRequest

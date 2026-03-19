@@ -52,11 +52,10 @@ class InstructionPlanAssemblerTest : AsgardDescribeSpec({
         val assembler = InstructionPlanAssembler(outFactory)
         val tempDir = Files.createTempDirectory("assembler-skip-null-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
-        // PrivateMd returns null when privateMdPath is null (default in fixture)
-
+        // PrivateMd returns null when resolvedPath points to non-existent file
         val plan = listOf(
             InstructionSection.RoleDefinition,
-            InstructionSection.PrivateMd,  // will return null
+            InstructionSection.PrivateMd(resolvedPath = Path.of("/tmp/nonexistent/PRIVATE.md")),  // will return null
             InstructionSection.Ticket,
         )
 
