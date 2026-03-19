@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T20:20:04Z
 id: nid_74c83cczud9jnwk1l1ywc8w2y_E
 title: "Implement performCompaction() + done-boundary trigger detection in PartExecutorImpl"
-status: in_progress
+status: closed
 deps: [nid_5z93biuqub3mhcejfpofjmj39_E, nid_kwebixws6qqn808x4904f2gtr_E, nid_6kqfuee0ryuf45se8c06t6v3a_E, nid_i28ll9uk8k9uvdv3gus2izj4o_E, nid_mebn70o7xjiabzx5uxngjx8uf_E]
 links: []
 created_iso: 2026-03-19T00:42:28Z
-status_updated_iso: 2026-03-19T19:52:30Z
+status_updated_iso: 2026-03-19T20:20:04Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

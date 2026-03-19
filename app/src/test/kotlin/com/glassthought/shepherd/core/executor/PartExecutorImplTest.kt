@@ -1,6 +1,8 @@
 package com.glassthought.shepherd.core.executor
 
+import com.asgard.core.out.LogLevel
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
 import com.glassthought.shepherd.core.agent.facade.AgentPayload
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
 import com.glassthought.shepherd.core.agent.facade.ContextWindowState
@@ -11,10 +13,12 @@ import com.glassthought.shepherd.core.agent.facade.SpawnedAgentHandle
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessionId
+import com.glassthought.shepherd.core.compaction.SelfCompactionInstructionBuilder
 import com.glassthought.shepherd.core.context.AgentInstructionRequest
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
 import com.glassthought.shepherd.core.context.ExecutionContext
 import com.glassthought.shepherd.core.data.AgentType
+import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.state.IterationConfig
 import com.glassthought.shepherd.core.state.PartResult
 import com.glassthought.shepherd.core.state.SubPartRole
@@ -28,12 +32,15 @@ import com.glassthought.shepherd.usecase.rejectionnegotiation.RejectionNegotiati
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Instant
 
-class PartExecutorImplTest : AsgardDescribeSpec({
+class PartExecutorImplTest : AsgardDescribeSpec(
+    config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
+    body = {
 
     // ── Helpers ────────────────────────────────────────────────────────
 
@@ -86,7 +93,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         return publicMd
     }
 
-    fun buildDoerConfig(publicMdPath: Path): SubPartConfig = SubPartConfig(
+    fun buildDoerConfig(publicMdPath: Path, privateMdPath: Path? = null): SubPartConfig = SubPartConfig(
         partName = "part_1",
         subPartName = "doer",
         subPartIndex = 0,
@@ -99,11 +106,15 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         ticketContent = "Test ticket",
         outputDir = publicMdPath.parent,
         publicMdOutputPath = publicMdPath,
-        privateMdPath = null,
+        privateMdPath = privateMdPath,
         executionContext = testExecutionContext,
     )
 
-    fun buildReviewerConfig(publicMdPath: Path, feedbackDir: Path? = null): SubPartConfig = SubPartConfig(
+    fun buildReviewerConfig(
+        publicMdPath: Path,
+        feedbackDir: Path? = null,
+        privateMdPath: Path? = null,
+    ): SubPartConfig = SubPartConfig(
         partName = "part_1",
         subPartName = "reviewer",
         subPartIndex = 1,
@@ -116,7 +127,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         ticketContent = "Test ticket",
         outputDir = publicMdPath.parent,
         publicMdOutputPath = publicMdPath,
-        privateMdPath = null,
+        privateMdPath = privateMdPath,
         executionContext = testExecutionContext,
         doerPublicMdPath = Path.of("/tmp/doer/PUBLIC.md"),
         feedbackDir = feedbackDir ?: publicMdPath.parent.resolve("__feedback"),
@@ -151,6 +162,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         gitCommitStrategy: GitCommitStrategy = RecordingGitCommitStrategy(),
         failedToConvergeUseCase: FailedToConvergeUseCase = abortingFailedToConverge,
         iterationConfig: IterationConfig = IterationConfig(max = 3),
+        harnessTimeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
     ): PartExecutorImpl = PartExecutorImpl(
         doerConfig = doerConfig,
         reviewerConfig = reviewerConfig,
@@ -160,6 +172,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
             gitCommitStrategy = gitCommitStrategy,
             failedToConvergeUseCase = failedToConvergeUseCase,
             outFactory = outFactory,
+            harnessTimeoutConfig = harnessTimeoutConfig,
         ),
         iterationConfig = iterationConfig,
     )
@@ -464,10 +477,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
     }
 
     // ── Doer+Reviewer: Iteration (NEEDS_ITERATION → reviewer re-instruction → PASS) ──
-    // NOTE: With the inner feedback loop architecture, after NEEDS_ITERATION the inner loop
-    // handles doer re-instruction per-item. When innerFeedbackLoop is null (these tests),
-    // the inner loop is skipped and the reviewer is re-instructed directly.
-    // Flow: doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS (3 signals).
+    // NOTE: After NEEDS_ITERATION, the outer loop re-instructs the doer before the reviewer.
+    // When innerFeedbackLoop is null, the inner loop is skipped.
+    // Flow: doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS (4 signals).
 
     describe("GIVEN a doer+reviewer executor") {
         describe("WHEN reviewer sends NEEDS_ITERATION then PASS on next round") {
@@ -485,6 +497,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
                         AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
@@ -517,9 +530,10 @@ class PartExecutorImplTest : AsgardDescribeSpec({
 
                 val signalQueue = ArrayDeque(
                     listOf(
-                        AgentSignal.Done(DoneResult.COMPLETED),
-                        AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.PASS),
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
 
@@ -538,9 +552,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 )
                 executor.execute()
 
-                // 3 Done signals = 3 git commits (doer COMPLETED, reviewer NEEDS_ITERATION,
-                // reviewer PASS). Inner loop doer re-instruction is handled by InnerFeedbackLoop.
-                gitStrategy.calls shouldHaveSize 3
+                // 4 Done signals = 4 git commits (doer COMPLETED, reviewer NEEDS_ITERATION,
+                // doer COMPLETED re-instructed, reviewer PASS).
+                gitStrategy.calls shouldHaveSize 4
             }
         }
     }
@@ -603,6 +617,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0 → budget exceeded
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
                         AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1 (after budget extension)
                     )
                 )
@@ -773,9 +788,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
     // ── Doer+Reviewer: Context window read at each done boundary ────────
 
     describe("GIVEN a doer+reviewer executor with iteration") {
-        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS") {
+        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS") {
 
-            it("THEN readContextWindowState is called 3 times (once per Done signal)") {
+            it("THEN readContextWindowState is called 4 times (once per Done signal)") {
                 val doerPublicMd = createPublicMdFile("doer output")
                 val reviewerPublicMd = createPublicMdFile("reviewer output")
                 val doerConfig = buildDoerConfig(doerPublicMd)
@@ -783,9 +798,10 @@ class PartExecutorImplTest : AsgardDescribeSpec({
 
                 val signalQueue = ArrayDeque(
                     listOf(
-                        AgentSignal.Done(DoneResult.COMPLETED),
-                        AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.PASS),
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
 
@@ -800,9 +816,8 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
                 executor.execute()
 
-                // 3 Done signals = 3 readContextWindowState calls.
-                // Inner loop doer re-instruction is handled by InnerFeedbackLoop (null here).
-                facade.readContextWindowStateCalls shouldHaveSize 3
+                // 4 Done signals = 4 readContextWindowState calls.
+                facade.readContextWindowStateCalls shouldHaveSize 4
             }
         }
     }
@@ -871,9 +886,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
     // ── Doer+Reviewer: sendPayload called correct number of times ───────
 
     describe("GIVEN a doer+reviewer executor with one iteration") {
-        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS") {
+        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS") {
 
-            it("THEN sendPayloadAndAwaitSignal is called 3 times") {
+            it("THEN sendPayloadAndAwaitSignal is called 4 times") {
                 val doerPublicMd = createPublicMdFile("doer output")
                 val reviewerPublicMd = createPublicMdFile("reviewer output")
                 val doerConfig = buildDoerConfig(doerPublicMd)
@@ -881,9 +896,10 @@ class PartExecutorImplTest : AsgardDescribeSpec({
 
                 val signalQueue = ArrayDeque(
                     listOf(
-                        AgentSignal.Done(DoneResult.COMPLETED),
-                        AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.PASS),
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
 
@@ -900,9 +916,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 )
                 executor.execute()
 
-                // 3 signals: doer instructions, reviewer instructions, reviewer re-instructions.
-                // Inner loop doer re-instruction is handled by InnerFeedbackLoop (null here).
-                facade.sendPayloadCalls shouldHaveSize 3
+                // 4 signals: doer instructions, reviewer instructions,
+                // doer re-instructions, reviewer re-instructions.
+                facade.sendPayloadCalls shouldHaveSize 4
             }
         }
     }
@@ -936,13 +952,14 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 val reviewerHandle = buildHandle("reviewer", sessionId = "session-2")
 
                 // Signal queue: doer COMPLETED, reviewer NEEDS_ITERATION,
-                // (inner loop re-instructs doer via ReInstructAndAwait — not through facade),
-                // reviewer PASS
+                // doer re-instructed COMPLETED, (inner loop re-instructs doer via
+                // ReInstructAndAwait — not through facade), reviewer PASS
                 val signalQueue = ArrayDeque(
                     listOf(
-                        AgentSignal.Done(DoneResult.COMPLETED),       // doer
-                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer
-                        AgentSignal.Done(DoneResult.PASS),            // reviewer after inner loop
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed by outer loop)
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1 after inner loop
                     )
                 )
 
@@ -1019,9 +1036,10 @@ class PartExecutorImplTest : AsgardDescribeSpec({
 
                 val signalQueue = ArrayDeque(
                     listOf(
-                        AgentSignal.Done(DoneResult.COMPLETED),
-                        AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.PASS),
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
+                        AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
+                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (re-instructed)
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
 
@@ -1075,6 +1093,469 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 Files.exists(
                     feedbackDir.resolve("addressed/important__check.md"),
                 ) shouldBe true
+            }
+        }
+    }
+
+    // ═══════════════════════════════════════════════════════════════════
+    // ── Self-Compaction: Done-boundary trigger detection ──────────────
+    // ═══════════════════════════════════════════════════════════════════
+
+    // ── Compaction: DONE_BOUNDARY triggers compaction on low context ──
+
+    describe("GIVEN a doer-only executor with low context window remaining") {
+        describe("WHEN doer signals Done(COMPLETED) and remaining=20 (below threshold=35)") {
+
+            val dir = Files.createTempDirectory("compaction-test")
+            val publicMd = dir.resolve("PUBLIC.md")
+            Files.writeString(publicMd, "# Output")
+            val privateMd = dir.resolve("PRIVATE.md")
+            val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+            val doerHandle = buildHandle("doer")
+
+            val facade = FakeAgentFacade()
+            val gitStrategy = RecordingGitCommitStrategy()
+
+            // First sendPayload: Done(COMPLETED) for the main task
+            // Second sendPayload: SelfCompacted for the compaction instruction
+            val signalQueue = ArrayDeque(listOf(
+                AgentSignal.Done(DoneResult.COMPLETED),
+                AgentSignal.SelfCompacted,
+            ))
+            facade.onSpawn { doerHandle }
+            facade.onSendPayloadAndAwaitSignal { _, _ ->
+                val signal = signalQueue.removeFirst()
+                // Simulate agent writing PRIVATE.md when receiving compaction instruction
+                if (signal == AgentSignal.SelfCompacted) {
+                    Files.writeString(privateMd, "# Compacted context summary")
+                }
+                signal
+            }
+            facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+            val executor = buildExecutor(
+                doerConfig, facade = facade, gitCommitStrategy = gitStrategy,
+            )
+
+            it("THEN the result is PartResult.Completed") {
+                val result = executor.execute()
+                result shouldBe PartResult.Completed
+            }
+
+            it("THEN a compaction instruction was sent (2 sendPayload calls total)") {
+                facade.sendPayloadCalls shouldHaveSize 2
+            }
+
+            it("THEN session is killed after compaction") {
+                facade.killSessionCalls shouldHaveSize 1
+            }
+
+            it("THEN git commit is called twice (once for done, once for compaction)") {
+                gitStrategy.calls shouldHaveSize 2
+            }
+
+            it("THEN the second git commit has result=SELF_COMPACTED") {
+                gitStrategy.calls[1].result shouldBe "SELF_COMPACTED"
+            }
+        }
+    }
+
+    // ── Compaction: Healthy context — NO compaction ──────────────────
+
+    describe("GIVEN a doer-only executor with healthy context window") {
+        describe("WHEN doer signals Done(COMPLETED) and remaining=80 (above threshold=35)") {
+
+            it("THEN NO compaction is triggered and only 1 sendPayload call is made") {
+                val publicMd = createPublicMdFile()
+                val dir = publicMd.parent
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> AgentSignal.Done(DoneResult.COMPLETED) }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                executor.execute()
+
+                facade.sendPayloadCalls shouldHaveSize 1
+            }
+        }
+    }
+
+    // ── Compaction: Stale context (null) — NO compaction, warning logged ──
+
+    describe("GIVEN a doer-only executor with stale context window state") {
+        describe("WHEN doer signals Done(COMPLETED) and remainingPercentage is null") {
+
+            it("THEN NO compaction is triggered and only 1 sendPayload call is made").config(
+                extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+            ) {
+                val publicMd = createPublicMdFile()
+                val dir = publicMd.parent
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> AgentSignal.Done(DoneResult.COMPLETED) }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = null) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                executor.execute()
+
+                facade.sendPayloadCalls shouldHaveSize 1
+            }
+        }
+    }
+
+    // ── Compaction: Done signal during compaction → AgentCrashed ──────
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent sends Done instead of SelfCompacted during compaction") {
+
+            it("THEN the result is AgentCrashed mentioning protocol violation") {
+                val dir = Files.createTempDirectory("compaction-done-violation")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),   // main task done
+                    AgentSignal.Done(DoneResult.COMPLETED),   // protocol violation during compaction
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "compaction protocol"
+            }
+        }
+    }
+
+    // ── Compaction: PRIVATE.md missing after SelfCompacted → AgentCrashed ──
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent signals SelfCompacted but PRIVATE.md does not exist") {
+
+            it("THEN the result is AgentCrashed") {
+                val dir = Files.createTempDirectory("compaction-missing-private")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                // Note: NOT creating PRIVATE.md — it should be missing
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.SelfCompacted,
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "PRIVATE.md"
+            }
+        }
+    }
+
+    // ── Compaction: PRIVATE.md empty after SelfCompacted → AgentCrashed ──
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent signals SelfCompacted but PRIVATE.md is empty") {
+
+            it("THEN the result is AgentCrashed") {
+                val dir = Files.createTempDirectory("compaction-empty-private")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.SelfCompacted,
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ ->
+                    val signal = signalQueue.removeFirst()
+                    if (signal == AgentSignal.SelfCompacted) {
+                        // Agent writes empty PRIVATE.md
+                        Files.writeString(privateMd, "")
+                    }
+                    signal
+                }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "empty PRIVATE.md"
+            }
+        }
+    }
+
+    // ── Compaction: Timeout → AgentCrashed ──────────────────────────
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent crashes (timeout) during compaction") {
+
+            it("THEN the result is AgentCrashed") {
+                val dir = Files.createTempDirectory("compaction-timeout")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.Crashed("Agent timed out during compaction"),
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "timed out"
+            }
+        }
+    }
+
+    // ── Compaction: Session rotation in doer+reviewer path ───────────
+
+    describe("GIVEN a doer+reviewer executor with doer at low context") {
+        describe("WHEN doer low-context compaction -> reviewer NEEDS_ITERATION -> doer respawned -> PASS") {
+
+            val dir = Files.createTempDirectory("compaction-rotation")
+            val doerPublicMd = dir.resolve("doer-PUBLIC.md")
+            Files.writeString(doerPublicMd, "doer output")
+            val doerPrivateMd = dir.resolve("PRIVATE.md")
+            val reviewerPublicMd = dir.resolve("reviewer-PUBLIC.md")
+            Files.writeString(reviewerPublicMd, "reviewer output")
+            val doerConfig = buildDoerConfig(doerPublicMd, privateMdPath = doerPrivateMd)
+            val reviewerCfg = buildReviewerConfig(reviewerPublicMd)
+
+            val doerHandle1 = buildHandle("doer-v1")
+            val doerHandle2 = buildHandle("doer-v2", sessionId = "session-respawned")
+            val reviewerHandle = buildHandle("reviewer", sessionId = "session-reviewer")
+
+            // Signal sequence:
+            // 1. Doer Done(COMPLETED) — triggers compaction
+            // 2. Doer SelfCompacted — compaction succeeds
+            // 3. Reviewer NEEDS_ITERATION — triggers next iteration
+            // 4. Doer (respawned) Done(COMPLETED) — healthy context this time
+            // 5. Reviewer PASS
+            val signalQueue = ArrayDeque(listOf(
+                AgentSignal.Done(DoneResult.COMPLETED),       // doer v1
+                AgentSignal.SelfCompacted,                    // doer v1 compaction
+                AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer
+                AgentSignal.Done(DoneResult.COMPLETED),       // doer v2
+                AgentSignal.Done(DoneResult.PASS),            // reviewer
+            ))
+
+            val facade = FakeAgentFacade()
+            val spawnQueue = ArrayDeque(listOf(doerHandle1, reviewerHandle, doerHandle2))
+            facade.onSpawn { spawnQueue.removeFirst() }
+            facade.onSendPayloadAndAwaitSignal { _, _ ->
+                val signal = signalQueue.removeFirst()
+                if (signal == AgentSignal.SelfCompacted) {
+                    Files.writeString(doerPrivateMd, "# Compacted context from doer v1")
+                }
+                signal
+            }
+
+            // First read: low context (triggers compaction for doer v1)
+            // Subsequent reads: healthy context
+            var contextReadCount = 0
+            facade.onReadContextWindowState {
+                contextReadCount++
+                if (contextReadCount == 1) ContextWindowState(remainingPercentage = 20)
+                else ContextWindowState(remainingPercentage = 80)
+            }
+
+            val gitStrategy = RecordingGitCommitStrategy()
+            val executor = buildExecutor(
+                doerConfig, reviewerConfig = reviewerCfg, facade = facade, gitCommitStrategy = gitStrategy,
+            )
+
+            it("THEN the result is PartResult.Completed") {
+                val result = executor.execute()
+                result shouldBe PartResult.Completed
+            }
+
+            it("THEN 3 spawn calls are made (doer v1 + reviewer + doer v2 respawn)") {
+                facade.spawnCalls shouldHaveSize 3
+            }
+
+            it("THEN 5 sendPayload calls are made") {
+                facade.sendPayloadCalls shouldHaveSize 5
+            }
+        }
+    }
+
+    // ── Compaction: Exact threshold boundary (remaining=35) triggers ──
+
+    describe("GIVEN a doer-only executor with context at exact threshold") {
+        describe("WHEN remaining=35 equals threshold=35") {
+
+            it("THEN compaction IS triggered (threshold is inclusive)") {
+                val dir = Files.createTempDirectory("compaction-exact-threshold")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.SelfCompacted,
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ ->
+                    val signal = signalQueue.removeFirst()
+                    if (signal == AgentSignal.SelfCompacted) {
+                        Files.writeString(privateMd, "# Context summary")
+                    }
+                    signal
+                }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 35) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                val result = executor.execute()
+
+                result shouldBe PartResult.Completed
+                // 2 sends = main task + compaction
+                facade.sendPayloadCalls shouldHaveSize 2
+            }
+        }
+    }
+
+    // ── Compaction: remaining=36 does NOT trigger ────────────────────
+
+    describe("GIVEN a doer-only executor with context just above threshold") {
+        describe("WHEN remaining=36 is above threshold=35") {
+
+            it("THEN NO compaction is triggered") {
+                val publicMd = createPublicMdFile()
+                val dir = publicMd.parent
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+                val facade = FakeAgentFacade()
+                facade.onSpawn { buildHandle("doer") }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> AgentSignal.Done(DoneResult.COMPLETED) }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 36) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                executor.execute()
+
+                facade.sendPayloadCalls shouldHaveSize 1
+            }
+        }
+    }
+
+    // ── Compaction: Reviewer PASS + compaction failure → AgentCrashed ──
+
+    describe("GIVEN a doer+reviewer executor where reviewer has low context") {
+        describe("WHEN reviewer signals PASS but compaction fails (missing PRIVATE.md)") {
+
+            it("THEN the result is AgentCrashed, not Completed") {
+                val dir = Files.createTempDirectory("compaction-reviewer-pass-fail")
+                val doerPublicMd = dir.resolve("doer-PUBLIC.md")
+                Files.writeString(doerPublicMd, "doer output")
+                val reviewerPublicMd = dir.resolve("reviewer-PUBLIC.md")
+                Files.writeString(reviewerPublicMd, "reviewer output")
+                val reviewerPrivateMd = dir.resolve("reviewer-PRIVATE.md")
+                // Note: NOT creating reviewer-PRIVATE.md — compaction will fail validation
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, privateMdPath = reviewerPrivateMd)
+
+                val doerHandle = buildHandle("doer")
+                val reviewerHandle = buildHandle("reviewer", sessionId = "session-reviewer")
+
+                // Signal sequence:
+                // 1. Doer Done(COMPLETED) — healthy context, no compaction
+                // 2. Reviewer PASS — low context triggers compaction
+                // 3. Reviewer SelfCompacted — but PRIVATE.md is missing
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),  // doer
+                    AgentSignal.Done(DoneResult.PASS),       // reviewer
+                    AgentSignal.SelfCompacted,               // reviewer compaction (PRIVATE.md missing)
+                ))
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(doerHandle, reviewerHandle))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+
+                // Doer: healthy context (80). Reviewer: low context (20) — triggers compaction
+                var contextReadCount = 0
+                facade.onReadContextWindowState {
+                    contextReadCount++
+                    if (contextReadCount == 1) ContextWindowState(remainingPercentage = 80)
+                    else ContextWindowState(remainingPercentage = 20)
+                }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "PRIVATE.md"
+            }
+        }
+    }
+
+    // ── Compaction: Crashed signal during compaction kills session ──────
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent crashes during compaction") {
+
+            it("THEN killSession is called for the crashed session") {
+                val dir = Files.createTempDirectory("compaction-crash-kill")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val doerHandle = buildHandle("doer")
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.Crashed("Agent timed out"),
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { doerHandle }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                executor.execute()
+
+                // killSession should be called: once inside performCompaction (Crashed branch),
+                // and the caller does NOT call killAllSessions for CompactionFailed.
+                // So we expect exactly 1 kill call from the Crashed branch.
+                facade.killSessionCalls shouldHaveSize 1
+                facade.killSessionCalls[0] shouldBe doerHandle
             }
         }
     }

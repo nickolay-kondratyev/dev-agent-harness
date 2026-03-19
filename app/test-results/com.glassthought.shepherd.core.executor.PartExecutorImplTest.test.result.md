@@ -11,6 +11,9 @@ skipped: 0
 - (1) GIVEN a doer-only executor
   - WHEN the doer signals FailWorkflow
     - [PASS] THEN the result is PartResult.FailedWorkflow with the reason
+- (1) GIVEN a doer-only executor with low context
+  - WHEN agent signals SelfCompacted but PRIVATE.md does not exist
+    - [PASS] THEN the result is AgentCrashed
 - (2) GIVEN a doer+reviewer executor
   - WHEN reviewer sends NEEDS_ITERATION then PASS on next round
     - [PASS] THEN git commit is called for each Done signal
@@ -18,18 +21,27 @@ skipped: 0
 - (2) GIVEN a doer-only executor
   - WHEN the doer signals Crashed
     - [PASS] THEN the result is PartResult.AgentCrashed with the details
+- (2) GIVEN a doer-only executor with low context
+  - WHEN agent signals SelfCompacted but PRIVATE.md is empty
+    - [PASS] THEN the result is AgentCrashed
 - (3) GIVEN a doer+reviewer executor
   - WHEN the doer signals FailWorkflow
     - [PASS] THEN the result is PartResult.FailedWorkflow
 - (3) GIVEN a doer-only executor
   - WHEN the doer signals Done(PASS)
     - [PASS] THEN IllegalStateException is thrown
+- (3) GIVEN a doer-only executor with low context
+  - WHEN agent crashes (timeout) during compaction
+    - [PASS] THEN the result is AgentCrashed
 - (4) GIVEN a doer+reviewer executor
   - WHEN the doer signals FailWorkflow before reviewer is needed
     - [PASS] THEN only 1 spawn call is made (doer only, reviewer is not spawned)
 - (4) GIVEN a doer-only executor
   - WHEN the doer signals Done(NEEDS_ITERATION)
     - [PASS] THEN IllegalStateException is thrown
+- (4) GIVEN a doer-only executor with low context
+  - WHEN agent crashes during compaction
+    - [PASS] THEN killSession is called for the crashed session
 - (5) GIVEN a doer+reviewer executor
   - WHEN the reviewer signals Crashed
     - [PASS] THEN the result is PartResult.AgentCrashed
@@ -60,6 +72,9 @@ skipped: 0
 - GIVEN a doer+reviewer executor
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor where reviewer has low context
+  - WHEN reviewer signals PASS but compaction fails (missing PRIVATE.md)
+    - [PASS] THEN the result is AgentCrashed, not Completed
 - GIVEN a doer+reviewer executor with InnerFeedbackLoop wired
   - WHEN reviewer sends NEEDS_ITERATION and inner loop processes feedback
     - [PASS] THEN inner loop moves feedback file from pending to addressed
@@ -67,6 +82,11 @@ skipped: 0
 - GIVEN a doer+reviewer executor with critical feedback file in pending
   - WHEN reviewer signals PASS
     - [PASS] THEN the result is PartResult.AgentCrashed
+- GIVEN a doer+reviewer executor with doer at low context
+  - WHEN doer low-context compaction -> reviewer NEEDS_ITERATION -> doer respawned -> PASS
+    - [PASS] THEN 3 spawn calls are made (doer v1 + reviewer + doer v2 respawn)
+    - [PASS] THEN 5 sendPayload calls are made
+    - [PASS] THEN the result is PartResult.Completed
 - GIVEN a doer+reviewer executor with empty feedback pending directory
   - WHEN reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
@@ -74,8 +94,8 @@ skipped: 0
   - WHEN reviewer signals PASS
     - [PASS] THEN the result is PartResult.AgentCrashed
 - GIVEN a doer+reviewer executor with iteration
-  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS
-    - [PASS] THEN readContextWindowState is called 3 times (once per Done signal)
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
+    - [PASS] THEN readContextWindowState is called 4 times (once per Done signal)
 - GIVEN a doer+reviewer executor with max=1 and granting FailedToConvergeUseCase
   - WHEN reviewer sends NEEDS_ITERATION, operator grants more, then reviewer PASS
     - [PASS] THEN the result is PartResult.Completed
@@ -83,8 +103,8 @@ skipped: 0
   - WHEN reviewer keeps sending NEEDS_ITERATION and operator aborts
     - [PASS] THEN the result is PartResult.FailedToConverge
 - GIVEN a doer+reviewer executor with one iteration
-  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS
-    - [PASS] THEN sendPayloadAndAwaitSignal is called 3 times
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
+    - [PASS] THEN sendPayloadAndAwaitSignal is called 4 times
 - GIVEN a doer+reviewer executor with only optional feedback files in pending
   - WHEN reviewer signals PASS
     - [PASS] THEN optional files are moved from pending to addressed
@@ -92,7 +112,29 @@ skipped: 0
 - GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED) and PUBLIC.md exists
     - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer-only executor with context at exact threshold
+  - WHEN remaining=35 equals threshold=35
+    - [PASS] THEN compaction IS triggered (threshold is inclusive)
+- GIVEN a doer-only executor with context just above threshold
+  - WHEN remaining=36 is above threshold=35
+    - [PASS] THEN NO compaction is triggered
+- GIVEN a doer-only executor with healthy context window
+  - WHEN doer signals Done(COMPLETED) and remaining=80 (above threshold=35)
+    - [PASS] THEN NO compaction is triggered and only 1 sendPayload call is made
+- GIVEN a doer-only executor with low context
+  - WHEN agent sends Done instead of SelfCompacted during compaction
+    - [PASS] THEN the result is AgentCrashed mentioning protocol violation
+- GIVEN a doer-only executor with low context window remaining
+  - WHEN doer signals Done(COMPLETED) and remaining=20 (below threshold=35)
+    - [PASS] THEN a compaction instruction was sent (2 sendPayload calls total)
+    - [PASS] THEN git commit is called twice (once for done, once for compaction)
+    - [PASS] THEN session is killed after compaction
+    - [PASS] THEN the result is PartResult.Completed
+    - [PASS] THEN the second git commit has result=SELF_COMPACTED
 - GIVEN a doer-only executor with recording git strategy
   - WHEN the doer signals Done(COMPLETED)
     - [PASS] THEN git commit context has correct part name
     - [PASS] THEN git commit strategy is called once
+- GIVEN a doer-only executor with stale context window state
+  - WHEN doer signals Done(COMPLETED) and remainingPercentage is null
+    - [PASS] THEN NO compaction is triggered and only 1 sendPayload call is made

@@ -9,8 +9,11 @@ import com.glassthought.shepherd.core.agent.facade.AgentPayload
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
 import com.glassthought.shepherd.core.agent.facade.DoneResult
 import com.glassthought.shepherd.core.agent.facade.SpawnedAgentHandle
+import com.glassthought.shepherd.core.compaction.CompactionTrigger
+import com.glassthought.shepherd.core.compaction.SelfCompactionInstructionBuilder
 import com.glassthought.shepherd.core.context.AgentInstructionRequest
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
+import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.state.IterationConfig
 import com.glassthought.shepherd.core.state.PartResult
 import com.glassthought.shepherd.core.state.SubPartRole
@@ -20,6 +23,7 @@ import com.glassthought.shepherd.core.state.validateCanSpawn
 import com.glassthought.shepherd.core.supporting.git.GitCommitStrategy
 import com.glassthought.shepherd.core.supporting.git.SubPartDoneContext
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToConvergeUseCase
+import java.nio.file.Files
 
 /**
  * Dependencies bundle for [PartExecutorImpl] — groups collaborators to stay within
@@ -32,6 +36,9 @@ data class PartExecutorDeps(
     val failedToConvergeUseCase: FailedToConvergeUseCase,
     val outFactory: OutFactory,
     val publicMdValidator: PublicMdValidator = PublicMdValidator(),
+    val harnessTimeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
+    val selfCompactionInstructionBuilder: SelfCompactionInstructionBuilder = SelfCompactionInstructionBuilder(),
+    val privateMdValidator: PrivateMdValidator = PrivateMdValidator(),
     val partCompletionGuard: PartCompletionGuard = PartCompletionGuard(),
     val innerFeedbackLoop: InnerFeedbackLoop? = null,
 )
@@ -40,12 +47,18 @@ data class PartExecutorDeps(
  * Core implementation of [PartExecutor] — handles both doer-only and doer+reviewer parts.
  *
  * **Doer-only path** (`reviewerConfig == null`): spawn doer -> send instructions -> await signal
- * -> PUBLIC.md validation -> git commit -> map to PartResult.
+ * -> PUBLIC.md validation -> git commit -> context window check -> optional compaction -> map to PartResult.
  *
  * **Doer+reviewer path** (`reviewerConfig != null`): spawn doer -> send -> await COMPLETED ->
- * PUBLIC.md validation -> git commit -> lazily spawn reviewer (first iteration only) -> send ->
+ * PUBLIC.md validation -> git commit -> context window check -> optional compaction ->
+ * lazily spawn reviewer (first iteration only) -> send ->
  * await -> on PASS: complete, on NEEDS_ITERATION: increment iteration, re-instruct doer with
- * reviewer's PUBLIC.md. Reviewer session stays alive for subsequent iterations.
+ * reviewer's PUBLIC.md. Reviewer session stays alive for subsequent iterations (unless compacted).
+ *
+ * **Self-compaction** (ref.ap.8nwz2AHf503xwq8fKuLcl.E): After every Done signal, reads context
+ * window state. If remaining percentage <= soft threshold, performs controlled compaction:
+ * send compaction instruction -> await SelfCompacted -> validate PRIVATE.md -> git commit ->
+ * kill session -> set handle = null. Next iteration lazily respawns with PRIVATE.md in instructions.
  *
  * **R6 constraint**: NO Clock, SessionsState, AgentUnresponsiveUseCase, or
  * ContextWindowStateReader in constructor — those belong to AgentFacadeImpl.
@@ -92,9 +105,20 @@ class PartExecutorImpl(
                         // transitionTo called for validation only — throws on invalid state transition.
                         doerStatus.transitionTo(signal)
                         doerStatus = SubPartStatus.COMPLETED
-                        afterDone(doerConfig, signal.result, handle)
-                        killAllSessions(handle, null)
-                        PartResult.Completed
+                        val compactionOutcome = afterDone(doerConfig, signal.result, handle)
+                        when (compactionOutcome) {
+                            is CompactionOutcome.NoCompaction -> {
+                                killAllSessions(handle, null)
+                                PartResult.Completed
+                            }
+                            is CompactionOutcome.Compacted -> {
+                                // Session already killed during compaction. Part is done.
+                                PartResult.Completed
+                            }
+                            is CompactionOutcome.CompactionFailed -> {
+                                PartResult.AgentCrashed(compactionOutcome.reason)
+                            }
+                        }
                     }
             }
             DoneResult.PASS -> {
@@ -111,105 +135,171 @@ class PartExecutorImpl(
 
     @Suppress("ReturnCount")
     private suspend fun executeDoerWithReviewer(revConfig: SubPartConfig): PartResult {
-        val doerHandle = spawnSubPart(doerConfig, isDoer = true)
+        var doerHandle: SpawnedAgentHandle? = spawnSubPart(doerConfig, isDoer = true)
         var reviewerHandle: SpawnedAgentHandle? = null
-        val doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = null)
+        var doerSignal = sendDoerInstructions(doerHandle!!, reviewerPublicMdPath = null)
 
-        val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle, reviewerHandle)
-        if (doerResult != null) return doerResult
-
-        // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
-        reviewerHandle = spawnSubPart(revConfig, isDoer = false)
-
-        var reviewerSignal = sendReviewerInstructions(reviewerHandle, revConfig)
-
-        // Outer reviewer loop: each iteration handles one reviewer signal.
-        // PASS -> complete. NEEDS_ITERATION -> inner loop + re-instruct reviewer.
         while (true) {
-            val revResult = mapReviewerSignal(reviewerSignal, doerHandle, reviewerHandle, revConfig)
-            if (revResult != null) return revResult
+            val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle!!, reviewerHandle)
+            if (doerResult is DoerSignalResult.Terminal) return doerResult.partResult
+
+            // After afterDone, doerHandle may have been compacted
+            if (doerResult is DoerSignalResult.Continue && doerResult.doerCompacted) {
+                doerHandle = null
+            }
+
+            // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
+            // Subsequent iterations reuse the already-alive reviewer session.
+            if (reviewerHandle == null) {
+                reviewerHandle = spawnSubPart(revConfig, isDoer = false)
+            }
+
+            val revResult = mapReviewerSignal(
+                sendReviewerInstructions(reviewerHandle, revConfig), doerHandle, reviewerHandle, revConfig
+            )
+            if (revResult is ReviewerSignalResult.Terminal) return revResult.partResult
+
+            // After reviewer afterDone, reviewer may have been compacted
+            if (revResult is ReviewerSignalResult.Continue && revResult.reviewerCompacted) {
+                reviewerHandle = null
+            }
+
+            // Respawn compacted sub-parts before inner loop (needs active handles)
+            if (doerHandle == null) {
+                doerHandle = respawnAfterCompaction(doerConfig)
+            }
+            if (reviewerHandle == null) {
+                reviewerHandle = respawnAfterCompaction(revConfig)
+            }
 
             // NEEDS_ITERATION: processNeedsIteration handles budget check + inner loop.
-            // If it returns a PartResult, we're done (budget exhausted, crash, etc.)
-            val needsIterResult = processNeedsIteration(
-                doerHandle, reviewerHandle, revConfig,
-            )
+            val needsIterResult = processNeedsIteration(doerHandle, reviewerHandle, revConfig)
             if (needsIterResult != null) return needsIterResult
 
-            // Re-instruct reviewer after inner loop.
-            reviewerSignal = sendReviewerInstructions(reviewerHandle, revConfig)
+            doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
         }
     }
 
-    /** Returns [PartResult] to stop, or null to proceed to reviewer. */
+    /** Result of processing a doer signal in the reviewer path. */
+    private sealed class DoerSignalResult {
+        /** Part terminated — return this result. */
+        data class Terminal(val partResult: PartResult) : DoerSignalResult()
+        /** Proceed to reviewer. [doerCompacted] indicates the doer handle was killed via compaction. */
+        data class Continue(val doerCompacted: Boolean = false) : DoerSignalResult()
+    }
+
+    /** Returns [DoerSignalResult.Terminal] to stop, or [DoerSignalResult.Continue] to proceed to reviewer. */
+    @Suppress("NestedBlockDepth")
     private suspend fun mapDoerSignalInReviewerPath(
         signal: AgentSignal,
         doerHandle: SpawnedAgentHandle,
         reviewerHandle: SpawnedAgentHandle?,
-    ): PartResult? = when (signal) {
+    ): DoerSignalResult = when (signal) {
         is AgentSignal.Done -> {
             check(signal.result == DoneResult.COMPLETED) {
                 "Doer in doer+reviewer path sent Done(${signal.result}) — expected COMPLETED"
             }
-            validatePublicMdOrCrash(doerConfig, doerHandle, reviewerHandle)
-                ?: run { afterDone(doerConfig, signal.result, doerHandle); null }
+            val crash = validatePublicMdOrCrash(doerConfig, doerHandle, reviewerHandle)
+            if (crash != null) {
+                DoerSignalResult.Terminal(crash)
+            } else {
+                when (val outcome = afterDone(doerConfig, signal.result, doerHandle)) {
+                    is CompactionOutcome.NoCompaction -> DoerSignalResult.Continue(doerCompacted = false)
+                    is CompactionOutcome.Compacted -> DoerSignalResult.Continue(doerCompacted = true)
+                    is CompactionOutcome.CompactionFailed -> {
+                        reviewerHandle?.let { deps.agentFacade.killSession(it) }
+                        DoerSignalResult.Terminal(PartResult.AgentCrashed(outcome.reason))
+                    }
+                }
+            }
         }
-        is AgentSignal.FailWorkflow ->
+        is AgentSignal.FailWorkflow -> DoerSignalResult.Terminal(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.DOER, PartResult.FailedWorkflow(signal.reason))
-        is AgentSignal.Crashed ->
+        )
+        is AgentSignal.Crashed -> DoerSignalResult.Terminal(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.DOER, PartResult.AgentCrashed(signal.details))
+        )
         AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
     }
 
-    /**
-     * Returns [PartResult] to stop, or null to continue iteration (NEEDS_ITERATION).
-     *
-     * PASS -> complete (validates, kills sessions, returns Completed).
-     * NEEDS_ITERATION -> returns null (caller handles inner loop + re-instruction).
-     * COMPLETED/FailWorkflow/Crashed/SelfCompacted -> terminal.
-     */
-    @Suppress("ReturnCount")
+    /** Result of processing a reviewer signal. */
+    private sealed class ReviewerSignalResult {
+        data class Terminal(val partResult: PartResult) : ReviewerSignalResult()
+        data class Continue(val reviewerCompacted: Boolean = false) : ReviewerSignalResult()
+    }
+
+    /** Returns [ReviewerSignalResult.Terminal] to stop, or [ReviewerSignalResult.Continue] to continue iteration. */
     private suspend fun mapReviewerSignal(
         signal: AgentSignal,
-        doerHandle: SpawnedAgentHandle,
+        doerHandle: SpawnedAgentHandle?,
         reviewerHandle: SpawnedAgentHandle,
         revConfig: SubPartConfig,
-    ): PartResult? {
-        return when (signal) {
-            is AgentSignal.Done -> when (signal.result) {
-                DoneResult.PASS -> validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
-                    ?: validateCompletionGuardOrCrash(revConfig, doerHandle, reviewerHandle)
-                    ?: run {
-                        reviewerStatus.transitionTo(signal)
-                        reviewerStatus = SubPartStatus.COMPLETED
-                        doerStatus = SubPartStatus.COMPLETED
-                        afterDone(revConfig, signal.result, reviewerHandle)
-                        killAllSessions(doerHandle, reviewerHandle)
-                        PartResult.Completed
-                    }
-                DoneResult.NEEDS_ITERATION -> {
-                    // Validate PUBLIC.md and do afterDone for the reviewer, but return null
-                    // to signal the caller to run the inner feedback loop.
-                    val crash = validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
-                    if (crash != null) return crash
-                    reviewerStatus.transitionTo(signal)
-                    afterDone(revConfig, signal.result, reviewerHandle)
-                    null
-                }
-                DoneResult.COMPLETED -> {
-                    killAllSessions(doerHandle, reviewerHandle)
-                    error("Reviewer sent Done(COMPLETED) — expected PASS or NEEDS_ITERATION")
-                }
+    ): ReviewerSignalResult = when (signal) {
+        is AgentSignal.Done -> when (signal.result) {
+            DoneResult.PASS -> handleReviewerPass(signal, doerHandle, reviewerHandle, revConfig)
+            DoneResult.NEEDS_ITERATION -> handleReviewerNeedsIteration(signal, doerHandle, reviewerHandle, revConfig)
+            DoneResult.COMPLETED -> {
+                killAllSessions(doerHandle, reviewerHandle)
+                error("Reviewer sent Done(COMPLETED) — expected PASS or NEEDS_ITERATION")
             }
-            is AgentSignal.FailWorkflow -> terminateWith(
-                doerHandle, reviewerHandle, SubPartRole.REVIEWER,
-                PartResult.FailedWorkflow(signal.reason),
+        }
+        is AgentSignal.FailWorkflow -> ReviewerSignalResult.Terminal(
+            terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.FailedWorkflow(signal.reason))
+        )
+        is AgentSignal.Crashed -> ReviewerSignalResult.Terminal(
+            terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.AgentCrashed(signal.details))
+        )
+        AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
+    }
+
+    @Suppress("ReturnCount")
+    private suspend fun handleReviewerPass(
+        signal: AgentSignal.Done,
+        doerHandle: SpawnedAgentHandle?,
+        reviewerHandle: SpawnedAgentHandle,
+        revConfig: SubPartConfig,
+    ): ReviewerSignalResult {
+        val publicMdCrash = validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
+        if (publicMdCrash != null) return ReviewerSignalResult.Terminal(publicMdCrash)
+
+        val guardCrash = validateCompletionGuardOrCrash(revConfig, doerHandle, reviewerHandle)
+        if (guardCrash != null) return ReviewerSignalResult.Terminal(guardCrash)
+
+        reviewerStatus.transitionTo(signal)
+        reviewerStatus = SubPartStatus.COMPLETED
+        doerStatus = SubPartStatus.COMPLETED
+        val compactionOutcome = afterDone(revConfig, signal.result, reviewerHandle)
+        return when (compactionOutcome) {
+            is CompactionOutcome.CompactionFailed -> {
+                doerHandle?.let { deps.agentFacade.killSession(it) }
+                ReviewerSignalResult.Terminal(PartResult.AgentCrashed(compactionOutcome.reason))
+            }
+            else -> {
+                killAllSessions(doerHandle, reviewerHandle)
+                ReviewerSignalResult.Terminal(PartResult.Completed)
+            }
+        }
+    }
+
+    private suspend fun handleReviewerNeedsIteration(
+        signal: AgentSignal.Done,
+        doerHandle: SpawnedAgentHandle?,
+        reviewerHandle: SpawnedAgentHandle,
+        revConfig: SubPartConfig,
+    ): ReviewerSignalResult {
+        val crash = validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
+        if (crash != null) return ReviewerSignalResult.Terminal(crash)
+
+        reviewerStatus.transitionTo(signal)
+        val compactionOutcome = afterDone(revConfig, signal.result, reviewerHandle)
+        return when (compactionOutcome) {
+            is CompactionOutcome.CompactionFailed -> {
+                doerHandle?.let { deps.agentFacade.killSession(it) }
+                ReviewerSignalResult.Terminal(PartResult.AgentCrashed(compactionOutcome.reason))
+            }
+            else -> ReviewerSignalResult.Continue(
+                reviewerCompacted = compactionOutcome is CompactionOutcome.Compacted
             )
-            is AgentSignal.Crashed -> terminateWith(
-                doerHandle, reviewerHandle, SubPartRole.REVIEWER,
-                PartResult.AgentCrashed(signal.details),
-            )
-            AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
         }
     }
 
@@ -246,8 +336,7 @@ class PartExecutorImpl(
             } else {
                 killAllSessions(doerHandle, reviewerHandle)
                 return PartResult.FailedToConverge(
-                    "Iteration budget exhausted after " +
-                        "$currentIteration iterations"
+                    "Iteration budget exhausted after $currentIteration iterations"
                 )
             }
         }
@@ -277,12 +366,129 @@ class PartExecutorImpl(
         }
     }
 
+    // ── Self-compaction ────────────────────────────────────────────────
+
+    /**
+     * Outcome of the done-boundary compaction check in [afterDone].
+     */
+    private sealed class CompactionOutcome {
+        /** Context is healthy or stale — no compaction triggered. */
+        data object NoCompaction : CompactionOutcome()
+        /** Compaction succeeded — session was killed, handle is invalid. */
+        data object Compacted : CompactionOutcome()
+        /** Compaction was attempted but failed — caller should return AgentCrashed. */
+        data class CompactionFailed(val reason: String) : CompactionOutcome()
+    }
+
+    /**
+     * Performs controlled self-compaction at a done boundary.
+     *
+     * Flow:
+     * 1. Build compaction instruction via [SelfCompactionInstructionBuilder]
+     * 2. Send via [AgentFacade.sendPayloadAndAwaitSignal] — expects [AgentSignal.SelfCompacted]
+     * 3. Validate PRIVATE.md exists and is non-empty
+     * 4. Git commit (captures PRIVATE.md)
+     * 5. Kill session
+     *
+     * See spec: ref.ap.8nwz2AHf503xwq8fKuLcl.E
+     */
+    @Suppress("UnusedParameter")
+    private suspend fun performCompaction(
+        handle: SpawnedAgentHandle,
+        config: SubPartConfig,
+        trigger: CompactionTrigger,
+    ): CompactionOutcome {
+        out.info("starting_self_compaction") {
+            listOf(
+                Val(config.subPartName, ShepherdValType.SUB_PART_NAME),
+                Val(trigger.name, ShepherdValType.COMPACTION_TRIGGER),
+            )
+        }
+
+        // Build compaction instruction and write to temp file
+        val privateMdPath = config.privateMdPath
+            ?: error("Cannot perform compaction: privateMdPath is null for sub-part [${config.subPartName}]")
+
+        val instructionText = deps.selfCompactionInstructionBuilder.build(privateMdPath)
+        val instructionFile = Files.createTempFile("compaction-instruction-", ".md")
+        Files.writeString(instructionFile, instructionText)
+
+        // Send compaction instruction and await signal
+        val signal = try {
+            deps.agentFacade.sendPayloadAndAwaitSignal(handle, AgentPayload(instructionFile))
+        } finally {
+            Files.deleteIfExists(instructionFile)
+        }
+
+        return when (signal) {
+            AgentSignal.SelfCompacted -> {
+                // Validate PRIVATE.md exists and is non-empty
+                val validation = deps.privateMdValidator.validate(privateMdPath, config.subPartName)
+                if (validation is PrivateMdValidator.ValidationResult.Invalid) {
+                    deps.agentFacade.killSession(handle)
+                    return CompactionOutcome.CompactionFailed(validation.message)
+                }
+
+                // Git commit captures PRIVATE.md
+                deps.gitCommitStrategy.onSubPartDone(SubPartDoneContext(
+                    partName = config.partName, subPartName = config.subPartName,
+                    subPartRole = config.subPartRole.name, result = "SELF_COMPACTED",
+                    hasReviewer = reviewerConfig != null, currentIteration = currentIteration,
+                    maxIterations = maxIterations, agentType = config.agentType, model = config.model,
+                ))
+
+                // Kill old session — handle becomes invalid
+                deps.agentFacade.killSession(handle)
+
+                out.info("self_compaction_complete") {
+                    listOf(Val(config.subPartName, ShepherdValType.SUB_PART_NAME))
+                }
+
+                CompactionOutcome.Compacted
+            }
+            is AgentSignal.Done -> {
+                deps.agentFacade.killSession(handle)
+                CompactionOutcome.CompactionFailed(
+                    "Agent [${config.subPartName}] cannot follow compaction protocol — " +
+                        "sent Done(${signal.result}) instead of SelfCompacted"
+                )
+            }
+            is AgentSignal.Crashed -> {
+                // Agent crashed during compaction (e.g., timeout) — kill lingering session
+                deps.agentFacade.killSession(handle)
+                CompactionOutcome.CompactionFailed(signal.details)
+            }
+            is AgentSignal.FailWorkflow -> {
+                deps.agentFacade.killSession(handle)
+                CompactionOutcome.CompactionFailed(
+                    "Agent [${config.subPartName}] sent FailWorkflow during compaction: ${signal.reason}"
+                )
+            }
+        }
+    }
+
     // ── Infrastructure helpers ──────────────────────────────────────────
 
     private suspend fun spawnSubPart(config: SubPartConfig, isDoer: Boolean): SpawnedAgentHandle {
         if (isDoer) { doerStatus.validateCanSpawn(); doerStatus = SubPartStatus.IN_PROGRESS }
         else { reviewerStatus.validateCanSpawn(); reviewerStatus = SubPartStatus.IN_PROGRESS }
         out.info(if (isDoer) "spawning_doer" else "spawning_reviewer") {
+            listOf(Val(config.subPartName, ShepherdValType.SUB_PART_NAME))
+        }
+        return deps.agentFacade.spawnAgent(config.toSpawnAgentConfig())
+    }
+
+    /**
+     * Respawns a sub-part after self-compaction killed the previous session.
+     *
+     * Unlike [spawnSubPart], this does NOT validate the NOT_STARTED state transition because
+     * the sub-part status remains IN_PROGRESS during session rotation. The sub-part is still
+     * logically in-progress — it just got a fresh context window.
+     *
+     * See spec: ref.ap.8nwz2AHf503xwq8fKuLcl.E (session rotation)
+     */
+    private suspend fun respawnAfterCompaction(config: SubPartConfig): SpawnedAgentHandle {
+        out.info("respawning_after_compaction") {
             listOf(Val(config.subPartName, ShepherdValType.SUB_PART_NAME))
         }
         return deps.agentFacade.spawnAgent(config.toSpawnAgentConfig())
@@ -320,7 +526,7 @@ class PartExecutorImpl(
      */
     @Suppress("ReturnCount")
     private suspend fun validateCompletionGuardOrCrash(
-        revConfig: SubPartConfig, doerHandle: SpawnedAgentHandle, reviewerHandle: SpawnedAgentHandle,
+        revConfig: SubPartConfig, doerHandle: SpawnedAgentHandle?, reviewerHandle: SpawnedAgentHandle,
     ): PartResult.AgentCrashed? {
         val feedbackDir = revConfig.feedbackDir ?: return null
         val pendingDir = feedbackDir.resolve(PENDING_DIR)
@@ -335,7 +541,7 @@ class PartExecutorImpl(
     }
 
     private suspend fun validatePublicMdOrCrash(
-        config: SubPartConfig, doerHandle: SpawnedAgentHandle, reviewerHandle: SpawnedAgentHandle?,
+        config: SubPartConfig, doerHandle: SpawnedAgentHandle?, reviewerHandle: SpawnedAgentHandle?,
     ): PartResult.AgentCrashed? {
         val result = deps.publicMdValidator.validate(config.publicMdOutputPath, config.subPartName)
         if (result is PublicMdValidator.ValidationResult.Invalid) {
@@ -347,26 +553,54 @@ class PartExecutorImpl(
         return null
     }
 
-    private suspend fun afterDone(config: SubPartConfig, result: DoneResult, handle: SpawnedAgentHandle) {
+    /**
+     * Post-done processing: git commit, context window check, optional compaction.
+     *
+     * Returns [CompactionOutcome] indicating whether compaction was triggered and its result.
+     * If compaction succeeds, the handle has been killed and must not be used further.
+     */
+    @Suppress("ReturnCount")
+    private suspend fun afterDone(
+        config: SubPartConfig,
+        result: DoneResult,
+        handle: SpawnedAgentHandle,
+    ): CompactionOutcome {
         deps.gitCommitStrategy.onSubPartDone(SubPartDoneContext(
             partName = config.partName, subPartName = config.subPartName,
             subPartRole = config.subPartRole.name, result = result.name,
             hasReviewer = reviewerConfig != null, currentIteration = currentIteration,
             maxIterations = maxIterations, agentType = config.agentType, model = config.model,
         ))
+
         val state = deps.agentFacade.readContextWindowState(handle)
         out.debug("context_window_state_at_done_boundary") {
             listOf(Val(state.remainingPercentage?.toString() ?: "unknown", ShepherdValType.CONTEXT_WINDOW_REMAINING))
         }
+
+        // Done-boundary compaction trigger detection (ref.ap.8nwz2AHf503xwq8fKuLcl.E)
+        val remaining = state.remainingPercentage
+        if (remaining == null) {
+            out.warn(
+                "stale_context_window_state_skipping_compaction",
+                Val(config.subPartName, ShepherdValType.SUB_PART_NAME),
+            )
+            return CompactionOutcome.NoCompaction
+        }
+
+        if (remaining <= deps.harnessTimeoutConfig.contextWindowSoftThresholdPct) {
+            return performCompaction(handle, config, CompactionTrigger.DONE_BOUNDARY)
+        }
+
+        return CompactionOutcome.NoCompaction
     }
 
-    private suspend fun killAllSessions(doer: SpawnedAgentHandle, reviewer: SpawnedAgentHandle?) {
-        deps.agentFacade.killSession(doer)
+    private suspend fun killAllSessions(doer: SpawnedAgentHandle?, reviewer: SpawnedAgentHandle?) {
+        doer?.let { deps.agentFacade.killSession(it) }
         reviewer?.let { deps.agentFacade.killSession(it) }
     }
 
     private suspend fun terminateWith(
-        doer: SpawnedAgentHandle, reviewer: SpawnedAgentHandle?, role: SubPartRole, result: PartResult,
+        doer: SpawnedAgentHandle?, reviewer: SpawnedAgentHandle?, role: SubPartRole, result: PartResult,
     ): PartResult {
         if (role == SubPartRole.DOER) doerStatus = SubPartStatus.FAILED else reviewerStatus = SubPartStatus.FAILED
         killAllSessions(doer, reviewer)
