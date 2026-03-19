@@ -22,9 +22,10 @@ object ProtocolVocabulary {
      * See `__feedback/` directory spec (ref.ap.3Hskx3JzhDlixTnvYxclk.E).
      */
     object FeedbackStatus {
-        const val UNADDRESSED = "unaddressed"
+        const val PENDING = "pending"
         const val ADDRESSED = "addressed"
         const val REJECTED = "rejected"
+        const val SKIPPED = "skipped"
     }
 
     /**
@@ -36,6 +37,17 @@ object ProtocolVocabulary {
         const val CRITICAL = "critical"
         const val IMPORTANT = "important"
         const val OPTIONAL = "optional"
+    }
+
+    /**
+     * Filename prefixes encoding severity in the flat `pending/`, `addressed/`, `rejected/` dirs.
+     *
+     * See granular-feedback-loop.md (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E), decision D1.
+     */
+    object SeverityPrefix {
+        const val CRITICAL = "critical__"
+        const val IMPORTANT = "important__"
+        const val OPTIONAL = "optional__"
     }
 
     /**
@@ -64,9 +76,6 @@ object ProtocolVocabulary {
 
     /** WHY-NOT comment protocol marker used in agent instructions and feedback. */
     const val WHY_NOT = "WHY-NOT"
-
-    /** Movement log section header in feedback files. See ref.ap.3Hskx3JzhDlixTnvYxclk.E. */
-    const val MOVEMENT_LOG = "Movement Log"
 
     /** Callback shell script for fire-and-forget signals. */
     const val CALLBACK_SIGNAL_SCRIPT = "callback_shepherd.signal.sh"

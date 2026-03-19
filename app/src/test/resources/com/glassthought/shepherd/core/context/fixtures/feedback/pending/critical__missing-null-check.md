@@ -6,4 +6,4 @@ The parser does not handle null input, which will cause NPE.
 
 ---
 
-## Movement Log
+## Resolution:
