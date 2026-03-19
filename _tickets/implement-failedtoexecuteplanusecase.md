@@ -2,7 +2,7 @@
 id: nid_foubbnsh3vmk1fk34zm75zkg0_E
 title: "Implement FailedToExecutePlanUseCase"
 status: open
-deps: []
+deps: [nid_smb6zudqraf0hkp3u9kjx855e_E]
 links: []
 created_iso: 2026-03-18T17:37:08Z
 status_updated_iso: 2026-03-18T17:37:08Z
@@ -67,3 +67,9 @@ interface FailedToExecutePlanUseCase {
 - TicketFailureLearningUseCase failure is non-fatal (logged, not thrown)
 - Unit tests cover all PartResult variants + learning failure case
 
+
+## Notes
+
+**2026-03-19T00:58:01Z**
+
+Added dep on nid_smb6zudqraf0hkp3u9kjx855e_E (SubPartStatus/SubPartStateTransition). PartResult should be defined in that ticket cohesively with other state types, NOT ad-hoc here.

@@ -65,3 +65,9 @@ Check if AgentSignal already exists in codebase before creating.
 - `app/src/main/kotlin/com/glassthought/shepherd/core/data/` (existing data class patterns)
 - `app/src/main/kotlin/com/glassthought/shepherd/core/agent/sessionresolver/HandshakeGuid.kt` (anchor point pattern)
 
+
+## Notes
+
+**2026-03-19T00:58:01Z**
+
+PartResult sealed class should be defined in this ticket alongside SubPartStatus and SubPartStateTransition. FailedToExecutePlanUseCase (nid_foubbnsh3vmk1fk34zm75zkg0_E) now depends on this ticket for PartResult.
