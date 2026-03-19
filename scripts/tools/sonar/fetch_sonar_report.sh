@@ -83,4 +83,6 @@ jq -n \
 
 echo "SonarCloud report written to: ${REPORT_FILE}"
 
-cat "${REPORT_FILE}" | jq .issues.issues[] -c > "${SONAR_ISSUES_JSONL:?}"
+# [select issueStatus == FIXED | not]: defensive client-side filter — SonarCloud API
+# may return resolved issues despite resolved=false query param (race/caching).
+jq -c '.issues.issues[] | select(.issueStatus == "FIXED" | not)' "${REPORT_FILE}" > "${SONAR_ISSUES_JSONL:?}"

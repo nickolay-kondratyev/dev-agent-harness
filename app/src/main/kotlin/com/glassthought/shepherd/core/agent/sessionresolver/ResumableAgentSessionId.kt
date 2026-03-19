@@ -9,7 +9,8 @@ import com.glassthought.shepherd.core.data.AgentType
  * is self-contained for both routing (server maps [HandshakeGuid] → session) and persistence
  * (`current_state.json` `handshake_guid` field).
  *
- * Returned by [AgentSessionIdResolver]/ref.ap.D3ICqiFdFFgbFIPLMTYdoyss.E after resolving a GUID handshake.
+ * The caller constructs this from the raw session ID returned by
+ * [com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter.resolveSessionId]/ref.ap.hhP3gT9qK2mR8vNwX5dYa.E.
  */
 data class ResumableAgentSessionId(
     val handshakeGuid: HandshakeGuid,

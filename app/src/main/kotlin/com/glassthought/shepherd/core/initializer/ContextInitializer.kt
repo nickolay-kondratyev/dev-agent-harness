@@ -8,7 +8,8 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
-import com.glassthought.shepherd.core.agent.sessionresolver.impl.ClaudeCodeAgentSessionIdResolver
+import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
+import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.Constants
 
@@ -25,7 +26,7 @@ data class TmuxInfra(
  * Groups Claude Code agent dependencies.
  */
 data class ClaudeCodeInfra(
-  val sessionIdResolver: ClaudeCodeAgentSessionIdResolver,
+  val agentTypeAdapter: AgentTypeAdapter,
 )
 
 /**
@@ -93,7 +94,7 @@ class ContextInitializerImpl : ContextInitializer {
     )
 
     val claudeCodeInfra = ClaudeCodeInfra(
-      sessionIdResolver = ClaudeCodeAgentSessionIdResolver(
+      agentTypeAdapter = ClaudeCodeAdapter.create(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
       ),

@@ -1,0 +1,70 @@
+---
+spec: "com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapterTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN ClaudeCodeAdapter
+  - AND all flags enabled
+    - WHEN buildStartCommand is called
+      - [PASS] THEN command always contains --dangerously-skip-permissions (Docker invariant)
+      - [PASS] THEN command contains --model sonnet
+      - [PASS] THEN command contains --system-prompt-file with the file path
+      - [PASS] THEN command contains --tools Read,Write
+      - [PASS] THEN command contains the bootstrap message as a positional argument
+      - [PASS] THEN command exports TICKET_SHEPHERD_HANDSHAKE_GUID with the handshake guid value
+      - [PASS] THEN command starts with bash -c and includes cd to working dir
+  - AND appendSystemPrompt=true
+    - WHEN buildStartCommand is called
+      - [PASS] THEN command contains --append-system-prompt-file
+      - [PASS] THEN command does NOT contain bare --system-prompt-file (without append prefix)
+  - AND bootstrap message containing shell-special characters
+    - WHEN buildStartCommand is called
+      - [PASS] THEN bootstrap message backticks are escaped
+      - [PASS] THEN bootstrap message dollar signs are escaped
+  - AND empty tools
+    - WHEN buildStartCommand is called
+      - [PASS] THEN command does not contain --tools
+  - AND file path containing single quotes
+    - WHEN buildStartCommand is called
+      - [PASS] THEN single quotes in the file path are escaped for the bash -c wrapper
+      - [PASS] THEN the command is a valid bash -c wrapper
+  - AND without system prompt file
+    - WHEN buildStartCommand is called
+      - [PASS] THEN command does not contain --append-system-prompt-file
+      - [PASS] THEN command does not contain --system-prompt-file
+      - [PASS] THEN command still contains --dangerously-skip-permissions (Docker invariant)
+  - AND workingDir containing single quote
+    - WHEN buildStartCommand is called
+      - [PASS] THEN single quote in workingDir is properly escaped
+- GIVEN a ClaudeCodeAdapter with a fake GuidScanner
+  - AND the scanner always returns empty and timeout is very short
+    - WHEN resolveSessionId is called
+      - [PASS] THEN exception message contains the GUID
+      - [PASS] THEN throws IllegalStateException wrapping the timeout
+  - AND the scanner returns empty on first call then a match on the second call
+    - WHEN resolveSessionId is called
+      - [PASS] THEN polls more than once before finding the match
+      - [PASS] THEN returns the session ID from the matched path
+  - AND the scanner returns empty on the first 3 calls then a match
+    - WHEN resolveSessionId is called
+      - [PASS] THEN returns the session ID after 4 total poll attempts
+- GIVEN a ClaudeCodeAdapter with a temp projects directory
+  - AND JSONL files are in nested subdirectories
+    - WHEN resolveSessionId is called
+      - [PASS] THEN finds the GUID in nested files and returns session ID
+  - AND a single JSONL file containing the target GUID
+    - WHEN resolveSessionId is called
+      - [PASS] THEN returns the session ID extracted from the filename
+  - AND multiple JSONL files contain the target GUID
+    - WHEN resolveSessionId is called
+      - [PASS] THEN exception message mentions ambiguous
+      - [PASS] THEN throws IllegalStateException
+  - AND no JSONL files contain the target GUID
+    - WHEN resolveSessionId is called with a short timeout
+      - [PASS] THEN exception message contains the GUID
+      - [PASS] THEN throws IllegalStateException
+  - AND only non-JSONL files contain the GUID
+    - WHEN resolveSessionId is called with a short timeout
+      - [PASS] THEN throws IllegalStateException because non-JSONL files are ignored
