@@ -15,7 +15,11 @@ skipped: 0
     - [PASS] THEN file moves to addressed/ directory
 - GIVEN critical (addressed), important (rejected+accepted), optional (skipped)
   - WHEN inner loop processes all three
-    - [PASS] THEN critical in addressed/, important in rejected/, optional in addressed/
+    - [PASS] THEN critical and optional land in addressed/
+    - [PASS] THEN git commit is called once per feedback item
+    - [PASS] THEN pending/ is empty
+    - [PASS] THEN rejected important item lands in rejected/
+    - [PASS] THEN result is Continue
 - GIVEN critical feedback files remain in pending/
   - WHEN PartCompletionGuard validates on reviewer PASS
     - [PASS] THEN guard fails with message about unaddressed items
@@ -30,4 +34,7 @@ skipped: 0
 - GIVEN reviewer writes critical, important, and optional feedback
   - WHEN doer addresses every item with ADDRESSED resolution
     - [PASS] THEN all files move to addressed/ in severity order
+    - [PASS] THEN git commit is called once per feedback item
     - [PASS] THEN iteration counter in git commits remains constant
+    - [PASS] THEN pending/ is empty
+    - [PASS] THEN result is Continue

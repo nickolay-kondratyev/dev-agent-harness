@@ -52,6 +52,12 @@ import java.time.Instant
  * - Feedback files presence guard
  * - Optional item SKIPPED handling
  *
+ * WHY-NOT self-compaction scenario: [InnerFeedbackLoop] reads context window state per item
+ * but does NOT own the compaction decision — that responsibility belongs to [PartExecutorImpl.afterDone()].
+ * The inner loop only checks if context is low and logs. There is no integration surface to test
+ * self-compaction at this layer. The unit test [InnerFeedbackLoopTest] verifies that
+ * `readContextWindowState` is called per item, which is the extent of this component's responsibility.
+ *
  * See spec: ref.ap.5Y5s8gqykzGN1TVK5MZdS.E (granular-feedback-loop.md, Gate 6)
  */
 class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
@@ -181,12 +187,17 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
      * Only [ReInstructAndAwait], [FeedbackFileReader], [AgentFacade], and [GitCommitStrategy]
      * are faked — those are the boundaries to agent communication and external systems.
      */
+    data class WiredLoopSetup(
+        val loop: InnerFeedbackLoop,
+        val gitStrategy: RecordingGitStrategy,
+    )
+
     fun buildWiredLoop(
         reInstructAndAwait: ReInstructAndAwait,
         feedbackFileReader: FeedbackFileReader,
         gitStrategy: RecordingGitStrategy = RecordingGitStrategy(),
         facade: FakeAgentFacade = FakeAgentFacade(),
-    ): Pair<InnerFeedbackLoop, RecordingGitStrategy> {
+    ): WiredLoopSetup {
         facade.onReadContextWindowState {
             ContextWindowState(remainingPercentage = 80)
         }
@@ -210,7 +221,7 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
                 outFactory = outFactory,
             )
         )
-        return loop to gitStrategy
+        return WiredLoopSetup(loop, gitStrategy)
     }
 
     fun buildCtx(
@@ -246,8 +257,13 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
     describe("GIVEN reviewer writes critical, important, and optional feedback") {
         describe("WHEN doer addresses every item with ADDRESSED resolution") {
 
-            it("THEN all files move to addressed/ in severity order") {
-                val feedbackDir = createFeedbackDir()
+            // Shared state for this describe block's `it` assertions
+            lateinit var feedbackDir: Path
+            lateinit var gitStrategy: RecordingGitStrategy
+            lateinit var result: InnerLoopOutcome
+
+            beforeEach {
+                feedbackDir = createFeedbackDir()
                 val doerCfg = createDoerConfigWithPublicMd()
 
                 writePendingFile(feedbackDir, "optional__style-nit.md", "Fix style.")
@@ -269,19 +285,29 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
                     ReInstructOutcome.Responded(AgentSignal.Done(DoneResult.COMPLETED))
                 }
 
-                val (loop, gitStrategy) = buildWiredLoop(reInstruct, reader)
-                val result = loop.execute(buildCtx(feedbackDir, doerCfg))
+                val setup = buildWiredLoop(reInstruct, reader)
+                gitStrategy = setup.gitStrategy
+                result = setup.loop.execute(buildCtx(feedbackDir, doerCfg))
+            }
 
+            it("THEN result is Continue") {
                 result shouldBe InnerLoopOutcome.Continue
+            }
 
+            it("THEN all files move to addressed/ in severity order") {
                 val addressedFiles = listFiles(feedbackDir.resolve("addressed"))
                 addressedFiles shouldContainExactly listOf(
                     "critical__null-check.md",
                     "important__error-handling.md",
                     "optional__style-nit.md",
                 )
+            }
 
+            it("THEN pending/ is empty") {
                 listFiles(feedbackDir.resolve("pending")) shouldHaveSize 0
+            }
+
+            it("THEN git commit is called once per feedback item") {
                 gitStrategy.calls shouldHaveSize 3
             }
 
@@ -560,8 +586,12 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
     describe("GIVEN critical (addressed), important (rejected+accepted), optional (skipped)") {
         describe("WHEN inner loop processes all three") {
 
-            it("THEN critical in addressed/, important in rejected/, optional in addressed/") {
-                val feedbackDir = createFeedbackDir()
+            lateinit var feedbackDir: Path
+            lateinit var gitStrategy: RecordingGitStrategy
+            lateinit var result: InnerLoopOutcome
+
+            beforeEach {
+                feedbackDir = createFeedbackDir()
                 val doerCfg = createDoerConfigWithPublicMd()
 
                 val criticalFile = writePendingFile(
@@ -601,19 +631,33 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
                     }
                 }
 
-                val (loop, gitStrategy) = buildWiredLoop(reInstruct, reader)
-                val result = loop.execute(buildCtx(feedbackDir, doerCfg))
+                val setup = buildWiredLoop(reInstruct, reader)
+                gitStrategy = setup.gitStrategy
+                result = setup.loop.execute(buildCtx(feedbackDir, doerCfg))
+            }
 
+            it("THEN result is Continue") {
                 result shouldBe InnerLoopOutcome.Continue
+            }
 
+            it("THEN critical and optional land in addressed/") {
                 listFiles(feedbackDir.resolve("addressed")) shouldContainExactly listOf(
                     "critical__real-bug.md",
                     "optional__minor.md",
                 )
+            }
+
+            it("THEN rejected important item lands in rejected/") {
                 listFiles(feedbackDir.resolve("rejected")) shouldContainExactly listOf(
                     "important__style-disagree.md",
                 )
+            }
+
+            it("THEN pending/ is empty") {
                 listFiles(feedbackDir.resolve("pending")) shouldHaveSize 0
+            }
+
+            it("THEN git commit is called once per feedback item") {
                 gitStrategy.calls shouldHaveSize 3
             }
         }
