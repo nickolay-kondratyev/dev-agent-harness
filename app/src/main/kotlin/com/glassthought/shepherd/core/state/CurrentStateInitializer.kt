@@ -49,6 +49,7 @@ class CurrentStateInitializerImpl : CurrentStateInitializer {
             return subPart.copy(
                 status = SubPartStatus.NOT_STARTED,
                 iteration = subPart.iteration?.copy(current = 0),
+                sessionIds = null, // Clear any stale session records from plan_flow.json
             )
         }
     }
