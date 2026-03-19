@@ -1,11 +1,11 @@
 ---
 id: nid_y4ick5sgbafgwgeauhu385xq2_E
 title: "Implement QaDrainAndDeliverUseCase + QaAnswersFileWriter"
-status: open
+status: in_progress
 deps: [nid_wnpjmnowllgk9oy5ccufgfyr1_E, nid_d1qyvonxndnk9yp68czrb98ki_E, nid_9kic96nh6mb8r5legcsvt46uy_E]
 links: [nid_d1qyvonxndnk9yp68czrb98ki_E, nid_wnpjmnowllgk9oy5ccufgfyr1_E]
 created_iso: 2026-03-19T00:40:51Z
-status_updated_iso: 2026-03-19T00:40:51Z
+status_updated_iso: 2026-03-19T18:02:24Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
