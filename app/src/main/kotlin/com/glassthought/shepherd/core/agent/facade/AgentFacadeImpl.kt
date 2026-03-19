@@ -15,15 +15,25 @@ import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessio
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionCreator
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
+import com.glassthought.shepherd.core.question.QaDrainAndDeliverUseCase
+import com.glassthought.shepherd.core.server.AckedPayloadSender
+import com.glassthought.shepherd.core.server.PayloadAckTimeoutException
 import com.glassthought.shepherd.core.session.SessionEntry
 import com.glassthought.shepherd.core.session.SessionsState
 import com.glassthought.shepherd.core.time.Clock
+import com.glassthought.shepherd.usecase.healthmonitoring.AgentUnresponsiveUseCase
+import com.glassthought.shepherd.usecase.healthmonitoring.DetectionContext
 import com.glassthought.shepherd.usecase.healthmonitoring.SingleSessionKiller
+import com.glassthought.shepherd.usecase.healthmonitoring.UnresponsiveDiagnostics
+import com.glassthought.shepherd.usecase.healthmonitoring.UnresponsiveHandleResult
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withTimeout
 import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicReference
+import kotlin.time.Duration
+import kotlin.time.Duration.Companion.milliseconds
 
 /**
  * Real [AgentFacade] implementation that delegates to infrastructure components.
@@ -31,16 +41,18 @@ import java.util.concurrent.atomic.AtomicReference
  * Owns the [SessionsState] lifecycle — no external access to the session registry.
  * Each method performs structured logging via [Out].
  *
- * **sendPayloadAndAwaitSignal** is a V1 stub — full health-aware await loop is deferred
- * to a separate ticket (nid_qdd1w86a415xllfpvcsf8djab_E).
+ * **sendPayloadAndAwaitSignal** implements the full health-aware await loop
+ * (ref.ap.QCjutDexa2UBDaKB3jTcF.E): ACK-wrapped payload delivery, health monitoring
+ * with ping/crash detection, and Q&A handling.
  *
  * Constructor depends on interfaces ([TmuxSessionCreator], [SingleSessionKiller]) rather
- * than the concrete [com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager], following DIP
- * and enabling unit testing without a real tmux binary.
+ * than the concrete [com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager],
+ * following DIP and enabling unit testing without a real tmux binary.
  *
  * See ref.ap.9h0KS4EOK5yumssRCJdbq.E (AgentFacade spec).
  */
 @AnchorPoint("ap.YRqz4vJhWbKc3NxTmAp8s.E")
+@Suppress("LongParameterList", "TooManyFunctions")
 class AgentFacadeImpl(
     private val sessionsState: SessionsState,
     private val agentTypeAdapter: AgentTypeAdapter,
@@ -49,12 +61,17 @@ class AgentFacadeImpl(
     private val contextWindowStateReader: ContextWindowStateReader,
     private val clock: Clock,
     private val harnessTimeoutConfig: HarnessTimeoutConfig,
+    private val ackedPayloadSender: AckedPayloadSender,
+    private val agentUnresponsiveUseCase: AgentUnresponsiveUseCase,
+    private val qaDrainAndDeliverUseCase: QaDrainAndDeliverUseCase,
     private val outFactory: OutFactory,
 ) : AgentFacade {
 
     private val out = outFactory.getOutForClass(AgentFacadeImpl::class)
 
-    override suspend fun spawnAgent(config: SpawnAgentConfig): SpawnedAgentHandle {
+    override suspend fun spawnAgent(
+        config: SpawnAgentConfig,
+    ): SpawnedAgentHandle {
         val handshakeGuid = HandshakeGuid.generate()
         val sessionName = buildSessionName(config.partName, config.subPartName)
 
@@ -70,7 +87,10 @@ class AgentFacadeImpl(
         awaitStartupOrCleanup(signalDeferred, handshakeGuid, sessionName, tmuxSession)
 
         val resumableId = resolveAndBuildSessionId(handshakeGuid, config)
-        val tmuxAgentSession = TmuxAgentSession(tmuxSession = tmuxSession, resumableAgentSessionId = resumableId)
+        val tmuxAgentSession = TmuxAgentSession(
+            tmuxSession = tmuxSession,
+            resumableAgentSessionId = resumableId,
+        )
         registerRealEntry(handshakeGuid, config, tmuxAgentSession)
 
         out.info(
@@ -104,18 +124,18 @@ class AgentFacadeImpl(
         )
     }
 
-    override suspend fun readContextWindowState(handle: SpawnedAgentHandle): ContextWindowState {
+    override suspend fun readContextWindowState(
+        handle: SpawnedAgentHandle,
+    ): ContextWindowState {
         return contextWindowStateReader.read(handle.sessionId.sessionId)
     }
 
     /**
-     * V1 stub — delivers payload and awaits the signal deferred.
+     * Delivers payload via [AckedPayloadSender] and runs the health-aware await
+     * loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) until a signal arrives or a crash
+     * is detected.
      *
-     * **V1 limitation**: Sends the raw instruction file path via TMUX send-keys without
-     * ACK protocol wrapping (ref.ap.tbtBcVN2iCl1xfHJthllP.E). The full ACK-wrapped delivery
-     * via [com.glassthought.shepherd.core.server.AckedPayloadSender] and health-aware await loop
-     * (health pings, Q&A handling, crash detection) are deferred to ticket
-     * nid_qdd1w86a415xllfpvcsf8djab_E.
+     * See [HealthAwareAwaitLoop] for the monitoring logic.
      */
     override suspend fun sendPayloadAndAwaitSignal(
         handle: SpawnedAgentHandle,
@@ -141,20 +161,60 @@ class AgentFacadeImpl(
         )
         sessionsState.register(handle.guid, updatedEntry)
 
-        // V1 stub: sends raw path without ACK wrapping. See KDoc above.
-        updatedEntry.tmuxAgentSession.tmuxSession.sendKeys(payload.instructionFilePath.toString())
+        val crashedFromAck = deliverPayloadOrCrash(
+            handle, updatedEntry, payload, freshSignalDeferred,
+        )
+        if (crashedFromAck != null) return crashedFromAck
 
-        return freshSignalDeferred.await()
+        out.info(
+            "payload_delivered_entering_health_loop",
+            Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+        )
+
+        val loop = HealthAwareAwaitLoop(
+            handle = handle,
+            entry = updatedEntry,
+            signalDeferred = freshSignalDeferred,
+            tmuxSession = updatedEntry.tmuxAgentSession.tmuxSession,
+            commInDir = payload.instructionFilePath.parent,
+        )
+        return loop.run()
     }
 
-    // ── Private helpers ─────────────────────────────────────────────────
-
     /**
-     * Registers a placeholder [SessionEntry] so the HTTP server can find the entry
-     * by [HandshakeGuid] during the startup handshake.
-     *
-     * @return The [CompletableDeferred] that the HTTP server will complete on /signal/started.
+     * Attempts ACK-wrapped payload delivery. Returns [AgentSignal.Crashed]
+     * if all ACK retries are exhausted, `null` on success.
      */
+    private suspend fun deliverPayloadOrCrash(
+        handle: SpawnedAgentHandle,
+        entry: SessionEntry,
+        payload: AgentPayload,
+        signalDeferred: CompletableDeferred<AgentSignal>,
+    ): AgentSignal.Crashed? {
+        try {
+            ackedPayloadSender.sendAndAwaitAck(
+                tmuxSession = entry.tmuxAgentSession,
+                sessionEntry = entry,
+                payloadContent = payload.instructionFilePath.toString(),
+            )
+            return null
+        } catch (e: PayloadAckTimeoutException) {
+            out.info(
+                "payload_ack_timeout_declaring_crash",
+                Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+                Val(e.message ?: "unknown", ValType.STRING_USER_AGNOSTIC),
+            )
+            killSession(handle)
+            val crashed = AgentSignal.Crashed(
+                "Payload ACK timeout — ${e.message}"
+            )
+            signalDeferred.complete(crashed)
+            return crashed
+        }
+    }
+
+    // ── Private helpers ─────────────────────────────────────────────
+
     private suspend fun registerPlaceholderEntry(
         guid: HandshakeGuid,
         config: SpawnAgentConfig,
@@ -243,34 +303,201 @@ class AgentFacadeImpl(
         sessionsState.register(guid, realEntry)
     }
 
-    private fun buildSessionName(partName: String, subPartName: String): String {
-        return "shepherd_${partName}_${subPartName}"
+    private fun buildSessionName(
+        partName: String,
+        subPartName: String,
+    ): String = "shepherd_${partName}_${subPartName}"
+
+    /**
+     * Encapsulates the health-aware await loop logic.
+     *
+     * Polls every [HarnessTimeoutConfig.healthCheckInterval] and checks:
+     * (a) signal completion, (b) Q&A pending, (c) activity staleness.
+     *
+     * See ref.ap.QCjutDexa2UBDaKB3jTcF.E and ref.ap.6HIM68gd4kb8D2WmvQDUK.E.
+     */
+    private inner class HealthAwareAwaitLoop(
+        private val handle: SpawnedAgentHandle,
+        private val entry: SessionEntry,
+        private val signalDeferred: CompletableDeferred<AgentSignal>,
+        private val tmuxSession: TmuxSession,
+        private val commInDir: java.nio.file.Path,
+    ) {
+        private val interval = harnessTimeoutConfig.healthCheckInterval
+        private val normalActivity = harnessTimeoutConfig.healthTimeouts.normalActivity
+        private val pingResponse = harnessTimeoutConfig.healthTimeouts.pingResponse
+
+        @Suppress("ReturnCount", "LoopWithTooManyJumpStatements")
+        suspend fun run(): AgentSignal {
+            while (true) {
+                delay(interval)
+
+                checkSignalCompleted()?.let { return it }
+
+                if (entry.isQAPending) {
+                    drainQA()
+                    continue
+                }
+
+                val staleResult = checkStaleness()
+                if (staleResult == StalenessAction.FRESH) continue
+
+                // Stale — ping sent, now await proof of life
+                val pingResult = awaitPingProofOfLife()
+                when (pingResult) {
+                    is PingOutcome.SignalArrived -> return pingResult.signal
+                    is PingOutcome.AgentAlive -> continue
+                    is PingOutcome.Crashed -> return pingResult.signal
+                }
+            }
+        }
+
+        private suspend fun checkSignalCompleted(): AgentSignal? {
+            if (!signalDeferred.isCompleted) return null
+            val signal = signalDeferred.await()
+            out.info(
+                "signal_received",
+                Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+                Val(signal::class.simpleName ?: "unknown", ShepherdValType.SIGNAL_ACTION),
+            )
+            return signal
+        }
+
+        private suspend fun drainQA() {
+            out.info(
+                "qa_pending_draining",
+                Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+            )
+            qaDrainAndDeliverUseCase.drainAndDeliver(entry, commInDir)
+        }
+
+        /**
+         * Checks `lastActivityTimestamp` staleness. If stale, sends a ping
+         * via [AgentUnresponsiveUseCase]. Returns [StalenessAction.FRESH]
+         * if no action needed, [StalenessAction.PING_SENT] if ping was sent.
+         */
+        private suspend fun checkStaleness(): StalenessAction {
+            val lastActivity = entry.lastActivityTimestamp.get()
+            val ageMs = java.time.Duration.between(lastActivity, clock.now()).toMillis()
+            val callbackAge = ageMs.milliseconds
+
+            if (callbackAge < normalActivity) {
+                out.debug("last_activity_timestamp_fresh") {
+                    listOf(
+                        Val(callbackAge.toString(), ShepherdValType.CALLBACK_AGE),
+                        Val(normalActivity.toString(), ShepherdValType.TIMEOUT_THRESHOLD),
+                    )
+                }
+                return StalenessAction.FRESH
+            }
+
+            out.info(
+                "no_activity_timeout_triggering_ping",
+                Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+                Val(callbackAge.toString(), ShepherdValType.STALE_DURATION),
+                Val(normalActivity.toString(), ShepherdValType.TIMEOUT_THRESHOLD),
+            )
+
+            agentUnresponsiveUseCase.handle(
+                detectionContext = DetectionContext.NO_ACTIVITY_TIMEOUT,
+                tmuxSession = tmuxSession,
+                diagnostics = UnresponsiveDiagnostics(
+                    handshakeGuid = handle.guid,
+                    timeoutDuration = normalActivity,
+                    staleDuration = callbackAge,
+                ),
+            )
+            return StalenessAction.PING_SENT
+        }
+
+        /**
+         * Waits the [pingResponse] window, polling for proof of life.
+         */
+        @Suppress("ReturnCount") // Three outcomes: signal, alive, crashed.
+        private suspend fun awaitPingProofOfLife(): PingOutcome {
+            val timestampBeforePing = entry.lastActivityTimestamp.get()
+            var elapsed = 0L
+            val intervalMs = interval.inWholeMilliseconds
+            val pingResponseMs = pingResponse.inWholeMilliseconds
+
+            while (elapsed < pingResponseMs) {
+                delay(interval)
+                elapsed += intervalMs
+
+                if (signalDeferred.isCompleted) {
+                    return PingOutcome.SignalArrived(signalDeferred.await())
+                }
+
+                val current = entry.lastActivityTimestamp.get()
+                if (current.isAfter(timestampBeforePing)) {
+                    out.info(
+                        "agent_alive_after_ping",
+                        Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+                    )
+                    return PingOutcome.AgentAlive
+                }
+            }
+
+            return declareCrash()
+        }
+
+        private suspend fun declareCrash(): PingOutcome.Crashed {
+            out.info(
+                "ping_timeout_killing_session",
+                Val(handle.guid.value, ShepherdValType.HANDSHAKE_GUID),
+                Val(tmuxSession.name.sessionName, ShepherdValType.TMUX_SESSION_NAME),
+            )
+
+            val finalTs = entry.lastActivityTimestamp.get()
+            val staleMs = java.time.Duration.between(finalTs, clock.now()).toMillis()
+
+            val result = agentUnresponsiveUseCase.handle(
+                detectionContext = DetectionContext.PING_TIMEOUT,
+                tmuxSession = tmuxSession,
+                diagnostics = UnresponsiveDiagnostics(
+                    handshakeGuid = handle.guid,
+                    timeoutDuration = pingResponse,
+                    staleDuration = staleMs.milliseconds,
+                ),
+            )
+
+            val crashed = when (result) {
+                is UnresponsiveHandleResult.SessionKilled -> result.signal
+                is UnresponsiveHandleResult.PingSent -> AgentSignal.Crashed(
+                    "Unexpected PingSent for PING_TIMEOUT context"
+                )
+            }
+            signalDeferred.complete(crashed)
+            sessionsState.remove(handle.guid)
+            return PingOutcome.Crashed(crashed)
+        }
     }
 
     companion object {
-        /**
-         * Placeholder [TmuxAgentSession] used in the initial [SessionEntry] registration
-         * before the real TMUX session is created. Replaced after startup completes.
-         */
         private val PLACEHOLDER_TMUX_AGENT_SESSION: TmuxAgentSession by lazy {
-            val noOpCommunicator = object : com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator {
-                override suspend fun sendKeys(paneTarget: String, text: String) =
-                    error("Placeholder — sendKeys must not be called")
+            val noOpCommunicator =
+                object : com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator {
+                    override suspend fun sendKeys(paneTarget: String, text: String) =
+                        error("Placeholder — sendKeys must not be called")
 
-                override suspend fun sendRawKeys(paneTarget: String, keys: String) =
-                    error("Placeholder — sendRawKeys must not be called")
-            }
-            val noOpExistsChecker = com.glassthought.shepherd.core.agent.tmux.SessionExistenceChecker {
-                false
-            }
-            val placeholderTmuxSession = com.glassthought.shepherd.core.agent.tmux.TmuxSession(
-                name = com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName("__placeholder__"),
-                paneTarget = "__placeholder__:0.0",
-                communicator = noOpCommunicator,
-                existsChecker = noOpExistsChecker,
-            )
+                    override suspend fun sendRawKeys(paneTarget: String, keys: String) =
+                        error("Placeholder — sendRawKeys must not be called")
+                }
+            val noOpExistsChecker =
+                com.glassthought.shepherd.core.agent.tmux.SessionExistenceChecker {
+                    false
+                }
+            val placeholderSession =
+                com.glassthought.shepherd.core.agent.tmux.TmuxSession(
+                    name = com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName(
+                        "__placeholder__"
+                    ),
+                    paneTarget = "__placeholder__:0.0",
+                    communicator = noOpCommunicator,
+                    existsChecker = noOpExistsChecker,
+                )
             TmuxAgentSession(
-                tmuxSession = placeholderTmuxSession,
+                tmuxSession = placeholderSession,
                 resumableAgentSessionId = ResumableAgentSessionId(
                     handshakeGuid = HandshakeGuid("handshake.placeholder"),
                     agentType = com.glassthought.shepherd.core.data.AgentType.CLAUDE_CODE,
@@ -282,6 +509,16 @@ class AgentFacadeImpl(
     }
 }
 
+/** Staleness check result — used internally by [HealthAwareAwaitLoop]. */
+private enum class StalenessAction { FRESH, PING_SENT }
+
+/** Outcome of the ping proof-of-life phase — used by [HealthAwareAwaitLoop]. */
+private sealed class PingOutcome {
+    data class SignalArrived(val signal: AgentSignal) : PingOutcome()
+    data object AgentAlive : PingOutcome()
+    data class Crashed(val signal: AgentSignal) : PingOutcome()
+}
+
 
 /**
  * Thrown when agent spawning fails (TMUX creation failure, startup timeout, etc.).
@@ -291,7 +528,7 @@ class AgentFacadeImpl(
  */
 class AgentSpawnException(
     val sessionName: String,
-    val timeout: kotlin.time.Duration,
+    val timeout: Duration,
     cause: Throwable? = null,
 ) : AsgardBaseException(
     "agent_spawn_failed",

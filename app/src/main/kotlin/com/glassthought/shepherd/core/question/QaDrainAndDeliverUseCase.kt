@@ -19,7 +19,7 @@ import java.nio.file.Path
  * - All answers are delivered in **one batch** (single file, single payload).
  * - The file is **overwritten** on each delivery.
  */
-class QaDrainAndDeliverUseCase(
+open class QaDrainAndDeliverUseCase(
     private val userQuestionHandler: UserQuestionHandler,
     private val qaAnswersFileWriter: QaAnswersFileWriter,
     private val ackedPayloadSender: AckedPayloadSender,
@@ -31,7 +31,7 @@ class QaDrainAndDeliverUseCase(
      * Drains all pending questions from [sessionEntry], collects answers,
      * writes `qa_answers.md` to [commInDir], and delivers the path to the agent.
      */
-    suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
+    open suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
         val collectedQAs = mutableListOf<QuestionAndAnswer>()
 
         // Drain-and-collect loop: keeps going until no new questions arrive

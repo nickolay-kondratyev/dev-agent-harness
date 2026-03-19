@@ -18,10 +18,33 @@ skipped: 0
     - [PASS] THEN delegates with correct sessionId
     - [PASS] THEN returns the reader result
 - GIVEN sendPayloadAndAwaitSignal
+  - AND Q&A completes WHEN normalActivity timeout reached
+    - [PASS] THEN health checks resume normally
+  - AND Q&A is pending WHEN normalActivity timeout would trigger
+    - [PASS] THEN health checks are skipped and Q&A is drained
+  - AND agent is active with fresh lastActivityTimestamp
+    - WHEN health check fires
+      - [PASS] THEN no ping is sent
+  - AND lastActivityTimestamp is stale beyond normalActivity
+    - [PASS] THEN sends a ping via AgentUnresponsiveUseCase with NO_ACTIVITY_TIMEOUT
+  - AND ping sent WHEN callback arrives during pingResponse window
+    - [PASS] THEN agent is marked alive and loop continues
+  - AND ping sent WHEN no callback after pingResponse window
+    - [PASS] THEN AgentUnresponsiveUseCase is called with PING_TIMEOUT
+    - [PASS] THEN returns AgentSignal.Crashed
+  - AND signal arrives before normalActivity timeout
+    - [PASS] THEN does not trigger any health checks
+    - [PASS] THEN returns the completed signal
+  - WHEN AckedPayloadSender throws PayloadAckTimeoutException
+    - [PASS] THEN crash details mention payload ACK timeout
+    - [PASS] THEN kills the session
+    - [PASS] THEN returns AgentSignal.Crashed
+  - WHEN payload delivery succeeds
+    - [PASS] THEN ackedPayloadSender.sendAndAwaitAck is called with instruction path
+  - WHEN payload delivery succeeds and signal completes with FailWorkflow
+    - [PASS] THEN returns FailWorkflow signal
   - WHEN session entry does not exist
     - [PASS] THEN throws IllegalStateException
-  - WHEN signal deferred is completed
-    - [PASS] THEN returns the completed signal
 - GIVEN spawnAgent startup timeout
   - WHEN startup signal never arrives
     - [PASS] THEN cleans up SessionsState
