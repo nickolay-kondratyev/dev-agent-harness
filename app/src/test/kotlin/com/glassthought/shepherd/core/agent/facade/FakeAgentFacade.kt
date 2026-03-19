@@ -5,7 +5,9 @@ package com.glassthought.shepherd.core.agent.facade
  *
  * Each facade method delegates to a user-supplied handler lambda. Handlers default to
  * throwing [IllegalStateException] so that missing setup is caught immediately (fail hard,
- * never mask). All calls are recorded for interaction verification.
+ * never mask). **Exception**: [killSession] defaults to a no-op (just records the call),
+ * since kill is typically not the behavior under test. All calls are recorded for interaction
+ * verification.
  *
  * Usage:
  * ```kotlin
