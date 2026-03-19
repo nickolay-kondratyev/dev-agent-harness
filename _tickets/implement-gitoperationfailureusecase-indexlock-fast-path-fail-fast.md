@@ -1,11 +1,11 @@
 ---
 id: nid_i1jbftljythkars6fhhc6idne_E
 title: "Implement GitOperationFailureUseCase — index.lock fast-path + fail-fast"
-status: open
+status: in_progress
 deps: [nid_foubbnsh3vmk1fk34zm75zkg0_E]
 links: []
 created_iso: 2026-03-18T23:45:37Z
-status_updated_iso: 2026-03-18T23:45:37Z
+status_updated_iso: 2026-03-19T17:04:04Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
