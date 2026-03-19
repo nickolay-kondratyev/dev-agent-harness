@@ -1,11 +1,11 @@
 ---
 id: nid_itogi6ji82dbhb0k3zzt6v8qp_E
 title: "Implement TicketShepherdCreator — ticket-scoped wiring factory"
-status: open
+status: in_progress
 deps: [nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_kavqh23pdfq56cdli0fv4sm3u_E, nid_00027pdr09egw4v9btb4vl6z7_E, nid_156yspl7869zrisam6l6xrd66_E, nid_fjod8du6esers3ajur2h7tvgx_E, nid_o5azwgdl76nnofttpt7ljgkua_E, nid_7xzhkw4pw5sc5hqh80cvsotdc_E, nid_p1w49sk0s2isnvcjbmhgapho7_E, nid_fqzi45z9xja51yy4yk3m3mkwh_E, nid_v14amda2uv5nedrp9hvb8xlfq_E, nid_mebn70o7xjiabzx5uxngjx8uf_E, nid_d1qyvonxndnk9yp68czrb98ki_E]
 links: [nid_7xzhkw4pw5sc5hqh80cvsotdc_E]
 created_iso: 2026-03-19T00:10:36Z
-status_updated_iso: 2026-03-19T00:10:36Z
+status_updated_iso: 2026-03-19T22:58:44Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
