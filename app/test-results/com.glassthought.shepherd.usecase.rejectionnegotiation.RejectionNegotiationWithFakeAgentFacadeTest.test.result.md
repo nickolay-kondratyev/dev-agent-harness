@@ -24,7 +24,7 @@ skipped: 0
     - [PASS] THEN returns RejectionResult.AgentCrashed
 - GIVEN reviewer signals Done(PASS) through full wired stack
   - WHEN execute is called
-    - [PASS] THEN payload forwarded to reviewer contains rejection reasoning
+    - [PASS] THEN payload is sent to reviewer handle
     - [PASS] THEN returns RejectionResult.Accepted
 - GIVEN reviewer signals FailWorkflow through full wired stack
   - WHEN execute is called

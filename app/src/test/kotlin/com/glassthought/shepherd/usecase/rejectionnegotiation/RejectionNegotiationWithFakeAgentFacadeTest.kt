@@ -137,7 +137,7 @@ class RejectionNegotiationWithFakeAgentFacadeTest : AsgardDescribeSpec({
                 result.shouldBeInstanceOf<RejectionResult.Accepted>()
             }
 
-            it("THEN payload forwarded to reviewer contains rejection reasoning") {
+            it("THEN payload is sent to reviewer handle") {
                 sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
                 val reviewerPayload = fakeFacade.sendPayloadCalls.first()
                 reviewerPayload.handle shouldBe reviewerHandle
