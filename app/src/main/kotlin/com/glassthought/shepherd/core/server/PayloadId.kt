@@ -1,5 +1,6 @@
 package com.glassthought.shepherd.core.server
 
+import com.asgard.core.annotation.AnchorPoint
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -16,6 +17,7 @@ import java.util.concurrent.atomic.AtomicInteger
  * - Sequence numbers reveal gaps for debugging
  * - Deterministic IDs enable easier test assertions
  */
+@AnchorPoint("ap.3Wug9Q5QRHDSOvMq0FB3d.E")
 @JvmInline
 value class PayloadId(val value: String) {
     override fun toString(): String = value
