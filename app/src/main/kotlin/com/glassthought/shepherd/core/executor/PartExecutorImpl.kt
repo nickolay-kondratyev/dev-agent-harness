@@ -517,7 +517,7 @@ class PartExecutorImpl(
                 AgentInstructionRequest.DoerRequest(
                     roleDefinition = doerConfig.roleDefinition, ticketContent = doerConfig.ticketContent,
                     iterationNumber = currentIteration, outputDir = doerConfig.outputDir,
-                    publicMdOutputPath = doerConfig.publicMdOutputPath, privateMdPath = doerConfig.privateMdPath,
+                    publicMdOutputPath = doerConfig.publicMdOutputPath, subPartName = doerConfig.subPartName,
                     executionContext = doerConfig.executionContext, reviewerPublicMdPath = reviewerPublicMdPath,
                 )
             )
@@ -529,7 +529,7 @@ class PartExecutorImpl(
                 AgentInstructionRequest.ReviewerRequest(
                     roleDefinition = revConfig.roleDefinition, ticketContent = revConfig.ticketContent,
                     iterationNumber = currentIteration, outputDir = revConfig.outputDir,
-                    publicMdOutputPath = revConfig.publicMdOutputPath, privateMdPath = revConfig.privateMdPath,
+                    publicMdOutputPath = revConfig.publicMdOutputPath, subPartName = revConfig.subPartName,
                     executionContext = revConfig.executionContext, doerPublicMdPath = doerConfig.publicMdOutputPath,
                     feedbackDir = revConfig.feedbackDir ?: error("Reviewer config must have feedbackDir"),
                 )

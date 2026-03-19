@@ -50,15 +50,18 @@ sealed class InstructionSection {
      * Renders prior session context from PRIVATE.md.
      *
      * Returns `null` (skip) when:
-     * - [AgentInstructionRequest.privateMdPath] is null (no prior session)
+     * - [resolvedPath] is null (no prior session)
      * - The file does not exist on disk
      * - The file is blank (empty or whitespace-only)
      *
+     * The path is resolved by [ContextForAgentProviderImpl] via [AiOutputStructure] before
+     * constructing this section.
+     *
      * See self-compaction spec (ref.ap.8nwz2AHf503xwq8fKuLcl.E).
      */
-    data object PrivateMd : InstructionSection() {
+    data class PrivateMd(val resolvedPath: Path?) : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String? =
-            request.privateMdPath
+            resolvedPath
                 ?.takeIf { Files.exists(it) }
                 ?.readText()
                 ?.takeIf { it.isNotBlank() }

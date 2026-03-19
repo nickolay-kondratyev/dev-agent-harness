@@ -52,6 +52,7 @@ object ContextTestFixtures {
             iterationNumber = 1,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            subPartName = "impl",
             executionContext = ExecutionContext(
                 partName = "part_1_implementation",
                 partDescription = "Implement the main feature",
@@ -82,6 +83,7 @@ object ContextTestFixtures {
             iterationNumber = 2,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            subPartName = "impl",
             executionContext = ExecutionContext(
                 partName = "part_1_implementation",
                 partDescription = "Implement the main feature",
@@ -119,6 +121,7 @@ object ContextTestFixtures {
             iterationNumber = 1,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            subPartName = "reviewer",
             executionContext = ExecutionContext(
                 partName = "part_1_implementation",
                 partDescription = "Review the implementation",
@@ -153,6 +156,7 @@ object ContextTestFixtures {
             iterationNumber = 2,
             outputDir = outputDir,
             publicMdOutputPath = publicMdOutputPath,
+            subPartName = "reviewer",
             executionContext = ExecutionContext(
                 partName = "part_1_implementation",
                 partDescription = "Review the implementation",
@@ -183,6 +187,7 @@ object ContextTestFixtures {
         return AgentInstructionRequest.PlannerRequest(
             roleDefinition = roleDefinition("PLANNER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
+            subPartName = "planner",
             roleCatalogEntries = listOf(
                 RoleCatalogEntry("IMPLEMENTOR", "Implements features", "Full-stack agent"),
                 RoleCatalogEntry("REVIEWER", "Reviews code", null),
@@ -213,6 +218,7 @@ object ContextTestFixtures {
         return AgentInstructionRequest.PlanReviewerRequest(
             roleDefinition = roleDefinition("PLAN_REVIEWER"),
             ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
+            subPartName = "plan_reviewer",
             planJsonContent = """{"parts": []}""",
             planMdContent = "# Plan\n\nThree-part implementation.",
             plannerPublicMdPath = plannerPublicMd,

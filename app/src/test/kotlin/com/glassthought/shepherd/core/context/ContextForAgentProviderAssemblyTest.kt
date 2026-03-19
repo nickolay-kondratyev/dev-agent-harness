@@ -1,6 +1,7 @@
 package com.glassthought.shepherd.core.context
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
@@ -262,20 +263,27 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
     }
 
     // -- PrivateMd tests --
+    // Path resolution now happens via AiOutputStructure. The TEST_AI_OUTPUT_STRUCTURE uses
+    // repoRoot=/tmp/test-repo, branch=test-branch. For execution requests with
+    // partName=part_1_implementation, subPartName=impl, the resolved path is:
+    // /tmp/test-repo/.ai_out/test-branch/execution/part_1_implementation/impl/private/PRIVATE.md
 
-    describe("GIVEN a doer request with privateMdPath pointing to existing non-empty file") {
-        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
+    describe("GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md exists with content") {
+        // Build AiOutputStructure with tempDir as repoRoot so we can create the PRIVATE.md file
         val tempDir = Files.createTempDirectory("assembly-privatemd-present-test")
+        val aiOutputStructure = AiOutputStructure(repoRoot = tempDir, branch = "test-branch")
+        val provider = ContextForAgentProvider.standard(outFactory, aiOutputStructure)
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
-        val privateMdFile = tempDir.resolve("private/PRIVATE.md")
+        // Create the PRIVATE.md at the path AiOutputStructure will resolve
+        val privateMdFile = aiOutputStructure.executionPrivateMd(
+            baseRequest.executionContext.partName, baseRequest.subPartName,
+        )
         Files.createDirectories(privateMdFile.parent)
         Files.writeString(privateMdFile, "Session context from prior run.")
 
-        val request = baseRequest.copy(privateMdPath = privateMdFile)
-
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(request).readText()
+            val text = provider.assembleInstructions(baseRequest).readText()
 
             it("THEN output contains PRIVATE.md content") {
                 text shouldContain "Session context from prior run"
@@ -295,9 +303,9 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a doer request with privateMdPath = null") {
+    describe("GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md does not exist") {
         val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
-        val tempDir = Files.createTempDirectory("assembly-privatemd-null-test")
+        val tempDir = Files.createTempDirectory("assembly-privatemd-nonexistent-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
@@ -309,35 +317,20 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a doer request with privateMdPath pointing to non-existent file") {
-        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
-        val tempDir = Files.createTempDirectory("assembly-privatemd-nonexistent-test")
-        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
-
-        val nonExistentPath = tempDir.resolve("does-not-exist/PRIVATE.md")
-        val request = baseRequest.copy(privateMdPath = nonExistentPath)
-
-        describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(request).readText()
-
-            it("THEN output does NOT contain Prior Session Context header") {
-                text shouldNotContain "Prior Session Context"
-            }
-        }
-    }
-
-    describe("GIVEN a doer request with privateMdPath pointing to empty file") {
-        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
+    describe("GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md is empty") {
         val tempDir = Files.createTempDirectory("assembly-privatemd-empty-test")
+        val aiOutputStructure = AiOutputStructure(repoRoot = tempDir, branch = "test-branch")
+        val provider = ContextForAgentProvider.standard(outFactory, aiOutputStructure)
         val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
-        val emptyFile = tempDir.resolve("private/PRIVATE.md")
-        Files.createDirectories(emptyFile.parent)
-        Files.writeString(emptyFile, "")
-        val request = baseRequest.copy(privateMdPath = emptyFile)
+        val privateMdFile = aiOutputStructure.executionPrivateMd(
+            baseRequest.executionContext.partName, baseRequest.subPartName,
+        )
+        Files.createDirectories(privateMdFile.parent)
+        Files.writeString(privateMdFile, "")
 
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(request).readText()
+            val text = provider.assembleInstructions(baseRequest).readText()
 
             it("THEN output does NOT contain Prior Session Context header") {
                 text shouldNotContain "Prior Session Context"
@@ -345,19 +338,19 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a planner request with privateMdPath pointing to existing file") {
-        val provider = ContextForAgentProvider.standard(outFactory, ContextTestFixtures.TEST_AI_OUTPUT_STRUCTURE)
+    describe("GIVEN a planner request where AiOutputStructure-resolved PRIVATE.md exists") {
         val tempDir = Files.createTempDirectory("assembly-planner-privatemd-test")
+        val aiOutputStructure = AiOutputStructure(repoRoot = tempDir, branch = "test-branch")
+        val provider = ContextForAgentProvider.standard(outFactory, aiOutputStructure)
         val baseRequest = ContextTestFixtures.plannerRequest(tempDir)
 
-        val privateMdFile = tempDir.resolve("planner/private/PRIVATE.md")
+        // Planning path: planningPrivateMd(subPartName)
+        val privateMdFile = aiOutputStructure.planningPrivateMd(baseRequest.subPartName)
         Files.createDirectories(privateMdFile.parent)
         Files.writeString(privateMdFile, "Planner session context.")
 
-        val request = baseRequest.copy(privateMdPath = privateMdFile)
-
         describe("WHEN instructions are assembled") {
-            val text = provider.assembleInstructions(request).readText()
+            val text = provider.assembleInstructions(baseRequest).readText()
 
             it("THEN output contains PRIVATE.md content") {
                 text shouldContain "Planner session context"
@@ -369,6 +362,40 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
                 val ticketIdx = text.indexOf("# Ticket")
                 (roleIdx < privateIdx) shouldBe true
                 (privateIdx < ticketIdx) shouldBe true
+            }
+        }
+    }
+
+    describe("GIVEN execution vs planning requests") {
+        val tempDir = Files.createTempDirectory("assembly-path-resolution-test")
+        val aiOutputStructure = AiOutputStructure(repoRoot = tempDir, branch = "test-branch")
+        val provider = ContextForAgentProvider.standard(outFactory, aiOutputStructure)
+
+        describe("WHEN a doer request resolves PRIVATE.md") {
+            val doerRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+            val expectedPath = aiOutputStructure.executionPrivateMd(
+                doerRequest.executionContext.partName, doerRequest.subPartName,
+            )
+            Files.createDirectories(expectedPath.parent)
+            Files.writeString(expectedPath, "Doer private context.")
+
+            val text = provider.assembleInstructions(doerRequest).readText()
+
+            it("THEN execution PRIVATE.md path is used (content appears)") {
+                text shouldContain "Doer private context."
+            }
+        }
+
+        describe("WHEN a planner request resolves PRIVATE.md") {
+            val plannerRequest = ContextTestFixtures.plannerRequest(tempDir)
+            val expectedPath = aiOutputStructure.planningPrivateMd(plannerRequest.subPartName)
+            Files.createDirectories(expectedPath.parent)
+            Files.writeString(expectedPath, "Planner private context.")
+
+            val text = provider.assembleInstructions(plannerRequest).readText()
+
+            it("THEN planning PRIVATE.md path is used (content appears)") {
+                text shouldContain "Planner private context."
             }
         }
     }

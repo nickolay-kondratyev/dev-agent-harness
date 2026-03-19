@@ -19,7 +19,6 @@ import java.nio.file.Path
 class ContextForAgentProviderImpl(
     outFactory: OutFactory,
     private val assembler: InstructionPlanAssembler,
-    @Suppress("UnusedPrivateProperty") // Wired for future use — path resolution during instruction assembly.
     private val aiOutputStructure: AiOutputStructure,
 ) : ContextForAgentProvider {
 
@@ -52,13 +51,36 @@ class ContextForAgentProviderImpl(
         return assembler.assembleFromPlan(plan, request)
     }
 
+    // -- Path resolution --
+
+    /**
+     * Resolves the PRIVATE.md path for the given request via [AiOutputStructure].
+     *
+     * Execution requests (Doer, DoerFeedbackItem, Reviewer) resolve to
+     * `executionPrivateMd(partName, subPartName)`.
+     * Planning requests (Planner, PlanReviewer) resolve to
+     * `planningPrivateMd(subPartName)`.
+     */
+    private fun resolvePrivateMdPath(request: AgentInstructionRequest): Path = when (request) {
+        is AgentInstructionRequest.DoerRequest ->
+            aiOutputStructure.executionPrivateMd(request.executionContext.partName, request.subPartName)
+        is AgentInstructionRequest.DoerFeedbackItemRequest ->
+            aiOutputStructure.executionPrivateMd(request.executionContext.partName, request.subPartName)
+        is AgentInstructionRequest.ReviewerRequest ->
+            aiOutputStructure.executionPrivateMd(request.executionContext.partName, request.subPartName)
+        is AgentInstructionRequest.PlannerRequest ->
+            aiOutputStructure.planningPrivateMd(request.subPartName)
+        is AgentInstructionRequest.PlanReviewerRequest ->
+            aiOutputStructure.planningPrivateMd(request.subPartName)
+    }
+
     // -- Doer plan --
 
     private fun buildDoerPlan(
         request: AgentInstructionRequest.DoerRequest,
     ): List<InstructionSection> = buildList {
         add(InstructionSection.RoleDefinition)
-        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PrivateMd(resolvePrivateMdPath(request)))
         add(InstructionSection.PartContext)
         add(InstructionSection.Ticket)
         add(InstructionSection.PlanMd)
@@ -81,7 +103,7 @@ class ContextForAgentProviderImpl(
         request: AgentInstructionRequest.DoerFeedbackItemRequest,
     ): List<InstructionSection> = buildList {
         add(InstructionSection.RoleDefinition)
-        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PrivateMd(resolvePrivateMdPath(request)))
         add(InstructionSection.PartContext)
         add(InstructionSection.Ticket)
         add(InstructionSection.PlanMd)
@@ -98,7 +120,7 @@ class ContextForAgentProviderImpl(
         request: AgentInstructionRequest.ReviewerRequest,
     ): List<InstructionSection> = buildList {
         add(InstructionSection.RoleDefinition)
-        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PrivateMd(resolvePrivateMdPath(request)))
         add(InstructionSection.PartContext)
         add(InstructionSection.Ticket)
         add(InstructionSection.PlanMd)
@@ -141,7 +163,7 @@ class ContextForAgentProviderImpl(
         request: AgentInstructionRequest.PlannerRequest,
     ): List<InstructionSection> = buildList {
         add(InstructionSection.RoleDefinition)
-        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PrivateMd(resolvePrivateMdPath(request)))
         add(InstructionSection.Ticket)
         add(InstructionSection.RoleCatalog)
         add(InstructionSection.AvailableAgentTypes)
@@ -162,7 +184,7 @@ class ContextForAgentProviderImpl(
         request: AgentInstructionRequest.PlanReviewerRequest,
     ): List<InstructionSection> = buildList {
         add(InstructionSection.RoleDefinition)
-        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PrivateMd(resolvePrivateMdPath(request)))
         add(InstructionSection.Ticket)
         add(InstructionSection.InlineStringContentSection(
             heading = "plan_flow.json",

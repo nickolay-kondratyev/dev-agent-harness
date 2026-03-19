@@ -25,6 +25,17 @@ skipped: 0
   - WHEN instructions are assembled
     - [PASS] THEN includes pushback guidance
     - [PASS] THEN includes reviewer's PUBLIC.md content
+- GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md does not exist
+  - WHEN instructions are assembled
+    - [PASS] THEN output does NOT contain Prior Session Context header
+- GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md exists with content
+  - WHEN instructions are assembled
+    - [PASS] THEN PRIVATE.md content appears after role definition
+    - [PASS] THEN output contains PRIVATE.md content
+    - [PASS] THEN output contains Prior Session Context header
+- GIVEN a doer request where AiOutputStructure-resolved PRIVATE.md is empty
+  - WHEN instructions are assembled
+    - [PASS] THEN output does NOT contain Prior Session Context header
 - GIVEN a doer request with a plan (with-planning workflow)
   - WHEN instructions are assembled
     - [PASS] THEN includes PLAN.md content
@@ -32,24 +43,10 @@ skipped: 0
   - WHEN instructions are assembled
     - [PASS] THEN includes Prior Agent Outputs header
     - [PASS] THEN includes prior PUBLIC.md content
-- GIVEN a doer request with privateMdPath = null
-  - WHEN instructions are assembled
-    - [PASS] THEN output does NOT contain Prior Session Context header
-- GIVEN a doer request with privateMdPath pointing to empty file
-  - WHEN instructions are assembled
-    - [PASS] THEN output does NOT contain Prior Session Context header
-- GIVEN a doer request with privateMdPath pointing to existing non-empty file
-  - WHEN instructions are assembled
-    - [PASS] THEN PRIVATE.md content appears after role definition
-    - [PASS] THEN output contains PRIVATE.md content
-    - [PASS] THEN output contains Prior Session Context header
-- GIVEN a doer request with privateMdPath pointing to non-existent file
-  - WHEN instructions are assembled
-    - [PASS] THEN output does NOT contain Prior Session Context header
 - GIVEN a doer request without a plan (no-planning workflow)
   - WHEN instructions are assembled
     - [PASS] THEN does NOT include plan section header
-- GIVEN a planner request with privateMdPath pointing to existing file
+- GIVEN a planner request where AiOutputStructure-resolved PRIVATE.md exists
   - WHEN instructions are assembled
     - [PASS] THEN PRIVATE.md content appears after role definition and before ticket
     - [PASS] THEN output contains PRIVATE.md content
@@ -65,6 +62,11 @@ skipped: 0
     - [PASS] THEN includes rejected feedback header
     - [PASS] THEN includes skipped optional feedback header
     - [PASS] THEN includes skipped optional feedback section
+- GIVEN execution vs planning requests
+  - WHEN a doer request resolves PRIVATE.md
+    - [PASS] THEN execution PRIVATE.md path is used (content appears)
+  - WHEN a planner request resolves PRIVATE.md
+    - [PASS] THEN planning PRIVATE.md path is used (content appears)
 - GIVEN instructions are assembled for any agent
   - WHEN the file is written
     - [PASS] THEN sections are separated by horizontal rules

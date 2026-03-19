@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T23:20:35Z
 id: nid_fv7og578z80kw90kb7bnst9sm_E
 title: "Use AiOutputStructure in ContextForAgentProviderImpl for path resolution and remove @Suppress"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T22:51:36Z
-status_updated_iso: 2026-03-19T22:59:28Z
+status_updated_iso: 2026-03-19T23:20:35Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
