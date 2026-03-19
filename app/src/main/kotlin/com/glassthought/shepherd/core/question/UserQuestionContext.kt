@@ -8,6 +8,10 @@ import com.glassthought.shepherd.core.state.SubPartRole
  *
  * Contains enough information to identify which agent asked and to display
  * meaningful context to the human operator.
+ *
+ * Also queued on `SessionEntry.questionQueue` for server→executor hand-off.
+ *
+ * See ref.ap.NE4puAzULta4xlOLh5kfD.E for the UserQuestionHandler spec.
  */
 data class UserQuestionContext(
     val question: String,
