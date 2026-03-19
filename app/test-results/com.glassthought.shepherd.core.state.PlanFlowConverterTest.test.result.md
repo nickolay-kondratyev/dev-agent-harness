@@ -18,6 +18,7 @@ skipped: 0
 - GIVEN a plan_flow.json with runtime fields already present
   - WHEN convertAndAppend is called
     - [PASS] THEN does not throw
+    - [PASS] THEN sessionIds are cleared (null)
     - [PASS] THEN status is re-initialized to NOT_STARTED
 - GIVEN a plan_flow.json with two execution parts
   - WHEN convertAndAppend is called
@@ -48,3 +49,6 @@ skipped: 0
 - GIVEN malformed plan_flow.json
   - WHEN convertAndAppend is called
     - [PASS] THEN throws PlanConversionException
+- GIVEN plan_flow.json does not exist
+  - WHEN convertAndAppend is called
+    - [PASS] THEN throws PlanConversionException mentioning plan_flow.json

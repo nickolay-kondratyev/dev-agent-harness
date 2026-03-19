@@ -6,6 +6,7 @@ import com.asgard.core.out.OutFactory
 import com.fasterxml.jackson.core.JacksonException
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Files
+import java.nio.file.NoSuchFileException
 import kotlin.io.path.readText
 
 /**
@@ -48,7 +49,14 @@ class PlanFlowConverterImpl(
         val planFlowPath = aiOutputStructure.planFlowJson()
 
         // 1. Read and deserialize
-        val rawContent = planFlowPath.readText()
+        val rawContent = try {
+            planFlowPath.readText()
+        } catch (e: NoSuchFileException) {
+            throw PlanConversionException(
+                "plan_flow.json does not exist at: $planFlowPath",
+                e,
+            )
+        }
         val parsedState = try {
             mapper.readValue(rawContent, CurrentState::class.java)
         } catch (e: JacksonException) {

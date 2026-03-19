@@ -73,109 +73,68 @@ class PlanFlowConverterTest : AsgardDescribeSpec({
 
             describe("WHEN convertAndAppend is called") {
 
-                it("THEN returns one execution part") {
-                    val ctx = createTestContext()
+                lateinit var ctx: PlanFlowTestContext
+                lateinit var currentState: CurrentState
+                lateinit var result: List<Part>
+
+                beforeEach {
+                    ctx = createTestContext()
                     ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
+                    currentState = CurrentState(parts = mutableListOf(planningPart))
+                    result = ctx.converter.convertAndAppend(currentState)
+                }
+
+                it("THEN returns one execution part") {
                     result shouldHaveSize 1
                 }
 
                 it("THEN returned part name is ui_design") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].name shouldBe "ui_design"
                 }
 
                 it("THEN returned part phase is EXECUTION") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].phase shouldBe Phase.EXECUTION
                 }
 
                 it("THEN returned part has two subParts") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].subParts shouldHaveSize 2
                 }
 
                 it("THEN impl subPart status is NOT_STARTED") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].subParts[0].status shouldBe SubPartStatus.NOT_STARTED
                 }
 
                 it("THEN review subPart status is NOT_STARTED") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].subParts[1].status shouldBe SubPartStatus.NOT_STARTED
                 }
 
                 it("THEN review subPart iteration.current is 0") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].subParts[1].iteration!!.current shouldBe 0
                 }
 
                 it("THEN review subPart iteration.max is 3") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    val result = ctx.converter.convertAndAppend(currentState)
                     result[0].subParts[1].iteration!!.max shouldBe 3
                 }
 
                 it("THEN currentState has two parts total (planning + execution appended)") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    ctx.converter.convertAndAppend(currentState)
                     currentState.parts shouldHaveSize 2
                 }
 
                 it("THEN currentState first part is the original planning part") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    ctx.converter.convertAndAppend(currentState)
                     currentState.parts[0].name shouldBe "planning"
                     currentState.parts[0].phase shouldBe Phase.PLANNING
                 }
 
                 it("THEN currentState second part is the appended execution part") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    ctx.converter.convertAndAppend(currentState)
                     currentState.parts[1].name shouldBe "ui_design"
                     currentState.parts[1].phase shouldBe Phase.EXECUTION
                 }
 
                 it("THEN plan_flow.json is deleted") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    ctx.converter.convertAndAppend(currentState)
                     ctx.aiOutputStructure.planFlowJson().exists() shouldBe false
                 }
 
                 it("THEN current_state.json is flushed to disk") {
-                    val ctx = createTestContext()
-                    ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
-                    val currentState = CurrentState(parts = mutableListOf(planningPart))
-                    ctx.converter.convertAndAppend(currentState)
                     ctx.aiOutputStructure.currentStateJson().exists() shouldBe true
                 }
             }
@@ -286,6 +245,33 @@ class PlanFlowConverterTest : AsgardDescribeSpec({
                 val currentState = CurrentState(parts = mutableListOf())
                 val result = ctx.converter.convertAndAppend(currentState)
                 result[0].subParts[0].status shouldBe SubPartStatus.NOT_STARTED
+            }
+
+            it("THEN sessionIds are cleared (null)") {
+                val ctx = createTestContext()
+                ctx.aiOutputStructure.planFlowJson().writeText(planFlowJson)
+                val currentState = CurrentState(parts = mutableListOf())
+                val result = ctx.converter.convertAndAppend(currentState)
+                result[0].subParts[0].sessionIds shouldBe null
+            }
+        }
+    }
+
+    // ── Validation: plan_flow.json does not exist ──
+
+    describe("GIVEN plan_flow.json does not exist") {
+
+        describe("WHEN convertAndAppend is called") {
+
+            it("THEN throws PlanConversionException mentioning plan_flow.json") {
+                val ctx = createTestContext()
+                // Do NOT write plan_flow.json — it should not exist
+                val currentState = CurrentState(parts = mutableListOf())
+
+                val ex = shouldThrow<PlanConversionException> {
+                    ctx.converter.convertAndAppend(currentState)
+                }
+                ex.message shouldContain "plan_flow.json"
             }
         }
     }
