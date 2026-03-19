@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T01:23:55Z
 id: nid_m7oounvwb31ra53ivu7btoj5v_E
 title: "Define AgentFacade interface + SpawnedAgentHandle + AgentSignal + ContextWindowState"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T00:28:58Z
-status_updated_iso: 2026-03-19T00:28:58Z
+status_updated_iso: 2026-03-19T01:23:55Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
