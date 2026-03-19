@@ -2,7 +2,7 @@
 id: nid_dnelaf98097nicijp4kvjfd1d_E
 title: "Implement ReInstructAndAwait use case — send instruction to existing session and await signal"
 status: open
-deps: []
+deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_g3e2bkvqepf2wzipadayt9in8_E]
 links: []
 created_iso: 2026-03-18T22:30:11Z
 status_updated_iso: 2026-03-18T22:30:11Z
@@ -47,3 +47,9 @@ Full spec at `doc/use-case/ReInstructAndAwait.md`
 - Clean DRY abstraction for re-instruction pattern
 - Independently testable from PartExecutorImpl
 
+
+## Notes
+
+**2026-03-19T00:51:21Z**
+
+Added missing deps: AgentFacade interface (nid_m7oounvwb31ra53ivu7btoj5v_E) for compilation and FakeAgentFacade (nid_g3e2bkvqepf2wzipadayt9in8_E) for unit testing. Was incorrectly listed as ready with zero deps.
