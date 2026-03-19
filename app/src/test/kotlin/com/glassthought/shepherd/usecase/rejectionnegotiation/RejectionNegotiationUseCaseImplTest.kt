@@ -88,6 +88,21 @@ class RejectionNegotiationUseCaseImplTest : AsgardDescribeSpec({
         }
     }
 
+    /**
+     * Recording [InstructionFileWriter] that captures written content for verification.
+     * Returns a deterministic path based on the label.
+     */
+    class RecordingInstructionFileWriter : InstructionFileWriter {
+        val writtenContent = mutableMapOf<String, String>()
+
+        override suspend fun write(content: String, label: String): Path {
+            writtenContent[label] = content
+            return Path.of("/tmp/instructions/$label.md")
+        }
+    }
+
+    val recordingWriter = RecordingInstructionFileWriter()
+
     fun buildSut(
         reInstructAndAwait: ReInstructAndAwait,
         feedbackFileReader: FeedbackFileReader,
@@ -95,6 +110,7 @@ class RejectionNegotiationUseCaseImplTest : AsgardDescribeSpec({
         RejectionNegotiationUseCaseImpl(
             reInstructAndAwait = reInstructAndAwait,
             feedbackFileReader = feedbackFileReader,
+            instructionFileWriter = recordingWriter,
             outFactory = outFactory,
         )
 
@@ -118,11 +134,11 @@ class RejectionNegotiationUseCaseImplTest : AsgardDescribeSpec({
                 result.shouldBeInstanceOf<RejectionResult.Accepted>()
             }
 
-            it("THEN reviewer is sent the rejection reasoning") {
+            it("THEN reviewer instruction file contains rejection reasoning") {
                 sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
-                val reviewerMessage = fakeReInstruct.calls.first { it.first == reviewerHandle }.second
-                reviewerMessage shouldContain "The implementor rejected this feedback item"
-                reviewerMessage shouldContain "Resolution: REJECTED"
+                val reviewerContent = recordingWriter.writtenContent["reviewer-judgment"]!!
+                reviewerContent shouldContain "The implementor rejected this feedback item"
+                reviewerContent shouldContain "Resolution: REJECTED"
             }
         }
     }
@@ -151,11 +167,11 @@ class RejectionNegotiationUseCaseImplTest : AsgardDescribeSpec({
                 result.shouldBeInstanceOf<RejectionResult.AddressedAfterInsistence>()
             }
 
-            it("THEN doer receives compliance instruction") {
+            it("THEN doer instruction file contains compliance instruction") {
                 sut.execute(doerHandle, reviewerHandle, feedbackFilePath)
-                val doerMessage = fakeReInstruct.calls.first { it.first == doerHandle }.second
-                doerMessage shouldContain "Reviewer insists"
-                doerMessage shouldContain "MUST address"
+                val doerContent = recordingWriter.writtenContent["doer-compliance"]!!
+                doerContent shouldContain "Reviewer insists"
+                doerContent shouldContain "MUST address"
             }
         }
     }
