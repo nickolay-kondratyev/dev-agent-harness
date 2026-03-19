@@ -85,58 +85,37 @@ class SetupPlanUseCaseImplTest : AsgardDescribeSpec(body = {
 
     describe("GIVEN a straightforward workflow") {
         describe("WHEN setup is called") {
-            it("THEN routes to StraightforwardPlanUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
+            lateinit var straightforward: FakeStraightforwardPlanUseCase
+            lateinit var detailed: FakeDetailedPlanningUseCase
+            lateinit var useCase: SetupPlanUseCaseImpl
+
+            beforeEach {
+                straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
+                detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
+                useCase = SetupPlanUseCaseImpl(
                     workflowDefinition = buildStraightforwardWorkflow(),
                     straightforwardPlanUseCase = straightforward,
                     detailedPlanningUseCase = detailed,
                     outFactory = outFactory,
                 )
+            }
 
+            it("THEN routes to StraightforwardPlanUseCase") {
                 useCase.setup()
                 straightforward.executeCalled shouldBe true
             }
 
             it("THEN does NOT route to DetailedPlanningUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildStraightforwardWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 useCase.setup()
                 detailed.executeCalled shouldBe false
             }
 
             it("THEN returns the parts from StraightforwardPlanUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildStraightforwardWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 val result = useCase.setup()
                 result shouldBe straightforwardParts
             }
 
             it("THEN returns exactly one part") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildStraightforwardWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 val result = useCase.setup()
                 result shouldHaveSize 1
             }
@@ -147,58 +126,37 @@ class SetupPlanUseCaseImplTest : AsgardDescribeSpec(body = {
 
     describe("GIVEN a with-planning workflow") {
         describe("WHEN setup is called") {
-            it("THEN routes to DetailedPlanningUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
+            lateinit var straightforward: FakeStraightforwardPlanUseCase
+            lateinit var detailed: FakeDetailedPlanningUseCase
+            lateinit var useCase: SetupPlanUseCaseImpl
+
+            beforeEach {
+                straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
+                detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
+                useCase = SetupPlanUseCaseImpl(
                     workflowDefinition = buildWithPlanningWorkflow(),
                     straightforwardPlanUseCase = straightforward,
                     detailedPlanningUseCase = detailed,
                     outFactory = outFactory,
                 )
+            }
 
+            it("THEN routes to DetailedPlanningUseCase") {
                 useCase.setup()
                 detailed.executeCalled shouldBe true
             }
 
             it("THEN does NOT route to StraightforwardPlanUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildWithPlanningWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 useCase.setup()
                 straightforward.executeCalled shouldBe false
             }
 
             it("THEN returns the parts from DetailedPlanningUseCase") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildWithPlanningWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 val result = useCase.setup()
                 result shouldBe detailedPlanningParts
             }
 
             it("THEN returns two parts") {
-                val straightforward = FakeStraightforwardPlanUseCase(straightforwardParts)
-                val detailed = FakeDetailedPlanningUseCase(detailedPlanningParts)
-                val useCase = SetupPlanUseCaseImpl(
-                    workflowDefinition = buildWithPlanningWorkflow(),
-                    straightforwardPlanUseCase = straightforward,
-                    detailedPlanningUseCase = detailed,
-                    outFactory = outFactory,
-                )
-
                 val result = useCase.setup()
                 result shouldHaveSize 2
             }

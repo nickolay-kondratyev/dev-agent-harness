@@ -3,7 +3,6 @@ package com.glassthought.shepherd.usecase.planning
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.state.Part
-import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 
 /**
  * Returns the static execution parts from a straightforward workflow definition.
@@ -19,7 +18,7 @@ fun interface StraightforwardPlanUseCase {
 }
 
 class StraightforwardPlanUseCaseImpl(
-    private val workflowDefinition: WorkflowDefinition,
+    private val parts: List<Part>,
     private val outFactory: OutFactory,
 ) : StraightforwardPlanUseCase {
 
@@ -27,6 +26,6 @@ class StraightforwardPlanUseCaseImpl(
 
     override suspend fun execute(): List<Part> {
         out.info("returning_static_parts_from_straightforward_workflow")
-        return workflowDefinition.parts!!
+        return parts
     }
 }

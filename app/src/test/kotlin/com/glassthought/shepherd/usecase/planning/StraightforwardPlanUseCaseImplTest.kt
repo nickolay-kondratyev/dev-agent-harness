@@ -4,7 +4,6 @@ import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.shepherd.core.state.Part
 import com.glassthought.shepherd.core.state.Phase
 import com.glassthought.shepherd.core.state.SubPart
-import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import io.kotest.matchers.collections.shouldHaveSize
 import io.kotest.matchers.shouldBe
 
@@ -27,12 +26,9 @@ class StraightforwardPlanUseCaseImplTest : AsgardDescribeSpec(body = {
         ),
     )
 
-    fun buildWorkflowDefinition(parts: List<Part>): WorkflowDefinition =
-        WorkflowDefinition(name = "test-workflow", parts = parts)
-
     fun buildUseCase(parts: List<Part>): StraightforwardPlanUseCaseImpl =
         StraightforwardPlanUseCaseImpl(
-            workflowDefinition = buildWorkflowDefinition(parts),
+            parts = parts,
             outFactory = outFactory,
         )
 
