@@ -1,11 +1,11 @@
 ---
 id: nid_5o5wyxuzoz7qrkuq4wuo2gnjr_E
 title: "Implement SessionEntry + PendingQuestion data classes — live session registry entry"
-status: open
+status: in_progress
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_6zpwfuz85gl4x175fcudp9lju_E]
 links: []
 created_iso: 2026-03-19T00:39:41Z
-status_updated_iso: 2026-03-19T00:39:41Z
+status_updated_iso: 2026-03-19T17:44:59Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
