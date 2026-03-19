@@ -5,8 +5,14 @@ import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
 import com.glassthought.shepherd.core.data.AgentType
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.types.shouldBeInstanceOf
 import java.nio.file.Path
 import kotlin.time.Duration.Companion.minutes
+
+private data class RunnerWithFake(
+    val runner: NonInteractiveAgentRunnerImpl,
+    val fakeProcessRunner: FakeProcessRunner,
+)
 
 class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
     config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
@@ -32,14 +38,14 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
         timeout = timeout,
     )
 
-    fun buildRunner(behavior: FakeProcessBehavior): Pair<NonInteractiveAgentRunnerImpl, FakeProcessRunner> {
+    fun buildRunner(behavior: FakeProcessBehavior): RunnerWithFake {
         val fakeProcessRunner = FakeProcessRunner(behavior)
         val runner = NonInteractiveAgentRunnerImpl(
             processRunner = fakeProcessRunner,
             outFactory = outFactory,
             zaiApiKey = testZaiApiKey,
         )
-        return runner to fakeProcessRunner
+        return RunnerWithFake(runner, fakeProcessRunner)
     }
 
     describe("GIVEN a CLAUDE_CODE agent request") {
@@ -53,10 +59,15 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
                 command[1] shouldBe "-c"
                 command[2] shouldContain "claude --print"
             }
+
+            it("THEN the request timeout is forwarded to ProcessRunner") {
+                runner.run(buildRequest(agentType = AgentType.CLAUDE_CODE, timeout = 20.minutes))
+                fake.lastTimeout shouldBe 20.minutes
+            }
         }
 
         describe("AND the command is constructed") {
-            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).first
+            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).runner
 
             it("THEN it starts with cd to working directory") {
                 val cmd = runner.buildShellCommand(buildRequest(agentType = AgentType.CLAUDE_CODE))
@@ -82,7 +93,7 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
 
     describe("GIVEN a PI agent request") {
         describe("AND the command is constructed") {
-            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).first
+            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).runner
 
             it("THEN it starts with cd to working directory") {
                 val cmd = runner.buildShellCommand(buildRequest(agentType = AgentType.PI))
@@ -119,7 +130,7 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
 
             it("THEN returns Success result") {
                 val result = runner.run(buildRequest())
-                (result is NonInteractiveAgentResult.Success) shouldBe true
+                result.shouldBeInstanceOf<NonInteractiveAgentResult.Success>()
             }
 
             it("THEN output contains stdout") {
@@ -150,7 +161,7 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
 
             it("THEN returns Failed result") {
                 val result = runner.run(buildRequest())
-                (result is NonInteractiveAgentResult.Failed) shouldBe true
+                result.shouldBeInstanceOf<NonInteractiveAgentResult.Failed>()
             }
 
             it("THEN exitCode matches the process exit code") {
@@ -173,7 +184,7 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
 
             it("THEN returns TimedOut result") {
                 val result = runner.run(buildRequest())
-                (result is NonInteractiveAgentResult.TimedOut) shouldBe true
+                result.shouldBeInstanceOf<NonInteractiveAgentResult.TimedOut>()
             }
 
             it("THEN output combines stdout and stderr") {
@@ -185,7 +196,7 @@ class NonInteractiveAgentRunnerImplTest : AsgardDescribeSpec(
 
     describe("GIVEN instructions with single quotes") {
         describe("WHEN the command is constructed") {
-            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).first
+            val runner = buildRunner(FakeProcessBehavior.Succeed(stdout = "ok")).runner
             val request = buildRequest(instructions = "fix the user's file")
 
             it("THEN single quotes are properly escaped") {

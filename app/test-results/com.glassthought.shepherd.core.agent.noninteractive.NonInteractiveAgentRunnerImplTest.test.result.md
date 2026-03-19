@@ -12,6 +12,7 @@ skipped: 0
     - [PASS] THEN it includes -p with the instructions
     - [PASS] THEN it starts with cd to working directory
   - WHEN run is called
+    - [PASS] THEN the request timeout is forwarded to ProcessRunner
     - [PASS] THEN the shell command contains claude --print
 - GIVEN a PI agent request
   - AND the command is constructed
