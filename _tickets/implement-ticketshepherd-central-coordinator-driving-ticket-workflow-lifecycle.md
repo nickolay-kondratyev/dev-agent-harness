@@ -1,11 +1,11 @@
 ---
 id: nid_fqzi45z9xja51yy4yk3m3mkwh_E
 title: "Implement TicketShepherd — central coordinator driving ticket workflow lifecycle"
-status: open
+status: in_progress
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_89a09ady4m86saemw4rul5b4s_E, nid_5z93biuqub3mhcejfpofjmj39_E, nid_foubbnsh3vmk1fk34zm75zkg0_E, nid_eq78xsmd72qtrycecxb7ltqp7_E, nid_m3cm8xizw5qhu1cu3454rca79_E, nid_fwf09ycnd4d8wdoqd1atuohgb_E, nid_g3e2bkvqepf2wzipadayt9in8_E]
 links: []
 created_iso: 2026-03-19T00:40:31Z
-status_updated_iso: 2026-03-19T00:40:31Z
+status_updated_iso: 2026-03-19T20:12:14Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
