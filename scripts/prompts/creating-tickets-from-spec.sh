@@ -2,7 +2,7 @@
 # __enable_bash_strict_mode__
 
 _make_instructions(){
-  local -r spec_to_process="$(rgfiles "#need-tickets" ./doc/ | grep_format.file | head -n 1| path | echom)"
+  local -r spec_to_process="$(rgfiles "#need-tickets" ./doc/ | rg AgentFacade | grep_format.file | head -n 1| path | echom)"
   file_verify_exists "${spec_to_process:?}" </dev/null
 
   # shellcheck disable=SC2155
@@ -46,7 +46,7 @@ main() {
       git.save
 
 
-      ai_core --agent CC --model opus --effort medium --print "Read and execute instructions in [${tmp_file:?}]"
+      ai_core --agent CC --model opus --effort medium "Read and execute instructions in [${tmp_file:?}]"
 
       git.save
   done
