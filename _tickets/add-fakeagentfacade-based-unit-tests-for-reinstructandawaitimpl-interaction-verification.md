@@ -1,11 +1,11 @@
 ---
 id: nid_s7dk275tezu0dgxg32wpb9kpk_E
 title: "Add FakeAgentFacade-based unit tests for ReInstructAndAwaitImpl — interaction verification"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T18:58:01Z
-status_updated_iso: 2026-03-19T18:58:01Z
+status_updated_iso: 2026-03-19T19:37:42Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
