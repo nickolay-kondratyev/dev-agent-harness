@@ -1,11 +1,11 @@
 ---
 id: nid_foubbnsh3vmk1fk34zm75zkg0_E
 title: "Implement FailedToExecutePlanUseCase"
-status: open
+status: in_progress
 deps: [nid_smb6zudqraf0hkp3u9kjx855e_E]
 links: []
 created_iso: 2026-03-18T17:37:08Z
-status_updated_iso: 2026-03-18T17:37:08Z
+status_updated_iso: 2026-03-19T13:30:03Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
