@@ -56,6 +56,40 @@ object ContextTestFixtures {
     }
 
     /**
+     * Creates a doer feedback item instruction request for the inner feedback loop.
+     */
+    fun doerFeedbackItemRequest(tempDir: Path): AgentInstructionRequest.DoerFeedbackItemRequest {
+        val outputDir = tempDir.resolve("comm/in")
+        Files.createDirectories(outputDir)
+
+        val publicMdOutputPath = tempDir.resolve("comm/out/PUBLIC.md")
+        Files.createDirectories(publicMdOutputPath.parent)
+
+        val feedbackFile = tempDir.resolve("feedback/pending/critical__missing-null-check.md")
+        Files.createDirectories(feedbackFile.parent)
+        Files.writeString(feedbackFile, "Add null check before accessing result.")
+
+        return AgentInstructionRequest.DoerFeedbackItemRequest(
+            roleDefinition = roleDefinition("IMPLEMENTOR"),
+            ticketContent = "---\nid: test-001\ntitle: Test Ticket\n---\n\nImplement feature X.",
+            iterationNumber = 2,
+            outputDir = outputDir,
+            publicMdOutputPath = publicMdOutputPath,
+            executionContext = ExecutionContext(
+                partName = "part_1_implementation",
+                partDescription = "Implement the main feature",
+                planMdPath = null,
+                priorPublicMdPaths = emptyList(),
+            ),
+            feedbackItem = InstructionSection.FeedbackItem(
+                feedbackContent = "Add null check before accessing result.",
+                currentPath = feedbackFile,
+                isOptional = false,
+            ),
+        )
+    }
+
+    /**
      * Creates a reviewer instruction request on iteration 1 with doer's PUBLIC.md.
      */
     fun reviewerInstructionRequest(tempDir: Path): AgentInstructionRequest.ReviewerRequest {

@@ -41,6 +41,7 @@ class ContextForAgentProviderImpl(
 
         val plan = when (request) {
             is AgentInstructionRequest.DoerRequest -> buildDoerPlan(request)
+            is AgentInstructionRequest.DoerFeedbackItemRequest -> buildDoerFeedbackItemPlan(request)
             is AgentInstructionRequest.ReviewerRequest -> buildReviewerPlan(request)
             is AgentInstructionRequest.PlannerRequest -> buildPlannerPlan(request)
             is AgentInstructionRequest.PlanReviewerRequest -> buildPlanReviewerPlan(request)
@@ -60,6 +61,29 @@ class ContextForAgentProviderImpl(
         add(InstructionSection.PlanMd)
         add(InstructionSection.PriorPublicMd)
         add(InstructionSection.IterationFeedback)
+        add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
+        add(InstructionSection.WritingGuidelines)
+        add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false))
+    }
+
+    // -- Doer feedback item plan --
+
+    /**
+     * Instruction plan for a doer processing a single feedback item in the inner feedback loop.
+     *
+     * Same structure as [buildDoerPlan] but replaces [InstructionSection.IterationFeedback]
+     * (reviewer's overall PUBLIC.md) with the per-item [InstructionSection.FeedbackItem].
+     */
+    private fun buildDoerFeedbackItemPlan(
+        request: AgentInstructionRequest.DoerFeedbackItemRequest,
+    ): List<InstructionSection> = buildList {
+        add(InstructionSection.RoleDefinition)
+        add(InstructionSection.PrivateMd)
+        add(InstructionSection.PartContext)
+        add(InstructionSection.Ticket)
+        add(InstructionSection.PlanMd)
+        add(InstructionSection.PriorPublicMd)
+        add(request.feedbackItem)
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
         add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false))
@@ -167,6 +191,7 @@ class ContextForAgentProviderImpl(
     private val AgentInstructionRequest.executionContextOrNull: ExecutionContext?
         get() = when (this) {
             is AgentInstructionRequest.DoerRequest -> executionContext
+            is AgentInstructionRequest.DoerFeedbackItemRequest -> executionContext
             is AgentInstructionRequest.ReviewerRequest -> executionContext
             is AgentInstructionRequest.PlannerRequest -> null
             is AgentInstructionRequest.PlanReviewerRequest -> null

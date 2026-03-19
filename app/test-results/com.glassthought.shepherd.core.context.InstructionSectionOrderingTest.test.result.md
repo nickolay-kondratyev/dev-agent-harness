@@ -5,6 +5,9 @@ failed: 0
 skipped: 0
 ---
 
+- GIVEN a doer feedback item request
+  - WHEN instructions are assembled
+    - [PASS] THEN doer feedback item sections appear in spec-defined order
 - GIVEN a doer request (iteration 2 with reviewer feedback and plan)
   - WHEN instructions are assembled
     - [PASS] THEN doer sections appear in spec-defined order

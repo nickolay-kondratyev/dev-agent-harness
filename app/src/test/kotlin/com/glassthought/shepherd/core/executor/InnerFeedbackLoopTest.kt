@@ -10,6 +10,7 @@ import com.glassthought.shepherd.core.agent.facade.SpawnedAgentHandle
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessionId
+import com.glassthought.shepherd.core.context.AgentInstructionRequest
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
 import com.glassthought.shepherd.core.context.ExecutionContext
 import com.glassthought.shepherd.core.data.AgentType
@@ -600,13 +601,19 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
             it("THEN result is Terminate(AgentCrashed)") {
                 val feedbackDir = createFeedbackDir()
                 val doerCfg = ensurePublicMd(testDoerConfig)
-                writePendingFile(feedbackDir, "critical__issue.md")
+                val file = writePendingFile(feedbackDir, "critical__issue.md")
+
+                val reader = FakeFeedbackFileReader()
+                reader.contentByPath[file.toString()] = "# Feedback\nSome issue."
 
                 val reInstruct = ReInstructAndAwait { _, _ ->
                     ReInstructOutcome.Crashed("agent died")
                 }
 
-                val loop = buildLoop(reInstructAndAwait = reInstruct)
+                val loop = buildLoop(
+                    reInstructAndAwait = reInstruct,
+                    feedbackFileReader = reader,
+                )
                 val result = loop.execute(buildCtx(feedbackDir, doerCfg))
 
                 result.shouldBeInstanceOf<InnerLoopOutcome.Terminate>()
@@ -622,13 +629,19 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
             it("THEN result is Terminate(FailedWorkflow)") {
                 val feedbackDir = createFeedbackDir()
                 val doerCfg = ensurePublicMd(testDoerConfig)
-                writePendingFile(feedbackDir, "critical__issue.md")
+                val file = writePendingFile(feedbackDir, "critical__issue.md")
+
+                val reader = FakeFeedbackFileReader()
+                reader.contentByPath[file.toString()] = "# Feedback\nSome issue."
 
                 val reInstruct = ReInstructAndAwait { _, _ ->
                     ReInstructOutcome.FailedWorkflow("bad state")
                 }
 
-                val loop = buildLoop(reInstructAndAwait = reInstruct)
+                val loop = buildLoop(
+                    reInstructAndAwait = reInstruct,
+                    feedbackFileReader = reader,
+                )
                 val result = loop.execute(buildCtx(feedbackDir, doerCfg))
 
                 result.shouldBeInstanceOf<InnerLoopOutcome.Terminate>()
@@ -717,6 +730,132 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
                 gitStrategy.calls.forEach {
                     it.result shouldBe "FEEDBACK_ADDRESSED"
                 }
+            }
+        }
+    }
+    // ── buildFeedbackItemRequest returns DoerFeedbackItemRequest ──
+
+    describe("GIVEN doer config and feedback file details") {
+        val feedbackDir = createFeedbackDir()
+        val feedbackFile = writePendingFile(
+            feedbackDir, "critical__null-check.md",
+            content = "Add null check before accessing result.",
+        )
+
+        describe("WHEN buildFeedbackItemRequest is called") {
+            val request = InnerFeedbackLoop.buildFeedbackItemRequest(
+                doerConfig = testDoerConfig,
+                currentIteration = 2,
+                feedbackFile = feedbackFile,
+                feedbackContent = "Add null check before accessing result.",
+                isOptional = false,
+            )
+
+            it("THEN returns a DoerFeedbackItemRequest") {
+                request.shouldBeInstanceOf<AgentInstructionRequest.DoerFeedbackItemRequest>()
+            }
+
+            it("THEN feedbackItem contains the feedback content") {
+                request.feedbackItem.feedbackContent shouldBe "Add null check before accessing result."
+            }
+
+            it("THEN feedbackItem contains the feedback file path") {
+                request.feedbackItem.currentPath shouldBe feedbackFile
+            }
+
+            it("THEN feedbackItem.isOptional matches the input") {
+                request.feedbackItem.isOptional shouldBe false
+            }
+
+            it("THEN iterationNumber matches the input") {
+                request.iterationNumber shouldBe 2
+            }
+        }
+    }
+
+    describe("GIVEN an optional feedback file") {
+        val feedbackDir = createFeedbackDir()
+        val feedbackFile = writePendingFile(
+            feedbackDir, "optional__style-nit.md",
+            content = "Consider renaming variable.",
+        )
+
+        describe("WHEN buildFeedbackItemRequest is called with isOptional=true") {
+            val request = InnerFeedbackLoop.buildFeedbackItemRequest(
+                doerConfig = testDoerConfig,
+                currentIteration = 1,
+                feedbackFile = feedbackFile,
+                feedbackContent = "Consider renaming variable.",
+                isOptional = true,
+            )
+
+            it("THEN feedbackItem.isOptional is true") {
+                request.feedbackItem.isOptional shouldBe true
+            }
+        }
+    }
+
+    // ── processFeedbackItem passes correct request type to ContextForAgentProvider ──
+
+    describe("GIVEN a feedback file in the inner loop") {
+        describe("WHEN the doer processes it") {
+            it("THEN ContextForAgentProvider receives a DoerFeedbackItemRequest with feedback content") {
+                val feedbackDir = createFeedbackDir()
+                val doerCfg = ensurePublicMd(testDoerConfig)
+                val feedbackContent = "Fix the null pointer."
+                val file = writePendingFile(
+                    feedbackDir, "critical__issue.md",
+                    content = feedbackContent,
+                )
+
+                // Queue-based reader: first read returns original content (for request assembly),
+                // second read returns resolved content (for resolution parsing).
+                val readCounts = mutableMapOf<String, Int>()
+                val queueReader = object : FeedbackFileReader {
+                    override suspend fun readContent(path: Path): String {
+                        val key = path.toString()
+                        val count = readCounts.getOrDefault(key, 0)
+                        readCounts[key] = count + 1
+                        return if (count == 0) feedbackContent
+                        else "## Resolution: ADDRESSED\nFixed it."
+                    }
+                }
+
+                var capturedRequest: AgentInstructionRequest? = null
+                val instructionFile = Files.createTempFile("instructions", ".md")
+                Files.writeString(instructionFile, "# Instructions")
+                val capturingProvider = ContextForAgentProvider { req ->
+                    capturedRequest = req
+                    instructionFile
+                }
+
+                val facade = FakeAgentFacade()
+                facade.onReadContextWindowState {
+                    ContextWindowState(remainingPercentage = 80)
+                }
+
+                val loop = InnerFeedbackLoop(
+                    InnerFeedbackLoopDeps(
+                        reInstructAndAwait = alwaysCompletedReInstruct(),
+                        rejectionNegotiationUseCase = RejectionNegotiationUseCase { _, _, _ ->
+                            error("rejection not expected")
+                        },
+                        contextForAgentProvider = capturingProvider,
+                        agentFacade = facade,
+                        gitCommitStrategy = RecordingGitStrategy(),
+                        publicMdValidator = PublicMdValidator(),
+                        feedbackFileReader = queueReader,
+                        outFactory = outFactory,
+                    )
+                )
+
+                loop.execute(buildCtx(feedbackDir, doerCfg))
+
+                capturedRequest
+                    .shouldBeInstanceOf<AgentInstructionRequest.DoerFeedbackItemRequest>()
+                val feedbackRequest =
+                    capturedRequest as AgentInstructionRequest.DoerFeedbackItemRequest
+                feedbackRequest.feedbackItem.feedbackContent shouldBe "Fix the null pointer."
             }
         }
     }
