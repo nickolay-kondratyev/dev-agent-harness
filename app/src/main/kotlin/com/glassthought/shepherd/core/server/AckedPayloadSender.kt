@@ -2,8 +2,8 @@ package com.glassthought.shepherd.core.server
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
-import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.ShepherdValType
 import com.glassthought.shepherd.core.agent.TmuxAgentSession
 import com.glassthought.shepherd.core.context.ProtocolVocabulary
 import com.glassthought.shepherd.core.session.SessionEntry
@@ -76,8 +76,8 @@ class AckedPayloadSenderImpl(
         for (attempt in 1..maxAttempts) {
             out.info(
                 "sending_acked_payload",
-                Val(payloadId.value, ValType.STRING_USER_AGNOSTIC),
-                Val(attempt.toString(), ValType.STRING_USER_AGNOSTIC),
+                Val(payloadId.value, ShepherdValType.PAYLOAD_ID),
+                Val(attempt.toString(), ShepherdValType.ATTEMPT_NUMBER),
             )
 
             sessionEntry.pendingPayloadAck.set(payloadId)
@@ -86,16 +86,16 @@ class AckedPayloadSenderImpl(
             if (awaitAck(sessionEntry)) {
                 out.info(
                     "payload_ack_received",
-                    Val(payloadId.value, ValType.STRING_USER_AGNOSTIC),
+                    Val(payloadId.value, ShepherdValType.PAYLOAD_ID),
                 )
                 return
             }
 
             out.warn(
                 "payload_ack_timeout",
-                Val(payloadId.value, ValType.STRING_USER_AGNOSTIC),
-                Val(attempt.toString(), ValType.STRING_USER_AGNOSTIC),
-                Val(maxAttempts.toString(), ValType.STRING_USER_AGNOSTIC),
+                Val(payloadId.value, ShepherdValType.PAYLOAD_ID),
+                Val(attempt.toString(), ShepherdValType.ATTEMPT_NUMBER),
+                Val(maxAttempts.toString(), ShepherdValType.MAX_ATTEMPTS),
             )
         }
 
