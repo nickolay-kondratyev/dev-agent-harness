@@ -38,14 +38,15 @@ main() {
   cdi.repo_root
   file_verify_exists "./ticket_shepherd_marker.txt"
 
-  #need-tickets
-  local tmp_file="$(ei2 _make_instructions)"
-
   for i in {1..20} ; do
       cdi.repo_root
+      #need-tickets
+      local tmp_file="$(ei2 _make_instructions)"
+
       git.save
 
-      ai_core --agent CC --model opus --effort medium "Read and execute instructions in [${tmp_file:?}]"
+
+      ai_core --agent CC --model opus --effort medium --print "Read and execute instructions in [${tmp_file:?}]"
 
       git.save
   done
