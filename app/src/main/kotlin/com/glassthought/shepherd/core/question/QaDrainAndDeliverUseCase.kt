@@ -8,6 +8,14 @@ import com.glassthought.shepherd.core.session.SessionEntry
 import java.nio.file.Path
 
 /**
+ * Testability seam for Q&A drain-and-deliver logic.
+ * Injected into [AgentFacadeImpl] following DIP.
+ */
+fun interface QaDrainer {
+    suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path)
+}
+
+/**
  * Drains all pending questions from a [SessionEntry]'s queue, collects answers
  * via [UserQuestionHandler], writes them to `qa_answers.md`, and delivers the
  * file path to the agent via [AckedPayloadSender].
@@ -24,14 +32,14 @@ class QaDrainAndDeliverUseCase(
     private val qaAnswersFileWriter: QaAnswersFileWriter,
     private val ackedPayloadSender: AckedPayloadSender,
     private val outFactory: OutFactory,
-) {
+) : QaDrainer {
     private val out = outFactory.getOutForClass(QaDrainAndDeliverUseCase::class)
 
     /**
      * Drains all pending questions from [sessionEntry], collects answers,
      * writes `qa_answers.md` to [commInDir], and delivers the path to the agent.
      */
-    suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
+    override suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
         val collectedQAs = mutableListOf<QuestionAndAnswer>()
 
         // Drain-and-collect loop: keeps going until no new questions arrive

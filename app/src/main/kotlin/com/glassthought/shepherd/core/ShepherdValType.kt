@@ -115,4 +115,32 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** Duration since the last callback — age of the last activity timestamp. */
+    val CALLBACK_AGE = ValTypeV2(
+        typeName = "CALLBACK_AGE",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Duration representing how long a timeout threshold is. */
+    val TIMEOUT_THRESHOLD = ValTypeV2(
+        typeName = "TIMEOUT_THRESHOLD",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Duration representing staleness (time since last activity beyond a threshold). */
+    val STALE_DURATION = ValTypeV2(
+        typeName = "STALE_DURATION",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** TMUX session name for structured logging. */
+    val TMUX_SESSION_NAME = ValTypeV2(
+        typeName = "TMUX_SESSION_NAME",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }

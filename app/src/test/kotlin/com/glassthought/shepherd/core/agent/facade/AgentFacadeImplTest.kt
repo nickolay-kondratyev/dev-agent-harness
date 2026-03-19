@@ -1,8 +1,10 @@
 package com.glassthought.shepherd.core.agent.facade
 
+import com.asgard.core.out.impl.NoOpOutFactory
 import com.asgard.core.out.OutFactory
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
+import com.glassthought.shepherd.core.agent.TmuxAgentSession
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.BuildStartCommandParams
 import com.glassthought.shepherd.core.agent.contextwindow.ContextWindowStateReader
@@ -17,19 +19,35 @@ import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.data.HealthTimeoutLadder
+import com.glassthought.shepherd.core.question.QaDrainer
+import com.glassthought.shepherd.core.question.UserQuestionContext
+import com.glassthought.shepherd.core.server.AckedPayloadSender
+import com.glassthought.shepherd.core.server.PayloadAckTimeoutException
+import com.glassthought.shepherd.core.session.SessionEntry
 import com.glassthought.shepherd.core.session.SessionsState
+import com.glassthought.shepherd.core.state.SubPartRole
 import com.glassthought.shepherd.core.time.TestClock
+import com.glassthought.shepherd.usecase.healthmonitoring.AgentUnresponsiveUseCase
+import com.glassthought.shepherd.usecase.healthmonitoring.DetectionContext
 import com.glassthought.shepherd.usecase.healthmonitoring.SingleSessionKiller
+import com.glassthought.shepherd.usecase.healthmonitoring.UnresponsiveDiagnostics
+import com.glassthought.shepherd.usecase.healthmonitoring.UnresponsiveHandleResult
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
+import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
 import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.advanceTimeBy
+import kotlinx.coroutines.test.runTest
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
+import kotlin.time.Duration.Companion.seconds
 
-// ── Test Fakes ──────────────────────────────────────────────────────
+// ── Test Fakes ─────────────────────────────────────────────────
 
 private class FakeAdapterForFacade(
     private val resolvedSessionId: String = "fake-session-id-123",
@@ -55,31 +73,6 @@ private class FakeAdapterForFacade(
 
 private object NoOpCommunicator : TmuxCommunicator {
     override suspend fun sendKeys(paneTarget: String, text: String) = Unit
-    override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
-}
-
-/**
- * Communicator that completes the session's signal deferred when [sendKeys] is called.
- * Used by the sendPayloadAndAwaitSignal test to simulate an agent responding to a payload
- * without delay-based synchronization.
- *
- * Looks up the entry in [sessions] by [partName], completes the first incomplete deferred,
- * and re-registers the entry so the lookup remains valid.
- */
-private class SignalCompletingCommunicator(
-    private val sessions: SessionsState,
-    private val partName: String,
-    private val signal: AgentSignal,
-) : TmuxCommunicator {
-    override suspend fun sendKeys(paneTarget: String, text: String) {
-        val removed = sessions.removeAllForPart(partName)
-        for (entry in removed) {
-            if (!entry.signalDeferred.isCompleted) {
-                entry.signalDeferred.complete(signal)
-            }
-        }
-    }
-
     override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
 }
 
@@ -122,7 +115,72 @@ private class FakeReader(
     }
 }
 
-// ── Constants ───────────────────────────────────────────────────────
+/**
+ * Fake [AckedPayloadSender] that succeeds immediately by default.
+ * Can be configured to throw [PayloadAckTimeoutException] to test crash path.
+ */
+private class FakeAckedPayloadSender(
+    private val shouldThrow: Boolean = false,
+) : AckedPayloadSender {
+    val sendCalls = mutableListOf<String>()
+
+    override suspend fun sendAndAwaitAck(
+        tmuxSession: TmuxAgentSession,
+        sessionEntry: SessionEntry,
+        payloadContent: String,
+    ) {
+        sendCalls.add(payloadContent)
+        if (shouldThrow) {
+            throw PayloadAckTimeoutException("All attempts exhausted — fake")
+        }
+    }
+}
+
+/**
+ * Fake [AgentUnresponsiveUseCase] that records calls and returns a configurable result.
+ */
+private class FakeAgentUnresponsiveUseCase(
+    private val noActivityResult: UnresponsiveHandleResult = UnresponsiveHandleResult.PingSent,
+    private val pingTimeoutResult: UnresponsiveHandleResult = UnresponsiveHandleResult.SessionKilled(
+        AgentSignal.Crashed("fake ping timeout crash")
+    ),
+) : AgentUnresponsiveUseCase {
+    data class HandleCall(
+        val detectionContext: DetectionContext,
+        val diagnostics: UnresponsiveDiagnostics,
+    )
+
+    val handleCalls = mutableListOf<HandleCall>()
+
+    override suspend fun handle(
+        detectionContext: DetectionContext,
+        tmuxSession: TmuxSession,
+        diagnostics: UnresponsiveDiagnostics,
+    ): UnresponsiveHandleResult {
+        handleCalls.add(HandleCall(detectionContext, diagnostics))
+        return when (detectionContext) {
+            DetectionContext.NO_ACTIVITY_TIMEOUT -> noActivityResult
+            DetectionContext.PING_TIMEOUT -> pingTimeoutResult
+            DetectionContext.STARTUP_TIMEOUT -> pingTimeoutResult
+        }
+    }
+}
+
+/**
+ * Fake [QaDrainer] that drains the queue without real I/O.
+ * Tracks how many times [drainAndDeliver] was invoked.
+ */
+private class QaDrainTracker : QaDrainer {
+    var drainCallCount = 0
+
+    override suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
+        drainCallCount++
+        // Drain the queue so isQAPending becomes false
+        while (sessionEntry.questionQueue.poll() != null) { /* drain */ }
+    }
+}
+
+// ── Constants ──────────────────────────────────────────────────
 
 private const val PART = "part_1"
 private const val SUB_PART = "impl"
@@ -134,7 +192,7 @@ private val PROMPT_PATH: Path = Path.of("/path/to/system-prompt.md")
 private val FIXED_INSTANT: Instant = Instant.parse("2026-03-19T12:00:00Z")
 private const val EXPECTED_SESSION = "shepherd_${PART}_${SUB_PART}"
 
-// ── Helpers ─────────────────────────────────────────────────────────
+// ── Helpers ────────────────────────────────────────────────────
 
 private fun config(): SpawnAgentConfig = SpawnAgentConfig(
     partName = PART,
@@ -155,6 +213,9 @@ private data class Harness(
     val killer: FakeKiller,
     val reader: FakeReader,
     val clock: TestClock,
+    val ackedPayloadSender: FakeAckedPayloadSender,
+    val agentUnresponsiveUseCase: FakeAgentUnresponsiveUseCase,
+    val qaDrainTracker: QaDrainTracker,
 )
 
 private fun harness(
@@ -164,6 +225,8 @@ private fun harness(
     communicator: TmuxCommunicator = NoOpCommunicator,
     onSessionCreated: (suspend () -> Unit)? = null,
     sessionsOverride: SessionsState? = null,
+    ackedPayloadSenderOverride: FakeAckedPayloadSender? = null,
+    agentUnresponsiveUseCaseOverride: FakeAgentUnresponsiveUseCase? = null,
 ): Harness {
     val sessions = sessionsOverride ?: SessionsState()
     val adapter = FakeAdapterForFacade(resolvedSessionId = RESOLVED_ID)
@@ -171,6 +234,9 @@ private fun harness(
     val killer = FakeKiller()
     val reader = FakeReader(result = ctxState)
     val clock = TestClock(FIXED_INSTANT)
+    val ackedSender = ackedPayloadSenderOverride ?: FakeAckedPayloadSender()
+    val unresponsiveUseCase = agentUnresponsiveUseCaseOverride ?: FakeAgentUnresponsiveUseCase()
+    val qaDrainTracker = QaDrainTracker()
 
     val facade = AgentFacadeImpl(
         sessionsState = sessions,
@@ -180,10 +246,16 @@ private fun harness(
         contextWindowStateReader = reader,
         clock = clock,
         harnessTimeoutConfig = timeout,
+        ackedPayloadSender = ackedSender,
+        agentUnresponsiveUseCase = unresponsiveUseCase,
+        qaDrainAndDeliverUseCase = qaDrainTracker,
         outFactory = outFactory,
     )
 
-    return Harness(facade, sessions, adapter, creator, killer, reader, clock)
+    return Harness(
+        facade, sessions, adapter, creator, killer,
+        reader, clock, ackedSender, unresponsiveUseCase, qaDrainTracker,
+    )
 }
 
 /**
@@ -199,6 +271,8 @@ private fun autoCompletingHarness(
     ctxState: ContextWindowState = ContextWindowState(75),
     outFactory: OutFactory,
     partName: String = PART,
+    ackedPayloadSenderOverride: FakeAckedPayloadSender? = null,
+    agentUnresponsiveUseCaseOverride: FakeAgentUnresponsiveUseCase? = null,
 ): Harness {
     val sessions = SessionsState()
     return harness(
@@ -213,6 +287,8 @@ private fun autoCompletingHarness(
             }
         },
         sessionsOverride = sessions,
+        ackedPayloadSenderOverride = ackedPayloadSenderOverride,
+        agentUnresponsiveUseCaseOverride = agentUnresponsiveUseCaseOverride,
     )
 }
 
@@ -229,13 +305,22 @@ private fun makeHandle(sessionId: String = "nonexistent"): SpawnedAgentHandle {
     )
 }
 
-// ── Tests ───────────────────────────────────────────────────────────
+private fun fakeUserQuestionContext(): UserQuestionContext = UserQuestionContext(
+    question = "What should I do?",
+    partName = PART,
+    subPartName = SUB_PART,
+    subPartRole = SubPartRole.DOER,
+    handshakeGuid = HandshakeGuid("handshake.test"),
+)
 
+// ── Tests ──────────────────────────────────────────────────────
+
+@OptIn(ExperimentalCoroutinesApi::class)
 class AgentFacadeImplTest : AsgardDescribeSpec(
     config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
     body = {
 
-        // ── spawnAgent ──────────────────────────────────────────────
+        // ── spawnAgent ───────────────────────────────────────
 
         describe("GIVEN spawnAgent with startup completing") {
             describe("WHEN spawnAgent is called") {
@@ -368,7 +453,7 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             }
         }
 
-        // ── killSession ─────────────────────────────────────────────
+        // ── killSession ──────────────────────────────────────
 
         describe("GIVEN killSession with existing entry") {
             describe("WHEN killSession is called") {
@@ -405,7 +490,7 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             }
         }
 
-        // ── readContextWindowState ──────────────────────────────────
+        // ── readContextWindowState ───────────────────────────
 
         describe("GIVEN readContextWindowState") {
             describe("WHEN called with a valid handle") {
@@ -426,41 +511,9 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             }
         }
 
-        // ── sendPayloadAndAwaitSignal (V1 stub) ────────────────────
+        // ── sendPayloadAndAwaitSignal ─────────────────────────
 
         describe("GIVEN sendPayloadAndAwaitSignal") {
-            describe("WHEN signal deferred is completed") {
-
-                it("THEN returns the completed signal") {
-                    val expected = AgentSignal.Done(DoneResult.COMPLETED)
-                    val sessions = SessionsState()
-                    val communicator = SignalCompletingCommunicator(
-                        sessions = sessions,
-                        partName = PART,
-                        signal = expected,
-                    )
-                    val h = harness(
-                        outFactory = outFactory,
-                        communicator = communicator,
-                        sessionsOverride = sessions,
-                        onSessionCreated = {
-                            val removed = sessions.removeAllForPart(PART)
-                            for (entry in removed) {
-                                if (!entry.signalDeferred.isCompleted) {
-                                    entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
-                                }
-                            }
-                        },
-                    )
-                    val handle = h.facade.spawnAgent(config())
-
-                    val payload = AgentPayload(
-                        instructionFilePath = Path.of("/tmp/instr.md"),
-                    )
-                    val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
-                    result shouldBe expected
-                }
-            }
 
             describe("WHEN session entry does not exist") {
 
@@ -473,6 +526,383 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
                         h.facade.sendPayloadAndAwaitSignal(
                             makeHandle(), payload,
                         )
+                    }
+                }
+            }
+
+            describe("WHEN AckedPayloadSender throws PayloadAckTimeoutException") {
+
+                it("THEN returns AgentSignal.Crashed") {
+                    val h = autoCompletingHarness(
+                        outFactory = outFactory,
+                        ackedPayloadSenderOverride = FakeAckedPayloadSender(shouldThrow = true),
+                    )
+                    val handle = h.facade.spawnAgent(config())
+                    val payload = AgentPayload(instructionFilePath = Path.of("/tmp/instr.md"))
+
+                    val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+
+                    (result is AgentSignal.Crashed) shouldBe true
+                }
+
+                it("THEN crash details mention payload ACK timeout") {
+                    val h = autoCompletingHarness(
+                        outFactory = outFactory,
+                        ackedPayloadSenderOverride = FakeAckedPayloadSender(shouldThrow = true),
+                    )
+                    val handle = h.facade.spawnAgent(config())
+                    val payload = AgentPayload(instructionFilePath = Path.of("/tmp/instr.md"))
+
+                    val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+
+                    (result as AgentSignal.Crashed).details shouldContain "Payload ACK timeout"
+                }
+
+                it("THEN kills the session") {
+                    val h = autoCompletingHarness(
+                        outFactory = outFactory,
+                        ackedPayloadSenderOverride = FakeAckedPayloadSender(shouldThrow = true),
+                    )
+                    val handle = h.facade.spawnAgent(config())
+                    val payload = AgentPayload(instructionFilePath = Path.of("/tmp/instr.md"))
+
+                    h.facade.sendPayloadAndAwaitSignal(handle, payload)
+
+                    h.killer.killed.size shouldBe 1
+                }
+            }
+
+            describe("WHEN payload delivery succeeds") {
+
+                it("THEN ackedPayloadSender.sendAndAwaitAck is called with instruction path") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        launch {
+                            h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                        }
+
+                        advanceTimeBy(500)
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+                        advanceTimeBy(1001)
+
+                        h.ackedPayloadSender.sendCalls.size shouldBe 1
+                        h.ackedPayloadSender.sendCalls.first() shouldBe "/tmp/comm/in/instr.md"
+                    }
+                }
+            }
+
+            describe("AND signal arrives before normalActivity timeout") {
+
+                it("THEN returns the completed signal") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        val expected = AgentSignal.Done(DoneResult.COMPLETED)
+                        val resultDeferred = CompletableDeferred<AgentSignal>()
+                        launch {
+                            val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            resultDeferred.complete(result)
+                        }
+
+                        // Complete the signal deferred before the health check fires
+                        advanceTimeBy(500)
+                        val updatedEntry = h.sessions.lookup(handle.guid)!!
+                        updatedEntry.signalDeferred.complete(expected)
+
+                        advanceTimeBy(1001)
+                        resultDeferred.await() shouldBe expected
+                    }
+                }
+
+                it("THEN does not trigger any health checks") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        launch {
+                            h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                        }
+
+                        advanceTimeBy(500)
+                        val updatedEntry = h.sessions.lookup(handle.guid)!!
+                        updatedEntry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+
+                        advanceTimeBy(1001)
+
+                        h.agentUnresponsiveUseCase.handleCalls.size shouldBe 0
+                    }
+                }
+            }
+
+            describe("AND agent is active with fresh lastActivityTimestamp") {
+                describe("WHEN health check fires") {
+
+                    it("THEN no ping is sent") {
+                        runTest {
+                            val h = autoCompletingHarness(outFactory = outFactory)
+                            val handle = h.facade.spawnAgent(config())
+                            val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                            launch {
+                                h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            }
+
+                            // Advance coroutine time past healthCheckInterval (1s)
+                            // but clock stays at FIXED_INSTANT so lastActivityTimestamp is fresh
+                            advanceTimeBy(1001)
+
+                            h.agentUnresponsiveUseCase.handleCalls.size shouldBe 0
+
+                            // Complete the signal to end the loop
+                            val updatedEntry = h.sessions.lookup(handle.guid)!!
+                            updatedEntry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+                            advanceTimeBy(1001)
+                        }
+                    }
+                }
+            }
+
+            describe("AND lastActivityTimestamp is stale beyond normalActivity") {
+
+                it("THEN sends a ping via AgentUnresponsiveUseCase with NO_ACTIVITY_TIMEOUT") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(
+                            instructionFilePath = Path.of("/tmp/comm/in/instr.md"),
+                        )
+
+                        launch {
+                            h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                        }
+
+                        // Let method start, register entry, deliver payload
+                        advanceTimeBy(1)
+
+                        // NOW advance clock so lastActivityTimestamp becomes stale
+                        h.clock.advance(6.seconds)
+                        // Trigger health check (delay(1s) in loop)
+                        advanceTimeBy(1000)
+
+                        h.agentUnresponsiveUseCase.handleCalls.size shouldBe 1
+                        val ctx = h.agentUnresponsiveUseCase.handleCalls.first()
+                        ctx.detectionContext shouldBe DetectionContext.NO_ACTIVITY_TIMEOUT
+
+                        // Simulate callback arriving during ping window
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.lastActivityTimestamp.set(h.clock.now())
+                        advanceTimeBy(1001)
+
+                        // Complete signal to end
+                        entry.signalDeferred.complete(
+                            AgentSignal.Done(DoneResult.COMPLETED),
+                        )
+                        advanceTimeBy(1001)
+                    }
+                }
+            }
+
+            describe("AND ping sent WHEN callback arrives during pingResponse window") {
+
+                it("THEN agent is marked alive and loop continues") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(
+                            instructionFilePath = Path.of("/tmp/comm/in/instr.md"),
+                        )
+
+                        val resultDeferred = CompletableDeferred<AgentSignal>()
+                        launch {
+                            val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            resultDeferred.complete(result)
+                        }
+
+                        // Let method start and set lastActivityTimestamp
+                        advanceTimeBy(1)
+                        // Make stale to trigger ping
+                        h.clock.advance(6.seconds)
+                        advanceTimeBy(1000) // health check triggers NO_ACTIVITY_TIMEOUT
+
+                        // Callback arrives during ping window
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.lastActivityTimestamp.set(h.clock.now())
+                        advanceTimeBy(1001) // ping check → alive
+
+                        val pingTimeoutCalls = h.agentUnresponsiveUseCase.handleCalls
+                            .filter { it.detectionContext == DetectionContext.PING_TIMEOUT }
+                        pingTimeoutCalls.size shouldBe 0
+
+                        entry.signalDeferred.complete(
+                            AgentSignal.Done(DoneResult.COMPLETED),
+                        )
+                        advanceTimeBy(1001)
+                        resultDeferred.await() shouldBe AgentSignal.Done(DoneResult.COMPLETED)
+                    }
+                }
+            }
+
+            describe("AND ping sent WHEN no callback after pingResponse window") {
+
+                it("THEN returns AgentSignal.Crashed") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(
+                            instructionFilePath = Path.of("/tmp/comm/in/instr.md"),
+                        )
+
+                        val resultDeferred = CompletableDeferred<AgentSignal>()
+                        launch {
+                            val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            resultDeferred.complete(result)
+                        }
+
+                        advanceTimeBy(1)
+                        h.clock.advance(6.seconds)
+                        advanceTimeBy(1000) // NO_ACTIVITY_TIMEOUT → PingSent
+
+                        h.clock.advance(2.seconds)
+                        advanceTimeBy(1001) // PING_TIMEOUT
+
+                        val result = resultDeferred.await()
+                        (result is AgentSignal.Crashed) shouldBe true
+                    }
+                }
+
+                it("THEN AgentUnresponsiveUseCase is called with PING_TIMEOUT") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(
+                            instructionFilePath = Path.of("/tmp/comm/in/instr.md"),
+                        )
+
+                        val resultDeferred = CompletableDeferred<AgentSignal>()
+                        launch {
+                            val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            resultDeferred.complete(result)
+                        }
+
+                        advanceTimeBy(1)
+                        h.clock.advance(6.seconds)
+                        advanceTimeBy(1000)
+
+                        h.clock.advance(2.seconds)
+                        advanceTimeBy(1001)
+
+                        resultDeferred.await()
+
+                        val pingTimeoutCalls = h.agentUnresponsiveUseCase.handleCalls
+                            .filter { it.detectionContext == DetectionContext.PING_TIMEOUT }
+                        pingTimeoutCalls.size shouldBe 1
+                    }
+                }
+            }
+
+            describe("AND Q&A is pending WHEN normalActivity timeout would trigger") {
+
+                it("THEN health checks are skipped and Q&A is drained") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        launch {
+                            h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                        }
+
+                        advanceTimeBy(500) // Let method start and register entry
+
+                        // Add a question to the queue to make isQAPending true
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.questionQueue.add(fakeUserQuestionContext())
+
+                        // Make clock stale beyond normalActivity
+                        h.clock.advance(6.seconds)
+
+                        advanceTimeBy(1001) // health check fires
+
+                        // Q&A should have been drained instead of health check
+                        h.qaDrainTracker.drainCallCount shouldBe 1
+                        h.agentUnresponsiveUseCase.handleCalls.size shouldBe 0
+
+                        // Complete signal to exit
+                        entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+                        advanceTimeBy(1001)
+                    }
+                }
+            }
+
+            describe("AND Q&A completes WHEN normalActivity timeout reached") {
+
+                it("THEN health checks resume normally") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        launch {
+                            h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                        }
+
+                        advanceTimeBy(500)
+
+                        // Add Q&A
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.questionQueue.add(fakeUserQuestionContext())
+
+                        h.clock.advance(6.seconds)
+                        advanceTimeBy(1001) // Q&A drained
+
+                        // Queue is now empty (drained by fake), but clock still stale
+                        // Next health check should detect stale activity
+                        h.clock.advance(6.seconds)
+                        advanceTimeBy(1001) // health check
+
+                        h.agentUnresponsiveUseCase.handleCalls.size shouldBe 1
+                        val ctx = h.agentUnresponsiveUseCase.handleCalls.first()
+                        ctx.detectionContext shouldBe DetectionContext.NO_ACTIVITY_TIMEOUT
+
+                        // Alive during ping
+                        entry.lastActivityTimestamp.set(h.clock.now())
+                        advanceTimeBy(1001)
+
+                        // Complete
+                        entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+                        advanceTimeBy(1001)
+                    }
+                }
+            }
+
+            describe("WHEN payload delivery succeeds and signal completes with FailWorkflow") {
+
+                it("THEN returns FailWorkflow signal") {
+                    runTest {
+                        val h = autoCompletingHarness(outFactory = outFactory)
+                        val handle = h.facade.spawnAgent(config())
+                        val payload = AgentPayload(instructionFilePath = Path.of("/tmp/comm/in/instr.md"))
+
+                        val expected = AgentSignal.FailWorkflow("something went wrong")
+                        val resultDeferred = CompletableDeferred<AgentSignal>()
+                        launch {
+                            val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
+                            resultDeferred.complete(result)
+                        }
+
+                        advanceTimeBy(500)
+                        val entry = h.sessions.lookup(handle.guid)!!
+                        entry.signalDeferred.complete(expected)
+
+                        advanceTimeBy(1001)
+                        resultDeferred.await() shouldBe expected
                     }
                 }
             }
