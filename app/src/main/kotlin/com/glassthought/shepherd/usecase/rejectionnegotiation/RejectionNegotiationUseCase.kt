@@ -219,6 +219,13 @@ class RejectionNegotiationUseCaseImpl(
 
         /**
          * Builds the message sent to the doer when reviewer insists on addressing the item.
+         *
+         * WHY-NOT: The spec (granular-feedback-loop.md lines 346-348) calls for including the
+         * reviewer's counter-reasoning in this message. However, [ReInstructOutcome.Responded]
+         * only carries [AgentSignal.Done] with a [DoneResult] enum — no message content.
+         * The protocol does not currently support passing textual reasoning back through signals.
+         * Including counter-reasoning would require a protocol extension (V2 consideration).
+         * The generic authority message is pragmatic for V1.
          */
         internal fun buildDoerComplianceMessage(
             feedbackFilePath: Path,
