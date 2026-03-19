@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T02:00:40Z
 id: nid_m3cm8xizw5qhu1cu3454rca79_E
 title: "Implement Part, SubPart, IterationConfig, SessionRecord data classes + CurrentState"
-status: open
+status: closed
 deps: [nid_smb6zudqraf0hkp3u9kjx855e_E]
 links: []
 created_iso: 2026-03-18T18:02:34Z
-status_updated_iso: 2026-03-18T18:02:34Z
+status_updated_iso: 2026-03-19T02:00:40Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
