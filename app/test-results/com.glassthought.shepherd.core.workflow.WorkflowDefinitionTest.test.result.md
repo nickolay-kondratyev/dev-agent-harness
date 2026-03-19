@@ -9,6 +9,8 @@ skipped: 0
   - [PASS] THEN isStraightforward is true
   - [PASS] THEN isWithPlanning is false
   - [PASS] THEN parts is not null
+- GIVEN a straightforward workflow with executionPhasesFrom specified
+  - [PASS] THEN construction fails with IllegalArgumentException
 - GIVEN a with-planning WorkflowDefinition
   - [PASS] THEN executionPhasesFrom is set
   - [PASS] THEN isStraightforward is false

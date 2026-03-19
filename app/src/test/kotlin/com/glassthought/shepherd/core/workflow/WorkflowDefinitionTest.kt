@@ -98,6 +98,21 @@ class WorkflowDefinitionTest : AsgardDescribeSpec({
         }
     }
 
+    // ── executionPhasesFrom rejected for straightforward ──
+
+    describe("GIVEN a straightforward workflow with executionPhasesFrom specified") {
+        it("THEN construction fails with IllegalArgumentException") {
+            val exception = shouldThrow<IllegalArgumentException> {
+                WorkflowDefinition(
+                    name = "bad-straightforward",
+                    parts = listOf(executionPart()),
+                    executionPhasesFrom = "plan_flow.json",
+                )
+            }
+            exception.message shouldContain "Straightforward workflow must not specify 'executionPhasesFrom'"
+        }
+    }
+
     // ── executionPhasesFrom required for with-planning ──
 
     describe("GIVEN planningParts without executionPhasesFrom") {

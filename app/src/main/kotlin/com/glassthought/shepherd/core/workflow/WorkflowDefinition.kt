@@ -34,6 +34,13 @@ data class WorkflowDefinition(
                 "or 'planningParts' (with-planning), but not both or neither."
         }
 
+        if (parts != null) {
+            require(executionPhasesFrom == null) {
+                "Straightforward workflow must not specify 'executionPhasesFrom' — " +
+                    "this field is only valid for with-planning workflows."
+            }
+        }
+
         if (planningParts != null) {
             requireNotNull(executionPhasesFrom) {
                 "With-planning workflow must specify 'executionPhasesFrom' " +
