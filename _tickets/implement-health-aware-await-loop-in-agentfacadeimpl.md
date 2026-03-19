@@ -2,7 +2,7 @@
 id: nid_qdd1w86a415xllfpvcsf8djab_E
 title: "Implement Health-Aware Await Loop in AgentFacadeImpl"
 status: open
-deps: [nid_0of6zl2493ctvmy9m23kxnhnl_E, nid_sfgmp7jk8tlnnh2sgblh3npkj_E]
+deps: [nid_0of6zl2493ctvmy9m23kxnhnl_E, nid_sfgmp7jk8tlnnh2sgblh3npkj_E, nid_p1w49sk0s2isnvcjbmhgapho7_E]
 links: []
 created_iso: 2026-03-18T17:37:59Z
 status_updated_iso: 2026-03-18T17:37:59Z

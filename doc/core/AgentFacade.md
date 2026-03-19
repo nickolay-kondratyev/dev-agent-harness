@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # AgentFacade — Testability Facade / ap.9h0KS4EOK5yumssRCJdbq.E
 
 **Status: PLAN — awaiting alignment before implementation**
