@@ -1,11 +1,11 @@
 ---
 id: nid_dufv6609fbbksmai08h5stqk7_E
 title: "Integration test — self-compaction end-to-end with real agent session"
-status: open
+status: in_progress
 deps: [nid_74c83cczud9jnwk1l1ywc8w2y_E]
 links: []
 created_iso: 2026-03-19T00:42:54Z
-status_updated_iso: 2026-03-19T00:42:54Z
+status_updated_iso: 2026-03-19T21:46:32Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
