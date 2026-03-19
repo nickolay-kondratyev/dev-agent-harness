@@ -81,6 +81,7 @@ fun interface RejectionNegotiationUseCase {
 class RejectionNegotiationUseCaseImpl(
     private val reInstructAndAwait: ReInstructAndAwait,
     private val feedbackFileReader: FeedbackFileReader,
+    private val instructionFileWriter: InstructionFileWriter,
     outFactory: OutFactory,
 ) : RejectionNegotiationUseCase {
 
@@ -98,7 +99,8 @@ class RejectionNegotiationUseCaseImpl(
 
         // Step 2: Send rejection + reasoning to reviewer for judgment.
         val reviewerMessage = buildReviewerJudgmentMessage(feedbackContent, feedbackFilePath)
-        val reviewerOutcome = reInstructAndAwait.execute(reviewerHandle, reviewerMessage)
+        val reviewerInstructionPath = instructionFileWriter.write(reviewerMessage, "reviewer-judgment")
+        val reviewerOutcome = reInstructAndAwait.execute(reviewerHandle, reviewerInstructionPath.toString())
 
         return when (reviewerOutcome) {
             is ReInstructOutcome.Crashed ->
@@ -144,7 +146,8 @@ class RejectionNegotiationUseCaseImpl(
     ): RejectionResult {
         // Step 5: Re-instruct doer to comply with reviewer's insistence.
         val doerMessage = buildDoerComplianceMessage(feedbackFilePath)
-        val doerOutcome = reInstructAndAwait.execute(doerHandle, doerMessage)
+        val doerInstructionPath = instructionFileWriter.write(doerMessage, "doer-compliance")
+        val doerOutcome = reInstructAndAwait.execute(doerHandle, doerInstructionPath.toString())
 
         return when (doerOutcome) {
             is ReInstructOutcome.Crashed ->

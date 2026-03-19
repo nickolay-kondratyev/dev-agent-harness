@@ -12,10 +12,10 @@ skipped: 0
 - GIVEN doer rejected and reviewer accepts the rejection
   - WHEN execute is called
     - [PASS] THEN returns RejectionResult.Accepted
-    - [PASS] THEN reviewer is sent the rejection reasoning
+    - [PASS] THEN reviewer instruction file contains rejection reasoning
 - GIVEN doer rejected and reviewer insists and doer complies
   - WHEN execute is called
-    - [PASS] THEN doer receives compliance instruction
+    - [PASS] THEN doer instruction file contains compliance instruction
     - [PASS] THEN returns RejectionResult.AddressedAfterInsistence
 - GIVEN doer rejected and reviewer insists but doer still rejects
   - WHEN execute is called
