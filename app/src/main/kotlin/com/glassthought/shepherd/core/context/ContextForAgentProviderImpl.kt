@@ -20,6 +20,10 @@ class ContextForAgentProviderImpl(
     private val assembler: InstructionPlanAssembler,
 ) : ContextForAgentProvider {
 
+    companion object {
+        private const val PUBLIC_MD = "PUBLIC.md"
+    }
+
     private val out = outFactory.getOutForClass(ContextForAgentProviderImpl::class)
 
     override suspend fun assembleInstructions(
@@ -56,7 +60,7 @@ class ContextForAgentProviderImpl(
         add(InstructionSection.PlanMd)
         add(InstructionSection.PriorPublicMd)
         add(InstructionSection.IterationFeedback)
-        add(InstructionSection.OutputPathSection("PUBLIC.md", request.publicMdOutputPath))
+        add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
         add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false))
     }
@@ -99,7 +103,7 @@ class ContextForAgentProviderImpl(
             )
         }
         add(InstructionSection.FeedbackWritingInstructions)
-        add(InstructionSection.OutputPathSection("PUBLIC.md", request.publicMdOutputPath))
+        add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
         add(InstructionSection.CallbackHelp(forReviewer = true, includePlanValidation = false))
     }
@@ -120,7 +124,7 @@ class ContextForAgentProviderImpl(
         }
         add(InstructionSection.OutputPathSection("plan_flow.json", request.planJsonOutputPath))
         add(InstructionSection.OutputPathSection("PLAN.md", request.planMdOutputPath))
-        add(InstructionSection.OutputPathSection("PUBLIC.md", request.publicMdOutputPath))
+        add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
         add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = true))
     }
@@ -153,7 +157,7 @@ class ContextForAgentProviderImpl(
                 path = request.priorPlanReviewerPublicMdPath,
             ))
         }
-        add(InstructionSection.OutputPathSection("PUBLIC.md", request.publicMdOutputPath))
+        add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
         add(InstructionSection.CallbackHelp(forReviewer = true, includePlanValidation = true))
     }
