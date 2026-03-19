@@ -331,22 +331,172 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
         }
     }
 
+    // ── Planning phase fixture ──
+
+    describe("GIVEN planning-phase current_state.json fixture") {
+
+        val planningPhaseJson = """
+        {
+          "parts": [
+            {
+              "name": "planning",
+              "phase": "planning",
+              "description": "Plan the workflow",
+              "subParts": [
+                {
+                  "name": "plan",
+                  "role": "PLANNER",
+                  "agentType": "ClaudeCode",
+                  "model": "opus",
+                  "status": "IN_PROGRESS",
+                  "sessionIds": [
+                    {
+                      "handshakeGuid": "handshake.c3d4e5f6-a7b8-9012-cdef-123456789012",
+                      "agentSession": { "id": "99f7d9gc-eg26-675d-aa89-384626985g30" },
+                      "agentType": "ClaudeCode",
+                      "model": "opus",
+                      "timestamp": "2026-03-10T14:00:00Z"
+                    }
+                  ]
+                },
+                {
+                  "name": "plan_review",
+                  "role": "PLAN_REVIEWER",
+                  "agentType": "ClaudeCode",
+                  "model": "opus",
+                  "status": "IN_PROGRESS",
+                  "iteration": { "max": 3, "current": 1 },
+                  "sessionIds": [
+                    {
+                      "handshakeGuid": "handshake.d4e5f6a7-b8c9-0123-defa-234567890123",
+                      "agentSession": { "id": "aag8eahd-fh37-786e-bb90-495737a96h41" },
+                      "agentType": "ClaudeCode",
+                      "model": "opus",
+                      "timestamp": "2026-03-10T14:30:00Z"
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+        """.trimIndent()
+
+        val state = mapper.readValue<CurrentState>(planningPhaseJson)
+
+        describe("WHEN deserializing") {
+
+            it("THEN has one part") {
+                state.parts shouldHaveSize 1
+            }
+
+            it("THEN part name is planning") {
+                state.parts[0].name shouldBe "planning"
+            }
+
+            it("THEN part phase is PLANNING") {
+                state.parts[0].phase shouldBe Phase.PLANNING
+            }
+
+            it("THEN part has two subParts") {
+                state.parts[0].subParts shouldHaveSize 2
+            }
+        }
+
+        describe("WHEN inspecting plan subPart") {
+            val plan = state.parts[0].subParts[0]
+
+            it("THEN status is IN_PROGRESS") {
+                plan.status shouldBe SubPartStatus.IN_PROGRESS
+            }
+
+            it("THEN role is PLANNER") {
+                plan.role shouldBe "PLANNER"
+            }
+
+            it("THEN model is opus") {
+                plan.model shouldBe "opus"
+            }
+
+            it("THEN has one session record") {
+                plan.sessionIds.shouldNotBeNull()
+                plan.sessionIds!! shouldHaveSize 1
+            }
+        }
+
+        describe("WHEN inspecting plan_review subPart") {
+            val planReview = state.parts[0].subParts[1]
+
+            it("THEN iteration current is 1") {
+                planReview.iteration!!.current shouldBe 1
+            }
+
+            it("THEN iteration max is 3") {
+                planReview.iteration!!.max shouldBe 3
+            }
+        }
+
+        describe("WHEN re-serializing planning-phase state") {
+            val reserialized = mapper.writeValueAsString(state)
+            val roundTripped = mapper.readValue<CurrentState>(reserialized)
+
+            it("THEN round-trips correctly") {
+                roundTripped shouldBe state
+            }
+        }
+    }
+
+    // ── SubPart round-trip ──
+
+    describe("GIVEN SubPart with all fields populated") {
+
+        val subPart = SubPart(
+            name = "impl",
+            role = "IMPLEMENTER",
+            agentType = "ClaudeCode",
+            model = "sonnet",
+            status = SubPartStatus.IN_PROGRESS,
+            iteration = IterationConfig(max = 5, current = 2),
+            sessionIds = listOf(
+                SessionRecord(
+                    handshakeGuid = "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+                    agentSession = AgentSessionInfo(id = "77d5b7ea-cf04-453b-8867-162404763e18"),
+                    agentType = "ClaudeCode",
+                    model = "sonnet",
+                    timestamp = "2026-03-10T15:30:00Z",
+                ),
+            ),
+        )
+
+        describe("WHEN round-tripping through JSON") {
+            val json = mapper.writeValueAsString(subPart)
+            val deserialized = mapper.readValue<SubPart>(json)
+
+            it("THEN preserves all fields") {
+                deserialized shouldBe subPart
+            }
+        }
+    }
+
     // ── NON_NULL serialization inclusion ──
 
     describe("GIVEN SubPart with null optional fields") {
         val subPart = SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet")
         val json = mapper.writeValueAsString(subPart)
 
-        it("THEN JSON does not contain 'status' key") {
-            json.contains("status") shouldBe false
-        }
+        describe("WHEN serializing") {
 
-        it("THEN JSON does not contain 'iteration' key") {
-            json.contains("iteration") shouldBe false
-        }
+            it("THEN JSON does not contain 'status' key") {
+                json.contains("status") shouldBe false
+            }
 
-        it("THEN JSON does not contain 'sessionIds' key") {
-            json.contains("sessionIds") shouldBe false
+            it("THEN JSON does not contain 'iteration' key") {
+                json.contains("iteration") shouldBe false
+            }
+
+            it("THEN JSON does not contain 'sessionIds' key") {
+                json.contains("sessionIds") shouldBe false
+            }
         }
     }
 

@@ -31,10 +31,14 @@ skipped: 0
 - GIVEN SessionRecord
   - WHEN round-tripping
     - [PASS] THEN preserves all fields
+- GIVEN SubPart with all fields populated
+  - WHEN round-tripping through JSON
+    - [PASS] THEN preserves all fields
 - GIVEN SubPart with null optional fields
-  - [PASS] THEN JSON does not contain 'iteration' key
-  - [PASS] THEN JSON does not contain 'sessionIds' key
-  - [PASS] THEN JSON does not contain 'status' key
+  - WHEN serializing
+    - [PASS] THEN JSON does not contain 'iteration' key
+    - [PASS] THEN JSON does not contain 'sessionIds' key
+    - [PASS] THEN JSON does not contain 'status' key
 - GIVEN current_state.json fixture (with runtime fields)
   - WHEN inspecting impl subPart
     - [PASS] THEN has one session record
@@ -68,4 +72,20 @@ skipped: 0
     - [PASS] THEN sessionIds is null
     - [PASS] THEN status is null
   - WHEN re-serializing plan flow
+    - [PASS] THEN round-trips correctly
+- GIVEN planning-phase current_state.json fixture
+  - WHEN deserializing
+    - [PASS] THEN has one part
+    - [PASS] THEN part has two subParts
+    - [PASS] THEN part name is planning
+    - [PASS] THEN part phase is PLANNING
+  - WHEN inspecting plan subPart
+    - [PASS] THEN has one session record
+    - [PASS] THEN model is opus
+    - [PASS] THEN role is PLANNER
+    - [PASS] THEN status is IN_PROGRESS
+  - WHEN inspecting plan_review subPart
+    - [PASS] THEN iteration current is 1
+    - [PASS] THEN iteration max is 3
+  - WHEN re-serializing planning-phase state
     - [PASS] THEN round-trips correctly
