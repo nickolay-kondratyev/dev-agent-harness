@@ -77,17 +77,20 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
 
     /**
      * Fake [PlanningPartExecutorFactory] that returns executors from a queue.
+     * Records the [priorConversionErrors] passed to each [create] call for verification.
      */
     class FakePlanningPartExecutorFactory : PlanningPartExecutorFactory {
         private val executors = ArrayDeque<PartExecutor>()
         val createCalls = mutableListOf<Unit>()
+        val createCallErrors = mutableListOf<List<String>>()
 
         fun onCreate(executor: PartExecutor) {
             executors.addLast(executor)
         }
 
-        override fun create(): PartExecutor {
+        override fun create(priorConversionErrors: List<String>): PartExecutor {
             createCalls.add(Unit)
+            createCallErrors.add(priorConversionErrors)
             return executors.removeFirstOrNull()
                 ?: error("FakePlanningPartExecutorFactory: no executor programmed for call #${createCalls.size}")
         }
@@ -252,20 +255,27 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
     describe("GIVEN planning executor completes") {
         describe("AND first plan conversion throws PlanConversionException") {
             describe("AND second plan conversion succeeds") {
-                it("THEN execute returns execution parts from second attempt").config(
-                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
-                ) {
-                    val factory = FakePlanningPartExecutorFactory()
+                lateinit var factory: FakePlanningPartExecutorFactory
+                lateinit var converter: FakePlanFlowConverter
+                lateinit var failedUseCase: FakeFailedToExecutePlanUseCase
+                lateinit var useCase: DetailedPlanningUseCaseImpl
+
+                beforeEach {
+                    factory = FakePlanningPartExecutorFactory()
                     factory.onCreate(FakePartExecutor(PartResult.Completed))
                     factory.onCreate(FakePartExecutor(PartResult.Completed))
 
-                    val converter = FakePlanFlowConverter()
+                    converter = FakePlanFlowConverter()
                     converter.onConvertAndAppend { throw PlanConversionException("invalid schema") }
                     converter.onConvertAndAppend { sampleExecutionParts }
 
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 3)
+                    failedUseCase = FakeFailedToExecutePlanUseCase()
+                    useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 3)
+                }
 
+                it("THEN execute returns execution parts from second attempt").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
                     val result = useCase.execute()
                     result shouldBe sampleExecutionParts
                 }
@@ -273,17 +283,6 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN the factory creates two executors (one per planning attempt)").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
-                    val factory = FakePlanningPartExecutorFactory()
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-
-                    val converter = FakePlanFlowConverter()
-                    converter.onConvertAndAppend { throw PlanConversionException("invalid schema") }
-                    converter.onConvertAndAppend { sampleExecutionParts }
-
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 3)
-
                     useCase.execute()
                     factory.createCalls shouldHaveSize 2
                 }
@@ -291,19 +290,22 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN failedToExecutePlanUseCase is NOT called on successful retry").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
-                    val factory = FakePlanningPartExecutorFactory()
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-
-                    val converter = FakePlanFlowConverter()
-                    converter.onConvertAndAppend { throw PlanConversionException("invalid schema") }
-                    converter.onConvertAndAppend { sampleExecutionParts }
-
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 3)
-
                     useCase.execute()
                     failedUseCase.calls shouldHaveSize 0
+                }
+
+                it("THEN first create call receives empty priorConversionErrors").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
+                    useCase.execute()
+                    factory.createCallErrors[0] shouldBe emptyList()
+                }
+
+                it("THEN second create call receives the conversion error from the first attempt").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
+                    useCase.execute()
+                    factory.createCallErrors[1] shouldBe listOf("invalid schema")
                 }
             }
         }
@@ -314,20 +316,27 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
     describe("GIVEN planning executor always completes") {
         describe("AND plan conversion always throws PlanConversionException") {
             describe("AND maxConversionRetries is 2") {
-                it("THEN failedToExecutePlanUseCase.handleFailure is called").config(
-                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
-                ) {
-                    val factory = FakePlanningPartExecutorFactory()
+                lateinit var factory: FakePlanningPartExecutorFactory
+                lateinit var converter: FakePlanFlowConverter
+                lateinit var failedUseCase: FakeFailedToExecutePlanUseCase
+                lateinit var useCase: DetailedPlanningUseCaseImpl
+
+                beforeEach {
+                    factory = FakePlanningPartExecutorFactory()
                     factory.onCreate(FakePartExecutor(PartResult.Completed))
                     factory.onCreate(FakePartExecutor(PartResult.Completed))
 
-                    val converter = FakePlanFlowConverter()
+                    converter = FakePlanFlowConverter()
                     converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 1") }
                     converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 2") }
 
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 2)
+                    failedUseCase = FakeFailedToExecutePlanUseCase()
+                    useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 2)
+                }
 
+                it("THEN failedToExecutePlanUseCase.handleFailure is called").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
                     shouldThrow<TestFailureException> { useCase.execute() }
                     failedUseCase.calls shouldHaveSize 1
                 }
@@ -335,17 +344,6 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN the failure result is FailedToConverge with conversion error message").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
-                    val factory = FakePlanningPartExecutorFactory()
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-
-                    val converter = FakePlanFlowConverter()
-                    converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 1") }
-                    converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 2") }
-
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 2)
-
                     val thrown = shouldThrow<TestFailureException> { useCase.execute() }
                     val failedResult = thrown.failedResult
                     failedResult.shouldBeInstanceOf<PartResult.FailedToConverge>()
@@ -355,21 +353,65 @@ class DetailedPlanningUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN the factory created 2 executors (one per retry attempt)").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
-                    val factory = FakePlanningPartExecutorFactory()
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-                    factory.onCreate(FakePartExecutor(PartResult.Completed))
-
-                    val converter = FakePlanFlowConverter()
-                    converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 1") }
-                    converter.onConvertAndAppend { throw PlanConversionException("bad schema attempt 2") }
-
-                    val failedUseCase = FakeFailedToExecutePlanUseCase()
-                    val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 2)
-
                     shouldThrow<TestFailureException> { useCase.execute() }
                     factory.createCalls shouldHaveSize 2
                 }
+
+                it("THEN first create call receives empty priorConversionErrors").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
+                    shouldThrow<TestFailureException> { useCase.execute() }
+                    factory.createCallErrors[0] shouldBe emptyList()
+                }
+
+                it("THEN second create call receives the error from the first conversion attempt").config(
+                    extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+                ) {
+                    shouldThrow<TestFailureException> { useCase.execute() }
+                    factory.createCallErrors[1] shouldBe listOf("bad schema attempt 1")
+                }
             }
+        }
+    }
+
+    // ── PlanConversionException: error accumulation across multiple retries ──
+
+    describe("GIVEN planning executor always completes") {
+        describe("AND plan conversion fails twice then succeeds on third attempt") {
+            it("THEN third create call receives both prior conversion errors").config(
+                extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+            ) {
+                val factory = FakePlanningPartExecutorFactory()
+                factory.onCreate(FakePartExecutor(PartResult.Completed))
+                factory.onCreate(FakePartExecutor(PartResult.Completed))
+                factory.onCreate(FakePartExecutor(PartResult.Completed))
+
+                val converter = FakePlanFlowConverter()
+                converter.onConvertAndAppend { throw PlanConversionException("error-1") }
+                converter.onConvertAndAppend { throw PlanConversionException("error-2") }
+                converter.onConvertAndAppend { sampleExecutionParts }
+
+                val failedUseCase = FakeFailedToExecutePlanUseCase()
+                val useCase = buildUseCase(factory, converter, failedUseCase, maxConversionRetries = 3)
+
+                useCase.execute()
+                factory.createCallErrors[2] shouldBe listOf("error-1", "error-2")
+            }
+        }
+    }
+
+    // ── Happy path: first call gets empty priorConversionErrors ──────────────
+
+    describe("GIVEN planning executor completes successfully on first try") {
+        it("THEN factory.create receives empty priorConversionErrors") {
+            val factory = FakePlanningPartExecutorFactory()
+            factory.onCreate(FakePartExecutor(PartResult.Completed))
+            val converter = FakePlanFlowConverter()
+            converter.onConvertAndAppend { sampleExecutionParts }
+            val useCase = buildUseCase(factory, converter, FakeFailedToExecutePlanUseCase())
+
+            useCase.execute()
+            factory.createCallErrors[0] shouldBe emptyList()
         }
     }
 })

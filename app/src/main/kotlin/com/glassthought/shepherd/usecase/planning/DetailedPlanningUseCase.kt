@@ -52,10 +52,11 @@ class DetailedPlanningUseCaseImpl(
     private val out = outFactory.getOutForClass(DetailedPlanningUseCaseImpl::class)
 
     override suspend fun execute(): List<Part> {
+        val conversionErrors = mutableListOf<String>()
         var remainingRetries = maxConversionRetries
 
         while (true) {
-            val executor = partExecutorFactory.create()
+            val executor = partExecutorFactory.create(conversionErrors.toList())
             val result = executor.execute()
 
             when (result) {
@@ -77,6 +78,7 @@ class DetailedPlanningUseCaseImpl(
                 }
                 executionParts
             } catch (e: PlanConversionException) {
+                conversionErrors.add(e.message ?: "unknown conversion error")
                 remainingRetries--
                 out.warn(
                     "plan_conversion_failed_will_retry",

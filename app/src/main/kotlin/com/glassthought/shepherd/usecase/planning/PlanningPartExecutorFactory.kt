@@ -8,7 +8,11 @@ import com.glassthought.shepherd.core.executor.PartExecutor
  *
  * Keeps [DetailedPlanningUseCaseImpl] testable — tests can supply a fake factory
  * that returns a pre-configured executor.
+ *
+ * @param priorConversionErrors validation errors from previous plan conversion attempts.
+ *   Implementations should inject these into the planner's context so the agent can
+ *   avoid repeating the same mistakes. Empty on the first attempt.
  */
-fun interface PlanningPartExecutorFactory {
-    fun create(): PartExecutor
+interface PlanningPartExecutorFactory {
+    fun create(priorConversionErrors: List<String> = emptyList()): PartExecutor
 }
