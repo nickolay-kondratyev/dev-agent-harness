@@ -59,4 +59,32 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** HandshakeGuid identifying an agent session in server callbacks. */
+    val HANDSHAKE_GUID = ValTypeV2(
+        typeName = "HANDSHAKE_GUID",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Result string from a /signal/done callback (e.g., "completed", "pass"). */
+    val RESULT = ValTypeV2(
+        typeName = "RESULT",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Reason string from a /signal/fail-workflow callback. */
+    val REASON = ValTypeV2(
+        typeName = "REASON",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Role of the sub-part (DOER/REVIEWER) for logging context. */
+    val ROLE = ValTypeV2(
+        typeName = "ROLE",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }

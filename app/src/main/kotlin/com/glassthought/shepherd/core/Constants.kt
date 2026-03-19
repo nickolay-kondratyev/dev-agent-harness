@@ -22,6 +22,12 @@ object Constants {
      * Fail-fast: every callback script hard-fails when this env var is not set.
      */
     const val HANDSHAKE_GUID_ENV_VAR = "TICKET_SHEPHERD_HANDSHAKE_GUID"
+
+    /**
+     * Env var specifying the port for the embedded Ktor CIO HTTP server.
+     * Read at server startup — fail hard if not set or not a valid port number.
+     */
+    const val SERVER_PORT_ENV_VAR = "TICKET_SHEPHERD_SERVER_PORT"
   }
 
   /**
