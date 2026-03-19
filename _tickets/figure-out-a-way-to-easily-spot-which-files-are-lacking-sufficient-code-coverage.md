@@ -1,11 +1,11 @@
 ---
 id: nid_axc4pcrl2vnqo2vebffi2pxdd_E
 title: "Figure out a way to easily spot which files are lacking sufficient code coverage"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T22:38:37Z
-status_updated_iso: 2026-03-19T22:38:37Z
+status_updated_iso: 2026-03-19T22:40:22Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
