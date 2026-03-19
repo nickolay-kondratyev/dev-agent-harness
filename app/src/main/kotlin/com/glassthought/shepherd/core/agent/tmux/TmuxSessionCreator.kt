@@ -10,6 +10,7 @@ import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
  *
  * Implemented by [TmuxSessionManager].
  */
+@FunctionalInterface
 interface TmuxSessionCreator {
 
     /**
