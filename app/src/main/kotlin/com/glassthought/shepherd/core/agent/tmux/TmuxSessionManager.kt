@@ -18,7 +18,7 @@ class TmuxSessionManager(
     outFactory: OutFactory,
     private val commandRunner: TmuxCommandRunner,
     private val communicator: TmuxCommunicator,
-) : SessionExistenceChecker {
+) : SessionExistenceChecker, TmuxSessionCreator {
     private val out = outFactory.getOutForClass(TmuxSessionManager::class)
 
     /**
@@ -29,7 +29,7 @@ class TmuxSessionManager(
      * @return A [TmuxSession] representing the created session.
      * @throws IllegalStateException if tmux fails to create the session.
      */
-    suspend fun createSession(sessionName: String, startCommand: TmuxStartCommand): TmuxSession {
+    override suspend fun createSession(sessionName: String, startCommand: TmuxStartCommand): TmuxSession {
         out.info(
             "creating_tmux_session",
             Val(sessionName, ValType.STRING_USER_AGNOSTIC),
