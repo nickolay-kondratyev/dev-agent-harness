@@ -8,6 +8,9 @@ skipped: 0
 - GIVEN a JSON file with invalid timestamp format
   - WHEN read is called
     - [PASS] THEN throws ContextWindowStateUnavailableException
+- GIVEN a JSON file with remaining_percentage outside valid range
+  - WHEN read is called
+    - [PASS] THEN throws ContextWindowStateUnavailableException
 - GIVEN a malformed JSON file with missing fields
   - WHEN read is called
     - [PASS] THEN throws ContextWindowStateUnavailableException

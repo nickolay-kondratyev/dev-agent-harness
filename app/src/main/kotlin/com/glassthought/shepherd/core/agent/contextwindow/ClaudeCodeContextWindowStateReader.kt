@@ -65,7 +65,7 @@ class ClaudeCodeContextWindowStateReader(
     }
 
     /**
-     * Parses the JSON file and validates that all required fields are present.
+     * Parses the JSON file and validates that all required fields are present and in range.
      *
      * WHY nullable DTO fields + explicit validation: Jackson KotlinModule silently defaults
      * missing primitive `Int` fields to 0 instead of throwing, so we use nullable fields
@@ -74,22 +74,30 @@ class ClaudeCodeContextWindowStateReader(
     private fun parseAndValidate(filePath: Path): ValidatedContextWindowSlim {
         val dto = parseFile(filePath)
 
-        val fileUpdatedTimestamp = dto.fileUpdatedTimestamp
-            ?: throw ContextWindowStateUnavailableException(
-                "Failed to parse context_window_slim.json at [$filePath]: " +
-                    "missing required field [file_updated_timestamp]"
-            )
-
-        val remainingPercentage = dto.remainingPercentage
-            ?: throw ContextWindowStateUnavailableException(
-                "Failed to parse context_window_slim.json at [$filePath]: " +
-                    "missing required field [remaining_percentage]"
-            )
+        val fileUpdatedTimestamp = requireField(dto.fileUpdatedTimestamp, "file_updated_timestamp", filePath)
+        val remainingPercentage = requireField(dto.remainingPercentage, "remaining_percentage", filePath)
 
         return ValidatedContextWindowSlim(
             fileUpdatedTimestamp = fileUpdatedTimestamp,
-            remainingPercentage = remainingPercentage,
+            remainingPercentage = validateBounds(remainingPercentage, filePath),
         )
+    }
+
+    private fun <T : Any> requireField(value: T?, fieldName: String, filePath: Path): T {
+        return value ?: throw ContextWindowStateUnavailableException(
+            "Failed to parse context_window_slim.json at [$filePath]: " +
+                "missing required field [$fieldName]"
+        )
+    }
+
+    private fun validateBounds(remainingPercentage: Int, filePath: Path): Int {
+        if (remainingPercentage !in REMAINING_PERCENTAGE_RANGE) {
+            throw ContextWindowStateUnavailableException(
+                "Failed to parse context_window_slim.json at [$filePath]: " +
+                    "remaining_percentage [$remainingPercentage] is outside valid range $REMAINING_PERCENTAGE_RANGE"
+            )
+        }
+        return remainingPercentage
     }
 
     private fun parseFile(filePath: Path): ContextWindowSlimDto {
@@ -132,6 +140,7 @@ class ClaudeCodeContextWindowStateReader(
 
     companion object {
         private const val CONTEXT_WINDOW_FILE_NAME = "context_window_slim.json"
+        private val REMAINING_PERCENTAGE_RANGE = 0..100
 
         fun defaultBasePath(): Path = Path.of(
             System.getenv("HOME"),

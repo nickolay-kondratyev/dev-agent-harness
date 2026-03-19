@@ -151,6 +151,25 @@ class ClaudeCodeContextWindowStateReaderTest : AsgardDescribeSpec(
         }
     }
 
+    describe("GIVEN a JSON file with remaining_percentage outside valid range") {
+        val basePath = Files.createTempDirectory("ctx-reader-bounds-test")
+        val reader = buildReader(basePath)
+
+        writeJsonFile(
+            basePath, sessionId,
+            """{"file_updated_timestamp": "2026-03-19T10:00:00Z", "remaining_percentage": 150}"""
+        )
+
+        describe("WHEN read is called") {
+            it("THEN throws ContextWindowStateUnavailableException") {
+                val exception = shouldThrow<ContextWindowStateUnavailableException> {
+                    reader.read(sessionId)
+                }
+                exception.message shouldContain "outside valid range"
+            }
+        }
+    }
+
     describe("GIVEN a timestamp exactly at the stale boundary") {
         val basePath = Files.createTempDirectory("ctx-reader-boundary-test")
         val config = HarnessTimeoutConfig(contextFileStaleTimeout = 5.minutes)
