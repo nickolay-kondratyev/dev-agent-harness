@@ -60,6 +60,15 @@ skipped: 0
 - GIVEN a doer+reviewer executor
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor with critical feedback file in pending
+  - WHEN reviewer signals PASS
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- GIVEN a doer+reviewer executor with empty feedback pending directory
+  - WHEN reviewer signals PASS
+    - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor with important feedback file in pending
+  - WHEN reviewer signals PASS
+    - [PASS] THEN the result is PartResult.AgentCrashed
 - GIVEN a doer+reviewer executor with iteration
   - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
     - [PASS] THEN readContextWindowState is called 4 times (once per Done signal)
@@ -72,6 +81,10 @@ skipped: 0
 - GIVEN a doer+reviewer executor with one iteration
   - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
     - [PASS] THEN sendPayloadAndAwaitSignal is called 4 times
+- GIVEN a doer+reviewer executor with only optional feedback files in pending
+  - WHEN reviewer signals PASS
+    - [PASS] THEN optional files are moved from pending to addressed
+    - [PASS] THEN the result is PartResult.Completed
 - GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED) and PUBLIC.md exists
     - [PASS] THEN the result is PartResult.Completed
