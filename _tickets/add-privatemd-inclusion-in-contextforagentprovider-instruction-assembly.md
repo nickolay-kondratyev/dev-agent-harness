@@ -1,11 +1,11 @@
 ---
 id: nid_6kqfuee0ryuf45se8c06t6v3a_E
 title: "Add PRIVATE.md inclusion in ContextForAgentProvider instruction assembly"
-status: open
+status: in_progress
 deps: [nid_9kic96nh6mb8r5legcsvt46uy_E]
 links: []
 created_iso: 2026-03-19T00:41:36Z
-status_updated_iso: 2026-03-19T00:41:36Z
+status_updated_iso: 2026-03-19T14:23:15Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
