@@ -73,6 +73,7 @@ object ProtocolVocabulary {
         const val USER_QUESTION = "user-question"
         const val PING_ACK = "ping-ack"
         const val SELF_COMPACTED = "self-compacted"
+        const val STARTED = "started"
     }
 
     /** WHY-NOT comment protocol marker used in agent instructions and feedback. */

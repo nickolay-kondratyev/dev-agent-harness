@@ -50,7 +50,7 @@ internal fun createTestSessionEntry(
     subPartName = subPartName,
     subPartIndex = subPartIndex,
     signalDeferred = CompletableDeferred<AgentSignal>(),
-    lastActivityTimestamp = Instant.now(),
+    lastActivityTimestamp = AtomicReference(Instant.now()),
     pendingPayloadAck = AtomicReference(null),
     questionQueue = questionQueue,
 )

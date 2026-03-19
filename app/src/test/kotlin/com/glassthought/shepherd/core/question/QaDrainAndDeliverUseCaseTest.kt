@@ -18,6 +18,7 @@ import kotlinx.coroutines.CompletableDeferred
 import java.nio.file.Files
 import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReference
 import com.glassthought.shepherd.core.state.SubPartRole
 
 class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
@@ -337,7 +338,7 @@ private fun createTestSessionEntry(
         subPartName = "test-sub-part",
         subPartIndex = 0,
         signalDeferred = CompletableDeferred<AgentSignal>(),
-        lastActivityTimestamp = Instant.now(),
+        lastActivityTimestamp = AtomicReference(Instant.now()),
         questionQueue = queue,
     )
 }
