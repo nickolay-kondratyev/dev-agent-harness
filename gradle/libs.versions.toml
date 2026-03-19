@@ -12,6 +12,7 @@ snakeyaml = "2.2"
 jackson = "2.17.2"
 ktor = "3.1.1"
 detekt = "1.23.8"
+kover = "0.9.1"
 sonarqube = "7.2.3.7755"
 
 [libraries]
@@ -38,4 +39,5 @@ ktor-server-test-host = { module = "io.ktor:ktor-server-test-host", version.ref 
 [plugins]
 kotlin-jvm = { id = "org.jetbrains.kotlin.jvm", version = "2.2.20" }
 detekt = { id = "io.gitlab.arturbosch.detekt", version.ref = "detekt" }
+kover = { id = "org.jetbrains.kotlinx.kover", version.ref = "kover" }
 sonarqube = { id = "org.sonarqube", version.ref = "sonarqube" }
