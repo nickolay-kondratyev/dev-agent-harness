@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T19:45:04Z
 id: nid_s7dk275tezu0dgxg32wpb9kpk_E
 title: "Add FakeAgentFacade-based unit tests for ReInstructAndAwaitImpl — interaction verification"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T18:58:01Z
-status_updated_iso: 2026-03-19T19:38:54Z
+status_updated_iso: 2026-03-19T19:45:04Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
