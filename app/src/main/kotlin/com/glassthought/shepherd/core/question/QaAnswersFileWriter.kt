@@ -9,7 +9,7 @@ import kotlin.io.path.writeText
  * The file is overwritten on each call — no append semantics.
  * The caller ([QaDrainAndDeliverUseCase]) is responsible for resolving the target directory.
  */
-interface QaAnswersFileWriter {
+fun interface QaAnswersFileWriter {
     /**
      * Writes `qa_answers.md` into [commInDir] containing all [qaList] pairs.
      *

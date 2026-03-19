@@ -12,7 +12,7 @@ import com.glassthought.shepherd.core.session.SessionEntry
  *
  * Implementation ticket: implement-ackedpayloadsender-wrap-send-keys-ack-await-retry
  */
-interface AckedPayloadSender {
+fun interface AckedPayloadSender {
     suspend fun sendAndAwaitAck(
         tmuxSession: TmuxAgentSession,
         sessionEntry: SessionEntry,
