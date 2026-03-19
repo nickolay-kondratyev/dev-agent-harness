@@ -1,0 +1,71 @@
+---
+spec: "com.glassthought.shepherd.core.filestructure.AiOutputStructureTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN AiOutputStructure with branch 'my_branch'
+  - WHEN branchRoot is called
+    - [PASS] THEN returns .ai_out/my_branch
+  - WHEN currentStateJson is called
+    - [PASS] THEN returns harness_private/current_state.json
+  - WHEN executionCommInDir is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/comm/in
+  - WHEN executionCommOutDir is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/comm/out
+  - WHEN executionInstructionsMd is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/comm/in/instructions.md
+  - WHEN executionPartDir is called with 'backend'
+    - [PASS] THEN returns .ai_out/my_branch/execution/backend
+  - WHEN executionPrivateMd is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/private/PRIVATE.md
+  - WHEN executionPublicMd is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/comm/out/PUBLIC.md
+  - WHEN executionSubPartDir is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl
+  - WHEN executionSubPartPrivateDir is called with 'backend', 'impl'
+    - [PASS] THEN returns execution/backend/impl/private
+  - WHEN feedbackAddressedDir is called with 'backend'
+    - [PASS] THEN returns execution/backend/__feedback/addressed
+  - WHEN feedbackDir is called with 'backend'
+    - [PASS] THEN returns execution/backend/__feedback
+  - WHEN feedbackPendingDir is called with 'backend'
+    - [PASS] THEN returns execution/backend/__feedback/pending
+  - WHEN feedbackRejectedDir is called with 'backend'
+    - [PASS] THEN returns execution/backend/__feedback/rejected
+  - WHEN harnessPrivateDir is called
+    - [PASS] THEN returns .ai_out/my_branch/harness_private
+  - WHEN planFlowJson is called
+    - [PASS] THEN returns harness_private/plan_flow.json
+  - WHEN planMd is called
+    - [PASS] THEN returns shared/plan/PLAN.md
+  - WHEN planningCommInDir is called with 'plan'
+    - [PASS] THEN returns planning/plan/comm/in
+  - WHEN planningCommOutDir is called with 'plan'
+    - [PASS] THEN returns planning/plan/comm/out
+  - WHEN planningInstructionsMd is called with 'plan'
+    - [PASS] THEN returns planning/plan/comm/in/instructions.md
+  - WHEN planningPrivateMd is called with 'plan'
+    - [PASS] THEN returns planning/plan/private/PRIVATE.md
+  - WHEN planningPublicMd is called with 'plan'
+    - [PASS] THEN returns planning/plan/comm/out/PUBLIC.md
+  - WHEN planningSubPartDir is called with 'plan'
+    - [PASS] THEN returns .ai_out/my_branch/planning/plan
+  - WHEN planningSubPartPrivateDir is called with 'plan'
+    - [PASS] THEN returns planning/plan/private
+  - WHEN sharedPlanDir is called
+    - [PASS] THEN returns .ai_out/my_branch/shared/plan
+- GIVEN AiOutputStructure with branch containing slashes 'feature/my-ticket'
+  - WHEN branchRoot is called
+    - [PASS] THEN slashes create nested path segments
+  - WHEN executionPublicMd is called with 'backend', 'impl'
+    - [PASS] THEN full path includes nested branch segments
+  - WHEN feedbackPendingDir is called with 'backend'
+    - [PASS] THEN full path includes nested branch segments
+  - WHEN planningPublicMd is called with 'plan'
+    - [PASS] THEN full path includes nested branch segments
+- GIVEN AiOutputStructure — planning vs execution structural difference
+  - WHEN comparing planningPublicMd and executionPublicMd
+    - [PASS] THEN execution has part-level grouping
+    - [PASS] THEN planning has no part-level grouping
