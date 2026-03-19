@@ -23,15 +23,19 @@ internal val noOpCommunicator = object : TmuxCommunicator {
 
 internal val noOpExistsChecker = SessionExistenceChecker { false }
 
-internal fun createTestTmuxAgentSession(): TmuxAgentSession {
+internal fun createTestTmuxAgentSession(
+    handshakeGuid: HandshakeGuid = HandshakeGuid.generate(),
+    communicator: TmuxCommunicator = noOpCommunicator,
+    existsChecker: SessionExistenceChecker = noOpExistsChecker,
+): TmuxAgentSession {
     val tmuxSession = TmuxSession(
         name = TmuxSessionName("test-session"),
         paneTarget = "test-session:0.0",
-        communicator = noOpCommunicator,
-        existsChecker = noOpExistsChecker,
+        communicator = communicator,
+        existsChecker = existsChecker,
     )
     val resumableId = ResumableAgentSessionId(
-        handshakeGuid = HandshakeGuid.generate(),
+        handshakeGuid = handshakeGuid,
         agentType = AgentType.CLAUDE_CODE,
         sessionId = "test-session-id",
         model = "test-model",
@@ -44,8 +48,9 @@ internal fun createTestSessionEntry(
     subPartName: String = "test-sub-part",
     subPartIndex: Int = 0,
     questionQueue: ConcurrentLinkedQueue<UserQuestionContext> = ConcurrentLinkedQueue(),
+    tmuxAgentSession: TmuxAgentSession = createTestTmuxAgentSession(),
 ): SessionEntry = SessionEntry(
-    tmuxAgentSession = createTestTmuxAgentSession(),
+    tmuxAgentSession = tmuxAgentSession,
     partName = partName,
     subPartName = subPartName,
     subPartIndex = subPartIndex,
@@ -55,8 +60,10 @@ internal fun createTestSessionEntry(
     questionQueue = questionQueue,
 )
 
-internal fun createTestUserQuestionContext(): UserQuestionContext = UserQuestionContext(
-    question = "test question?",
+internal fun createTestUserQuestionContext(
+    question: String = "test question?",
+): UserQuestionContext = UserQuestionContext(
+    question = question,
     partName = "test-part",
     subPartName = "test-sub-part",
     subPartRole = SubPartRole.DOER,

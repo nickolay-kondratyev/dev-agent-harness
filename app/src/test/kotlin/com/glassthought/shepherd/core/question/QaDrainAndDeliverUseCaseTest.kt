@@ -2,24 +2,14 @@ package com.glassthought.shepherd.core.question
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.glassthought.shepherd.core.agent.TmuxAgentSession
-import com.glassthought.shepherd.core.agent.facade.AgentSignal
-import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
-import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessionId
-import com.glassthought.shepherd.core.agent.tmux.SessionExistenceChecker
-import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
-import com.glassthought.shepherd.core.agent.tmux.TmuxSession
-import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
-import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.server.AckedPayloadSender
 import com.glassthought.shepherd.core.session.SessionEntry
+import com.glassthought.shepherd.core.session.createTestSessionEntry
+import com.glassthought.shepherd.core.session.createTestUserQuestionContext
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import kotlinx.coroutines.CompletableDeferred
 import java.nio.file.Files
-import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
-import java.util.concurrent.atomic.AtomicReference
-import com.glassthought.shepherd.core.state.SubPartRole
 
 class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
 
@@ -34,7 +24,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             outFactory = outFactory,
         )
         val entry = createTestSessionEntry(
-            questions = listOf(createPendingQuestion("Question one?")),
+            questionQueue = ConcurrentLinkedQueue(listOf(createTestUserQuestionContext(question = "Question one?"))),
         )
 
         describe("WHEN drain-and-deliver is called") {
@@ -75,10 +65,12 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             outFactory = outFactory,
         )
         val entry = createTestSessionEntry(
-            questions = listOf(
-                createPendingQuestion("Q1?"),
-                createPendingQuestion("Q2?"),
-                createPendingQuestion("Q3?"),
+            questionQueue = ConcurrentLinkedQueue(
+                listOf(
+                    createTestUserQuestionContext(question = "Q1?"),
+                    createTestUserQuestionContext(question = "Q2?"),
+                    createTestUserQuestionContext(question = "Q3?"),
+                ),
             ),
         )
 
@@ -107,7 +99,9 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
     describe("GIVEN question arrives during answer collection") {
         val tempDir = Files.createTempDirectory("qa-drain-test")
         val entry = createTestSessionEntry(
-            questions = listOf(createPendingQuestion("Initial question?")),
+            questionQueue = ConcurrentLinkedQueue(
+                listOf(createTestUserQuestionContext(question = "Initial question?")),
+            ),
         )
 
         // Handler that adds a new question to the queue when answering the first one
@@ -120,7 +114,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
                 receivedQuestions.add(context.question)
                 if (callCount == 1) {
                     // Simulate a new question arriving while we answer the first
-                    entry.questionQueue.add(createPendingQuestion("Late arrival question?"))
+                    entry.questionQueue.add(createTestUserQuestionContext(question = "Late arrival question?"))
                 }
                 return "Answer ${callCount}."
             }
@@ -166,7 +160,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             ackedPayloadSender = fakeSender,
             outFactory = outFactory,
         )
-        val entry = createTestSessionEntry(questions = emptyList())
+        val entry = createTestSessionEntry()
 
         describe("WHEN drain-and-deliver is called") {
             useCase.drainAndDeliver(entry, tempDir)
@@ -198,9 +192,13 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             outFactory = outFactory,
         )
         val entry = createTestSessionEntry(
-            questions = listOf(
-                createPendingQuestion("How should I handle the responsive layout for mobile devices?"),
-                createPendingQuestion("Should I add dark mode support?"),
+            questionQueue = ConcurrentLinkedQueue(
+                listOf(
+                    createTestUserQuestionContext(
+                        question = "How should I handle the responsive layout for mobile devices?",
+                    ),
+                    createTestUserQuestionContext(question = "Should I add dark mode support?"),
+                ),
             ),
         )
 
@@ -241,7 +239,7 @@ class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
             outFactory = outFactory,
         )
         val entry = createTestSessionEntry(
-            questions = listOf(createPendingQuestion("Some question?")),
+            questionQueue = ConcurrentLinkedQueue(listOf(createTestUserQuestionContext(question = "Some question?"))),
         )
 
         describe("WHEN drain-and-deliver is called") {
@@ -302,51 +300,3 @@ private class RecordingAckedPayloadSender : AckedPayloadSender {
         calls.add(SendCall(tmuxSession, sessionEntry, payloadContent))
     }
 }
-
-// ── Test Helpers ──────────────────────────────────────────────────────────
-
-private val noOpCommunicator = object : TmuxCommunicator {
-    override suspend fun sendKeys(paneTarget: String, text: String) = Unit
-    override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
-}
-private val noOpExistsChecker = SessionExistenceChecker { false }
-
-private fun createTestTmuxAgentSession(): TmuxAgentSession {
-    val tmuxSession = TmuxSession(
-        name = TmuxSessionName("test-session"),
-        paneTarget = "test-session:0.0",
-        communicator = noOpCommunicator,
-        existsChecker = noOpExistsChecker,
-    )
-    val resumableId = ResumableAgentSessionId(
-        handshakeGuid = HandshakeGuid.generate(),
-        agentType = AgentType.CLAUDE_CODE,
-        sessionId = "test-session-id",
-        model = "test-model",
-    )
-    return TmuxAgentSession(tmuxSession = tmuxSession, resumableAgentSessionId = resumableId)
-}
-
-private fun createTestSessionEntry(
-    questions: List<UserQuestionContext>,
-): SessionEntry {
-    val queue = ConcurrentLinkedQueue<UserQuestionContext>()
-    questions.forEach { queue.add(it) }
-    return SessionEntry(
-        tmuxAgentSession = createTestTmuxAgentSession(),
-        partName = "test-part",
-        subPartName = "test-sub-part",
-        subPartIndex = 0,
-        signalDeferred = CompletableDeferred<AgentSignal>(),
-        lastActivityTimestamp = AtomicReference(Instant.now()),
-        questionQueue = queue,
-    )
-}
-
-private fun createPendingQuestion(question: String): UserQuestionContext = UserQuestionContext(
-    question = question,
-    partName = "test-part",
-    subPartName = "test-sub-part",
-    subPartRole = SubPartRole.DOER,
-    handshakeGuid = HandshakeGuid.generate(),
-)
