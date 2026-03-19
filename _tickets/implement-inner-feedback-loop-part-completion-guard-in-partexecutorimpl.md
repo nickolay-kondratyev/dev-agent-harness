@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T20:03:50Z
 id: nid_fq8wn0eb9yrvzcpzdurlmsg7i_E
 title: "Implement Inner Feedback Loop in PartExecutorImpl"
-status: in_progress
+status: closed
 deps: [nid_dnelaf98097nicijp4kvjfd1d_E, nid_rnusi51qg9yw7cmszkes0l1ab_E, nid_92vpmdxcn3j8f98gzgu9eln43_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_fjod8du6esers3ajur2h7tvgx_E, nid_5z93biuqub3mhcejfpofjmj39_E]
 links: []
 created_iso: 2026-03-18T22:31:11Z
-status_updated_iso: 2026-03-19T19:35:43Z
+status_updated_iso: 2026-03-19T20:03:50Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
