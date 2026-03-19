@@ -1,11 +1,11 @@
 ---
 id: nid_eq78xsmd72qtrycecxb7ltqp7_E
 title: "Implement TicketShepherd interrupt protocol — double Ctrl+C handler"
-status: open
+status: in_progress
 deps: [nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_m7oounvwb31ra53ivu7btoj5v_E, nid_m3cm8xizw5qhu1cu3454rca79_E]
 links: []
 created_iso: 2026-03-19T00:39:56Z
-status_updated_iso: 2026-03-19T00:39:56Z
+status_updated_iso: 2026-03-19T17:41:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
