@@ -1,11 +1,11 @@
 ---
 id: nid_z5d5bocyheir7mjgktfydigu5_E
 title: "Add Kover for code coverage"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T20:07:59Z
-status_updated_iso: 2026-03-19T20:07:59Z
+status_updated_iso: 2026-03-19T20:10:01Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
