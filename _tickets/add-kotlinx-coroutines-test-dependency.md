@@ -1,11 +1,11 @@
 ---
 id: nid_c9jhmwry79x87j1h27qh4tvle_E
 title: "Add kotlinx-coroutines-test dependency"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T00:29:10Z
-status_updated_iso: 2026-03-19T00:29:10Z
+status_updated_iso: 2026-03-19T14:19:15Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
