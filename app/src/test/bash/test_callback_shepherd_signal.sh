@@ -232,6 +232,15 @@ else
   fail "'ack-payload' without argument: exit_code=[${LAST_EXIT_CODE}], stderr=[${LAST_STDERR}]"
 fi
 
+echo "--- test: 'ack-payload' empty string arg"
+((TESTS_RUN++)) || true
+run_script_env "8080" "handshake.test-guid" ack-payload ""
+if [[ "${LAST_EXIT_CODE}" -ne 0 && "${LAST_STDERR}" == *"must not be empty"* ]]; then
+  pass "'ack-payload' with empty string exits non-zero"
+else
+  fail "'ack-payload' with empty string: exit_code=[${LAST_EXIT_CODE}], stderr=[${LAST_STDERR}]"
+fi
+
 echo "--- test: 'ack-payload' valid"
 ((TESTS_RUN++)) || true
 MOCK_DIR="$(create_mock_curl_200)"

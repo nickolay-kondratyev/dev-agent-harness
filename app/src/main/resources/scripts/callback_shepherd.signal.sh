@@ -51,8 +51,6 @@ shift
 # Build JSON payload per action
 # ---------------------------------------------------------------------------
 
-GUID="${TICKET_SHEPHERD_HANDSHAKE_GUID}"
-
 # [json_escape]: escapes backslashes, double quotes, and control characters
 # so that arbitrary user text can be safely embedded in a JSON string value.
 json_escape() {
@@ -65,6 +63,9 @@ json_escape() {
   input="${input//$'\r'/\\r}"
   echo -n "$input"
 }
+
+# Defensive: escape all values embedded in JSON, even those with known-safe formats
+GUID="$(json_escape "${TICKET_SHEPHERD_HANDSHAKE_GUID}")"
 
 case "${ACTION}" in
   started)
@@ -116,7 +117,8 @@ case "${ACTION}" in
       echo "ERROR: 'ack-payload' payload ID must not be empty" >&2
       exit 1
     fi
-    JSON_PAYLOAD="{\"handshakeGuid\":\"${GUID}\",\"payloadId\":\"${PAYLOAD_ID}\"}"
+    ESCAPED_PAYLOAD_ID="$(json_escape "${PAYLOAD_ID}")"
+    JSON_PAYLOAD="{\"handshakeGuid\":\"${GUID}\",\"payloadId\":\"${ESCAPED_PAYLOAD_ID}\"}"
     ;;
 
   self-compacted)
@@ -137,13 +139,16 @@ URL="http://localhost:${TICKET_SHEPHERD_SERVER_PORT}/callback-shepherd/signal/${
 
 MAX_ATTEMPTS=3
 BACKOFF_SECONDS=(0 1 5)  # index 0 unused; backoff after attempt 1 = 1s, after attempt 2 = 5s
+CURL_STDERR_FILE="$(mktemp)"
+trap 'rm -f "${CURL_STDERR_FILE}"' EXIT
 
 for (( attempt=1; attempt<=MAX_ATTEMPTS; attempt++ )); do
   HTTP_CODE=""
   CURL_EXIT=0
+  CURL_STDERR=""
 
   # [curl flags]:
-  #   --silent --show-error: suppress progress but show errors
+  #   --silent --show-error: suppress progress but show errors to stderr
   #   --output /dev/null: discard response body (fire-and-forget)
   #   --write-out '%{http_code}': capture HTTP status code
   #   --max-time 30: timeout after 30 seconds
@@ -156,7 +161,9 @@ for (( attempt=1; attempt<=MAX_ATTEMPTS; attempt++ )); do
     --header "Content-Type: application/json" \
     --data "${JSON_PAYLOAD}" \
     --request POST \
-    "${URL}" 2>/dev/null) || CURL_EXIT=$?
+    "${URL}" 2>"${CURL_STDERR_FILE}") || CURL_EXIT=$?
+
+  CURL_STDERR="$(cat "${CURL_STDERR_FILE}" 2>/dev/null || true)"
 
   # -- Success --
   if [[ "${CURL_EXIT}" -eq 0 && "${HTTP_CODE}" == "200" ]]; then
@@ -165,9 +172,8 @@ for (( attempt=1; attempt<=MAX_ATTEMPTS; attempt++ )); do
 
   # -- Non-transient HTTP errors: fail immediately --
   if [[ "${CURL_EXIT}" -eq 0 ]]; then
-    HTTP_CODE_INT="${HTTP_CODE}"
-    if [[ "${HTTP_CODE_INT}" == "400" || "${HTTP_CODE_INT}" == "404" ]]; then
-      echo "ERROR: server returned HTTP ${HTTP_CODE_INT} for action=[${ACTION}] (non-transient, not retrying)" >&2
+    if [[ "${HTTP_CODE}" == "400" || "${HTTP_CODE}" == "404" ]]; then
+      echo "ERROR: server returned HTTP ${HTTP_CODE} for action=[${ACTION}] (non-transient, not retrying)" >&2
       exit 1
     fi
   fi
@@ -175,10 +181,10 @@ for (( attempt=1; attempt<=MAX_ATTEMPTS; attempt++ )); do
   # -- Transient failure: curl error or HTTP 5xx → retry --
   if (( attempt < MAX_ATTEMPTS )); then
     BACKOFF="${BACKOFF_SECONDS[$attempt]}"
-    echo "WARN: attempt ${attempt}/${MAX_ATTEMPTS} failed for action=[${ACTION}] (curl_exit=[${CURL_EXIT}], http_code=[${HTTP_CODE:-N/A}]). Retrying in ${BACKOFF}s..." >&2
+    echo "WARN: attempt ${attempt}/${MAX_ATTEMPTS} failed for action=[${ACTION}] (curl_exit=[${CURL_EXIT}], http_code=[${HTTP_CODE:-N/A}], curl_stderr=[${CURL_STDERR}]). Retrying in ${BACKOFF}s..." >&2
     sleep "${BACKOFF}"
   fi
 done
 
-echo "ERROR: all ${MAX_ATTEMPTS} attempts failed for action=[${ACTION}] (last curl_exit=[${CURL_EXIT}], last http_code=[${HTTP_CODE:-N/A}])" >&2
+echo "ERROR: all ${MAX_ATTEMPTS} attempts failed for action=[${ACTION}] (last curl_exit=[${CURL_EXIT}], last http_code=[${HTTP_CODE:-N/A}], last curl_stderr=[${CURL_STDERR}])" >&2
 exit 1
