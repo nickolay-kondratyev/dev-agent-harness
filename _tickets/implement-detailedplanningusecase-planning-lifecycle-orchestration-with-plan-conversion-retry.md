@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T00:55:04Z
 id: nid_ddgriql9mr7ry2ugamptxdadm_E
 title: "Implement DetailedPlanningUseCase — planning lifecycle orchestration with plan conversion retry"
-status: open
+status: closed
 deps: [nid_5z93biuqub3mhcejfpofjmj39_E, nid_wppjbc4te6exn13bo3o0jln6n_E, nid_foubbnsh3vmk1fk34zm75zkg0_E, nid_m7oounvwb31ra53ivu7btoj5v_E]
 links: []
 created_iso: 2026-03-19T00:49:05Z
-status_updated_iso: 2026-03-19T00:49:05Z
+status_updated_iso: 2026-03-19T00:55:04Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -95,3 +96,9 @@ Unit tests with `FakeAgentFacade` covering:
 - Plan schema: ref.ap.56azZbk7lAMll0D4Ot2G0.E
 - Agent type & model assignment: ref.ap.Xt9bKmV2wR7pLfNhJ3cQy.E
 
+
+## Notes
+
+**2026-03-19T00:55:05Z**
+
+Closed as duplicate of nid_7uh4ju2nel6sqqyuhqrp8ouny_E which has more complete deps and is correctly wired into the dependency tree (SetupPlanUseCase depends on it).
