@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # TicketFailureLearningUseCase / ap.cI3odkAZACqDst82HtxKa.E
 
 When a `shepherd run` fails (try-N), the next try starts fresh with zero knowledge of what

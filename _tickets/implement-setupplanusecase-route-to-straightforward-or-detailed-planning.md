@@ -50,3 +50,13 @@ interface SetupPlanUseCase {
 - Test with-planning routing delegates to DetailedPlanningUseCase.
 - Test that unknown workflow type fails hard.
 
+
+## Notes
+
+**2026-03-19T00:47:57Z**
+
+StraightforwardPlanUseCase spec (ref.ap.6iySKY6iakspLNi3WenRO.E) at doc/use-case/SetupPlanUseCase/StraightforwardPlanUseCase.md is covered by this ticket's straightforward routing path. No separate ticket needed — the use case trivially returns predefined parts from WorkflowDefinition.
+
+**2026-03-19T00:48:08Z**
+
+Reviewed against spec (ref.ap.VLjh11HdzC8ZOhNCDOr2g.E). Ticket covers the spec adequately. One minor clarification: for the 'straightforward' workflow type, the spec names the delegate as StraightforwardPlanUseCase (ref.ap.6iySKY6iakspLNi3WenRO.E). Implementation should route to that use case rather than inlining the logic. Both paths return List<Part> directly — no SetupPlanResult sealed class (ref.ap.evYmpQfliHCHUTdK2QRgS.E).
