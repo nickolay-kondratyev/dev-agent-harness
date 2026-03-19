@@ -1,15 +1,18 @@
 # Private: Health-Aware Await Loop Implementation
 
-## Status: COMPLETED
+## Status: COMPLETED (iteration 1 review fixes applied)
 
-All tests pass (`./test.sh` exit 0). Implementation committed.
+All tests pass (`./test.sh` exit 0).
 
-## What Was Done
+## What Was Done (iteration 0)
 - Full health-aware await loop in `AgentFacadeImpl.sendPayloadAndAwaitSignal`
 - 3 new constructor dependencies wired
 - 4 new ShepherdValType entries
-- `QaDrainAndDeliverUseCase` made `open` for testability
 - Comprehensive unit tests with virtual time
+
+## Iteration 1 Review Fixes
+- **checkStaleness()**: Added `check(result is UnresponsiveHandleResult.PingSent)` to assert the spec invariant that `NO_ACTIVITY_TIMEOUT` always produces `PingSent`.
+- **QaDrainer interface**: Extracted `fun interface QaDrainer` in `QaDrainAndDeliverUseCase.kt`. `AgentFacadeImpl` now depends on the interface. Test fake `QaDrainTracker` implements `QaDrainer` directly. Removed `open` from class and method.
 
 ## Follow-up Items
 - `TicketShepherdCreator` needs updating to wire the 3 new deps into `AgentFacadeImpl`

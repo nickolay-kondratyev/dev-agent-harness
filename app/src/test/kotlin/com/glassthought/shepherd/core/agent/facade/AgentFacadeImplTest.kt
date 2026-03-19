@@ -19,7 +19,7 @@ import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.data.HealthTimeoutLadder
-import com.glassthought.shepherd.core.question.QaDrainAndDeliverUseCase
+import com.glassthought.shepherd.core.question.QaDrainer
 import com.glassthought.shepherd.core.question.UserQuestionContext
 import com.glassthought.shepherd.core.server.AckedPayloadSender
 import com.glassthought.shepherd.core.server.PayloadAckTimeoutException
@@ -167,32 +167,16 @@ private class FakeAgentUnresponsiveUseCase(
 }
 
 /**
- * Creates a [QaDrainAndDeliverUseCase] with fake dependencies that drain the queue
- * without doing real I/O. Tracks how many times [QaDrainAndDeliverUseCase.drainAndDeliver] was invoked.
+ * Fake [QaDrainer] that drains the queue without real I/O.
+ * Tracks how many times [drainAndDeliver] was invoked.
  */
-private class QaDrainTracker {
+private class QaDrainTracker : QaDrainer {
     var drainCallCount = 0
 
-    /**
-     * Builds a real [QaDrainAndDeliverUseCase] with fake deps.
-     * The handler returns a canned answer, the writer returns a fake path,
-     * and the sender is a no-op. The real `drainAndDeliver` logic runs and
-     * drains the queue — which is what we need for tests.
-     */
-    fun buildUseCase(): QaDrainAndDeliverUseCase {
-        val tracker = this
-        return object : QaDrainAndDeliverUseCase(
-            userQuestionHandler = { "fake answer" },
-            qaAnswersFileWriter = { _, commInDir -> commInDir.resolve("qa_answers.md") },
-            ackedPayloadSender = AckedPayloadSender { _, _, _ -> },
-            outFactory = NoOpOutFactory(),
-        ) {
-            override suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
-                tracker.drainCallCount++
-                // Drain the queue so isQAPending becomes false
-                while (sessionEntry.questionQueue.poll() != null) { /* drain */ }
-            }
-        }
+    override suspend fun drainAndDeliver(sessionEntry: SessionEntry, commInDir: Path) {
+        drainCallCount++
+        // Drain the queue so isQAPending becomes false
+        while (sessionEntry.questionQueue.poll() != null) { /* drain */ }
     }
 }
 
@@ -264,7 +248,7 @@ private fun harness(
         harnessTimeoutConfig = timeout,
         ackedPayloadSender = ackedSender,
         agentUnresponsiveUseCase = unresponsiveUseCase,
-        qaDrainAndDeliverUseCase = qaDrainTracker.buildUseCase(),
+        qaDrainAndDeliverUseCase = qaDrainTracker,
         outFactory = outFactory,
     )
 

@@ -15,7 +15,7 @@ import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessio
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionCreator
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
-import com.glassthought.shepherd.core.question.QaDrainAndDeliverUseCase
+import com.glassthought.shepherd.core.question.QaDrainer
 import com.glassthought.shepherd.core.server.AckedPayloadSender
 import com.glassthought.shepherd.core.server.PayloadAckTimeoutException
 import com.glassthought.shepherd.core.session.SessionEntry
@@ -63,7 +63,7 @@ class AgentFacadeImpl(
     private val harnessTimeoutConfig: HarnessTimeoutConfig,
     private val ackedPayloadSender: AckedPayloadSender,
     private val agentUnresponsiveUseCase: AgentUnresponsiveUseCase,
-    private val qaDrainAndDeliverUseCase: QaDrainAndDeliverUseCase,
+    private val qaDrainAndDeliverUseCase: QaDrainer,
     private val outFactory: OutFactory,
 ) : AgentFacade {
 
@@ -398,7 +398,7 @@ class AgentFacadeImpl(
                 Val(normalActivity.toString(), ShepherdValType.TIMEOUT_THRESHOLD),
             )
 
-            agentUnresponsiveUseCase.handle(
+            val result = agentUnresponsiveUseCase.handle(
                 detectionContext = DetectionContext.NO_ACTIVITY_TIMEOUT,
                 tmuxSession = tmuxSession,
                 diagnostics = UnresponsiveDiagnostics(
@@ -407,6 +407,9 @@ class AgentFacadeImpl(
                     staleDuration = callbackAge,
                 ),
             )
+            check(result is UnresponsiveHandleResult.PingSent) {
+                "Expected PingSent for NO_ACTIVITY_TIMEOUT but got $result"
+            }
             return StalenessAction.PING_SENT
         }
 
