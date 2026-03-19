@@ -84,7 +84,15 @@ class SignalCallbackDispatcher(
         }
 
         sessionEntry.lastActivityTimestamp = clock.instant()
-        sessionEntry.signalDeferred.complete(agentSignal)
+        val wasCompleted = sessionEntry.signalDeferred.complete(agentSignal)
+
+        if (!wasCompleted) {
+            out.warn(
+                "signal_dispatch_duplicate_callback",
+                Val(action, ShepherdValType.SIGNAL_ACTION),
+                Val(guidValue, ShepherdValType.HANDSHAKE_GUID),
+            )
+        }
 
         out.info(
             "signal_dispatched",

@@ -32,15 +32,21 @@ skipped: 0
     - [PASS] THEN returns Success with AgentSignal.Done(COMPLETED)
 - GIVEN a registered session AND done signal with needs_iteration result
   - WHEN dispatch(done, {handshakeGuid, result=needs_iteration})
+    - [PASS] THEN completes the signalDeferred
     - [PASS] THEN returns Success with AgentSignal.Done(NEEDS_ITERATION)
 - GIVEN a registered session AND done signal with pass result
   - WHEN dispatch(done, {handshakeGuid, result=pass})
+    - [PASS] THEN completes the signalDeferred
     - [PASS] THEN returns Success with AgentSignal.Done(PASS)
 - GIVEN a registered session AND fail-workflow signal
   - WHEN dispatch(fail-workflow, {handshakeGuid, reason})
     - [PASS] THEN completes the signalDeferred with FailWorkflow
     - [PASS] THEN returns Success with AgentSignal.FailWorkflow
     - [PASS] THEN updates lastActivityTimestamp
+- GIVEN a registered session that already received a signal
+  - WHEN a second signal is dispatched to the same session
+    - [PASS] THEN still returns Success
+    - [PASS] THEN the deferred still holds the original signal
 - GIVEN a registered session with old timestamp
   - WHEN dispatch(self-compacted, {handshakeGuid})
     - [PASS] THEN lastActivityTimestamp is updated to the fixed clock instant

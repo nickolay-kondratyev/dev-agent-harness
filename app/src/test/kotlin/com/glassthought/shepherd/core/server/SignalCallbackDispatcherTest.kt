@@ -58,86 +58,45 @@ class SignalCallbackDispatcherTest : AsgardDescribeSpec(
     }
 
     // -------------------------------------------------------------------------
-    // done — completed
+    // done — all result variants (data-driven)
     // -------------------------------------------------------------------------
 
-    describe("GIVEN a registered session AND done signal with completed result") {
-        val sessionsState = SessionsState()
-        val guid = HandshakeGuid.generate()
-        val entry = createTestSessionEntry()
-        sessionsState.register(guid, entry)
-        val dispatcher = SignalCallbackDispatcher(sessionsState, outFactory, fixedClock)
+    data class DoneResultTestCase(
+        val protocolValue: String,
+        val expectedDoneResult: DoneResult,
+    )
 
-        describe("WHEN dispatch(done, {handshakeGuid, result=completed})") {
-            val result = dispatcher.dispatch(
-                action = ProtocolVocabulary.Signal.DONE,
-                payload = mapOf(
-                    "handshakeGuid" to guid.value,
-                    "result" to ProtocolVocabulary.DoneResult.COMPLETED,
-                ),
-            )
+    val doneResultTestCases = listOf(
+        DoneResultTestCase(ProtocolVocabulary.DoneResult.COMPLETED, DoneResult.COMPLETED),
+        DoneResultTestCase(ProtocolVocabulary.DoneResult.PASS, DoneResult.PASS),
+        DoneResultTestCase(ProtocolVocabulary.DoneResult.NEEDS_ITERATION, DoneResult.NEEDS_ITERATION),
+    )
 
-            it("THEN returns Success with AgentSignal.Done(COMPLETED)") {
-                result.shouldBeInstanceOf<DispatchResult.Success>()
-                result.signal shouldBe AgentSignal.Done(DoneResult.COMPLETED)
-            }
+    doneResultTestCases.forEach { testCase ->
+        describe("GIVEN a registered session AND done signal with ${testCase.protocolValue} result") {
+            val sessionsState = SessionsState()
+            val guid = HandshakeGuid.generate()
+            val entry = createTestSessionEntry()
+            sessionsState.register(guid, entry)
+            val dispatcher = SignalCallbackDispatcher(sessionsState, outFactory, fixedClock)
 
-            it("THEN completes the signalDeferred") {
-                entry.signalDeferred.getCompleted() shouldBe AgentSignal.Done(DoneResult.COMPLETED)
-            }
-        }
-    }
+            describe("WHEN dispatch(done, {handshakeGuid, result=${testCase.protocolValue}})") {
+                val result = dispatcher.dispatch(
+                    action = ProtocolVocabulary.Signal.DONE,
+                    payload = mapOf(
+                        "handshakeGuid" to guid.value,
+                        "result" to testCase.protocolValue,
+                    ),
+                )
 
-    // -------------------------------------------------------------------------
-    // done — pass
-    // -------------------------------------------------------------------------
+                it("THEN returns Success with AgentSignal.Done(${testCase.expectedDoneResult})") {
+                    result.shouldBeInstanceOf<DispatchResult.Success>()
+                    result.signal shouldBe AgentSignal.Done(testCase.expectedDoneResult)
+                }
 
-    describe("GIVEN a registered session AND done signal with pass result") {
-        val sessionsState = SessionsState()
-        val guid = HandshakeGuid.generate()
-        val entry = createTestSessionEntry()
-        sessionsState.register(guid, entry)
-        val dispatcher = SignalCallbackDispatcher(sessionsState, outFactory, fixedClock)
-
-        describe("WHEN dispatch(done, {handshakeGuid, result=pass})") {
-            val result = dispatcher.dispatch(
-                action = ProtocolVocabulary.Signal.DONE,
-                payload = mapOf(
-                    "handshakeGuid" to guid.value,
-                    "result" to ProtocolVocabulary.DoneResult.PASS,
-                ),
-            )
-
-            it("THEN returns Success with AgentSignal.Done(PASS)") {
-                result.shouldBeInstanceOf<DispatchResult.Success>()
-                result.signal shouldBe AgentSignal.Done(DoneResult.PASS)
-            }
-        }
-    }
-
-    // -------------------------------------------------------------------------
-    // done — needs_iteration
-    // -------------------------------------------------------------------------
-
-    describe("GIVEN a registered session AND done signal with needs_iteration result") {
-        val sessionsState = SessionsState()
-        val guid = HandshakeGuid.generate()
-        val entry = createTestSessionEntry()
-        sessionsState.register(guid, entry)
-        val dispatcher = SignalCallbackDispatcher(sessionsState, outFactory, fixedClock)
-
-        describe("WHEN dispatch(done, {handshakeGuid, result=needs_iteration})") {
-            val result = dispatcher.dispatch(
-                action = ProtocolVocabulary.Signal.DONE,
-                payload = mapOf(
-                    "handshakeGuid" to guid.value,
-                    "result" to ProtocolVocabulary.DoneResult.NEEDS_ITERATION,
-                ),
-            )
-
-            it("THEN returns Success with AgentSignal.Done(NEEDS_ITERATION)") {
-                result.shouldBeInstanceOf<DispatchResult.Success>()
-                result.signal shouldBe AgentSignal.Done(DoneResult.NEEDS_ITERATION)
+                it("THEN completes the signalDeferred") {
+                    entry.signalDeferred.getCompleted() shouldBe AgentSignal.Done(testCase.expectedDoneResult)
+                }
             }
         }
     }
@@ -193,6 +152,41 @@ class SignalCallbackDispatcherTest : AsgardDescribeSpec(
 
             it("THEN lastActivityTimestamp is updated to the fixed clock instant") {
                 entry.lastActivityTimestamp shouldBe fixedInstant
+            }
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // duplicate callback — warns on second signal
+    // -------------------------------------------------------------------------
+
+    describe("GIVEN a registered session that already received a signal") {
+        val sessionsState = SessionsState()
+        val guid = HandshakeGuid.generate()
+        val entry = createTestSessionEntry()
+        sessionsState.register(guid, entry)
+        val dispatcher = SignalCallbackDispatcher(sessionsState, outFactory, fixedClock)
+
+        // First signal completes normally
+        dispatcher.dispatch(
+            action = ProtocolVocabulary.Signal.SELF_COMPACTED,
+            payload = mapOf("handshakeGuid" to guid.value),
+        )
+
+        describe("WHEN a second signal is dispatched to the same session") {
+            val result = dispatcher.dispatch(
+                action = ProtocolVocabulary.Signal.SELF_COMPACTED,
+                payload = mapOf("handshakeGuid" to guid.value),
+            )
+
+            it("THEN still returns Success").config(
+                extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+            ) {
+                result.shouldBeInstanceOf<DispatchResult.Success>()
+            }
+
+            it("THEN the deferred still holds the original signal") {
+                entry.signalDeferred.getCompleted() shouldBe AgentSignal.SelfCompacted
             }
         }
     }
