@@ -1,11 +1,11 @@
 ---
 id: nid_wppjbc4te6exn13bo3o0jln6n_E
 title: "Implement plan_flow.json parsing + conversion to CurrentState execution parts"
-status: open
+status: in_progress
 deps: [nid_o5azwgdl76nnofttpt7ljgkua_E]
 links: []
 created_iso: 2026-03-18T18:03:50Z
-status_updated_iso: 2026-03-18T18:03:50Z
+status_updated_iso: 2026-03-19T14:29:25Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
