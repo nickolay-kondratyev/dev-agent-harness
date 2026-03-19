@@ -1,11 +1,11 @@
 ---
 id: nid_7xzhkw4pw5sc5hqh80cvsotdc_E
 title: "Wire AiOutputStructure into TicketShepherdCreator — .ai_out/ setup during ticket initialization"
-status: open
+status: in_progress
 deps: [nid_fjod8du6esers3ajur2h7tvgx_E, nid_9kic96nh6mb8r5legcsvt46uy_E, nid_o4gj7swdejriooj5bex3b34vf_E]
 links: [nid_zseecydaikj0f2i2l14nwcfax_E, nid_o5azwgdl76nnofttpt7ljgkua_E, nid_itogi6ji82dbhb0k3zzt6v8qp_E]
 created_iso: 2026-03-18T20:45:06Z
-status_updated_iso: 2026-03-19T22:00:09Z
+status_updated_iso: 2026-03-19T22:01:22Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
