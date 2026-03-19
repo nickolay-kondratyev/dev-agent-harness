@@ -2,7 +2,7 @@
 id: nid_zseecydaikj0f2i2l14nwcfax_E
 title: "Wire assembleFromPlan into ContextForAgentProviderImpl — replace build*Sections + update tests"
 status: open
-deps: [nid_r2rdkc0t9jd9597sumbgzp7aw_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_8ts4qxw2wevxwep3yk2gvqwja_E]
+deps: [nid_r2rdkc0t9jd9597sumbgzp7aw_E, nid_gp9rduvxoqf14m95z9bttnaxq_E]
 links: [nid_7vpbal1qdmrvt23g44vpq6hgv_E, nid_gp9rduvxoqf14m95z9bttnaxq_E, nid_r2rdkc0t9jd9597sumbgzp7aw_E, nid_7xzhkw4pw5sc5hqh80cvsotdc_E]
 created_iso: 2026-03-18T18:18:07Z
 status_updated_iso: 2026-03-18T18:18:07Z
@@ -145,3 +145,7 @@ Add a test that verifies the assembled file is written to `${outputDir}/instruct
 ## PartExecutor call-site integration note
 
 PartExecutor (ref.ap.fFr7GUmCYQEV5SJi8p6AS.E) is the primary caller of ContextForAgentProvider. When PartExecutor is implemented, it MUST construct the new sealed AgentInstructionRequest subtypes (DoerRequest, ReviewerRequest, etc.) — not the old AgentRole + UnifiedInstructionRequest. PartExecutor tickets (created from doc/core/PartExecutor.md) own that call-site update. This ticket verifies the old types are deleted; PartExecutor ticket verifies the new types are used at the call site.
+
+**2026-03-19T01:01:24Z**
+
+Removed stale dependency on nid_8ts4qxw2wevxwep3yk2gvqwja_E (ContextForAgentProvider sealed redesign) — that work is closed/completed.
