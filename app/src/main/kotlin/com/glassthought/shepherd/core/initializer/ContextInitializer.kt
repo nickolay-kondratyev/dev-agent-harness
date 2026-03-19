@@ -94,7 +94,7 @@ class ContextInitializerImpl : ContextInitializer {
     )
 
     val claudeCodeInfra = ClaudeCodeInfra(
-      agentTypeAdapter = ClaudeCodeAdapter(
+      agentTypeAdapter = ClaudeCodeAdapter.create(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
       ),

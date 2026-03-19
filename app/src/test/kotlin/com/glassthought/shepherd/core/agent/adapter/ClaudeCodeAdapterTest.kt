@@ -22,7 +22,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
     describe("GIVEN ClaudeCodeAdapter") {
 
         describe("AND all flags enabled") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -71,7 +71,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND appendSystemPrompt=true") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -101,7 +101,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND without system prompt file") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -134,7 +134,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND file path containing single quotes") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -164,7 +164,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND workingDir containing single quote") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -189,7 +189,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND empty tools") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -214,7 +214,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         }
 
         describe("AND bootstrap message containing shell-special characters") {
-            val adapter = ClaudeCodeAdapter(
+            val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
             )
@@ -259,7 +259,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"type":"message","content":"${guid.value}"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -280,7 +280,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"type":"message","content":"different-content"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
@@ -298,7 +298,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"type":"message","content":"different-content"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,
@@ -324,7 +324,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -344,7 +344,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -370,7 +370,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                         )
@@ -394,7 +394,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             """{"content":"${guid.value}"}"""
                         )
 
-                        val adapter = ClaudeCodeAdapter(
+                        val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
                             resolveTimeoutMs = 600L,

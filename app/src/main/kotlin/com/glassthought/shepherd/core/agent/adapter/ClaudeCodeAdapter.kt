@@ -23,7 +23,6 @@ import kotlin.time.Duration.Companion.milliseconds
  * Filesystem-backed [GuidScanner]: walks [claudeProjectsDir] recursively
  * for `*.jsonl` files and returns those containing the GUID string.
  */
-@Suppress("UnusedPrivateClass") // Used by ClaudeCodeAdapter primary constructor; detekt doesn't see it
 private class FilesystemGuidScanner(
     private val claudeProjectsDir: Path,
     private val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
@@ -59,40 +58,23 @@ private class FilesystemGuidScanner(
  * GUID string. The matching filename (minus `.jsonl` extension) is the session ID.
  * Called after `/signal/started` is received, so the GUID is guaranteed to be present.
  *
- * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
+ * Use [create] factory for production wiring. The primary constructor is `internal` so tests
+ * can inject a fake [GuidScanner].
+ *
+ * @param guidScanner Strategy for scanning for GUID matches.
  * @param outFactory Factory for structured logging.
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
- * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
  */
 @AnchorPoint("ap.gCgRdmWd9eTGXPbHJvyxI.E")
-class ClaudeCodeAdapter(
-    claudeProjectsDir: Path,
+class ClaudeCodeAdapter internal constructor(
+    private val guidScanner: GuidScanner,
     outFactory: OutFactory,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
-    dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
 ) : AgentTypeAdapter {
 
-    // Internal constructor allows tests to inject a fake GuidScanner.
-    constructor(
-        guidScanner: GuidScanner,
-        outFactory: OutFactory,
-        resolveTimeoutMs: Long = 45_000L,
-        pollIntervalMs: Long = 500L,
-    ) : this(
-        claudeProjectsDir = PLACEHOLDER_PATH,
-        outFactory = outFactory,
-        resolveTimeoutMs = resolveTimeoutMs,
-        pollIntervalMs = pollIntervalMs,
-    ) {
-        this.guidScanner = guidScanner
-    }
-
     private val out = outFactory.getOutForClass(ClaudeCodeAdapter::class)
-
-    // Backing field set via internal constructor for test injection; otherwise built from claudeProjectsDir.
-    private var guidScanner: GuidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider)
 
     override fun buildStartCommand(params: BuildStartCommandParams): TmuxStartCommand {
         val parts = mutableListOf("claude")
@@ -201,10 +183,27 @@ class ClaudeCodeAdapter(
     }
 
     companion object {
-        // Sentinel value used as a placeholder path in the internal test constructor.
-        // The FilesystemGuidScanner built from this path is never called when a
-        // custom guidScanner is injected.
-        private val PLACEHOLDER_PATH: Path = Path.of("/dev/null")
+        /**
+         * Production factory: creates a [ClaudeCodeAdapter] backed by [FilesystemGuidScanner].
+         *
+         * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
+         * @param outFactory Factory for structured logging.
+         * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
+         * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
+         * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
+         */
+        fun create(
+            claudeProjectsDir: Path,
+            outFactory: OutFactory,
+            resolveTimeoutMs: Long = 45_000L,
+            pollIntervalMs: Long = 500L,
+            dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+        ): ClaudeCodeAdapter = ClaudeCodeAdapter(
+            guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
+            outFactory = outFactory,
+            resolveTimeoutMs = resolveTimeoutMs,
+            pollIntervalMs = pollIntervalMs,
+        )
 
         /**
          * Escapes a string for safe inclusion in a single-quoted bash -c command.

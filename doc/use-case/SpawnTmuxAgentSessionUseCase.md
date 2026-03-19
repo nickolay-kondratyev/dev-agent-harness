@@ -174,10 +174,29 @@ that encapsulates both the start command builder and the session ID resolver.
 
 ```kotlin
 interface AgentTypeAdapter {
-    fun buildStartCommand(bootstrapMessage: String): TmuxStartCommand
+    fun buildStartCommand(params: BuildStartCommandParams): TmuxStartCommand
     suspend fun resolveSessionId(handshakeGuid: HandshakeGuid): String
 }
+
+// Per-session parameters that vary per agent session (as opposed to adapter-level
+// configuration like claudeProjectsDir, logging, timeouts — wired once at init).
+data class BuildStartCommandParams(
+    val bootstrapMessage: String,
+    val handshakeGuid: HandshakeGuid,
+    val workingDir: String,
+    val model: String,
+    val tools: List<String>,
+    val systemPromptFilePath: String?,
+    val appendSystemPrompt: Boolean,
+)
 ```
+
+**Why `BuildStartCommandParams` instead of `buildStartCommand(bootstrapMessage: String)`:**
+The adapter is wired once at init time (one instance per agent type), but `buildStartCommand` is
+called per session with 7 parameters that vary per spawn. A single `bootstrapMessage` parameter
+would require the remaining 6 values to be constructor parameters, forcing a new adapter instance
+per session — defeating the purpose of a singleton adapter. The params data class bundles all
+per-session values cleanly.
 
 #### Why a Single Interface
 
