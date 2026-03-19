@@ -94,4 +94,18 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** Number of feedback files in the pending directory. */
+    val FEEDBACK_FILE_COUNT = ValTypeV2(
+        typeName = "FEEDBACK_FILE_COUNT",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Name of a feedback file being processed in the inner loop. */
+    val FEEDBACK_FILE_NAME = ValTypeV2(
+        typeName = "FEEDBACK_FILE_NAME",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }
