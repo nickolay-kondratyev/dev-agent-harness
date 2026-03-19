@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T19:43:56Z
 id: nid_srtovyxkmpyp3xupve7x1akiy_E
 title: "RejectionNegotiationUseCaseImpl passes message content where file path expected"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T19:29:52Z
-status_updated_iso: 2026-03-19T19:40:32Z
+status_updated_iso: 2026-03-19T19:43:56Z
 type: bug
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -28,3 +29,9 @@ Files:
 
 Discovered by wired integration test: RejectionNegotiationWithFakeAgentFacadeTest
 
+
+## Notes
+
+**2026-03-19T19:43:55Z**
+
+Bug already fixed in commit 9d51501 ('Add FakeAgentFacade-wired integration tests for RejectionNegotiationUseCaseImpl'). Fix approach: Option 1 from ticket — InstructionFileWriter interface added as dependency to RejectionNegotiationUseCaseImpl, bridging content→path. Code flow: buildMessage() → instructionFileWriter.write(content, label) → Path → reInstructAndAwait.execute(handle, path.toString()). All RejectionNegotiation tests pass.
