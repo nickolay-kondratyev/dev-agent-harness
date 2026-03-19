@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T20:29:41Z
 id: nid_go6n8yo6eqokjl0y84ki78aq6_E
 title: "Update downstream specs for AgentFacade relationship changes"
-status: in_progress
+status: closed
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_p1w49sk0s2isnvcjbmhgapho7_E]
 links: []
 created_iso: 2026-03-19T00:30:18Z
-status_updated_iso: 2026-03-19T20:27:09Z
+status_updated_iso: 2026-03-19T20:29:41Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -52,3 +53,9 @@ With AgentFacade established, several downstream specs need updates to reflect t
 - Consistent narrative across specs
 - `#need-tickets` tag removed from AgentFacade.md, replaced with `#has-tickets`
 
+
+## Notes
+
+**2026-03-19T20:29:45Z**
+
+All spec updates verified as already complete. Dependency tickets (nid_m7oounvwb31ra53ivu7btoj5v_E, nid_p1w49sk0s2isnvcjbmhgapho7_E) already made all required changes: SessionsState.md caller updated, PartExecutor.md dependencies correct, TicketShepherdCreator.md wiring documented, SpawnTmuxAgentSessionUseCase.md encapsulation note present, AgentFacade.md has #has-tickets tag, high-level.md aligned. No code or doc changes needed.
