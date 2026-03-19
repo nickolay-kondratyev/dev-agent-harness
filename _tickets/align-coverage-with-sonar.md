@@ -1,15 +1,28 @@
 ---
+closed_iso: 2026-03-19T22:12:16Z
 id: nid_x56bo8icym4x66j0w7zjtvfuy_E
 title: "Align coverage with sonar"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T22:05:18Z
-status_updated_iso: 2026-03-19T22:06:24Z
+status_updated_iso: 2026-03-19T22:12:16Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
 ---
+
+## Resolution
+
+**Root Cause:** `sonar.coverage.jacoco.xmlReportPaths` was set at the root project level in `build.gradle.kts`. The Sonar Gradle plugin processes each module independently — the root project has no indexed source files, so Sonar could not resolve any coverage file references from the Kover XML report.
+
+**Fix:** Moved the `sonar.coverage.jacoco.xmlReportPaths` property from the root-level `sonar {}` block to `project(":app") { sonar { properties { } } }`, associating coverage data with the `:app` module where the actual sources live.
+
+**File changed:** `build.gradle.kts` (2 lines removed, 11 lines added including comments)
+
+---
+
+## Original Issue
 
 When I ran `./run_sonar.sh` i am getting issue shown as following in relation to to coverage i think.
 

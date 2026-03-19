@@ -15,8 +15,17 @@ sonar {
         // Source/test paths are auto-discovered by the plugin from the Gradle project structure.
         // Setting them explicitly causes "indexed twice" errors in multi-module builds.
         property("sonar.exclusions", "**/build/**,**/.gradle/**,**/.kotlin/**,**/node_modules/**")
-        // Kover produces JaCoCo-compatible XML; point Sonar at the report it generates.
-        property("sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/.out/coverage.xml")
+    }
+}
+
+// Associate coverage report with :app module where the actual sources live.
+// Setting this at root level causes "File 'X.kt' not found in project sources"
+// because the root project has no indexed source files.
+project(":app") {
+    sonar {
+        properties {
+            property("sonar.coverage.jacoco.xmlReportPaths", "${rootDir}/.out/coverage.xml")
+        }
     }
 }
 
