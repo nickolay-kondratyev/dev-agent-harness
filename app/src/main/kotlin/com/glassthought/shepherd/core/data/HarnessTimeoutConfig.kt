@@ -5,6 +5,31 @@ import kotlin.time.Duration.Companion.minutes
 import kotlin.time.Duration.Companion.seconds
 
 /**
+ * Groups the three health-check timeouts into a conceptual ladder:
+ * startup → steady-state → ping-response.
+ *
+ * Operators see the full timeout sequence in one place.
+ * The ordering is intentional: [startup] ≤ [normalActivity]; [pingResponse] ≤ [startup].
+ *
+ * Spec: ref.ap.RJWVLgUGjO5zAwupNLhA0.E (HealthMonitoring.md — HealthTimeoutLadder section)
+ */
+data class HealthTimeoutLadder(
+
+  /** After agent spawn, the window before declaring a startup failure.
+   *  Catches misconfigured env, binary crashes, and TMUX issues 10× faster than [normalActivity].
+   *  Switches to [normalActivity] as soon as any callback arrives. */
+  val startup: Duration = 3.minutes,
+
+  /** Elapsed time since last HTTP callback before triggering a ping.
+   *  Applies to all sub-parts once the startup phase is complete. */
+  val normalActivity: Duration = 30.minutes,
+
+  /** Wait time after sending a ping before declaring the agent crashed.
+   *  Any callback activity during this window resets the timer. */
+  val pingResponse: Duration = 3.minutes,
+)
+
+/**
  * Centralizes all timeout and threshold constants for the harness.
  *
  * Having all values in one place enables:
@@ -24,21 +49,12 @@ data class HarnessTimeoutConfig(
 
   // --- Health Monitoring (ref.ap.RJWVLgUGjO5zAwupNLhA0.E) ---
 
-  /** After agent spawn, the window before declaring a startup failure.
-   *  Catches misconfigured env, binary crashes, and TMUX issues 10× faster than [noActivityTimeout].
-   *  Switches to [noActivityTimeout] as soon as any callback arrives. */
-  val startupAckTimeout: Duration = 3.minutes,
+  /** Three-step health timeout ladder: startup → normalActivity → pingResponse.
+   *  See [HealthTimeoutLadder] for individual field documentation. */
+  val healthTimeouts: HealthTimeoutLadder = HealthTimeoutLadder(),
 
   /** How often PartExecutor polls `lastActivityTimestamp` while the deferred is pending. */
   val healthCheckInterval: Duration = 5.minutes,
-
-  /** Elapsed time since last HTTP callback before triggering a ping.
-   *  Applies to all sub-parts once the startup phase is complete. */
-  val noActivityTimeout: Duration = 30.minutes,
-
-  /** Wait time after sending a ping before declaring the agent crashed.
-   *  Any callback activity during this window resets the timer. */
-  val pingTimeout: Duration = 3.minutes,
 
   // --- Payload Delivery ACK (ref.ap.wLpW8YbvqpRdxDplnN7Vh.E) ---
 
@@ -90,10 +106,12 @@ data class HarnessTimeoutConfig(
      * Threshold percentages are left at production values (they drive logic, not wall time).
      */
     fun forTests(): HarnessTimeoutConfig = HarnessTimeoutConfig(
-      startupAckTimeout = 2.seconds,
+      healthTimeouts = HealthTimeoutLadder(
+        startup = 1.seconds,
+        normalActivity = 5.seconds,
+        pingResponse = 1.seconds,
+      ),
       healthCheckInterval = 1.seconds,
-      noActivityTimeout = 5.seconds,
-      pingTimeout = 2.seconds,
       payloadAckTimeout = 2.seconds,
       selfCompactionTimeout = 3.seconds,
       contextFileStaleTimeout = 2.seconds,
