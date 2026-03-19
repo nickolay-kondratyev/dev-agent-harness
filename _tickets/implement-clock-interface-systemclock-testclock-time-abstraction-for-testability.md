@@ -1,11 +1,11 @@
 ---
 id: nid_xeq8q9q7xmr56x5ttr98br4z9_E
 title: "Implement Clock interface + SystemClock + TestClock — time abstraction for testability"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T00:09:49Z
-status_updated_iso: 2026-03-19T00:09:49Z
+status_updated_iso: 2026-03-19T15:16:46Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
