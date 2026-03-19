@@ -1,11 +1,11 @@
 ---
 id: nid_7uh4ju2nel6sqqyuhqrp8ouny_E
 title: "Implement DetailedPlanningUseCase — planning lifecycle + plan-to-execution-parts conversion"
-status: open
+status: in_progress
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_g3e2bkvqepf2wzipadayt9in8_E, nid_5z93biuqub3mhcejfpofjmj39_E, nid_foubbnsh3vmk1fk34zm75zkg0_E, nid_m3cm8xizw5qhu1cu3454rca79_E, nid_wppjbc4te6exn13bo3o0jln6n_E]
 links: []
 created_iso: 2026-03-19T00:50:57Z
-status_updated_iso: 2026-03-19T00:50:57Z
+status_updated_iso: 2026-03-19T19:32:40Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
