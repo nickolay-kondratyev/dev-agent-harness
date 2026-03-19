@@ -14,7 +14,7 @@ import com.glassthought.shepherd.core.workflow.WorkflowDefinition
  *
  * ap.Chdyvp7XQhz5cTxffqFCf.E
  */
-interface CurrentStateInitializer {
+fun interface CurrentStateInitializer {
     fun createInitialState(workflowDefinition: WorkflowDefinition): CurrentState
 }
 
