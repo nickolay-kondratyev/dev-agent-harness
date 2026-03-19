@@ -1,0 +1,75 @@
+---
+spec: "com.glassthought.shepherd.core.executor.PartExecutorImplTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- (1) GIVEN a doer+reviewer executor
+  - WHEN the part completes successfully
+    - [PASS] THEN both doer and reviewer sessions are killed
+- (1) GIVEN a doer-only executor
+  - WHEN the doer signals FailWorkflow
+    - [PASS] THEN the result is PartResult.FailedWorkflow with the reason
+- (2) GIVEN a doer+reviewer executor
+  - WHEN reviewer sends NEEDS_ITERATION then PASS on next round
+    - [PASS] THEN git commit is called for each Done signal
+    - [PASS] THEN the result is PartResult.Completed
+- (2) GIVEN a doer-only executor
+  - WHEN the doer signals Crashed
+    - [PASS] THEN the result is PartResult.AgentCrashed with the details
+- (3) GIVEN a doer+reviewer executor
+  - WHEN the doer signals FailWorkflow
+    - [PASS] THEN the result is PartResult.FailedWorkflow
+- (3) GIVEN a doer-only executor
+  - WHEN the doer signals Done(PASS)
+    - [PASS] THEN IllegalStateException is thrown
+- (4) GIVEN a doer+reviewer executor
+  - WHEN the reviewer signals Crashed
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- (4) GIVEN a doer-only executor
+  - WHEN the doer signals Done(NEEDS_ITERATION)
+    - [PASS] THEN IllegalStateException is thrown
+- (5) GIVEN a doer+reviewer executor
+  - WHEN reviewer signals PASS but reviewer PUBLIC.md does not exist
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- (5) GIVEN a doer-only executor
+  - WHEN the doer signals Done(COMPLETED) but PUBLIC.md does not exist
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- (6) GIVEN a doer+reviewer executor
+  - WHEN doer signals COMPLETED but doer PUBLIC.md does not exist
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- (6) GIVEN a doer-only executor
+  - WHEN the doer signals Done(COMPLETED) but PUBLIC.md is empty
+    - [PASS] THEN the result is PartResult.AgentCrashed
+- (7) GIVEN a doer-only executor
+  - WHEN the doer signals Done(COMPLETED)
+    - [PASS] THEN readContextWindowState is called
+- (8) GIVEN a doer-only executor
+  - WHEN execution completes
+    - [PASS] THEN killSession is called for the doer
+- (9) GIVEN a doer-only executor
+  - WHEN execute is called
+    - [PASS] THEN spawnAgent is called with the doer's SpawnAgentConfig
+- GIVEN a doer+reviewer executor
+  - WHEN doer signals COMPLETED and reviewer signals PASS
+    - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor with iteration
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
+    - [PASS] THEN readContextWindowState is called 4 times (once per Done signal)
+- GIVEN a doer+reviewer executor with max=1 and granting FailedToConvergeUseCase
+  - WHEN reviewer sends NEEDS_ITERATION, operator grants more, then reviewer PASS
+    - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor with max=1 iterations
+  - WHEN reviewer keeps sending NEEDS_ITERATION and operator aborts
+    - [PASS] THEN the result is PartResult.FailedToConverge
+- GIVEN a doer+reviewer executor with one iteration
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
+    - [PASS] THEN sendPayloadAndAwaitSignal is called 4 times
+- GIVEN a doer-only executor
+  - WHEN the doer signals Done(COMPLETED) and PUBLIC.md exists
+    - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer-only executor with recording git strategy
+  - WHEN the doer signals Done(COMPLETED)
+    - [PASS] THEN git commit context has correct part name
+    - [PASS] THEN git commit strategy is called once
