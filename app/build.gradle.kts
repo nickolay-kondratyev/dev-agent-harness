@@ -31,6 +31,7 @@ dependencies {
     testImplementation(libs.asgard.test.tools)
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.runner.junit5)
+    testImplementation(libs.kotlinx.coroutines.test)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 
