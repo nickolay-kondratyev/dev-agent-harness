@@ -77,7 +77,7 @@ interface GitCommitStrategy {
  *
  * On git failure (except diff check), delegates to [GitOperationFailureUseCase].
  */
-class CommitPerSubPart(
+internal class CommitPerSubPart(
     outFactory: OutFactory,
     private val processRunner: ProcessRunner,
     private val gitOperationFailureUseCase: GitOperationFailureUseCase,
@@ -162,6 +162,10 @@ class CommitPerSubPart(
         }
     }
 
+    /**
+     * Executes `git commit`. On failure, delegates to [gitOperationFailureUseCase] which may
+     * return normally after successful index.lock recovery (retries the exact same command).
+     */
     @Suppress("TooGenericExceptionCaught", "SpreadOperator")
     private suspend fun commit(
         authorName: String,
