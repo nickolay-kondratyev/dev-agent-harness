@@ -11,7 +11,6 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.server.AckedPayloadSender
-import com.glassthought.shepherd.core.session.PendingQuestion
 import com.glassthought.shepherd.core.session.SessionEntry
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
@@ -19,7 +18,6 @@ import kotlinx.coroutines.CompletableDeferred
 import java.nio.file.Files
 import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
-import com.glassthought.shepherd.core.session.UserQuestionContext as SessionUserQuestionContext
 import com.glassthought.shepherd.core.state.SubPartRole
 
 class QaDrainAndDeliverUseCaseTest : AsgardDescribeSpec({
@@ -329,9 +327,9 @@ private fun createTestTmuxAgentSession(): TmuxAgentSession {
 }
 
 private fun createTestSessionEntry(
-    questions: List<PendingQuestion>,
+    questions: List<UserQuestionContext>,
 ): SessionEntry {
-    val queue = ConcurrentLinkedQueue<PendingQuestion>()
+    val queue = ConcurrentLinkedQueue<UserQuestionContext>()
     questions.forEach { queue.add(it) }
     return SessionEntry(
         tmuxAgentSession = createTestTmuxAgentSession(),
@@ -340,18 +338,14 @@ private fun createTestSessionEntry(
         subPartIndex = 0,
         signalDeferred = CompletableDeferred<AgentSignal>(),
         lastActivityTimestamp = Instant.now(),
-        pendingPayloadAck = null,
         questionQueue = queue,
     )
 }
 
-private fun createPendingQuestion(question: String): PendingQuestion = PendingQuestion(
+private fun createPendingQuestion(question: String): UserQuestionContext = UserQuestionContext(
     question = question,
-    context = SessionUserQuestionContext(
-        question = question,
-        partName = "test-part",
-        subPartName = "test-sub-part",
-        subPartRole = SubPartRole.DOER,
-        handshakeGuid = HandshakeGuid.generate(),
-    ),
+    partName = "test-part",
+    subPartName = "test-sub-part",
+    subPartRole = SubPartRole.DOER,
+    handshakeGuid = HandshakeGuid.generate(),
 )

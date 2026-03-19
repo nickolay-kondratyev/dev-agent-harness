@@ -162,5 +162,11 @@ private fun createTestShepherdContext(): com.glassthought.shepherd.core.initiali
         tmux = tmuxInfra,
         claudeCode = claudeCodeInfra,
     )
-    return com.glassthought.shepherd.core.initializer.data.ShepherdContext(infra = infra)
+    val noOpRunner = com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner {
+        com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentResult.Success(output = "")
+    }
+    return com.glassthought.shepherd.core.initializer.data.ShepherdContext(
+        infra = infra,
+        nonInteractiveAgentRunner = noOpRunner,
+    )
 }
