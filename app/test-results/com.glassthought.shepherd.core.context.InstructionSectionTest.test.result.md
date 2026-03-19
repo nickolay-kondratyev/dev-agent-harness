@@ -41,6 +41,9 @@ skipped: 0
     - [PASS] THEN includes the plan file content
     - [PASS] THEN returns non-null
     - [PASS] THEN starts with Plan heading
+- GIVEN a PlanMd section with a DoerRequest and non-null planMdPath pointing to missing file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
 - GIVEN a PlanMd section with a DoerRequest and null planMdPath
   - WHEN rendered
     - [PASS] THEN returns null
@@ -50,6 +53,9 @@ skipped: 0
 - GIVEN a PriorPublicMd section with a DoerRequest and empty priorPublicMdPaths
   - WHEN rendered
     - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with a DoerRequest and missing prior file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
 - GIVEN a PriorPublicMd section with a DoerRequest and non-empty priorPublicMdPaths
   - WHEN rendered
     - [PASS] THEN includes first prior file content
@@ -115,6 +121,9 @@ skipped: 0
 - GIVEN an InlineFileContentSection with a null path
   - WHEN rendered
     - [PASS] THEN returns null
+- GIVEN an IterationFeedback section with a DoerRequest and missing reviewer file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
 - GIVEN an IterationFeedback section with a DoerRequest and non-null reviewerPublicMdPath
   - WHEN rendered
     - [PASS] THEN includes Reviewer Feedback heading

@@ -391,6 +391,23 @@ class InstructionSectionTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a PlanMd section with a DoerRequest and non-null planMdPath pointing to missing file") {
+        val tempDir = Files.createTempDirectory("section-planmd-missing-test")
+        val missingPlanFile = tempDir.resolve("PLAN.md") // not created
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val request = baseRequest.copy(
+            executionContext = baseRequest.executionContext.copy(planMdPath = missingPlanFile)
+        )
+
+        describe("WHEN rendered") {
+            it("THEN throws IllegalStateException") {
+                shouldThrow<IllegalStateException> {
+                    InstructionSection.PlanMd.render(request)
+                }
+            }
+        }
+    }
+
     describe("GIVEN a PlanMd section with a PlannerRequest") {
         val tempDir = Files.createTempDirectory("section-planmd-planner-test")
         val request = ContextTestFixtures.plannerRequest(tempDir)
@@ -471,6 +488,25 @@ class InstructionSectionTest : AsgardDescribeSpec({
         }
     }
 
+    describe("GIVEN a PriorPublicMd section with a DoerRequest and missing prior file") {
+        val tempDir = Files.createTempDirectory("section-priorpub-missing-test")
+        val missingPrior = tempDir.resolve("missing_PUBLIC.md") // not created
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val request = baseRequest.copy(
+            executionContext = baseRequest.executionContext.copy(
+                priorPublicMdPaths = listOf(missingPrior)
+            )
+        )
+
+        describe("WHEN rendered") {
+            it("THEN throws IllegalStateException") {
+                shouldThrow<IllegalStateException> {
+                    InstructionSection.PriorPublicMd.render(request)
+                }
+            }
+        }
+    }
+
     describe("GIVEN a PriorPublicMd section with specific prior paths (negative test)") {
         val tempDir = Files.createTempDirectory("section-priorpub-negative-test")
 
@@ -534,6 +570,24 @@ class InstructionSectionTest : AsgardDescribeSpec({
             it("THEN wraps pushback guidance in compaction-survival tags") {
                 result!! shouldContain "<critical_to_keep_through_compaction>"
                 result!! shouldContain "</critical_to_keep_through_compaction>"
+            }
+        }
+    }
+
+    describe("GIVEN an IterationFeedback section with a DoerRequest and missing reviewer file") {
+        val tempDir = Files.createTempDirectory("section-iterfeedback-missing-test")
+        val missingReviewerFile = tempDir.resolve("reviewer_PUBLIC.md") // not created
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val request = baseRequest.copy(
+            iterationNumber = 2,
+            reviewerPublicMdPath = missingReviewerFile,
+        )
+
+        describe("WHEN rendered") {
+            it("THEN throws IllegalStateException") {
+                shouldThrow<IllegalStateException> {
+                    InstructionSection.IterationFeedback.render(request)
+                }
             }
         }
     }
