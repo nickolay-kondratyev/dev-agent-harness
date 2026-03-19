@@ -73,19 +73,17 @@ sealed class InstructionSection {
      * Delegates to [InstructionRenderers.partContext].
      */
     data object PartContext : InstructionSection() {
-        override fun render(request: AgentInstructionRequest): String? =
-            when (request) {
-                is AgentInstructionRequest.DoerRequest -> InstructionRenderers.partContext(
-                    request.executionContext.partName,
-                    request.executionContext.partDescription,
-                )
-                is AgentInstructionRequest.ReviewerRequest -> InstructionRenderers.partContext(
-                    request.executionContext.partName,
-                    request.executionContext.partDescription,
-                )
+        override fun render(request: AgentInstructionRequest): String? {
+            val executionContext = when (request) {
+                is AgentInstructionRequest.DoerRequest -> request.executionContext
+                is AgentInstructionRequest.ReviewerRequest -> request.executionContext
                 is AgentInstructionRequest.PlannerRequest -> null
                 is AgentInstructionRequest.PlanReviewerRequest -> null
             }
+            return executionContext?.let {
+                InstructionRenderers.partContext(it.partName, it.partDescription)
+            }
+        }
     }
 
     // ── 4. Ticket ────────────────────────────────────────────────────────────
