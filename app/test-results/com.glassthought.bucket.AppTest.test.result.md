@@ -5,4 +5,5 @@ failed: 0
 skipped: 0
 ---
 
-*No tests were run*
+- GIVEN TmuxCommandRunner
+  - [PASS] THEN can be instantiated without error

@@ -5,4 +5,87 @@ failed: 0
 skipped: 0
 ---
 
-*No tests were run*
+- GIVEN AgentSessionInfo
+  - WHEN round-tripping
+    - [PASS] THEN preserves id
+- GIVEN IterationConfig
+  - WHEN deserializing with only max field
+    - [PASS] THEN current defaults to 0
+    - [PASS] THEN max is set correctly
+  - WHEN serializing with current=1
+    - [PASS] THEN round-trips correctly
+  - WHEN serializing with default current=0
+    - [PASS] THEN round-trips correctly
+- GIVEN JSON with unknown properties
+  - WHEN deserializing IterationConfig
+    - [PASS] THEN ignores unknown field and deserializes correctly
+- GIVEN Phase enum
+  - WHEN deserializing 'execution'
+    - [PASS] THEN returns EXECUTION
+  - WHEN deserializing 'planning'
+    - [PASS] THEN returns PLANNING
+  - WHEN serializing EXECUTION
+    - [PASS] THEN serializes to lowercase 'execution'
+  - WHEN serializing PLANNING
+    - [PASS] THEN serializes to lowercase 'planning'
+- GIVEN SessionRecord
+  - WHEN round-tripping
+    - [PASS] THEN preserves all fields
+- GIVEN SubPart with all fields populated
+  - WHEN round-tripping through JSON
+    - [PASS] THEN preserves all fields
+- GIVEN SubPart with null optional fields
+  - WHEN serializing
+    - [PASS] THEN JSON does not contain 'iteration' key
+    - [PASS] THEN JSON does not contain 'sessionIds' key
+    - [PASS] THEN JSON does not contain 'status' key
+- GIVEN current_state.json fixture (with runtime fields)
+  - WHEN inspecting impl subPart
+    - [PASS] THEN has one session record
+    - [PASS] THEN iteration is null
+    - [PASS] THEN session agentSession id is correct
+    - [PASS] THEN session handshakeGuid is correct
+    - [PASS] THEN session timestamp is correct
+    - [PASS] THEN status is IN_PROGRESS
+  - WHEN inspecting review subPart
+    - [PASS] THEN has one session record
+    - [PASS] THEN iteration current is 1
+    - [PASS] THEN iteration max is 3
+    - [PASS] THEN session agentSession id is correct
+    - [PASS] THEN status is IN_PROGRESS
+  - WHEN re-serializing current state
+    - [PASS] THEN round-trips correctly
+- GIVEN plan_flow.json fixture (no runtime fields)
+  - WHEN deserializing
+    - [PASS] THEN has one part
+    - [PASS] THEN part has two subParts
+    - [PASS] THEN part name is ui_design
+    - [PASS] THEN part phase is EXECUTION
+  - WHEN inspecting impl subPart
+    - [PASS] THEN iteration is null
+    - [PASS] THEN role is UI_DESIGNER
+    - [PASS] THEN sessionIds is null
+    - [PASS] THEN status is null
+  - WHEN inspecting review subPart
+    - [PASS] THEN iteration current defaults to 0
+    - [PASS] THEN iteration max is 3
+    - [PASS] THEN sessionIds is null
+    - [PASS] THEN status is null
+  - WHEN re-serializing plan flow
+    - [PASS] THEN round-trips correctly
+- GIVEN planning-phase current_state.json fixture
+  - WHEN deserializing
+    - [PASS] THEN has one part
+    - [PASS] THEN part has two subParts
+    - [PASS] THEN part name is planning
+    - [PASS] THEN part phase is PLANNING
+  - WHEN inspecting plan subPart
+    - [PASS] THEN has one session record
+    - [PASS] THEN model is opus
+    - [PASS] THEN role is PLANNER
+    - [PASS] THEN status is IN_PROGRESS
+  - WHEN inspecting plan_review subPart
+    - [PASS] THEN iteration current is 1
+    - [PASS] THEN iteration max is 3
+  - WHEN re-serializing planning-phase state
+    - [PASS] THEN round-trips correctly

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T19:31:25Z
 id: nid_g8nrofr7aho65licpjwf9ea48_E
 title: "Add missing edge-case tests to RejectionNegotiationUseCaseImplTest"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T18:57:45Z
-status_updated_iso: 2026-03-19T19:25:07Z
+status_updated_iso: 2026-03-19T19:31:25Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

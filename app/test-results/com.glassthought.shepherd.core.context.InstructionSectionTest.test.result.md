@@ -5,4 +5,193 @@ failed: 0
 skipped: 0
 ---
 
-*No tests were run*
+- GIVEN a CallbackHelp section for a doer (not reviewer, no plan validation)
+  - WHEN rendered
+    - [PASS] THEN does NOT include validate-plan query
+    - [PASS] THEN includes the callback signal script name
+    - [PASS] THEN includes the completed done result (not reviewer)
+- GIVEN a CallbackHelp section for a reviewer with plan validation
+  - WHEN rendered
+    - [PASS] THEN includes needs_iteration done result (reviewer)
+    - [PASS] THEN includes pass done result (reviewer)
+    - [PASS] THEN includes validate-plan query section
+- GIVEN a FeedbackDirectorySection with a non-existent directory
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a FeedbackDirectorySection with an empty directory
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a FeedbackDirectorySection with filenamePrefix filter
+  - WHEN rendered
+    - [PASS] THEN does NOT include non-matching files
+    - [PASS] THEN includes the optional file
+    - [PASS] THEN returns non-null
+- GIVEN a FeedbackDirectorySection with only non-.md files
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a FeedbackDirectorySection with populated directory
+  - WHEN rendered
+    - [PASS] THEN includes the first file content
+    - [PASS] THEN includes the first file name as sub-heading
+    - [PASS] THEN includes the second file content
+    - [PASS] THEN includes the second file name as sub-heading
+    - [PASS] THEN returns non-null
+    - [PASS] THEN separates files with horizontal rule
+    - [PASS] THEN starts with the heading
+- GIVEN a FeedbackItem section with isOptional = false
+  - WHEN rendered
+    - [PASS] THEN does NOT include SKIPPED note for required items
+    - [PASS] THEN includes ADDRESSED resolution marker
+    - [PASS] THEN includes the feedback content
+    - [PASS] THEN includes the feedback file path
+- GIVEN a FeedbackItem section with isOptional = true
+  - WHEN rendered
+    - [PASS] THEN includes SKIPPED resolution marker
+    - [PASS] THEN includes the SKIPPED note for optional items
+    - [PASS] THEN includes the feedback content
+- GIVEN a FeedbackWritingInstructions section
+  - WHEN rendered
+    - [PASS] THEN returns the FEEDBACK_WRITING_INSTRUCTIONS text exactly
+- GIVEN a PartContext section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN includes the part description
+    - [PASS] THEN includes the part name
+    - [PASS] THEN returns non-null
+- GIVEN a PartContext section with a PlanReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PartContext section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PartContext section with a ReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN includes the part name
+    - [PASS] THEN returns non-null
+- GIVEN a PlanFormatInstructions section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PlanFormatInstructions section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns the static plan format instructions text
+- GIVEN a PlanMd section with a DoerRequest and non-null planMdPath
+  - WHEN rendered
+    - [PASS] THEN includes the plan file content
+    - [PASS] THEN returns non-null
+    - [PASS] THEN starts with Plan heading
+- GIVEN a PlanMd section with a DoerRequest and non-null planMdPath pointing to missing file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a PlanMd section with a DoerRequest and null planMdPath
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PlanMd section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with a DoerRequest and empty priorPublicMdPaths
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with a DoerRequest and missing prior file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a PriorPublicMd section with a DoerRequest and non-empty priorPublicMdPaths
+  - WHEN rendered
+    - [PASS] THEN includes first prior file content
+    - [PASS] THEN includes first prior file name as heading
+    - [PASS] THEN includes second prior file content
+    - [PASS] THEN includes second prior file name as heading
+    - [PASS] THEN returns non-null
+- GIVEN a PriorPublicMd section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with specific prior paths (negative test)
+  - WHEN rendered
+    - [PASS] THEN does NOT include planner PUBLIC.md content (not in the list)
+    - [PASS] THEN renders only the files in the provided list
+- GIVEN a PrivateMd section with blank file
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PrivateMd section with existing non-blank file
+  - WHEN rendered
+    - [PASS] THEN includes the Prior Session Context heading
+    - [PASS] THEN includes the file content
+    - [PASS] THEN returns non-null
+- GIVEN a PrivateMd section with non-existent file
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PrivateMd section with privateMdPath = null
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a RoleCatalog section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a RoleCatalog section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN includes Available Roles heading
+    - [PASS] THEN includes role names from catalog
+    - [PASS] THEN returns non-null
+- GIVEN a RoleDefinition section
+  - WHEN rendered
+    - [PASS] THEN includes the role file content
+    - [PASS] THEN starts with role heading including role name
+- GIVEN a StructuredFeedbackFormat section
+  - WHEN rendered
+    - [PASS] THEN contains the REVIEWER_FEEDBACK_FORMAT text
+    - [PASS] THEN is wrapped in compaction-survival tags
+- GIVEN a Ticket section
+  - WHEN rendered
+    - [PASS] THEN includes the ticket content
+    - [PASS] THEN starts with Ticket heading
+- GIVEN a WritingGuidelines section
+  - WHEN rendered
+    - [PASS] THEN returns the static writing guidelines text
+- GIVEN an AvailableAgentTypes section
+  - WHEN rendered with any request type
+    - [PASS] THEN mentions V1 constraints
+    - [PASS] THEN returns the static agent types text
+- GIVEN an AvailableAgentTypes section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns the static agent types text
+- GIVEN an InlineFileContentSection with a non-null path and existing file
+  - WHEN rendered
+    - [PASS] THEN includes the file content
+    - [PASS] THEN includes the heading
+    - [PASS] THEN returns non-null
+- GIVEN an InlineFileContentSection with a non-null path and missing file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN an InlineFileContentSection with a null path
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN an InlineStringContentSection with json code block
+  - WHEN rendered
+    - [PASS] THEN includes the heading
+    - [PASS] THEN wraps content in json code block
+- GIVEN an InlineStringContentSection with plain content
+  - WHEN rendered
+    - [PASS] THEN does NOT wrap in code block
+    - [PASS] THEN includes the content verbatim
+    - [PASS] THEN includes the heading
+- GIVEN an IterationFeedback section with a DoerRequest and missing reviewer file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN an IterationFeedback section with a DoerRequest and non-null reviewerPublicMdPath
+  - WHEN rendered
+    - [PASS] THEN includes Reviewer Feedback heading
+    - [PASS] THEN includes pushback guidance
+    - [PASS] THEN includes the reviewer feedback content
+    - [PASS] THEN returns non-null
+    - [PASS] THEN wraps pushback guidance in compaction-survival tags
+- GIVEN an IterationFeedback section with a DoerRequest and null reviewerPublicMdPath (iteration 1)
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN an IterationFeedback section with a ReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN an OutputPathSection for PUBLIC.md
+  - WHEN rendered
+    - [PASS] THEN includes the label in heading
+    - [PASS] THEN includes the output path
+- GIVEN an OutputPathSection for plan_flow.json
+  - WHEN rendered
+    - [PASS] THEN includes the label in heading
+    - [PASS] THEN includes the path
