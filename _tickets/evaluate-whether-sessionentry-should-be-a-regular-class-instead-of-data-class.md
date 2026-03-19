@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:48:53Z
 id: nid_7vkcmaxmbzayvjgoaff2ifeur_E
 title: "Evaluate whether SessionEntry should be a regular class instead of data class"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T18:26:16Z
-status_updated_iso: 2026-03-19T18:45:59Z
+status_updated_iso: 2026-03-19T18:48:53Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
