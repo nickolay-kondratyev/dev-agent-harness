@@ -60,9 +60,16 @@ object ShepherdValType {
         expectedValClass = String::class,
     )
 
-    /** HandshakeGuid identifying an agent session in server callbacks. */
+    /** Handshake GUID identifying an agent session in signal callbacks. */
     val HANDSHAKE_GUID = ValTypeV2(
         typeName = "HANDSHAKE_GUID",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Signal action name from callback URL path (e.g., "done", "self-compacted"). */
+    val SIGNAL_ACTION = ValTypeV2(
+        typeName = "SIGNAL_ACTION",
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
