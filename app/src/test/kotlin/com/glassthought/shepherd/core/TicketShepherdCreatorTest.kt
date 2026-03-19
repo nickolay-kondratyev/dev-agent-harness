@@ -20,6 +20,9 @@ private class FakeConsoleOutput : ConsoleOutput {
     override fun printlnRed(message: String) {
         messages.add(message)
     }
+    override fun printlnGreen(message: String) {
+        messages.add(message)
+    }
 }
 
 private class FakeProcessExitException(val exitCode: Int) : RuntimeException("FakeExit($exitCode)")

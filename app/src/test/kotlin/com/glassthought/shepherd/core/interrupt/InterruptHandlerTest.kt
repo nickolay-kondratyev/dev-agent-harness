@@ -44,6 +44,10 @@ private class FakeConsoleOutput : ConsoleOutput {
     override fun printlnRed(message: String) {
         printedMessages.add(message)
     }
+
+    override fun printlnGreen(message: String) {
+        printedMessages.add(message)
+    }
 }
 
 private class FakeAllSessionsKiller : AllSessionsKiller {

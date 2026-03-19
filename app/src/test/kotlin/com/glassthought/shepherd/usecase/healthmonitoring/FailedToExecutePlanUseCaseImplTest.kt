@@ -25,9 +25,14 @@ internal class FakeProcessExiter : ProcessExiter {
 
 internal class FakeConsoleOutput : ConsoleOutput {
     val printedMessages = mutableListOf<String>()
+    val greenMessages = mutableListOf<String>()
 
     override fun printlnRed(message: String) {
         printedMessages.add(message)
+    }
+
+    override fun printlnGreen(message: String) {
+        greenMessages.add(message)
     }
 }
 
@@ -243,6 +248,9 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                     val orderTracker = OrderTracker()
                     val fakeConsole = object : ConsoleOutput {
                         override fun printlnRed(message: String) {
+                            orderTracker.events.add(EVENT_PRINT)
+                        }
+                        override fun printlnGreen(message: String) {
                             orderTracker.events.add(EVENT_PRINT)
                         }
                     }
