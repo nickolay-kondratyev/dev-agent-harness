@@ -9,6 +9,7 @@ import com.glassthought.shepherd.core.state.SubPartRole
 import kotlinx.coroutines.CompletableDeferred
 import java.time.Instant
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.atomic.AtomicReference
 
 /**
  * Live registry entry for a single agent session within [SessionsState].
@@ -20,6 +21,9 @@ import java.util.concurrent.ConcurrentLinkedQueue
  * [questionQueue] uses [ConcurrentLinkedQueue] for thread-safe access from both
  * the server callback thread and the orchestration coroutine.
  *
+ * [pendingPayloadAck] uses [AtomicReference] for the same reason — the server
+ * callback thread clears it on ACK arrival while the orchestration coroutine polls it.
+ *
  * See ref.ap.7V6upjt21tOoCFXA7nqNh.E for the SessionsState spec.
  */
 @AnchorPoint("ap.igClEuLMC0bn7mDrK41jQ.E")
@@ -30,7 +34,7 @@ data class SessionEntry(
     val subPartIndex: Int,
     val signalDeferred: CompletableDeferred<AgentSignal>,
     val lastActivityTimestamp: Instant,
-    val pendingPayloadAck: PayloadId?,
+    val pendingPayloadAck: AtomicReference<PayloadId?> = AtomicReference(null),
     val questionQueue: ConcurrentLinkedQueue<UserQuestionContext>,
 ) {
     /** True when one or more user questions are awaiting a response. */

@@ -4,10 +4,8 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.server.AckedPayloadSender
-import com.glassthought.shepherd.core.session.PendingQuestion
 import com.glassthought.shepherd.core.session.SessionEntry
 import java.nio.file.Path
-import com.glassthought.shepherd.core.session.UserQuestionContext as SessionUserQuestionContext
 
 /**
  * Drains all pending questions from a [SessionEntry]'s queue, collects answers
@@ -38,15 +36,14 @@ class QaDrainAndDeliverUseCase(
 
         // Drain-and-collect loop: keeps going until no new questions arrive
         while (true) {
-            val pending: PendingQuestion = sessionEntry.questionQueue.poll() ?: break
+            val pending: UserQuestionContext = sessionEntry.questionQueue.poll() ?: break
 
             out.info(
                 "processing_pending_question",
                 Val(collectedQAs.size + 1, ValType.COUNT),
             )
 
-            val questionContext = toQuestionContext(pending.context)
-            val answer = userQuestionHandler.handleQuestion(questionContext)
+            val answer = userQuestionHandler.handleQuestion(pending)
             collectedQAs.add(QuestionAndAnswer(question = pending.question, answer = answer))
         }
 
@@ -76,21 +73,4 @@ class QaDrainAndDeliverUseCase(
         )
     }
 
-    companion object {
-        /**
-         * Maps session-package [SessionUserQuestionContext] to question-package [UserQuestionContext].
-         *
-         * These are structurally identical data classes in different packages.
-         * The session package holds context alongside the queue; the question package
-         * is what [UserQuestionHandler] expects.
-         */
-        fun toQuestionContext(ctx: SessionUserQuestionContext): UserQuestionContext =
-            UserQuestionContext(
-                question = ctx.question,
-                partName = ctx.partName,
-                subPartName = ctx.subPartName,
-                subPartRole = ctx.subPartRole,
-                handshakeGuid = ctx.handshakeGuid,
-            )
-    }
 }
