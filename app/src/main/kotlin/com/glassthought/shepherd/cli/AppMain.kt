@@ -29,6 +29,7 @@ fun main() {
     //   3. TicketShepherdCreator → TicketShepherd
     //   4. TicketShepherd.run()
     //   5. Cleanup (ShepherdContext.close())
-    throw RuntimeException("Not implemented yet: CLI not yet implemented — see high-level.md ap.HRlQHC1bgrTRyRknP3WNX.E")
+    // See high-level.md ap.HRlQHC1bgrTRyRknP3WNX.E for startup sequence spec.
+    TODO("CLI not yet implemented")
   }
 }
