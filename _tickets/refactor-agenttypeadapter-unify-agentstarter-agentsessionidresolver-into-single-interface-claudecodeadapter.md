@@ -1,11 +1,11 @@
 ---
 id: nid_3rw8eoib2wseydcyhnj648d2a_E
 title: "Refactor AgentTypeAdapter — unify AgentStarter + AgentSessionIdResolver into single interface + ClaudeCodeAdapter"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T00:17:04Z
-status_updated_iso: 2026-03-19T00:17:04Z
+status_updated_iso: 2026-03-19T14:06:28Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
