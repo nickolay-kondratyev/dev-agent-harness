@@ -26,7 +26,11 @@ interface WorkingTreeValidator {
             outFactory: OutFactory,
             processRunner: ProcessRunner,
             workingDir: Path? = null,
-        ): WorkingTreeValidator = WorkingTreeValidatorImpl(outFactory, processRunner, workingDir)
+        ): WorkingTreeValidator = WorkingTreeValidatorImpl(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            gitCommandBuilder = GitCommandBuilder(workingDir),
+        )
     }
 }
 
@@ -39,7 +43,7 @@ interface WorkingTreeValidator {
 class WorkingTreeValidatorImpl(
     outFactory: OutFactory,
     private val processRunner: ProcessRunner,
-    private val workingDir: Path? = null,
+    private val gitCommandBuilder: GitCommandBuilder,
 ) : WorkingTreeValidator {
 
     private val out = outFactory.getOutForClass(WorkingTreeValidatorImpl::class)
@@ -49,7 +53,7 @@ class WorkingTreeValidatorImpl(
             emptyList()
         }
 
-        val porcelainOutput = processRunner.runProcess(*gitCommand("status", "--porcelain"))
+        val porcelainOutput = processRunner.runProcess(*gitCommandBuilder.build("status", "--porcelain"))
 
         if (porcelainOutput.trim().isEmpty()) {
             out.info("working_tree_is_clean")
@@ -64,17 +68,6 @@ class WorkingTreeValidatorImpl(
         throw IllegalStateException(
             buildErrorMessage(porcelainOutput.trim())
         )
-    }
-
-    /**
-     * Builds a git command array, prepending `-C <workingDir>` when [workingDir] is set.
-     */
-    private fun gitCommand(vararg args: String): Array<String> {
-        return if (workingDir != null) {
-            arrayOf("git", "-C", workingDir.toString(), *args)
-        } else {
-            arrayOf("git", *args)
-        }
     }
 
     companion object {

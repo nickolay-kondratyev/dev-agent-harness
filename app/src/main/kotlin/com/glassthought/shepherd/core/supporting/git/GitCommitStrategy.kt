@@ -60,7 +60,7 @@ fun interface GitCommitStrategy {
             gitOperationFailureUseCase = gitOperationFailureUseCase,
             hostUsername = hostUsername,
             gitUserEmail = gitUserEmail,
-            workingDir = workingDir,
+            gitCommandBuilder = GitCommandBuilder(workingDir),
         )
     }
 }
@@ -83,7 +83,7 @@ internal class CommitPerSubPart(
     private val gitOperationFailureUseCase: GitOperationFailureUseCase,
     private val hostUsername: String,
     private val gitUserEmail: String,
-    private val workingDir: Path? = null,
+    private val gitCommandBuilder: GitCommandBuilder = GitCommandBuilder(),
 ) : GitCommitStrategy {
 
     private val out = outFactory.getOutForClass(CommitPerSubPart::class)
@@ -131,7 +131,7 @@ internal class CommitPerSubPart(
 
     @Suppress("TooGenericExceptionCaught", "SpreadOperator")
     private suspend fun stageAll(context: SubPartDoneContext) {
-        val command = gitCommand("add", "-A")
+        val command = gitCommandBuilder.build("add", "-A")
         try {
             processRunner.runProcess(*command)
         } catch (e: Exception) {
@@ -153,7 +153,7 @@ internal class CommitPerSubPart(
     @Suppress("TooGenericExceptionCaught", "SpreadOperator")
     private suspend fun hasStagedChanges(): Boolean {
         return try {
-            processRunner.runProcess(*gitCommand("diff", "--cached", "--quiet"))
+            processRunner.runProcess(*gitCommandBuilder.build("diff", "--cached", "--quiet"))
             // Exit 0 → no changes
             false
         } catch (_: Exception) {
@@ -172,7 +172,7 @@ internal class CommitPerSubPart(
         message: String,
         context: SubPartDoneContext,
     ) {
-        val command = gitCommand(
+        val command = gitCommandBuilder.build(
             "commit",
             "--author=$authorName <$gitUserEmail>",
             "-m",
@@ -186,17 +186,6 @@ internal class CommitPerSubPart(
                 errorOutput = e.message ?: "unknown",
                 context = toGitFailureContext(context),
             )
-        }
-    }
-
-    /**
-     * Builds a git command array, prepending `-C <workingDir>` when [workingDir] is set.
-     */
-    private fun gitCommand(vararg args: String): Array<String> {
-        return if (workingDir != null) {
-            arrayOf("git", "-C", workingDir.toString(), *args)
-        } else {
-            arrayOf("git", *args)
         }
     }
 
