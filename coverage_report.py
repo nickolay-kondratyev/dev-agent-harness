@@ -2,12 +2,14 @@
 """Parse Kover XML coverage report and display per-file coverage, sorted worst-first.
 
 Usage:
-    python3 coverage_report.py [--threshold N] [--xml PATH]
+    python3 coverage_report.py [--threshold N] [--xml PATH] [--json PATH]
 
     --threshold N   Highlight files below N% line coverage (default: 80)
     --xml PATH      Path to coverage XML (default: .out/coverage.xml)
+    --json PATH     Write JSON report to PATH (default: .out/coverage_report.json)
 """
 
+import json
 import sys
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass
@@ -102,9 +104,45 @@ def parse_coverage(xml_path: Path) -> list[FileCoverage]:
     return results
 
 
+def write_json_report(files: list[FileCoverage], threshold: float, json_path: Path) -> None:
+    total_lines = sum(f.total_lines for f in files)
+    total_covered = sum(f.lines_covered for f in files)
+    overall_pct = round((total_covered / total_lines * 100) if total_lines > 0 else 100.0, 2)
+
+    report = {
+        "threshold": threshold,
+        "summary": {
+            "overall_line_pct": overall_pct,
+            "lines_covered": total_covered,
+            "lines_total": total_lines,
+            "files_total": len(files),
+            "files_below_threshold": len([f for f in files if f.line_pct < threshold]),
+        },
+        "files": [
+            {
+                "file": f.qualified_name,
+                "line_pct": round(f.line_pct, 2),
+                "branch_pct": round(f.branch_pct, 2),
+                "lines_covered": f.lines_covered,
+                "lines_missed": f.lines_missed,
+                "lines_total": f.total_lines,
+                "branches_covered": f.branches_covered,
+                "branches_missed": f.branches_missed,
+                "branches_total": f.total_branches,
+            }
+            for f in files
+        ],
+    }
+
+    json_path.parent.mkdir(parents=True, exist_ok=True)
+    json_path.write_text(json.dumps(report, indent=2) + "\n")
+    print(f"JSON report written to: {json_path}")
+
+
 def main():
     threshold = 80.0
     xml_path = Path(".out/coverage.xml")
+    json_path = Path(".out/coverage_report.json")
 
     args = sys.argv[1:]
     i = 0
@@ -114,6 +152,9 @@ def main():
             i += 2
         elif args[i] == "--xml" and i + 1 < len(args):
             xml_path = Path(args[i + 1])
+            i += 2
+        elif args[i] == "--json" and i + 1 < len(args):
+            json_path = Path(args[i + 1])
             i += 2
         else:
             print(f"Unknown arg: {args[i]}", file=sys.stderr)
@@ -126,6 +167,9 @@ def main():
     files = parse_coverage(xml_path)
     # Sort by line coverage ascending (worst first), then by name
     files.sort(key=lambda f: (f.line_pct, f.qualified_name))
+
+    # Write JSON report
+    write_json_report(files, threshold, json_path)
 
     below_threshold = [f for f in files if f.line_pct < threshold]
     above_threshold = [f for f in files if f.line_pct >= threshold]
