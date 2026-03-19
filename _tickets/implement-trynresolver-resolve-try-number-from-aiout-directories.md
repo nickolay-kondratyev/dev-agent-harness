@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:52:50Z
 id: nid_156yspl7869zrisam6l6xrd66_E
 title: "Implement TryNResolver — resolve try number from .ai_out/ directories"
-status: in_progress
+status: closed
 deps: [nid_9kic96nh6mb8r5legcsvt46uy_E]
 links: []
 created_iso: 2026-03-18T23:44:11Z
-status_updated_iso: 2026-03-19T17:41:45Z
+status_updated_iso: 2026-03-19T17:52:50Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -46,3 +47,9 @@ Implement TryNResolver that determines the next try-N number by scanning .ai_out
 - BranchNameBuilder at app/src/main/kotlin/com/glassthought/shepherd/core/supporting/git/BranchNameBuilder.kt
 - AiOutputStructure ticket: nid_9kic96nh6mb8r5legcsvt46uy_E
 
+
+## Notes
+
+**2026-03-19T17:52:53Z**
+
+Implemented TryNResolver interface + TryNResolverImpl. Scans .ai_out/ directories to find next available try-N. 5 unit tests. Commits: fce1f0a (impl), c35676a (test refactor after review).
