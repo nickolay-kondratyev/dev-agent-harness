@@ -15,6 +15,40 @@ skipped: 0
     - [PASS] THEN includes needs_iteration done result (reviewer)
     - [PASS] THEN includes pass done result (reviewer)
     - [PASS] THEN includes validate-plan query section
+- GIVEN a FeedbackDirectorySection with a non-existent directory
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a FeedbackDirectorySection with an empty directory
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a FeedbackDirectorySection with filenamePrefix filter
+  - WHEN rendered
+    - [PASS] THEN does NOT include non-matching files
+    - [PASS] THEN includes the optional file
+    - [PASS] THEN returns non-null
+- GIVEN a FeedbackDirectorySection with populated directory
+  - WHEN rendered
+    - [PASS] THEN includes the first file content
+    - [PASS] THEN includes the first file name as sub-heading
+    - [PASS] THEN includes the second file content
+    - [PASS] THEN includes the second file name as sub-heading
+    - [PASS] THEN returns non-null
+    - [PASS] THEN separates files with horizontal rule
+    - [PASS] THEN starts with the heading
+- GIVEN a FeedbackItem section with isOptional = false
+  - WHEN rendered
+    - [PASS] THEN does NOT include SKIPPED note for required items
+    - [PASS] THEN includes ADDRESSED resolution marker
+    - [PASS] THEN includes the feedback content
+    - [PASS] THEN includes the feedback file path
+- GIVEN a FeedbackItem section with isOptional = true
+  - WHEN rendered
+    - [PASS] THEN includes SKIPPED resolution marker
+    - [PASS] THEN includes the SKIPPED note for optional items
+    - [PASS] THEN includes the feedback content
+- GIVEN a FeedbackWritingInstructions section
+  - WHEN rendered
+    - [PASS] THEN returns the FEEDBACK_WRITING_INSTRUCTIONS text exactly
 - GIVEN a PartContext section with a DoerRequest
   - WHEN rendered
     - [PASS] THEN includes the part description
@@ -48,6 +82,9 @@ skipped: 0
   - WHEN rendered
     - [PASS] THEN includes the role file content
     - [PASS] THEN starts with role heading including role name
+- GIVEN a StructuredFeedbackFormat section
+  - WHEN rendered
+    - [PASS] THEN returns the REVIEWER_FEEDBACK_FORMAT text exactly
 - GIVEN a Ticket section
   - WHEN rendered
     - [PASS] THEN includes the ticket content

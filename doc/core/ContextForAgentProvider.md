@@ -229,7 +229,7 @@ Each logical content block is one `InstructionSection` subtype:
 | `CallbackHelp` | Compaction-survival callback script usage (role-specific done signal) |
 | **`OutputPathSection(label, path)`** | Labeled output path for the agent. Replaces `PlanFlowJsonOutputPath`, `PlanMdOutputPath`, `PublicMdOutputPath` — all were structurally "tell the agent where to write, with a label". |
 | **`InlineFileContentSection(heading, path)`** | Read a file and render its content under a heading. Replaces `PlanFlowJsonContent`, `PlanMdContent`, `PlannerPublicMd`, `DoerOutputForReview`, `PlannerFeedback`, `PlanReviewerPriorFeedback` — all were structurally "read file, render under heading". |
-| **`FeedbackDirectorySection(dir, heading)`** | Glob a feedback directory and render all files under a heading. Replaces `AddressedFeedback`, `RejectedFeedback`, `RemainingOptionalFeedback` — all were structurally "glob feedback dir, render under heading". |
+| **`FeedbackDirectorySection(dir, heading, filenamePrefix?)`** | Glob a feedback directory and render all `.md` files under a heading. Optional `filenamePrefix` filters files (e.g. `optional__` for skipped optional items). Returns `null` when directory is absent or empty. Replaces `AddressedFeedback`, `RejectedFeedback`, `RemainingOptionalFeedback` — all were structurally "glob feedback dir, render under heading". |
 
 ### InstructionPlan per role
 

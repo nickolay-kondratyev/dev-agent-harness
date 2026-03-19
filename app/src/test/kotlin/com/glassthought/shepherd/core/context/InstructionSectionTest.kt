@@ -293,4 +293,207 @@ class InstructionSectionTest : AsgardDescribeSpec({
             }
         }
     }
+
+    // ── FeedbackItem ──────────────────────────────────────────────────────
+
+    describe("GIVEN a FeedbackItem section with isOptional = false") {
+        val tempDir = Files.createTempDirectory("section-feedbackitem-required-test")
+        val feedbackPath = tempDir.resolve("pending/critical__missing-tests.md")
+        val section = InstructionSection.FeedbackItem(
+            feedbackContent = "Missing unit tests for UserService.",
+            currentPath = feedbackPath,
+            isOptional = false,
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN includes the feedback content") {
+                result shouldContain "Missing unit tests for UserService."
+            }
+
+            it("THEN includes the feedback file path") {
+                result shouldContain feedbackPath.toString()
+            }
+
+            it("THEN includes ADDRESSED resolution marker") {
+                result shouldContain ProtocolVocabulary.FeedbackStatus.ADDRESSED
+            }
+
+            it("THEN does NOT include SKIPPED note for required items") {
+                result shouldNotContain "This feedback is ${ProtocolVocabulary.Severity.OPTIONAL}"
+            }
+        }
+    }
+
+    describe("GIVEN a FeedbackItem section with isOptional = true") {
+        val tempDir = Files.createTempDirectory("section-feedbackitem-optional-test")
+        val feedbackPath = tempDir.resolve("pending/optional__naming-suggestion.md")
+        val section = InstructionSection.FeedbackItem(
+            feedbackContent = "Consider renaming variable for clarity.",
+            currentPath = feedbackPath,
+            isOptional = true,
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN includes the feedback content") {
+                result shouldContain "Consider renaming variable for clarity."
+            }
+
+            it("THEN includes the SKIPPED note for optional items") {
+                result shouldContain "This feedback is ${ProtocolVocabulary.Severity.OPTIONAL}"
+            }
+
+            it("THEN includes SKIPPED resolution marker") {
+                result shouldContain ProtocolVocabulary.FeedbackStatus.SKIPPED
+            }
+        }
+    }
+
+    // ── StructuredFeedbackFormat ───────────────────────────────────────────
+
+    describe("GIVEN a StructuredFeedbackFormat section") {
+        val tempDir = Files.createTempDirectory("section-feedback-format-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = InstructionSection.StructuredFeedbackFormat.render(request)
+
+            it("THEN returns the REVIEWER_FEEDBACK_FORMAT text exactly") {
+                result shouldBe InstructionText.REVIEWER_FEEDBACK_FORMAT
+            }
+        }
+    }
+
+    // ── FeedbackWritingInstructions ────────────────────────────────────────
+
+    describe("GIVEN a FeedbackWritingInstructions section") {
+        val tempDir = Files.createTempDirectory("section-feedback-writing-test")
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = InstructionSection.FeedbackWritingInstructions.render(request)
+
+            it("THEN returns the FEEDBACK_WRITING_INSTRUCTIONS text exactly") {
+                result shouldBe InstructionText.FEEDBACK_WRITING_INSTRUCTIONS
+            }
+        }
+    }
+
+    // ── FeedbackDirectorySection ──────────────────────────────────────────
+
+    describe("GIVEN a FeedbackDirectorySection with an empty directory") {
+        val tempDir = Files.createTempDirectory("section-feedbackdir-empty-test")
+        val emptyDir = tempDir.resolve("addressed")
+        Files.createDirectories(emptyDir)
+        val section = InstructionSection.FeedbackDirectorySection(
+            dir = emptyDir,
+            heading = "Addressed Feedback",
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN returns null") {
+                result.shouldBeNull()
+            }
+        }
+    }
+
+    describe("GIVEN a FeedbackDirectorySection with a non-existent directory") {
+        val tempDir = Files.createTempDirectory("section-feedbackdir-noexist-test")
+        val section = InstructionSection.FeedbackDirectorySection(
+            dir = tempDir.resolve("does-not-exist"),
+            heading = "Addressed Feedback",
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN returns null") {
+                result.shouldBeNull()
+            }
+        }
+    }
+
+    describe("GIVEN a FeedbackDirectorySection with populated directory") {
+        val tempDir = Files.createTempDirectory("section-feedbackdir-populated-test")
+        val feedbackDir = tempDir.resolve("addressed")
+        Files.createDirectories(feedbackDir)
+        Files.writeString(feedbackDir.resolve("critical__missing-tests.md"), "Fixed missing tests.")
+        Files.writeString(feedbackDir.resolve("important__error-handling.md"), "Added error handling.")
+        val section = InstructionSection.FeedbackDirectorySection(
+            dir = feedbackDir,
+            heading = "Addressed Feedback",
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN returns non-null") {
+                result.shouldNotBeNull()
+            }
+
+            it("THEN starts with the heading") {
+                result!! shouldStartWith "## Addressed Feedback"
+            }
+
+            it("THEN includes the first file name as sub-heading") {
+                result!! shouldContain "### critical__missing-tests.md"
+            }
+
+            it("THEN includes the first file content") {
+                result!! shouldContain "Fixed missing tests."
+            }
+
+            it("THEN includes the second file name as sub-heading") {
+                result!! shouldContain "### important__error-handling.md"
+            }
+
+            it("THEN includes the second file content") {
+                result!! shouldContain "Added error handling."
+            }
+
+            it("THEN separates files with horizontal rule") {
+                result!! shouldContain "---"
+            }
+        }
+    }
+
+    describe("GIVEN a FeedbackDirectorySection with filenamePrefix filter") {
+        val tempDir = Files.createTempDirectory("section-feedbackdir-prefix-test")
+        val pendingDir = tempDir.resolve("pending")
+        Files.createDirectories(pendingDir)
+        Files.writeString(pendingDir.resolve("optional__naming.md"), "Naming suggestion.")
+        Files.writeString(pendingDir.resolve("critical__bug.md"), "Critical bug found.")
+        val section = InstructionSection.FeedbackDirectorySection(
+            dir = pendingDir,
+            heading = "Skipped Optional Feedback",
+            filenamePrefix = ProtocolVocabulary.SeverityPrefix.OPTIONAL,
+        )
+        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        describe("WHEN rendered") {
+            val result = section.render(request)
+
+            it("THEN returns non-null") {
+                result.shouldNotBeNull()
+            }
+
+            it("THEN includes the optional file") {
+                result!! shouldContain "optional__naming.md"
+            }
+
+            it("THEN does NOT include non-matching files") {
+                result!! shouldNotContain "critical__bug.md"
+            }
+        }
+    }
 })

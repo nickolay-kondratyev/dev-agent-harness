@@ -13,8 +13,9 @@ import kotlin.io.path.readText
  * A `render` call returns `null` to signal "skip this section" — the assembler filters
  * out nulls before joining, avoiding stray separators for absent optional sections.
  *
- * **7 shared subtypes** (this ticket); role-specific subtypes (InlineFileContentSection,
- * FeedbackDirectorySection) are tracked separately.
+ * **11 subtypes** — 7 shared (RoleDefinition, PrivateMd, PartContext, Ticket, OutputPathSection,
+ * WritingGuidelines, CallbackHelp) plus 4 feedback-loop subtypes (FeedbackItem,
+ * StructuredFeedbackFormat, FeedbackWritingInstructions, FeedbackDirectorySection).
  *
  * See ContextForAgentProvider spec (ref.ap.9HksYVzl1KkR9E1L2x8Tx.E), "Internal Design:
  * Data-Driven Assembly" section.
@@ -148,5 +149,93 @@ sealed class InstructionSection {
                 forReviewer = forReviewer,
                 includePlanValidation = includePlanValidation,
             )
+    }
+
+    // ── 8. Feedback item (doer inner loop) ─────────────────────────────────
+
+    /**
+     * Renders per-feedback-item instructions for a doer processing a single feedback item
+     * in the inner feedback loop.
+     *
+     * Always returns non-null — the feedback item is always actionable.
+     *
+     * Spec: granular-feedback-loop.md (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — Doer Instructions
+     * Per Feedback Item section.
+     */
+    data class FeedbackItem(
+        val feedbackContent: String,
+        val currentPath: Path,
+        val isOptional: Boolean,
+    ) : InstructionSection() {
+        override fun render(request: AgentInstructionRequest): String =
+            InstructionRenderers.feedbackItemInstructions(feedbackContent, currentPath, isOptional)
+    }
+
+    // ── 9. Structured feedback format (reviewer) ───────────────────────────
+
+    /**
+     * Returns the static structured feedback format guidance for reviewers.
+     *
+     * Spec: Structured Reviewer Feedback Contract (ref.ap.EslyJMFQq8BBrFXCzYw5P.E).
+     */
+    data object StructuredFeedbackFormat : InstructionSection() {
+        override fun render(request: AgentInstructionRequest): String =
+            InstructionText.REVIEWER_FEEDBACK_FORMAT
+    }
+
+    // ── 10. Feedback writing instructions (reviewer) ───────────────────────
+
+    /**
+     * Returns the static instructions for reviewers on writing individual feedback files
+     * to `__feedback/`.
+     *
+     * Spec: granular-feedback-loop.md (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E), R2.
+     */
+    data object FeedbackWritingInstructions : InstructionSection() {
+        override fun render(request: AgentInstructionRequest): String =
+            InstructionText.FEEDBACK_WRITING_INSTRUCTIONS
+    }
+
+    // ── 11. Feedback directory section (reviewer iteration > 1) ────────────
+
+    /**
+     * Globs `*.md` files in [dir] (optionally filtered by [filenamePrefix]), renders each
+     * file as `### filename\n\ncontent`, and joins them under a `## [heading]` header.
+     *
+     * Returns `null` when the directory does not exist, is not a directory, or contains no
+     * matching `.md` files — the assembler skips absent feedback directories silently.
+     *
+     * Pattern reused from `ContextForAgentProviderImpl.collectMarkdownFilesInDir()`.
+     */
+    data class FeedbackDirectorySection(
+        val dir: Path,
+        val heading: String,
+        val filenamePrefix: String? = null,
+    ) : InstructionSection() {
+
+        companion object {
+            private const val FILE_SEPARATOR = "\n\n---\n\n"
+        }
+
+        override fun render(request: AgentInstructionRequest): String? {
+            val renderedFiles = collectMarkdownFiles()
+            if (renderedFiles.isEmpty()) return null
+            val joinedContent = renderedFiles.joinToString(FILE_SEPARATOR)
+            return "## $heading\n\n$joinedContent"
+        }
+
+        private fun collectMarkdownFiles(): List<String> =
+            if (Files.exists(dir) && Files.isDirectory(dir)) {
+                Files.list(dir).use { stream ->
+                    stream
+                        .filter { Files.isRegularFile(it) && it.toString().endsWith(".md") }
+                        .filter { filenamePrefix == null || it.fileName.toString().startsWith(filenamePrefix) }
+                        .sorted()
+                        .map { "### ${it.fileName}\n\n${it.readText()}" }
+                        .toList()
+                }
+            } else {
+                emptyList()
+            }
     }
 }
