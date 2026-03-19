@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:53:27Z
 id: nid_fwf09ycnd4d8wdoqd1atuohgb_E
 title: "Implement GitCommitStrategy interface + CommitPerSubPart — harness-owned git commits"
-status: in_progress
+status: closed
 deps: [nid_a93jjhotbiv75jqm9ts3ne3e0_E, nid_m3cm8xizw5qhu1cu3454rca79_E, nid_i1jbftljythkars6fhhc6idne_E]
 links: []
 created_iso: 2026-03-18T23:45:04Z
-status_updated_iso: 2026-03-19T17:38:44Z
+status_updated_iso: 2026-03-19T17:53:27Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
