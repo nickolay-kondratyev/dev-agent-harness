@@ -25,26 +25,32 @@ skipped: 0
   - WHEN the doer signals Done(PASS)
     - [PASS] THEN IllegalStateException is thrown
 - (4) GIVEN a doer+reviewer executor
-  - WHEN the reviewer signals Crashed
-    - [PASS] THEN the result is PartResult.AgentCrashed
+  - WHEN the doer signals FailWorkflow before reviewer is needed
+    - [PASS] THEN only 1 spawn call is made (doer only, reviewer is not spawned)
 - (4) GIVEN a doer-only executor
   - WHEN the doer signals Done(NEEDS_ITERATION)
     - [PASS] THEN IllegalStateException is thrown
 - (5) GIVEN a doer+reviewer executor
-  - WHEN reviewer signals PASS but reviewer PUBLIC.md does not exist
+  - WHEN the reviewer signals Crashed
     - [PASS] THEN the result is PartResult.AgentCrashed
 - (5) GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED) but PUBLIC.md does not exist
     - [PASS] THEN the result is PartResult.AgentCrashed
 - (6) GIVEN a doer+reviewer executor
-  - WHEN doer signals COMPLETED but doer PUBLIC.md does not exist
+  - WHEN reviewer signals PASS but reviewer PUBLIC.md does not exist
     - [PASS] THEN the result is PartResult.AgentCrashed
 - (6) GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED) but PUBLIC.md is empty
     - [PASS] THEN the result is PartResult.AgentCrashed
+- (7) GIVEN a doer+reviewer executor
+  - WHEN doer signals COMPLETED but doer PUBLIC.md does not exist
+    - [PASS] THEN the result is PartResult.AgentCrashed
 - (7) GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED)
     - [PASS] THEN readContextWindowState is called
+- (8) GIVEN a doer+reviewer executor
+  - WHEN reviewer signals Done(COMPLETED) instead of PASS or NEEDS_ITERATION
+    - [PASS] THEN IllegalStateException is thrown
 - (8) GIVEN a doer-only executor
   - WHEN execution completes
     - [PASS] THEN killSession is called for the doer

@@ -2,8 +2,8 @@ package com.glassthought.shepherd.core.executor
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
-import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.ShepherdValType
 import com.glassthought.shepherd.core.agent.facade.AgentFacade
 import com.glassthought.shepherd.core.agent.facade.AgentPayload
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
@@ -41,8 +41,9 @@ data class PartExecutorDeps(
  * -> PUBLIC.md validation -> git commit -> map to PartResult.
  *
  * **Doer+reviewer path** (`reviewerConfig != null`): spawn doer -> send -> await COMPLETED ->
- * PUBLIC.md validation -> git commit -> spawn reviewer -> send -> await -> on PASS: complete,
- * on NEEDS_ITERATION: increment iteration, re-instruct doer with reviewer's PUBLIC.md.
+ * PUBLIC.md validation -> git commit -> lazily spawn reviewer (first iteration only) -> send ->
+ * await -> on PASS: complete, on NEEDS_ITERATION: increment iteration, re-instruct doer with
+ * reviewer's PUBLIC.md. Reviewer session stays alive for subsequent iterations.
  *
  * **R6 constraint**: NO Clock, SessionsState, AgentUnresponsiveUseCase, or
  * ContextWindowStateReader in constructor — those belong to AgentFacadeImpl.
@@ -87,6 +88,7 @@ class PartExecutorImpl(
             DoneResult.COMPLETED -> {
                 validatePublicMdOrCrash(doerConfig, handle, null)
                     ?: run {
+                        // transitionTo called for validation only — throws on invalid state transition.
                         doerStatus.transitionTo(signal)
                         doerStatus = SubPartStatus.COMPLETED
                         afterDone(doerConfig, signal.result, handle)
@@ -109,12 +111,18 @@ class PartExecutorImpl(
     @Suppress("ReturnCount")
     private suspend fun executeDoerWithReviewer(revConfig: SubPartConfig): PartResult {
         val doerHandle = spawnSubPart(doerConfig, isDoer = true)
-        val reviewerHandle = spawnSubPart(revConfig, isDoer = false)
+        var reviewerHandle: SpawnedAgentHandle? = null
         var doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = null)
 
         while (true) {
             val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle, reviewerHandle)
             if (doerResult != null) return doerResult
+
+            // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
+            // Subsequent iterations reuse the already-alive reviewer session.
+            if (reviewerHandle == null) {
+                reviewerHandle = spawnSubPart(revConfig, isDoer = false)
+            }
 
             val revResult = mapReviewerSignal(
                 sendReviewerInstructions(reviewerHandle, revConfig), doerHandle, reviewerHandle, revConfig
@@ -129,7 +137,7 @@ class PartExecutorImpl(
     private suspend fun mapDoerSignalInReviewerPath(
         signal: AgentSignal,
         doerHandle: SpawnedAgentHandle,
-        reviewerHandle: SpawnedAgentHandle,
+        reviewerHandle: SpawnedAgentHandle?,
     ): PartResult? = when (signal) {
         is AgentSignal.Done -> {
             check(signal.result == DoneResult.COMPLETED) {
@@ -196,8 +204,8 @@ class PartExecutorImpl(
             maxIterations += ITERATION_INCREMENT
             out.info("iteration_budget_extended") {
                 listOf(
-                    Val(maxIterations.toString(), ValType.STRING_USER_AGNOSTIC),
-                    Val(currentIteration.toString(), ValType.STRING_USER_AGNOSTIC),
+                    Val(maxIterations.toString(), ShepherdValType.MAX_ITERATIONS),
+                    Val(currentIteration.toString(), ShepherdValType.ITERATION_COUNT),
                 )
             }
             return null
@@ -212,7 +220,7 @@ class PartExecutorImpl(
         if (isDoer) { doerStatus.validateCanSpawn(); doerStatus = SubPartStatus.IN_PROGRESS }
         else { reviewerStatus.validateCanSpawn(); reviewerStatus = SubPartStatus.IN_PROGRESS }
         out.info(if (isDoer) "spawning_doer" else "spawning_reviewer") {
-            listOf(Val(config.subPartName, ValType.STRING_USER_AGNOSTIC))
+            listOf(Val(config.subPartName, ShepherdValType.SUB_PART_NAME))
         }
         return deps.agentFacade.spawnAgent(config.toSpawnAgentConfig())
     }
@@ -264,7 +272,7 @@ class PartExecutorImpl(
         ))
         val state = deps.agentFacade.readContextWindowState(handle)
         out.debug("context_window_state_at_done_boundary") {
-            listOf(Val(state.remainingPercentage?.toString() ?: "unknown", ValType.STRING_USER_AGNOSTIC))
+            listOf(Val(state.remainingPercentage?.toString() ?: "unknown", ShepherdValType.CONTEXT_WINDOW_REMAINING))
         }
     }
 

@@ -31,4 +31,32 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** Current iteration number in a doer/reviewer loop (0-based). */
+    val ITERATION_COUNT = ValTypeV2(
+        typeName = "ITERATION_COUNT",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Maximum iterations allowed in a doer/reviewer loop. */
+    val MAX_ITERATIONS = ValTypeV2(
+        typeName = "MAX_ITERATIONS",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Name of a sub-part (doer or reviewer) being spawned or referenced. */
+    val SUB_PART_NAME = ValTypeV2(
+        typeName = "SUB_PART_NAME",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
+    /** Remaining context window percentage reported by an agent. */
+    val CONTEXT_WINDOW_REMAINING = ValTypeV2(
+        typeName = "CONTEXT_WINDOW_REMAINING",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }

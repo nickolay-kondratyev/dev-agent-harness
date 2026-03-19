@@ -646,6 +646,34 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         }
     }
 
+    // ── Doer+Reviewer: Reviewer spawned lazily (only after doer COMPLETED) ──
+
+    describe("GIVEN a doer+reviewer executor") {
+        describe("WHEN the doer signals FailWorkflow before reviewer is needed") {
+
+            it("THEN only 1 spawn call is made (doer only, reviewer is not spawned)") {
+                val doerPublicMd = createPublicMdFile()
+                val reviewerPublicMd = createPublicMdFile()
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd)
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(
+                    listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2"))
+                )
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ ->
+                    AgentSignal.FailWorkflow("cannot proceed")
+                }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                executor.execute()
+
+                facade.spawnCalls shouldHaveSize 1
+            }
+        }
+    }
+
     // ── Doer+Reviewer: Reviewer Crashed ─────────────────────────────────
 
     describe("GIVEN a doer+reviewer executor") {
@@ -793,6 +821,41 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 facade.spawnCalls.first().partName shouldBe "part_1"
                 facade.spawnCalls.first().subPartName shouldBe "doer"
                 facade.spawnCalls.first().role shouldBe "DOER"
+            }
+        }
+    }
+
+    // ── Doer+Reviewer: Reviewer Done(COMPLETED) → IllegalStateException ──
+
+    describe("GIVEN a doer+reviewer executor") {
+        describe("WHEN reviewer signals Done(COMPLETED) instead of PASS or NEEDS_ITERATION") {
+
+            it("THEN IllegalStateException is thrown") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED), // doer
+                        AgentSignal.Done(DoneResult.COMPLETED), // reviewer — invalid
+                    )
+                )
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(
+                    listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2"))
+                )
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+
+                shouldThrow<IllegalStateException> {
+                    executor.execute()
+                }
             }
         }
     }
