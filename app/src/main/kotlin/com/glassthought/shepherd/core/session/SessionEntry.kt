@@ -33,7 +33,7 @@ class SessionEntry(
     val subPartName: String,
     val subPartIndex: Int,
     val signalDeferred: CompletableDeferred<AgentSignal>,
-    val lastActivityTimestamp: Instant,
+    val lastActivityTimestamp: AtomicReference<Instant>,
     val pendingPayloadAck: AtomicReference<PayloadId?> = AtomicReference(null),
     val questionQueue: ConcurrentLinkedQueue<UserQuestionContext>,
 ) {

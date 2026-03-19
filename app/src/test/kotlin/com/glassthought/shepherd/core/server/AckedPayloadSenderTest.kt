@@ -356,7 +356,7 @@ private fun createTestSessionEntry(
     subPartName = "test-sub-part",
     subPartIndex = 0,
     signalDeferred = CompletableDeferred<AgentSignal>(),
-    lastActivityTimestamp = Instant.now(),
+    lastActivityTimestamp = AtomicReference(Instant.now()),
     pendingPayloadAck = AtomicReference(null),
     questionQueue = ConcurrentLinkedQueue(),
 )

@@ -32,6 +32,7 @@ dependencies {
     testImplementation(libs.kotest.assertions.core)
     testImplementation(libs.kotest.runner.junit5)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation(libs.ktor.server.test.host)
 
     testRuntimeOnly("org.junit.platform:junit-platform-launcher")
 

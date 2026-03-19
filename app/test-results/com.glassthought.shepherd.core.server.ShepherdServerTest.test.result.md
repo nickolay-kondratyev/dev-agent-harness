@@ -1,0 +1,59 @@
+---
+spec: "com.glassthought.shepherd.core.server.ShepherdServerTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a DOER session whose deferred is already completed
+  - WHEN POST /signal/done is sent again (duplicate)
+    - [PASS] THEN returns 200 (idempotent)
+- GIVEN a registered DOER session
+  - WHEN POST /signal/done with invalid result=banana
+    - [PASS] THEN returns 400
+  - WHEN POST /signal/done with result=completed
+    - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with Done(COMPLETED)
+  - WHEN POST /signal/done with result=pass (role mismatch)
+    - [PASS] THEN returns 400
+- GIVEN a registered REVIEWER session
+  - WHEN POST /signal/done with result=completed (role mismatch)
+    - [PASS] THEN returns 400
+  - WHEN POST /signal/done with result=needs_iteration
+    - [PASS] THEN signalDeferred is completed with Done(NEEDS_ITERATION)
+  - WHEN POST /signal/done with result=pass
+    - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with Done(PASS)
+- GIVEN a registered session
+  - WHEN POST /signal/fail-workflow
+    - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with FailWorkflow
+- GIVEN a registered session for self-compacted
+  - WHEN POST /signal/self-compacted
+    - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with SelfCompacted
+- GIVEN a registered session with an old timestamp
+  - WHEN POST /signal/started
+    - [PASS] THEN lastActivityTimestamp is updated
+    - [PASS] THEN returns 200
+- GIVEN a registered session with empty question queue
+  - WHEN POST /signal/user-question
+    - [PASS] THEN question is appended to questionQueue
+    - [PASS] THEN returns 200
+- GIVEN a session whose deferred was already completed by done
+  - WHEN POST /signal/fail-workflow (late fail after done)
+    - [PASS] THEN returns 200 (idempotent)
+    - [PASS] THEN signalDeferred retains the original Done signal
+- GIVEN a session with a pending payload ACK
+  - WHEN POST /signal/ack-payload with matching payloadId
+    - [PASS] THEN pendingPayloadAck is cleared to null
+    - [PASS] THEN returns 200
+  - WHEN POST /signal/ack-payload with mismatched payloadId
+    - [PASS] THEN pendingPayloadAck is NOT cleared
+    - [PASS] THEN returns 200
+- GIVEN a session with null pendingPayloadAck
+  - WHEN POST /signal/ack-payload (duplicate ACK)
+    - [PASS] THEN returns 200
+- GIVEN no session is registered
+  - WHEN POST /signal/done with unknown GUID
+    - [PASS] THEN returns 404
