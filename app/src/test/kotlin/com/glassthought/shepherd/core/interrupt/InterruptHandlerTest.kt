@@ -13,7 +13,6 @@ import com.glassthought.shepherd.core.state.SubPartStatus
 import com.glassthought.shepherd.core.time.TestClock
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import io.kotest.assertions.throwables.shouldThrow
-import io.kotest.matchers.collections.shouldBeEmpty
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import kotlin.time.Duration.Companion.milliseconds

@@ -8,6 +8,7 @@ import com.glassthought.shepherd.core.state.SubPartStatus
 import com.glassthought.shepherd.core.time.Clock
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import kotlinx.coroutines.runBlocking
+import com.asgard.core.annotation.AnchorPoint
 import sun.misc.Signal
 import java.time.Instant
 
@@ -15,11 +16,14 @@ import java.time.Instant
  * Handles SIGINT (Ctrl+C) using the double-press pattern to prevent accidental termination.
  *
  * 1. First Ctrl+C  -> prints confirmation prompt, records timestamp. Execution continues.
- * 2. Second Ctrl+C within [CONFIRM_WINDOW_SECONDS]s -> cleanup and exit.
+ * 2. Second Ctrl+C within [CONFIRM_WINDOW_MS]ms -> cleanup and exit.
  * 3. Second Ctrl+C after window expires -> treated as fresh first Ctrl+C.
  *
  * See spec: `doc/core/TicketShepherd.md` section "Interrupt Protocol (Ctrl+C)".
+ *
+ * ap.yWFAwVrZdx1UTDqDJmDpe.E
  */
+@AnchorPoint("ap.yWFAwVrZdx1UTDqDJmDpe.E")
 interface InterruptHandler {
     /**
      * Registers the SIGINT handler. Called once during startup.
@@ -75,8 +79,8 @@ class InterruptHandlerImpl(
     }
 
     private fun isWithinConfirmWindow(now: Instant, firstPress: Instant): Boolean {
-        val elapsedSeconds = java.time.Duration.between(firstPress, now).seconds
-        return elapsedSeconds < CONFIRM_WINDOW_SECONDS
+        val elapsedMs = java.time.Duration.between(firstPress, now).toMillis()
+        return elapsedMs < CONFIRM_WINDOW_MS
     }
 
     private fun performCleanupAndExit() {
@@ -99,7 +103,7 @@ class InterruptHandlerImpl(
     }
 
     companion object {
-        internal const val CONFIRM_WINDOW_SECONDS = 2L
+        internal const val CONFIRM_WINDOW_MS = 2000L
         internal const val CONFIRMATION_MESSAGE = "Press Ctrl+C again to confirm exit."
         private const val EXIT_CODE_INTERRUPTED = 1
     }
