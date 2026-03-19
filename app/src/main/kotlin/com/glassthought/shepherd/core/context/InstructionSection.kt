@@ -105,7 +105,11 @@ sealed class InstructionSection {
      *
      * Constructed with a concrete [label] and [path] when building the per-request plan.
      * Replaces the former role-specific output path sections (PlanFlowJsonOutputPath,
-     * PlanMdOutputPath, PublicMdOutputPath).
+     * PlanMdOutputPath, PublicMdOutputPath) which each had slightly different heading/body
+     * wording (e.g. "Output Path" vs "$label Output Path", "human-readable plan" vs file name).
+     * Those differences were accidental inconsistency. This class provides a **single canonical
+     * template** for all output paths: heading `## $label Output Path` and body
+     * `Write your $label to:`. This is the intended format going forward.
      */
     data class OutputPathSection(
         val label: String,

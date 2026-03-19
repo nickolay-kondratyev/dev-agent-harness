@@ -5,6 +5,7 @@ import io.kotest.matchers.nulls.shouldBeNull
 import io.kotest.matchers.nulls.shouldNotBeNull
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
+import io.kotest.matchers.string.shouldNotContain
 import io.kotest.matchers.string.shouldStartWith
 import java.nio.file.Files
 import java.nio.file.Path
@@ -266,7 +267,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
             }
 
             it("THEN does NOT include validate-plan query") {
-                result shouldContain "Communicating with the Harness"
+                result shouldNotContain "validate-plan"
             }
         }
     }
