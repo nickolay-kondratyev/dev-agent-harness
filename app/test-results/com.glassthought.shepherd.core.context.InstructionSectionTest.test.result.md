@@ -67,6 +67,46 @@ skipped: 0
   - WHEN rendered
     - [PASS] THEN includes the part name
     - [PASS] THEN returns non-null
+- GIVEN a PlanFormatInstructions section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PlanFormatInstructions section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns the static plan format instructions text
+- GIVEN a PlanMd section with a DoerRequest and non-null planMdPath
+  - WHEN rendered
+    - [PASS] THEN includes the plan file content
+    - [PASS] THEN returns non-null
+    - [PASS] THEN starts with Plan heading
+- GIVEN a PlanMd section with a DoerRequest and non-null planMdPath pointing to missing file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a PlanMd section with a DoerRequest and null planMdPath
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PlanMd section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with a DoerRequest and empty priorPublicMdPaths
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with a DoerRequest and missing prior file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN a PriorPublicMd section with a DoerRequest and non-empty priorPublicMdPaths
+  - WHEN rendered
+    - [PASS] THEN includes first prior file content
+    - [PASS] THEN includes first prior file name as heading
+    - [PASS] THEN includes second prior file content
+    - [PASS] THEN includes second prior file name as heading
+    - [PASS] THEN returns non-null
+- GIVEN a PriorPublicMd section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PriorPublicMd section with specific prior paths (negative test)
+  - WHEN rendered
+    - [PASS] THEN does NOT include planner PUBLIC.md content (not in the list)
+    - [PASS] THEN renders only the files in the provided list
 - GIVEN a PrivateMd section with blank file
   - WHEN rendered
     - [PASS] THEN returns null
@@ -81,6 +121,14 @@ skipped: 0
 - GIVEN a PrivateMd section with privateMdPath = null
   - WHEN rendered
     - [PASS] THEN returns null
+- GIVEN a RoleCatalog section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a RoleCatalog section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN includes Available Roles heading
+    - [PASS] THEN includes role names from catalog
+    - [PASS] THEN returns non-null
 - GIVEN a RoleDefinition section
   - WHEN rendered
     - [PASS] THEN includes the role file content
@@ -96,6 +144,40 @@ skipped: 0
 - GIVEN a WritingGuidelines section
   - WHEN rendered
     - [PASS] THEN returns the static writing guidelines text
+- GIVEN an AvailableAgentTypes section
+  - WHEN rendered with any request type
+    - [PASS] THEN mentions V1 constraints
+    - [PASS] THEN returns the static agent types text
+- GIVEN an AvailableAgentTypes section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns the static agent types text
+- GIVEN an InlineFileContentSection with a non-null path and existing file
+  - WHEN rendered
+    - [PASS] THEN includes the file content
+    - [PASS] THEN includes the heading
+    - [PASS] THEN returns non-null
+- GIVEN an InlineFileContentSection with a non-null path and missing file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN an InlineFileContentSection with a null path
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN an IterationFeedback section with a DoerRequest and missing reviewer file
+  - WHEN rendered
+    - [PASS] THEN throws IllegalStateException
+- GIVEN an IterationFeedback section with a DoerRequest and non-null reviewerPublicMdPath
+  - WHEN rendered
+    - [PASS] THEN includes Reviewer Feedback heading
+    - [PASS] THEN includes pushback guidance
+    - [PASS] THEN includes the reviewer feedback content
+    - [PASS] THEN returns non-null
+    - [PASS] THEN wraps pushback guidance in compaction-survival tags
+- GIVEN an IterationFeedback section with a DoerRequest and null reviewerPublicMdPath (iteration 1)
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN an IterationFeedback section with a ReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
 - GIVEN an OutputPathSection for PUBLIC.md
   - WHEN rendered
     - [PASS] THEN includes the label in heading

@@ -3,6 +3,9 @@
 # See: https://detekt.dev/docs/rules/configuration/
 
 complexity:
+  LargeClass:
+    # Test classes grow naturally as new subtypes are tested — exclude test sources.
+    excludes: ['**/test/**']
   LongParameterList:
     # Allow more parameters in constructors for data classes and test builders.
     constructorThreshold: 8
