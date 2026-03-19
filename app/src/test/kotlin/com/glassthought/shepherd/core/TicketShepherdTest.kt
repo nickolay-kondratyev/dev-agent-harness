@@ -19,6 +19,7 @@ import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdater
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
+import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldContain
 
 // ── Test Fakes (prefixed with "Ts" to avoid redeclaration with same-package test files) ─────
@@ -173,6 +174,7 @@ private fun createFixture(
         finalCommitUseCase = fakeFinalCommit,
         ticketStatusUpdater = fakeStatusUpdater,
         out = outFactory.getOutForClass(TicketShepherd::class),
+        ticketId = "test-ticket-42",
     )
 
     val shepherd = TicketShepherd(
@@ -231,10 +233,11 @@ class TicketShepherdTest : AsgardDescribeSpec(
                     fixture.fakeKiller.killAllSessionsCalled shouldBe true
                 }
 
-                it("THEN prints success message in green") {
+                it("THEN prints success message in green with ticket ID") {
                     val fixture = createFixture(parts, results, outFactory)
                     shouldThrow<TsProcessExitException> { fixture.shepherd.run() }
-                    fixture.fakeConsole.greenMessages.first() shouldContain "Workflow completed successfully"
+                    val expectedMessage = "Workflow completed successfully for ticket test-ticket-42."
+                    fixture.fakeConsole.greenMessages.first() shouldBe expectedMessage
                 }
 
                 it("THEN exits with code 0") {
@@ -341,6 +344,51 @@ class TicketShepherdTest : AsgardDescribeSpec(
             }
         }
 
+        describe("GIVEN a part with 1 sub-part (doer only)") {
+            val singleSubPartPart = Part(
+                name = "single-subpart",
+                phase = Phase.EXECUTION,
+                description = "part with doer only",
+                subParts = listOf(SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet")),
+            )
+
+            describe("WHEN run() is called") {
+
+                it("THEN factory receives the part with exactly 1 sub-part") {
+                    val fixture = createFixture(listOf(singleSubPartPart), listOf(PartResult.Completed), outFactory)
+                    shouldThrow<TsProcessExitException> { fixture.shepherd.run() }
+                    fixture.fakeFactory.createdForParts[0].subParts.size shouldBe 1
+                }
+            }
+        }
+
+        describe("GIVEN a part with 2 sub-parts (doer + reviewer)") {
+            val twoSubPartsPart = Part(
+                name = "with-reviewer",
+                phase = Phase.EXECUTION,
+                description = "part with doer and reviewer",
+                subParts = listOf(
+                    SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet"),
+                    SubPart(name = "review", role = "REVIEWER", agentType = "ClaudeCode", model = "opus"),
+                ),
+            )
+
+            describe("WHEN run() is called") {
+
+                it("THEN factory receives the part with exactly 2 sub-parts") {
+                    val fixture = createFixture(listOf(twoSubPartsPart), listOf(PartResult.Completed), outFactory)
+                    shouldThrow<TsProcessExitException> { fixture.shepherd.run() }
+                    fixture.fakeFactory.createdForParts[0].subParts.size shouldBe 2
+                }
+
+                it("THEN factory receives the reviewer sub-part as second element") {
+                    val fixture = createFixture(listOf(twoSubPartsPart), listOf(PartResult.Completed), outFactory)
+                    shouldThrow<TsProcessExitException> { fixture.shepherd.run() }
+                    fixture.fakeFactory.createdForParts[0].subParts[1].role shouldBe "REVIEWER"
+                }
+            }
+        }
+
         describe("GIVEN activeExecutor tracking during execution") {
             describe("WHEN a part is being executed") {
 
@@ -371,6 +419,7 @@ class TicketShepherdTest : AsgardDescribeSpec(
                         finalCommitUseCase = TsFinalCommitUseCase(),
                         ticketStatusUpdater = TsTicketStatusUpdater(),
                         out = outFactory.getOutForClass(TicketShepherd::class),
+                        ticketId = "test-ticket-42",
                     )
 
                     shepherd = TicketShepherd(
@@ -384,7 +433,7 @@ class TicketShepherdTest : AsgardDescribeSpec(
 
                     // During execution, activeExecutor was the executor itself (non-null)
                     capturedActiveExecutors.size shouldBe 1
-                    capturedActiveExecutors[0] shouldBe capturedActiveExecutors[0]
+                    capturedActiveExecutors[0] shouldNotBe null
                     // After execution, activeExecutor should be null
                     shepherd.activeExecutor shouldBe null
                 }
@@ -422,6 +471,7 @@ class TicketShepherdTest : AsgardDescribeSpec(
                         finalCommitUseCase = FinalCommitUseCase { orderTracker.add("final_commit") },
                         ticketStatusUpdater = TicketStatusUpdater { orderTracker.add("mark_done") },
                         out = outFactory.getOutForClass(TicketShepherd::class),
+                        ticketId = "test-ticket-42",
                     )
 
                     val shepherd = TicketShepherd(

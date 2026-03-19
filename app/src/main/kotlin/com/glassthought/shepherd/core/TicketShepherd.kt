@@ -31,6 +31,7 @@ data class TicketShepherdDeps(
     val finalCommitUseCase: FinalCommitUseCase,
     val ticketStatusUpdater: TicketStatusUpdater,
     val out: Out,
+    val ticketId: String,
 )
 
 /**
@@ -105,12 +106,14 @@ class TicketShepherd(
         deps.finalCommitUseCase.commitIfDirty()
         deps.ticketStatusUpdater.markDone()
         deps.allSessionsKiller.killAllSessions()
-        deps.consoleOutput.printlnGreen(SUCCESS_MESSAGE)
+        deps.consoleOutput.printlnGreen(successMessage(deps.ticketId))
         deps.processExiter.exit(EXIT_CODE_SUCCESS)
     }
 
     companion object {
-        internal const val SUCCESS_MESSAGE = "Workflow completed successfully for ticket."
         private const val EXIT_CODE_SUCCESS = 0
+
+        internal fun successMessage(ticketId: String): String =
+            "Workflow completed successfully for ticket $ticketId."
     }
 }
