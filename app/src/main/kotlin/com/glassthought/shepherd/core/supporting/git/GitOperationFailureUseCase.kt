@@ -19,7 +19,7 @@ import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUse
  * See `doc/core/git.md` § Git Operation Failure Handling.
  */
 // ap.3W25hwJNB64sPy63Nc3OV.E
-interface GitOperationFailureUseCase {
+fun interface GitOperationFailureUseCase {
 
     /**
      * Handles a failed git operation.
