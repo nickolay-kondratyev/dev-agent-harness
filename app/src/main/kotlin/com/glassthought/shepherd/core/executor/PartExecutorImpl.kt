@@ -33,6 +33,7 @@ data class PartExecutorDeps(
     val outFactory: OutFactory,
     val publicMdValidator: PublicMdValidator = PublicMdValidator(),
     val partCompletionGuard: PartCompletionGuard = PartCompletionGuard(),
+    val innerFeedbackLoop: InnerFeedbackLoop? = null,
 )
 
 /**
@@ -112,24 +113,31 @@ class PartExecutorImpl(
     private suspend fun executeDoerWithReviewer(revConfig: SubPartConfig): PartResult {
         val doerHandle = spawnSubPart(doerConfig, isDoer = true)
         var reviewerHandle: SpawnedAgentHandle? = null
-        var doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = null)
+        val doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = null)
 
+        val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle, reviewerHandle)
+        if (doerResult != null) return doerResult
+
+        // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
+        reviewerHandle = spawnSubPart(revConfig, isDoer = false)
+
+        var reviewerSignal = sendReviewerInstructions(reviewerHandle, revConfig)
+
+        // Outer reviewer loop: each iteration handles one reviewer signal.
+        // PASS -> complete. NEEDS_ITERATION -> inner loop + re-instruct reviewer.
         while (true) {
-            val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle, reviewerHandle)
-            if (doerResult != null) return doerResult
-
-            // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
-            // Subsequent iterations reuse the already-alive reviewer session.
-            if (reviewerHandle == null) {
-                reviewerHandle = spawnSubPart(revConfig, isDoer = false)
-            }
-
-            val revResult = mapReviewerSignal(
-                sendReviewerInstructions(reviewerHandle, revConfig), doerHandle, reviewerHandle, revConfig
-            )
+            val revResult = mapReviewerSignal(reviewerSignal, doerHandle, reviewerHandle, revConfig)
             if (revResult != null) return revResult
 
-            doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
+            // NEEDS_ITERATION: processNeedsIteration handles budget check + inner loop.
+            // If it returns a PartResult, we're done (budget exhausted, crash, etc.)
+            val needsIterResult = processNeedsIteration(
+                doerHandle, reviewerHandle, revConfig,
+            )
+            if (needsIterResult != null) return needsIterResult
+
+            // Re-instruct reviewer after inner loop.
+            reviewerSignal = sendReviewerInstructions(reviewerHandle, revConfig)
         }
     }
 
@@ -153,64 +161,120 @@ class PartExecutorImpl(
         AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
     }
 
-    /** Returns [PartResult] to stop, or null to continue iteration. */
+    /**
+     * Returns [PartResult] to stop, or null to continue iteration (NEEDS_ITERATION).
+     *
+     * PASS -> complete (validates, kills sessions, returns Completed).
+     * NEEDS_ITERATION -> returns null (caller handles inner loop + re-instruction).
+     * COMPLETED/FailWorkflow/Crashed/SelfCompacted -> terminal.
+     */
     @Suppress("ReturnCount")
     private suspend fun mapReviewerSignal(
         signal: AgentSignal,
         doerHandle: SpawnedAgentHandle,
         reviewerHandle: SpawnedAgentHandle,
         revConfig: SubPartConfig,
-    ): PartResult? = when (signal) {
-        is AgentSignal.Done -> when (signal.result) {
-            DoneResult.PASS -> validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
-                ?: validateCompletionGuardOrCrash(revConfig, doerHandle, reviewerHandle)
-                ?: run {
+    ): PartResult? {
+        return when (signal) {
+            is AgentSignal.Done -> when (signal.result) {
+                DoneResult.PASS -> validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
+                    ?: validateCompletionGuardOrCrash(revConfig, doerHandle, reviewerHandle)
+                    ?: run {
+                        reviewerStatus.transitionTo(signal)
+                        reviewerStatus = SubPartStatus.COMPLETED
+                        doerStatus = SubPartStatus.COMPLETED
+                        afterDone(revConfig, signal.result, reviewerHandle)
+                        killAllSessions(doerHandle, reviewerHandle)
+                        PartResult.Completed
+                    }
+                DoneResult.NEEDS_ITERATION -> {
+                    // Validate PUBLIC.md and do afterDone for the reviewer, but return null
+                    // to signal the caller to run the inner feedback loop.
+                    val crash = validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
+                    if (crash != null) return crash
                     reviewerStatus.transitionTo(signal)
-                    reviewerStatus = SubPartStatus.COMPLETED
-                    doerStatus = SubPartStatus.COMPLETED
                     afterDone(revConfig, signal.result, reviewerHandle)
-                    killAllSessions(doerHandle, reviewerHandle)
-                    PartResult.Completed
+                    null
                 }
-            DoneResult.NEEDS_ITERATION -> processNeedsIteration(signal, doerHandle, reviewerHandle, revConfig)
-            DoneResult.COMPLETED -> {
-                killAllSessions(doerHandle, reviewerHandle)
-                error("Reviewer sent Done(COMPLETED) — expected PASS or NEEDS_ITERATION")
+                DoneResult.COMPLETED -> {
+                    killAllSessions(doerHandle, reviewerHandle)
+                    error("Reviewer sent Done(COMPLETED) — expected PASS or NEEDS_ITERATION")
+                }
             }
+            is AgentSignal.FailWorkflow -> terminateWith(
+                doerHandle, reviewerHandle, SubPartRole.REVIEWER,
+                PartResult.FailedWorkflow(signal.reason),
+            )
+            is AgentSignal.Crashed -> terminateWith(
+                doerHandle, reviewerHandle, SubPartRole.REVIEWER,
+                PartResult.AgentCrashed(signal.details),
+            )
+            AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
         }
-        is AgentSignal.FailWorkflow ->
-            terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.FailedWorkflow(signal.reason))
-        is AgentSignal.Crashed ->
-            terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.AgentCrashed(signal.details))
-        AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
     }
 
+    /**
+     * Handles the NEEDS_ITERATION flow: iteration budget check, inner feedback loop.
+     *
+     * Called AFTER mapReviewerSignal has validated PUBLIC.md and called afterDone.
+     * Returns [PartResult] if a terminal condition is reached (budget exhausted, crash),
+     * or null to continue to reviewer re-instruction.
+     *
+     * R10: iteration.current increments once per needs_iteration, NOT per feedback item.
+     */
     @Suppress("ReturnCount")
     private suspend fun processNeedsIteration(
-        signal: AgentSignal.Done,
         doerHandle: SpawnedAgentHandle,
         reviewerHandle: SpawnedAgentHandle,
         revConfig: SubPartConfig,
     ): PartResult? {
-        val crash = validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
-        if (crash != null) return crash
-        reviewerStatus.transitionTo(signal)
-        afterDone(revConfig, signal.result, reviewerHandle)
+        // R10: iteration counter increments once per reviewer needs_iteration
         currentIteration++
-        if (currentIteration < maxIterations) return null
-        val granted = deps.failedToConvergeUseCase.askForMoreIterations(maxIterations, currentIteration)
-        if (granted) {
-            maxIterations += ITERATION_INCREMENT
-            out.info("iteration_budget_extended") {
-                listOf(
-                    Val(maxIterations.toString(), ShepherdValType.MAX_ITERATIONS),
-                    Val(currentIteration.toString(), ShepherdValType.ITERATION_COUNT),
+
+        // Budget check
+        if (currentIteration >= maxIterations) {
+            val granted = deps.failedToConvergeUseCase
+                .askForMoreIterations(maxIterations, currentIteration)
+            if (granted) {
+                maxIterations += ITERATION_INCREMENT
+                out.info("iteration_budget_extended") {
+                    listOf(
+                        Val(maxIterations.toString(), ShepherdValType.MAX_ITERATIONS),
+                        Val(currentIteration.toString(), ShepherdValType.ITERATION_COUNT),
+                    )
+                }
+            } else {
+                killAllSessions(doerHandle, reviewerHandle)
+                return PartResult.FailedToConverge(
+                    "Iteration budget exhausted after " +
+                        "$currentIteration iterations"
                 )
             }
-            return null
         }
-        killAllSessions(doerHandle, reviewerHandle)
-        return PartResult.FailedToConverge("Iteration budget exhausted after $currentIteration iterations")
+
+        // Inner feedback loop (R3, R9, R11)
+        val innerLoop = deps.innerFeedbackLoop ?: return null
+        val feedbackDir = revConfig.feedbackDir
+            ?: error("Reviewer config must have feedbackDir")
+
+        val innerResult = innerLoop.execute(
+            InnerLoopContext(
+                doerHandle = doerHandle,
+                reviewerHandle = reviewerHandle,
+                feedbackDir = feedbackDir,
+                doerConfig = doerConfig,
+                currentIteration = currentIteration,
+                maxIterations = maxIterations,
+            )
+        )
+
+        return when (innerResult) {
+            is InnerLoopOutcome.Terminate -> {
+                killAllSessions(doerHandle, reviewerHandle)
+                innerResult.result
+            }
+            is InnerLoopOutcome.Continue -> null
+        }
     }
 
     // ── Infrastructure helpers ──────────────────────────────────────────
