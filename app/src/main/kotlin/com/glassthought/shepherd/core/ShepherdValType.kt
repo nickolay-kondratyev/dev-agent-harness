@@ -39,13 +39,6 @@ object ShepherdValType {
         expectedValClass = String::class,
     )
 
-    /** Signal action name from the callback URL path (e.g., "done", "started"). */
-    val SIGNAL_ACTION = ValTypeV2(
-        typeName = "SIGNAL_ACTION",
-        userSpecificity = UserSpecificity.USER_AGNOSTIC,
-        expectedValClass = String::class,
-    )
-
     /** Result string from a /signal/done callback (e.g., "completed", "pass"). */
     val RESULT = ValTypeV2(
         typeName = "RESULT",

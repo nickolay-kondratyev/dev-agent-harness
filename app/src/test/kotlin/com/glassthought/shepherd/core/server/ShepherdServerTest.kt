@@ -22,6 +22,26 @@ class ShepherdServerTest : AsgardDescribeSpec(
     config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
     body = {
 
+    // ── malformed JSON ─────────────────────────────────────────────────
+
+    describe("GIVEN a registered session") {
+        describe("WHEN POST /signal/done with missing required field") {
+            it("THEN returns 400 (not 500)") {
+                val (sessionsState, _) = registerDoerSession()
+                val server = ShepherdServer(sessionsState, outFactory)
+
+                testApplication {
+                    application { server.configureApplication(this) }
+                    val response = client.post("/callback-shepherd/signal/done") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"some-guid"}""")
+                    }
+                    response.status shouldBe HttpStatusCode.BadRequest
+                }
+            }
+        }
+    }
+
     // ── /signal/done ───────────────────────────────────────────────────
 
     describe("GIVEN a registered DOER session") {
@@ -405,6 +425,56 @@ class ShepherdServerTest : AsgardDescribeSpec(
 
                 testApplication {
                     application { server.configureApplication(this) }
+                    client.post("/callback-shepherd/signal/self-compacted") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"${guid.value}"}""")
+                    }
+                }
+
+                entry.signalDeferred.getCompleted() shouldBe AgentSignal.SelfCompacted
+            }
+        }
+    }
+
+    describe("GIVEN a session whose deferred was already completed by self-compacted") {
+        describe("WHEN POST /signal/self-compacted is sent again (duplicate)") {
+            it("THEN returns 200 (idempotent)").config(
+                extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+            ) {
+                val (sessionsState, guid) = registerDoerSession()
+                val server = ShepherdServer(sessionsState, outFactory)
+
+                testApplication {
+                    application { server.configureApplication(this) }
+
+                    client.post("/callback-shepherd/signal/self-compacted") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"${guid.value}"}""")
+                    }
+
+                    val response = client.post("/callback-shepherd/signal/self-compacted") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"${guid.value}"}""")
+                    }
+                    response.status shouldBe HttpStatusCode.OK
+                }
+            }
+
+            it("THEN signalDeferred retains the original SelfCompacted signal").config(
+                extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
+            ) {
+                val (sessionsState, guid) = registerDoerSession()
+                val entry = sessionsState.lookupBlocking(guid)
+                val server = ShepherdServer(sessionsState, outFactory)
+
+                testApplication {
+                    application { server.configureApplication(this) }
+
+                    client.post("/callback-shepherd/signal/self-compacted") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"${guid.value}"}""")
+                    }
+
                     client.post("/callback-shepherd/signal/self-compacted") {
                         contentType(ContentType.Application.Json)
                         setBody("""{"handshakeGuid":"${guid.value}"}""")

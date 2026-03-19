@@ -5,6 +5,10 @@ failed: 0
 skipped: 0
 ---
 
+- (1) GIVEN a registered session
+  - WHEN POST /signal/fail-workflow
+    - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with FailWorkflow
 - GIVEN a DOER session whose deferred is already completed
   - WHEN POST /signal/done is sent again (duplicate)
     - [PASS] THEN returns 200 (idempotent)
@@ -25,9 +29,8 @@ skipped: 0
     - [PASS] THEN returns 200
     - [PASS] THEN signalDeferred is completed with Done(PASS)
 - GIVEN a registered session
-  - WHEN POST /signal/fail-workflow
-    - [PASS] THEN returns 200
-    - [PASS] THEN signalDeferred is completed with FailWorkflow
+  - WHEN POST /signal/done with missing required field
+    - [PASS] THEN returns 400 (not 500)
 - GIVEN a registered session for self-compacted
   - WHEN POST /signal/self-compacted
     - [PASS] THEN returns 200
@@ -44,6 +47,10 @@ skipped: 0
   - WHEN POST /signal/fail-workflow (late fail after done)
     - [PASS] THEN returns 200 (idempotent)
     - [PASS] THEN signalDeferred retains the original Done signal
+- GIVEN a session whose deferred was already completed by self-compacted
+  - WHEN POST /signal/self-compacted is sent again (duplicate)
+    - [PASS] THEN returns 200 (idempotent)
+    - [PASS] THEN signalDeferred retains the original SelfCompacted signal
 - GIVEN a session with a pending payload ACK
   - WHEN POST /signal/ack-payload with matching payloadId
     - [PASS] THEN pendingPayloadAck is cleared to null

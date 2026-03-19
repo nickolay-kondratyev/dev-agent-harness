@@ -14,9 +14,11 @@ import com.glassthought.shepherd.core.session.SessionsState
 import com.glassthought.shepherd.core.state.SubPartRole
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.jackson.jackson
+import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
+import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.request.receive
 import io.ktor.server.response.respondText
 import io.ktor.server.routing.post
@@ -59,6 +61,14 @@ class ShepherdServer(
     fun configureApplication(application: Application) {
         application.install(ContentNegotiation) {
             jackson()
+        }
+        application.install(StatusPages) {
+            exception<MissingKotlinParameterException> { call, cause ->
+                call.respondText(
+                    "Missing required field: ${cause.parameter.name}",
+                    status = HttpStatusCode.BadRequest,
+                )
+            }
         }
         application.routing {
             route("/callback-shepherd/signal") {
@@ -268,6 +278,11 @@ class ShepherdServer(
             // may still arrive. Clearing prematurely would cause the sender to think
             // delivery succeeded when it may not have.
         } else {
+            // WHY-NOT compareAndSet: PayloadId is a value class — AtomicReference boxes it on
+            // each get(), producing distinct object identities. compareAndSet uses reference
+            // equality, so it would always return false. The architecture guarantees only one
+            // writer (AckedPayloadSenderImpl) sets a new pendingPayloadAck before sending, so
+            // a simple set(null) after matching the value is safe here.
             entry.pendingPayloadAck.set(null)
             out.info(
                 "signal_ack_payload_cleared",
