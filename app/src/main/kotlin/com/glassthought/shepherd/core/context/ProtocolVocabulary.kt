@@ -4,7 +4,7 @@ package com.glassthought.shepherd.core.context
  * Central registry of all protocol keywords used in agent↔harness communication.
  *
  * These constants are referenced by:
- * - [InstructionText] / [InstructionRenderers] — embedded in instruction text via string templates
+ * - [InstructionText] / [InstructionSection] — embedded in instruction text via string templates
  * - Keyword presence tests — asserted via `shouldContain` to verify instructions include
  *   all required protocol terms without brittle exact-match testing
  *

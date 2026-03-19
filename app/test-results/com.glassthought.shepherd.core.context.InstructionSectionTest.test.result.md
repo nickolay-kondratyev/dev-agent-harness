@@ -162,6 +162,15 @@ skipped: 0
 - GIVEN an InlineFileContentSection with a null path
   - WHEN rendered
     - [PASS] THEN returns null
+- GIVEN an InlineStringContentSection with json code block
+  - WHEN rendered
+    - [PASS] THEN includes the heading
+    - [PASS] THEN wraps content in json code block
+- GIVEN an InlineStringContentSection with plain content
+  - WHEN rendered
+    - [PASS] THEN does NOT wrap in code block
+    - [PASS] THEN includes the content verbatim
+    - [PASS] THEN includes the heading
 - GIVEN an IterationFeedback section with a DoerRequest and missing reviewer file
   - WHEN rendered
     - [PASS] THEN throws IllegalStateException
