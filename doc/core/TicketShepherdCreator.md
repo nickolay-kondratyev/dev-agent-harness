@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # TicketShepherdCreator / ap.cJbeC4udcM3J8UFoWXfGh.E
 
 Creates a fully wired `TicketShepherd` (ref.ap.P3po8Obvcjw4IXsSUSU91.E) for a single run.
