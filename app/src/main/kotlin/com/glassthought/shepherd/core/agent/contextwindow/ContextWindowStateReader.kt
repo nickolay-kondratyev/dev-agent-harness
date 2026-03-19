@@ -11,7 +11,7 @@ import com.glassthought.shepherd.core.agent.facade.ContextWindowState
  * @see ContextWindowState
  */
 @AnchorPoint("ap.ufavF1Ztk6vm74dLAgANY.E")
-interface ContextWindowStateReader {
+fun interface ContextWindowStateReader {
 
     /**
      * Reads the current context window state for an agent session.
