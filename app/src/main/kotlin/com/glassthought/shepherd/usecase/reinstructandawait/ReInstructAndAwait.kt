@@ -56,6 +56,9 @@ interface ReInstructAndAwait {
      *
      * Maps the raw [AgentSignal] to [ReInstructOutcome] for cleaner call-site `when` branches.
      * Returns [ReInstructOutcome.Responded], [ReInstructOutcome.FailedWorkflow], or [ReInstructOutcome.Crashed].
+     *
+     * @param handle The spawned agent handle identifying the existing session.
+     * @param message Absolute path to the instruction file to deliver to the agent.
      */
     suspend fun execute(
         handle: SpawnedAgentHandle,
