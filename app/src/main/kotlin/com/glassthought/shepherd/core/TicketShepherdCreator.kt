@@ -1,6 +1,5 @@
 package com.glassthought.shepherd.core
 
-import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
@@ -32,28 +31,15 @@ data class TicketShepherdCreatorResult(
 )
 
 /**
- * Creates a fully wired ticket-scoped execution environment.
+ * **SUPERSEDED** by [com.glassthought.shepherd.core.creator.TicketShepherdCreator].
  *
- * Receives [ShepherdContext] (ref.ap.TkpljsXvwC6JaAVnIq02He98.E) plus ticket-specific inputs,
- * resolves ticket-scoped dependencies, and returns wired components ready for execution.
- * One creation per run — called once from the CLI entry point.
+ * This partial implementation only wired InterruptHandler + .ai_out/ structure.
+ * The full implementation in `core.creator` package handles the complete lifecycle:
+ * workflow parsing, ticket validation, git branching, and TicketShepherd construction.
  *
- * ### Current scope
- * Wires [InterruptHandler] (ref.ap.yWFAwVrZdx1UTDqDJmDpe.E) with all production dependencies
- * and sets up the `.ai_out/` directory structure via [AiOutputStructure.ensureStructure].
- * The caller is responsible for calling [InterruptHandler.install] on the returned result
- * before the main execution loop starts.
- *
- * ### Future responsibilities (TODOs)
- * - Workflow JSON resolution
- * - Ticket parsing and validation
- * - Git branch creation (try-N resolution)
- * - AgentFacadeImpl construction
- * - Full TicketShepherd construction
- *
- * ap.cJbeC4udcM3J8UFoWXfGh.E
+ * Kept temporarily for backward compatibility with existing tests.
+ * See ref.ap.cJbeC4udcM3J8UFoWXfGh.E (anchor now lives on the new implementation).
  */
-@AnchorPoint("ap.cJbeC4udcM3J8UFoWXfGh.E")
 fun interface TicketShepherdCreator {
 
     /**
