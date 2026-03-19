@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:59:33Z
 id: nid_00027pdr09egw4v9btb4vl6z7_E
 title: "Implement WorkingTreeValidator — startup guard for clean git state"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T23:43:56Z
-status_updated_iso: 2026-03-19T17:47:13Z
+status_updated_iso: 2026-03-19T17:59:33Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -40,3 +41,9 @@ Dirty files:
 
 Please commit or stash your changes before running 'shepherd run'.\n```\n\n## Owner\n- Called by TicketShepherdCreator (ref.ap.cJbeC4udcM3J8UFoWXfGh.E) before branch creation\n\n## Testing\n- Unit tests with fake ProcessRunner (clean tree, dirty tree with various statuses)\n- Integration test in a real git repo (create dirty files, verify failure)\n\n## Existing Code Context\n- GitBranchManager at app/src/main/kotlin/com/glassthought/shepherd/core/supporting/git/GitBranchManager.kt — follow same pattern (interface+impl, ProcessRunner, optional workingDir)\n- Constants at app/src/main/kotlin/com/glassthought/shepherd/core/Constants.kt
 
+
+## Notes
+
+**2026-03-19T17:59:39Z**
+
+Implemented WorkingTreeValidator with 9 BDD unit tests. All 760+ tests pass. Review: PASS_WITH_SUGGESTIONS (no blocking issues). Wiring into TicketShepherdCreator is a separate task.
