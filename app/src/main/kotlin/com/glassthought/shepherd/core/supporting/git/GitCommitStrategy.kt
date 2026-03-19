@@ -33,7 +33,7 @@ data class SubPartDoneContext(
  *
  * See doc/core/git.md — "When Commits Happen — GitCommitStrategy".
  */
-interface GitCommitStrategy {
+fun interface GitCommitStrategy {
 
     /**
      * Called after a sub-part completes. Implementations decide whether to commit
