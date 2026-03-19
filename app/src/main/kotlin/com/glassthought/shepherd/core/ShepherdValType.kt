@@ -94,4 +94,11 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** Compaction trigger type (e.g., DONE_BOUNDARY). */
+    val COMPACTION_TRIGGER = ValTypeV2(
+        typeName = "COMPACTION_TRIGGER",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }
