@@ -1,0 +1,55 @@
+---
+spec: "com.glassthought.shepherd.core.executor.InnerFeedbackLoopTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- (1) GIVEN a feedback file
+  - WHEN doer resolves as REJECTED and reviewer accepts
+    - [PASS] THEN file is moved to rejected/ directory
+- (1) GIVEN multiple pending feedback files
+  - WHEN inner loop completes
+    - [PASS] THEN iteration number in git commits stays constant
+- (2) GIVEN a feedback file
+  - WHEN doer REJECTED and reviewer insists, doer addresses
+    - [PASS] THEN file is moved to addressed/ directory
+- (3) GIVEN a feedback file
+  - WHEN rejection negotiation results in AgentCrashed
+    - [PASS] THEN result is Terminate(AgentCrashed)
+- (4) GIVEN a feedback file
+  - WHEN ReInstructAndAwait returns Crashed
+    - [PASS] THEN result is Terminate(AgentCrashed)
+- (5) GIVEN a feedback file
+  - WHEN ReInstructAndAwait returns FailedWorkflow
+    - [PASS] THEN result is Terminate(FailedWorkflow)
+- GIVEN 2 feedback files
+  - WHEN both are ADDRESSED
+    - [PASS] THEN git commit is called twice with FEEDBACK_ADDRESSED result
+- GIVEN a critical feedback file
+  - WHEN doer resolves as SKIPPED
+    - [PASS] THEN result is Terminate(AgentCrashed)
+- GIVEN a feedback file
+  - WHEN doer does not write resolution marker
+    - [PASS] THEN result is Terminate(AgentCrashed)
+- GIVEN a single critical feedback file
+  - WHEN doer resolves as ADDRESSED
+    - [PASS] THEN file is moved to addressed/ directory
+- GIVEN an important feedback file
+  - WHEN doer resolves as SKIPPED
+    - [PASS] THEN result is Terminate(AgentCrashed)
+- GIVEN an optional feedback file
+  - WHEN doer resolves as SKIPPED
+    - [PASS] THEN file is moved to addressed/ directory
+- GIVEN critical, important, and optional files in pending/
+  - WHEN inner feedback loop executes
+    - [PASS] THEN files are processed in order: critical → important → optional
+- GIVEN files: 2 critical, 1 important, 1 optional
+  - WHEN inner loop processes them
+    - [PASS] THEN all are moved to addressed/ in severity order
+- GIVEN multiple pending feedback files
+  - WHEN inner loop processes them
+    - [PASS] THEN readContextWindowState is called for each item
+- GIVEN pending/ directory is empty
+  - WHEN inner feedback loop executes
+    - [PASS] THEN result is Terminate(AgentCrashed)

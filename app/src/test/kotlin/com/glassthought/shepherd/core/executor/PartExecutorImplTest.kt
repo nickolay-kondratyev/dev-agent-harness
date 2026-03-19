@@ -459,7 +459,11 @@ class PartExecutorImplTest : AsgardDescribeSpec({
         }
     }
 
-    // ── Doer+Reviewer: Iteration (NEEDS_ITERATION → doer re-instruction → PASS) ──
+    // ── Doer+Reviewer: Iteration (NEEDS_ITERATION → reviewer re-instruction → PASS) ──
+    // NOTE: With the inner feedback loop architecture, after NEEDS_ITERATION the inner loop
+    // handles doer re-instruction per-item. When innerFeedbackLoop is null (these tests),
+    // the inner loop is skipped and the reviewer is re-instructed directly.
+    // Flow: doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS (3 signals).
 
     describe("GIVEN a doer+reviewer executor") {
         describe("WHEN reviewer sends NEEDS_ITERATION then PASS on next round") {
@@ -477,7 +481,6 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0
-                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1
                         AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
                     )
                 )
@@ -512,7 +515,6 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.PASS),
                     )
                 )
@@ -532,9 +534,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 )
                 executor.execute()
 
-                // 4 Done signals = 4 git commits (doer COMPLETED, reviewer NEEDS_ITERATION,
-                // doer COMPLETED, reviewer PASS)
-                gitStrategy.calls shouldHaveSize 4
+                // 3 Done signals = 3 git commits (doer COMPLETED, reviewer NEEDS_ITERATION,
+                // reviewer PASS). Inner loop doer re-instruction is handled by InnerFeedbackLoop.
+                gitStrategy.calls shouldHaveSize 3
             }
         }
     }
@@ -597,8 +599,7 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 0
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION), // reviewer iter 0 → budget exceeded
-                        AgentSignal.Done(DoneResult.COMPLETED),       // doer iter 1 (after budget extension)
-                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1
+                        AgentSignal.Done(DoneResult.PASS),            // reviewer iter 1 (after budget extension)
                     )
                 )
 
@@ -768,9 +769,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
     // ── Doer+Reviewer: Context window read at each done boundary ────────
 
     describe("GIVEN a doer+reviewer executor with iteration") {
-        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS") {
+        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS") {
 
-            it("THEN readContextWindowState is called 4 times (once per Done signal)") {
+            it("THEN readContextWindowState is called 3 times (once per Done signal)") {
                 val doerPublicMd = createPublicMdFile("doer output")
                 val reviewerPublicMd = createPublicMdFile("reviewer output")
                 val doerConfig = buildDoerConfig(doerPublicMd)
@@ -780,13 +781,14 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.PASS),
                     )
                 )
 
                 val facade = FakeAgentFacade()
-                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                val spawnQueue = ArrayDeque(
+                    listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")),
+                )
                 facade.onSpawn { spawnQueue.removeFirst() }
                 facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
                 facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 70) }
@@ -794,7 +796,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                 val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
                 executor.execute()
 
-                facade.readContextWindowStateCalls shouldHaveSize 4
+                // 3 Done signals = 3 readContextWindowState calls.
+                // Inner loop doer re-instruction is handled by InnerFeedbackLoop (null here).
+                facade.readContextWindowStateCalls shouldHaveSize 3
             }
         }
     }
@@ -863,9 +867,9 @@ class PartExecutorImplTest : AsgardDescribeSpec({
     // ── Doer+Reviewer: sendPayload called correct number of times ───────
 
     describe("GIVEN a doer+reviewer executor with one iteration") {
-        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS") {
+        describe("WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS") {
 
-            it("THEN sendPayloadAndAwaitSignal is called 4 times") {
+            it("THEN sendPayloadAndAwaitSignal is called 3 times") {
                 val doerPublicMd = createPublicMdFile("doer output")
                 val reviewerPublicMd = createPublicMdFile("reviewer output")
                 val doerConfig = buildDoerConfig(doerPublicMd)
@@ -875,21 +879,26 @@ class PartExecutorImplTest : AsgardDescribeSpec({
                     listOf(
                         AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.NEEDS_ITERATION),
-                        AgentSignal.Done(DoneResult.COMPLETED),
                         AgentSignal.Done(DoneResult.PASS),
                     )
                 )
 
                 val facade = FakeAgentFacade()
-                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                val spawnQueue = ArrayDeque(
+                    listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")),
+                )
                 facade.onSpawn { spawnQueue.removeFirst() }
                 facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
                 facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 70) }
 
-                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val executor = buildExecutor(
+                    doerConfig, reviewerConfig = reviewerCfg, facade = facade,
+                )
                 executor.execute()
 
-                facade.sendPayloadCalls shouldHaveSize 4
+                // 3 signals: doer instructions, reviewer instructions, reviewer re-instructions.
+                // Inner loop doer re-instruction is handled by InnerFeedbackLoop (null here).
+                facade.sendPayloadCalls shouldHaveSize 3
             }
         }
     }

@@ -61,8 +61,8 @@ skipped: 0
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
 - GIVEN a doer+reviewer executor with iteration
-  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
-    - [PASS] THEN readContextWindowState is called 4 times (once per Done signal)
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS
+    - [PASS] THEN readContextWindowState is called 3 times (once per Done signal)
 - GIVEN a doer+reviewer executor with max=1 and granting FailedToConvergeUseCase
   - WHEN reviewer sends NEEDS_ITERATION, operator grants more, then reviewer PASS
     - [PASS] THEN the result is PartResult.Completed
@@ -70,8 +70,8 @@ skipped: 0
   - WHEN reviewer keeps sending NEEDS_ITERATION and operator aborts
     - [PASS] THEN the result is PartResult.FailedToConverge
 - GIVEN a doer+reviewer executor with one iteration
-  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> doer COMPLETED -> reviewer PASS
-    - [PASS] THEN sendPayloadAndAwaitSignal is called 4 times
+  - WHEN doer COMPLETED -> reviewer NEEDS_ITERATION -> reviewer PASS
+    - [PASS] THEN sendPayloadAndAwaitSignal is called 3 times
 - GIVEN a doer-only executor
   - WHEN the doer signals Done(COMPLETED) and PUBLIC.md exists
     - [PASS] THEN the result is PartResult.Completed
