@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T01:30:49Z
 id: nid_9kic96nh6mb8r5legcsvt46uy_E
 title: "Implement AiOutputStructure — path resolution for .ai_out/ directory schema"
-status: open
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T20:44:30Z
-status_updated_iso: 2026-03-18T20:44:30Z
+status_updated_iso: 2026-03-19T01:30:49Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
