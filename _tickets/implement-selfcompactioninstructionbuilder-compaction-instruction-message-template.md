@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:49:57Z
 id: nid_kwebixws6qqn808x4904f2gtr_E
 title: "Implement SelfCompactionInstructionBuilder — compaction instruction message template"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T00:41:58Z
-status_updated_iso: 2026-03-19T17:39:37Z
+status_updated_iso: 2026-03-19T17:49:57Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
