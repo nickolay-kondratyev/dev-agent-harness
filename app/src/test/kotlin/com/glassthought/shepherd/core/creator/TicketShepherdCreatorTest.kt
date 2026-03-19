@@ -208,6 +208,7 @@ private fun createCreator(
 
 // ── Tests ──────────────────────────────────────────────────────────────
 
+@Suppress("LongMethod")
 class TicketShepherdCreatorTest : AsgardDescribeSpec(
     config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
     body = {
@@ -226,6 +227,22 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
                         creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     }
                     exception.message shouldContain "id"
+                }
+            }
+        }
+
+        // ── Ticket validation: blank title ──
+
+        describe("GIVEN a ticket with blank title") {
+            val ticketData = VALID_TICKET_DATA.copy(title = "")
+            val creator = createCreator(ticketParser = FakeTicketParser(ticketData))
+
+            describe("WHEN create() is called") {
+                it("THEN fails with IllegalStateException mentioning 'title'") {
+                    val exception = shouldThrow<IllegalStateException> {
+                        creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
+                    }
+                    exception.message shouldContain "title"
                 }
             }
         }
@@ -292,9 +309,8 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(workingTreeValidator = validator)
 
             describe("WHEN create() is called") {
-                creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
                 it("THEN working tree validation is called") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     validator.validateCalled shouldBe true
                 }
             }
@@ -307,9 +323,8 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(gitBranchManager = gitManager)
 
             describe("WHEN create() is called") {
-                val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
                 it("THEN originatingBranch is 'feature/existing'") {
+                    val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     result.originatingBranch shouldBe "feature/existing"
                 }
             }
@@ -322,13 +337,13 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(tryNResolver = resolver)
 
             describe("WHEN create() is called") {
-                val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
                 it("THEN tryNumber is 3") {
+                    val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     result.tryNumber shouldBe 3
                 }
 
                 it("THEN resolver was called with the ticket data") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     resolver.resolvedTicketData shouldBe VALID_TICKET_DATA
                 }
             }
@@ -344,9 +359,8 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             )
 
             describe("WHEN create() is called") {
-                creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
                 it("THEN feature branch is created with correct name format") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     val expected = BranchNameBuilder.build(VALID_TICKET_DATA, 2)
                     gitManager.createdBranchName shouldBe expected
                 }
@@ -361,9 +375,8 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             )
 
             describe("WHEN create() is called") {
-                val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
                 it("THEN returns TicketShepherd with tryNumber set") {
+                    val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
                     result.tryNumber shouldBe 1
                 }
             }
@@ -372,15 +385,26 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
         // ── With-planning workflow → TicketShepherd returned ──
 
         describe("GIVEN a with-planning workflow") {
+            val tempDir = Files.createTempDirectory("planning-test")
             val creator = createCreator(
                 workflowParser = FakeWorkflowParser(WITH_PLANNING_WORKFLOW),
+                repoRoot = tempDir,
             )
 
             describe("WHEN create() is called") {
-                val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "with-planning")
-
                 it("THEN returns TicketShepherd with tryNumber set") {
+                    val result = creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "with-planning")
                     result.tryNumber shouldBe 1
+                }
+
+                it("THEN CurrentState on disk contains planning phase parts") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "with-planning")
+                    val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
+                    val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                        tempDir, branchName,
+                    )
+                    val json = Files.readString(aiOutputStructure.currentStateJson())
+                    json shouldContain "\"phase\" : \"planning\""
                 }
             }
         }
@@ -392,22 +416,30 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(repoRoot = tempDir)
 
             describe("WHEN create() is called") {
-                creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
-                val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
-                val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
-                    tempDir, branchName,
-                )
-
                 it("THEN creates the harness_private directory") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
+                    val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
+                    val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                        tempDir, branchName,
+                    )
                     Files.isDirectory(aiOutputStructure.harnessPrivateDir()) shouldBe true
                 }
 
                 it("THEN creates the shared/plan directory") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
+                    val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
+                    val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                        tempDir, branchName,
+                    )
                     Files.isDirectory(aiOutputStructure.sharedPlanDir()) shouldBe true
                 }
 
                 it("THEN creates the execution sub-part comm directories") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
+                    val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
+                    val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                        tempDir, branchName,
+                    )
                     Files.isDirectory(aiOutputStructure.executionCommInDir("main", "impl")) shouldBe true
                     Files.isDirectory(aiOutputStructure.executionCommOutDir("main", "impl")) shouldBe true
                 }
@@ -421,14 +453,12 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(repoRoot = tempDir)
 
             describe("WHEN create() is called") {
-                creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
-
-                val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
-                val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
-                    tempDir, branchName,
-                )
-
                 it("THEN current_state.json exists on disk") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "straightforward")
+                    val branchName = BranchNameBuilder.build(VALID_TICKET_DATA, 1)
+                    val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                        tempDir, branchName,
+                    )
                     Files.exists(aiOutputStructure.currentStateJson()) shouldBe true
                 }
             }
@@ -441,9 +471,8 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
             val creator = createCreator(workflowParser = parser)
 
             describe("WHEN create() is called with workflow name 'my-workflow'") {
-                creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "my-workflow")
-
                 it("THEN workflow parser receives the correct workflow name") {
+                    creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "my-workflow")
                     parser.parsedWorkflowName shouldBe "my-workflow"
                 }
             }

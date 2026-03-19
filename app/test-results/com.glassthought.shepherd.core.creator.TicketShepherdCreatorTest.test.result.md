@@ -22,6 +22,9 @@ skipped: 0
 - GIVEN a ticket with blank id
   - WHEN create() is called
     - [PASS] THEN fails with IllegalStateException mentioning 'id'
+- GIVEN a ticket with blank title
+  - WHEN create() is called
+    - [PASS] THEN fails with IllegalStateException mentioning 'title'
 - GIVEN a ticket with null status
   - WHEN create() is called
     - [PASS] THEN fails with IllegalStateException mentioning 'status'
@@ -34,6 +37,7 @@ skipped: 0
     - [PASS] THEN current_state.json exists on disk
 - GIVEN a with-planning workflow
   - WHEN create() is called
+    - [PASS] THEN CurrentState on disk contains planning phase parts
     - [PASS] THEN returns TicketShepherd with tryNumber set
 - GIVEN a workflow parser
   - WHEN create() is called with workflow name 'my-workflow'

@@ -16,6 +16,7 @@ import com.glassthought.shepherd.core.interrupt.InterruptHandlerImpl
 import com.glassthought.shepherd.core.state.CurrentState
 import com.glassthought.shepherd.core.state.CurrentStateInitializer
 import com.glassthought.shepherd.core.state.CurrentStateInitializerImpl
+import com.glassthought.shepherd.core.state.CurrentStatePersistence
 import com.glassthought.shepherd.core.state.CurrentStatePersistenceImpl
 import com.glassthought.shepherd.core.supporting.git.BranchNameBuilder
 import com.glassthought.shepherd.core.supporting.git.GitBranchManager
@@ -297,7 +298,7 @@ private data class GitSetupResult(
 private data class StateSetupResult(
     val aiOutputStructure: AiOutputStructure,
     val currentState: CurrentState,
-    val currentStatePersistence: CurrentStatePersistenceImpl,
+    val currentStatePersistence: CurrentStatePersistence,
 )
 
 // ── Factory interfaces for testability ──────────────────────────────────
