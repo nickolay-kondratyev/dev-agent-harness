@@ -23,7 +23,7 @@ import kotlin.io.path.readText
  *
  * ap.bV7kMn3pQ9wRxYz2LfJ8s.E
  */
-interface PlanFlowConverter {
+fun interface PlanFlowConverter {
 
     /**
      * Reads plan_flow.json, validates, initializes runtime fields, appends to [currentState],
