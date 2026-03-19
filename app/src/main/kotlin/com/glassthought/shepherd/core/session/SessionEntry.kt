@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.session
 import com.asgard.core.annotation.AnchorPoint
 import com.glassthought.shepherd.core.agent.TmuxAgentSession
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
+import com.glassthought.shepherd.core.question.UserQuestionContext
 import com.glassthought.shepherd.core.server.PayloadId
 import com.glassthought.shepherd.core.state.SubPartRole
 import kotlinx.coroutines.CompletableDeferred
@@ -30,7 +31,7 @@ data class SessionEntry(
     val signalDeferred: CompletableDeferred<AgentSignal>,
     val lastActivityTimestamp: Instant,
     val pendingPayloadAck: PayloadId?,
-    val questionQueue: ConcurrentLinkedQueue<PendingQuestion>,
+    val questionQueue: ConcurrentLinkedQueue<UserQuestionContext>,
 ) {
     /** True when one or more user questions are awaiting a response. */
     val isQAPending: Boolean get() = questionQueue.isNotEmpty()

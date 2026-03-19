@@ -30,7 +30,7 @@ The server does **not** route `/callback-shepherd/signal/done` or `/callback-she
 to `TicketShepherd` directly. Instead, it completes the `CompletableDeferred<AgentSignal>`
 (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) on the `SessionEntry`, which wakes the executor coroutine.
 `/callback-shepherd/signal/user-question` is handled as a side-channel: server appends the
-question to `SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The executor's
+question (as a `UserQuestionContext`) to `SessionEntry.questionQueue` (ref.ap.NE4puAzULta4xlOLh5kfD.E). The executor's
 health-aware await loop detects the non-empty queue on its next tick, collects answers via
 `UserQuestionHandler`, and batch-delivers all answers via `AckedPayloadSender`
 (ref.ap.tbtBcVN2iCl1xfHJthllP.E). The executor stays suspended for signal-await; health
@@ -55,7 +55,7 @@ server-side validation and shepherd-side decision making.
 | `signalDeferred` | `CompletableDeferred<AgentSignal>` (ref.ap.UsyJHSAzLm5ChDLd0H6PK.E) | The callback bridge — completed by server on `/signal/done` or `/signal/fail-workflow`, or by the facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) on crash detection. The facade suspends on `.await()` inside `sendPayloadAndAwaitSignal`; `PartExecutor` never holds a raw `Deferred<AgentSignal>` reference. |
 | `lastActivityTimestamp` | `Instant` | **Initialized to registration time** (i.e., spawn time) so the health-aware await loop does not see stale initial values. Updated by the server on **every** callback. Read by the facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) to decide when to ping and when to declare crash. Resets the health timeout even during side-channel interactions. |
 | `pendingPayloadAck` | `PayloadId?` | Set by the executor before sending a `send-keys` payload (ref.ap.r0us6iYsIRzrqHA5MVO0Q.E). Cleared (set to `null`) by the server when a matching `/signal/ack-payload` arrives. The executor polls this field during the ACK-await phase. `null` means no pending ACK (either no payload sent, or ACK received). |
-| `questionQueue` | `ConcurrentLinkedQueue<PendingQuestion>` | Thread-safe queue of pending questions from the agent. Server appends on `/signal/user-question`. Executor drains and processes in its health-aware await loop (ref.ap.NE4puAzULta4xlOLh5kfD.E). |
+| `questionQueue` | `ConcurrentLinkedQueue<UserQuestionContext>` | Thread-safe queue of pending questions from the agent. Server appends on `/signal/user-question`. Executor drains and processes in its health-aware await loop (ref.ap.NE4puAzULta4xlOLh5kfD.E). |
 | `isQAPending` | `Boolean` (derived) | **Derived property**: `questionQueue.isNotEmpty()`. `true` when Q&A is in progress — questions have been queued but not yet fully answered and delivered. Gates health ping firing and noActivityTimeout — both are **suppressed** while `true`. No separate actor manages this flag — it follows directly from queue state. |
 
 `SubPartRole` is a two-value enum: `DOER`, `REVIEWER`. Role is derived on-the-fly from
@@ -87,21 +87,15 @@ only require updating `fromIndex()`, not session records or any persisted state.
    directly as the return value of `sendPayloadAndAwaitSignal`; it never holds a raw
    `Deferred<AgentSignal>` reference
 
-### PendingQuestion — Queued on SessionEntry
+### Question Queuing on SessionEntry
 
-```kotlin
-data class PendingQuestion(
-    val question: String,
-    val context: UserQuestionContext,
-)
-```
-
-Questions are queued on `SessionEntry.questionQueue` — a `ConcurrentLinkedQueue<PendingQuestion>`.
-The server appends on every `/signal/user-question`. The executor's health-aware await loop
-(ref.ap.QCjutDexa2UBDaKB3jTcF.E) drains the queue and processes questions sequentially
-(one stdin prompt per question via `UserQuestionHandler`). When all queued questions are
-answered, the executor batch-delivers all answers together via `AckedPayloadSender`
-(ref.ap.tbtBcVN2iCl1xfHJthllP.E).
+Questions are queued on `SessionEntry.questionQueue` — a `ConcurrentLinkedQueue<UserQuestionContext>`.
+Each `UserQuestionContext` carries the question text plus the agent identity and plan position
+context needed for routing. The server appends on every `/signal/user-question`. The executor's
+health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E) drains the queue and processes
+questions sequentially (one stdin prompt per question via `UserQuestionHandler`). When all
+queued questions are answered, the executor batch-delivers all answers together via
+`AckedPayloadSender` (ref.ap.tbtBcVN2iCl1xfHJthllP.E).
 
 **Multiple questions:** If a second `/signal/user-question` arrives while the executor is
 collecting answers, the server appends to `questionQueue`. The executor continues processing

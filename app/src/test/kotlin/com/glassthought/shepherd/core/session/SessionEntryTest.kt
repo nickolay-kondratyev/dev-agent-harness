@@ -10,6 +10,7 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.data.AgentType
+import com.glassthought.shepherd.core.question.UserQuestionContext
 import com.glassthought.shepherd.core.state.SubPartRole
 import io.kotest.matchers.shouldBe
 import kotlinx.coroutines.CompletableDeferred
@@ -27,8 +28,8 @@ class SessionEntryTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN SessionEntry with non-empty questionQueue") {
-        val queue = ConcurrentLinkedQueue<PendingQuestion>()
-        queue.add(createTestPendingQuestion())
+        val queue = ConcurrentLinkedQueue<UserQuestionContext>()
+        queue.add(createTestUserQuestionContext())
         val entry = createTestSessionEntry(subPartIndex = 0, questionQueue = queue)
 
         it("THEN isQAPending is true") {
@@ -56,7 +57,7 @@ class SessionEntryTest : AsgardDescribeSpec({
         val entry = createTestSessionEntry(subPartIndex = 0)
 
         describe("WHEN question added to queue") {
-            entry.questionQueue.add(createTestPendingQuestion())
+            entry.questionQueue.add(createTestUserQuestionContext())
 
             it("THEN isQAPending becomes true") {
                 entry.isQAPending shouldBe true
@@ -65,8 +66,8 @@ class SessionEntryTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN SessionEntry with questions in queue") {
-        val queue = ConcurrentLinkedQueue<PendingQuestion>()
-        queue.add(createTestPendingQuestion())
+        val queue = ConcurrentLinkedQueue<UserQuestionContext>()
+        queue.add(createTestUserQuestionContext())
         val entry = createTestSessionEntry(subPartIndex = 0, questionQueue = queue)
 
         describe("WHEN queue is drained") {
@@ -103,7 +104,7 @@ private fun createTestTmuxAgentSession(): TmuxAgentSession {
 
 private fun createTestSessionEntry(
     subPartIndex: Int,
-    questionQueue: ConcurrentLinkedQueue<PendingQuestion> = ConcurrentLinkedQueue(),
+    questionQueue: ConcurrentLinkedQueue<UserQuestionContext> = ConcurrentLinkedQueue(),
 ): SessionEntry = SessionEntry(
     tmuxAgentSession = createTestTmuxAgentSession(),
     partName = "test-part",
@@ -115,13 +116,10 @@ private fun createTestSessionEntry(
     questionQueue = questionQueue,
 )
 
-private fun createTestPendingQuestion(): PendingQuestion = PendingQuestion(
+private fun createTestUserQuestionContext(): UserQuestionContext = UserQuestionContext(
     question = "test question?",
-    context = UserQuestionContext(
-        question = "test question?",
-        partName = "test-part",
-        subPartName = "test-sub-part",
-        subPartRole = SubPartRole.DOER,
-        handshakeGuid = HandshakeGuid.generate(),
-    ),
+    partName = "test-part",
+    subPartName = "test-sub-part",
+    subPartRole = SubPartRole.DOER,
+    handshakeGuid = HandshakeGuid.generate(),
 )
