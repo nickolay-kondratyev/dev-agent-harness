@@ -26,7 +26,6 @@ import com.glassthought.shepherd.usecase.healthmonitoring.AgentUnresponsiveUseCa
 import com.glassthought.shepherd.usecase.healthmonitoring.SingleSessionKiller
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldNotBeEmpty
 import io.kotest.matchers.types.shouldBeInstanceOf
 import io.ktor.server.cio.CIO
@@ -68,14 +67,16 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
         val shepherdServer = ShepherdServer(sessionsState, outFactory)
         val clock = SystemClock()
 
-        // Pick a random available port, then start the Ktor CIO server on it
+        // Pick a random available port, then start the Ktor CIO server on it.
+        // Note: TOCTOU race — the port is freed after ServerSocket closes, so another process
+        // could theoretically claim it before embeddedServer binds. Unlikely in test environments.
         val serverPort = ServerSocket(0).use { it.localPort }
         val ktorServer = embeddedServer(CIO, port = serverPort) {
             shepherdServer.configureApplication(this)
         }.start(wait = false)
 
         // Resolve absolute path to callback script directory
-        val scriptsDir = resolveCallbackScriptsDir()
+        val scriptsDir = IntegTestHelpers.resolveCallbackScriptsDir()
 
         // Wrapping adapter that injects TICKET_SHEPHERD_SERVER_PORT and PATH into the command
         val wrappedAdapter = ServerPortInjectingAdapter(
@@ -121,10 +122,21 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
         )
 
         // Write a system prompt file for the agent
-        val systemPromptFile = createIntegTestSystemPromptFile()
+        val systemPromptFile = IntegTestHelpers.createIntegTestSystemPromptFile()
 
         // Track spawned handles for cleanup
         val spawnedHandles = mutableListOf<SpawnedAgentHandle>()
+
+        fun buildSpawnConfig(partName: String) = SpawnAgentConfig(
+            partName = partName,
+            subPartName = "doer",
+            subPartIndex = 0,
+            agentType = AgentType.CLAUDE_CODE,
+            model = "sonnet",
+            role = "DOER",
+            systemPromptPath = systemPromptFile.toPath(),
+            bootstrapMessage = IntegTestHelpers.buildBootstrapMessage(),
+        )
 
         afterEach {
             spawnedHandles.forEach { handle ->
@@ -145,28 +157,12 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
         // ── Test: spawn agent → started signal ─────────────────────────────
 
         describe("WHEN spawnAgent is called with a valid config") {
-            val spawnConfig = SpawnAgentConfig(
-                partName = "integ-test",
-                subPartName = "doer",
-                subPartIndex = 0,
-                agentType = AgentType.CLAUDE_CODE,
-                model = "sonnet",
-                role = "DOER",
-                systemPromptPath = systemPromptFile.toPath(),
-                bootstrapMessage = buildBootstrapMessage(),
-            )
 
-            it("THEN the returned handle has a valid HandshakeGuid") {
-                val handle = facade.spawnAgent(spawnConfig)
+            it("THEN the returned handle has a valid HandshakeGuid and resolved session ID") {
+                val handle = facade.spawnAgent(buildSpawnConfig("integ-test"))
                 spawnedHandles.add(handle)
 
                 handle.guid.value.shouldNotBeEmpty()
-            }
-
-            it("THEN the returned handle has a resolved session ID") {
-                val handle = facade.spawnAgent(spawnConfig)
-                spawnedHandles.add(handle)
-
                 handle.sessionId.sessionId.shouldNotBeEmpty()
             }
         }
@@ -176,30 +172,19 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
         describe("WHEN a payload is sent to a spawned agent instructing it to signal done") {
 
             it("THEN sendPayloadAndAwaitSignal returns AgentSignal.Done(COMPLETED)") {
-                val spawnConfig = SpawnAgentConfig(
-                    partName = "integ-payload",
-                    subPartName = "doer",
-                    subPartIndex = 0,
-                    agentType = AgentType.CLAUDE_CODE,
-                    model = "sonnet",
-                    role = "DOER",
-                    systemPromptPath = systemPromptFile.toPath(),
-                    bootstrapMessage = buildBootstrapMessage(),
-                )
-
-                val handle = facade.spawnAgent(spawnConfig)
+                val handle = facade.spawnAgent(buildSpawnConfig("integ-payload"))
                 spawnedHandles.add(handle)
 
                 // Create a temp instruction file telling the agent to signal done
-                val instructionFile = createDoneInstructionFile()
-                val payload = AgentPayload(instructionFilePath = instructionFile.toPath())
+                val instructionFile = IntegTestHelpers.createDoneInstructionFile()
+                try {
+                    val payload = AgentPayload(instructionFilePath = instructionFile.toPath())
+                    val signal = facade.sendPayloadAndAwaitSignal(handle, payload)
 
-                val signal = facade.sendPayloadAndAwaitSignal(handle, payload)
-
-                signal.shouldBeInstanceOf<AgentSignal.Done>()
-                (signal as AgentSignal.Done).result shouldBe DoneResult.COMPLETED
-
-                instructionFile.delete()
+                    signal.shouldBeInstanceOf<AgentSignal.Done>().result shouldBe DoneResult.COMPLETED
+                } finally {
+                    instructionFile.delete()
+                }
             }
         }
 
@@ -208,18 +193,7 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
         describe("WHEN killSession is called after spawn") {
 
             it("THEN the tmux session no longer exists") {
-                val spawnConfig = SpawnAgentConfig(
-                    partName = "integ-kill",
-                    subPartName = "doer",
-                    subPartIndex = 0,
-                    agentType = AgentType.CLAUDE_CODE,
-                    model = "sonnet",
-                    role = "DOER",
-                    systemPromptPath = systemPromptFile.toPath(),
-                    bootstrapMessage = buildBootstrapMessage(),
-                )
-
-                val handle = facade.spawnAgent(spawnConfig)
+                val handle = facade.spawnAgent(buildSpawnConfig("integ-kill"))
                 // DO NOT add to spawnedHandles -- we're killing it explicitly
 
                 facade.killSession(handle)
@@ -234,31 +208,20 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
 
         describe("WHEN readContextWindowState is called after spawn") {
 
-            it("THEN it returns a ContextWindowState (may have null remainingPercentage)") {
-                val spawnConfig = SpawnAgentConfig(
-                    partName = "integ-ctx",
-                    subPartName = "doer",
-                    subPartIndex = 0,
-                    agentType = AgentType.CLAUDE_CODE,
-                    model = "sonnet",
-                    role = "DOER",
-                    systemPromptPath = systemPromptFile.toPath(),
-                    bootstrapMessage = buildBootstrapMessage(),
-                )
-
-                val handle = facade.spawnAgent(spawnConfig)
+            it("THEN it returns a ContextWindowState with null remainingPercentage from stub") {
+                val handle = facade.spawnAgent(buildSpawnConfig("integ-ctx"))
                 spawnedHandles.add(handle)
 
                 val state = facade.readContextWindowState(handle)
 
-                // With stub reader, remainingPercentage is null — just verify it returns
-                state shouldNotBe null
+                // Stub reader returns null remainingPercentage — assert explicitly
+                state.remainingPercentage shouldBe null
             }
         }
     }
 })
 
-// ── Helper functions ────────────────────────────────────────────────────────
+// ── Helper utilities ────────────────────────────────────────────────────────
 
 /**
  * Wrapping [AgentTypeAdapter] that injects `TICKET_SHEPHERD_SERVER_PORT` and
@@ -266,6 +229,11 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
  *
  * This enables the E2E test to provide the dynamically-assigned server port
  * and callback script location to the spawned agent's tmux session.
+ *
+ * COUPLING NOTE: This adapter assumes the delegate ([ClaudeCodeAdapter]) produces a command
+ * in the format `bash -c '<inner command>'`. If ClaudeCodeAdapter changes its command format
+ * (e.g., different quoting style or shell invocation), this injection will break. The `check`
+ * call below guards against silent failures, but the string manipulation is inherently fragile.
  */
 private class ServerPortInjectingAdapter(
     private val delegate: AgentTypeAdapter,
@@ -304,104 +272,110 @@ private class ServerPortInjectingAdapter(
 }
 
 /**
- * Resolves the absolute path to the callback scripts directory.
- * The scripts are at `app/src/main/resources/scripts/` relative to the project root.
+ * Stateless helper utilities for [AgentFacadeImplIntegTest].
  */
-private fun resolveCallbackScriptsDir(): String {
-    val projectDir = System.getProperty("user.dir")
-    val scriptsDir = File(projectDir, "src/main/resources/scripts")
-    check(scriptsDir.isDirectory) {
-        "Callback scripts directory not found at ${scriptsDir.absolutePath}. " +
-            "Ensure you are running from the app module directory."
-    }
-    // Ensure the script is executable
-    val signalScript = File(scriptsDir, "callback_shepherd.signal.sh")
-    check(signalScript.exists()) {
-        "callback_shepherd.signal.sh not found at ${signalScript.absolutePath}"
-    }
-    if (!signalScript.canExecute()) {
-        signalScript.setExecutable(true)
-    }
-    return scriptsDir.absolutePath
-}
+private object IntegTestHelpers {
 
-/**
- * Creates a temporary system prompt file that instructs the agent about the callback protocol.
- */
-private fun createIntegTestSystemPromptFile(): File {
-    val tmpDir = File(System.getProperty("user.dir"), ".tmp")
-    tmpDir.mkdirs()
-    val file = File(tmpDir, "integ-test-system-prompt-${System.currentTimeMillis()}.md")
-    file.writeText(
-        """
-        |# Integration Test Agent Protocol
-        |
-        |You are a test agent running in an integration test. Follow these rules EXACTLY:
-        |
-        |## Callback Protocol
-        |
-        |You MUST use `callback_shepherd.signal.sh` (already on your PATH) to communicate with the harness.
-        |
-        |### On startup (FIRST thing you do):
-        |```bash
-        |callback_shepherd.signal.sh started
-        |```
-        |
-        |### When you receive a payload wrapped in XML tags:
-        |1. First ACK the payload:
-        |```bash
-        |callback_shepherd.signal.sh ack-payload <payload_id>
-        |```
-        |The payload_id is in the `payload_id` attribute of the XML tag.
-        |
-        |2. Then read and follow the instructions in the payload.
-        |
-        |### When done with work:
-        |```bash
-        |callback_shepherd.signal.sh done completed
-        |```
-        |
-        |## IMPORTANT
-        |- ALWAYS call `callback_shepherd.signal.sh started` FIRST before doing anything else.
-        |- ALWAYS ACK payloads before processing them.
-        |- ALWAYS signal done when you finish processing a payload's instructions.
-        |- Use Bash tool to execute the callback scripts.
-        """.trimMargin()
-    )
-    return file
-}
+    /**
+     * Resolves the absolute path to the callback scripts directory.
+     * The scripts are at `app/src/main/resources/scripts/` relative to the project root.
+     */
+    fun resolveCallbackScriptsDir(): String {
+        val projectDir = System.getProperty("user.dir")
+        val scriptsDir = File(projectDir, "src/main/resources/scripts")
+        check(scriptsDir.isDirectory) {
+            "Callback scripts directory not found at ${scriptsDir.absolutePath}. " +
+                "Ensure you are running from the app module directory."
+        }
+        // Ensure the script is executable
+        val signalScript = File(scriptsDir, "callback_shepherd.signal.sh")
+        check(signalScript.exists()) {
+            "callback_shepherd.signal.sh not found at ${signalScript.absolutePath}"
+        }
+        if (!signalScript.canExecute()) {
+            signalScript.setExecutable(true)
+        }
+        return scriptsDir.absolutePath
+    }
 
-/**
- * Builds the bootstrap message sent to the agent on spawn.
- * This message is the first thing the agent sees and must instruct it to call started.
- */
-private fun buildBootstrapMessage(): String {
-    return "You are a test agent. Your FIRST action must be to call " +
-        "`callback_shepherd.signal.sh started` using the Bash tool. " +
-        "This is critical — do it immediately before anything else. " +
-        "After that, wait for further instructions via payload delivery."
-}
+    /**
+     * Creates a temporary system prompt file that instructs the agent about the callback protocol.
+     */
+    fun createIntegTestSystemPromptFile(): File {
+        val tmpDir = File(System.getProperty("user.dir"), ".tmp")
+        tmpDir.mkdirs()
+        val file = File(tmpDir, "integ-test-system-prompt-${System.currentTimeMillis()}.md")
+        file.writeText(
+            """
+            |# Integration Test Agent Protocol
+            |
+            |You are a test agent running in an integration test. Follow these rules EXACTLY:
+            |
+            |## Callback Protocol
+            |
+            |You MUST use `callback_shepherd.signal.sh` (already on your PATH) to communicate with the harness.
+            |
+            |### On startup (FIRST thing you do):
+            |```bash
+            |callback_shepherd.signal.sh started
+            |```
+            |
+            |### When you receive a payload wrapped in XML tags:
+            |1. First ACK the payload:
+            |```bash
+            |callback_shepherd.signal.sh ack-payload <payload_id>
+            |```
+            |The payload_id is in the `payload_id` attribute of the XML tag.
+            |
+            |2. Then read and follow the instructions in the payload.
+            |
+            |### When done with work:
+            |```bash
+            |callback_shepherd.signal.sh done completed
+            |```
+            |
+            |## IMPORTANT
+            |- ALWAYS call `callback_shepherd.signal.sh started` FIRST before doing anything else.
+            |- ALWAYS ACK payloads before processing them.
+            |- ALWAYS signal done when you finish processing a payload's instructions.
+            |- Use Bash tool to execute the callback scripts.
+            """.trimMargin()
+        )
+        return file
+    }
 
-/**
- * Creates a temporary instruction file that tells the agent to signal done.
- */
-private fun createDoneInstructionFile(): File {
-    val tmpDir = File(System.getProperty("user.dir"), ".tmp")
-    tmpDir.mkdirs()
-    val file = File(tmpDir, "integ-test-done-instruction-${System.currentTimeMillis()}.md")
-    file.writeText(
-        """
-        |# Task: Signal Done
-        |
-        |Your task is simple: signal that you are done.
-        |
-        |Run this command using the Bash tool:
-        |```bash
-        |callback_shepherd.signal.sh done completed
-        |```
-        |
-        |That is all you need to do.
-        """.trimMargin()
-    )
-    return file
+    /**
+     * Builds the bootstrap message sent to the agent on spawn.
+     * This message is the first thing the agent sees and must instruct it to call started.
+     */
+    fun buildBootstrapMessage(): String {
+        return "You are a test agent. Your FIRST action must be to call " +
+            "`callback_shepherd.signal.sh started` using the Bash tool. " +
+            "This is critical — do it immediately before anything else. " +
+            "After that, wait for further instructions via payload delivery."
+    }
+
+    /**
+     * Creates a temporary instruction file that tells the agent to signal done.
+     */
+    fun createDoneInstructionFile(): File {
+        val tmpDir = File(System.getProperty("user.dir"), ".tmp")
+        tmpDir.mkdirs()
+        val file = File(tmpDir, "integ-test-done-instruction-${System.currentTimeMillis()}.md")
+        file.writeText(
+            """
+            |# Task: Signal Done
+            |
+            |Your task is simple: signal that you are done.
+            |
+            |Run this command using the Bash tool:
+            |```bash
+            |callback_shepherd.signal.sh done completed
+            |```
+            |
+            |That is all you need to do.
+            """.trimMargin()
+        )
+        return file
+    }
 }
