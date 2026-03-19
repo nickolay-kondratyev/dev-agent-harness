@@ -117,16 +117,14 @@ object InstructionRenderers {
     fun feedbackItemInstructions(
         feedbackContent: String,
         currentPath: Path,
-        addressedPath: Path,
-        rejectedPath: Path,
         isOptional: Boolean,
     ): String {
         val optionalNote = if (isOptional) {
             """
             |
             |**This feedback is ${ProtocolVocabulary.Severity.OPTIONAL}.** You may choose to skip it.
-            |If skipping, simply signal done without moving the file. The feedback will remain in
-            |${ProtocolVocabulary.FeedbackStatus.UNADDRESSED}/ but will NOT block part completion.
+            |If skipping, write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.SKIPPED}` in the feedback file.
+            |${ProtocolVocabulary.Severity.OPTIONAL} items do NOT block part completion.
             """.trimMargin()
         } else {
             ""
@@ -140,31 +138,17 @@ object InstructionRenderers {
             |## Instructions
             |
             |1. Address the feedback item above in the codebase.
-            |2. When done, move the feedback file from its current location to the corresponding
-            |   `${ProtocolVocabulary.FeedbackStatus.ADDRESSED}/` directory. Add a movement record
-            |   (see ${ProtocolVocabulary.MOVEMENT_LOG} format below).
-            |3. If you disagree with this feedback, move it to `${ProtocolVocabulary.FeedbackStatus.REJECTED}/`
-            |   instead, with a ${ProtocolVocabulary.WHY_NOT} justification in the movement record.
+            |2. Write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}` in the feedback file,
+            |   followed by a brief description of what you did.
+            |3. If you disagree with this feedback, write `## Resolution: ${ProtocolVocabulary.FeedbackStatus.REJECTED}`
+            |   instead, with a ${ProtocolVocabulary.WHY_NOT} justification explaining why.
             |4. Update your PUBLIC.md with a brief one-liner noting this item was
             |   ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}/${ProtocolVocabulary.FeedbackStatus.REJECTED}.
             |5. Signal done: `${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
             |$optionalNote
             |
-            |### ${ProtocolVocabulary.MOVEMENT_LOG} Format
-            |
-            |Append to the `## ${ProtocolVocabulary.MOVEMENT_LOG}` section of the feedback file:
-            |
-            |```markdown
-            |### [YYYY-MM-DDTHH:MM:SSZ] Moved by: <role> | From: <source_dir> → To: <target_dir>
-            |<brief justification — WHY this was ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}/${ProtocolVocabulary.FeedbackStatus.REJECTED}>
-            |```
-            |
-            |### Current feedback file path
+            |### Feedback file path
             |`$currentPath`
-            |
-            |### Target paths
-            |- ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}: `$addressedPath`
-            |- ${ProtocolVocabulary.FeedbackStatus.REJECTED}: `$rejectedPath`
         """.trimMargin()
     }
 

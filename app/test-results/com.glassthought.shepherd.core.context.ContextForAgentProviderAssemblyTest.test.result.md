@@ -51,6 +51,8 @@ skipped: 0
   - WHEN instructions are assembled
     - [PASS] THEN includes addressed feedback header
     - [PASS] THEN includes rejected feedback header
+    - [PASS] THEN includes skipped optional feedback header
+    - [PASS] THEN includes skipped optional feedback section
 - GIVEN instructions are assembled for any agent
   - WHEN the file is written
     - [PASS] THEN sections are separated by horizontal rules
