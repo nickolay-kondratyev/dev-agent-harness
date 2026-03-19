@@ -1,0 +1,65 @@
+---
+spec: "com.glassthought.shepherd.core.context.InstructionSectionTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a CallbackHelp section for a doer (not reviewer, no plan validation)
+  - WHEN rendered
+    - [PASS] THEN does NOT include validate-plan query
+    - [PASS] THEN includes the callback signal script name
+    - [PASS] THEN includes the completed done result (not reviewer)
+- GIVEN a CallbackHelp section for a reviewer with plan validation
+  - WHEN rendered
+    - [PASS] THEN includes needs_iteration done result (reviewer)
+    - [PASS] THEN includes pass done result (reviewer)
+    - [PASS] THEN includes validate-plan query section
+- GIVEN a PartContext section with a DoerRequest
+  - WHEN rendered
+    - [PASS] THEN includes the part description
+    - [PASS] THEN includes the part name
+    - [PASS] THEN returns non-null
+- GIVEN a PartContext section with a PlanReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PartContext section with a PlannerRequest
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PartContext section with a ReviewerRequest
+  - WHEN rendered
+    - [PASS] THEN includes the part name
+    - [PASS] THEN returns non-null
+- GIVEN a PrivateMd section with blank file
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PrivateMd section with existing non-blank file
+  - WHEN rendered
+    - [PASS] THEN includes the Prior Session Context heading
+    - [PASS] THEN includes the file content
+    - [PASS] THEN returns non-null
+- GIVEN a PrivateMd section with non-existent file
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a PrivateMd section with privateMdPath = null
+  - WHEN rendered
+    - [PASS] THEN returns null
+- GIVEN a RoleDefinition section
+  - WHEN rendered
+    - [PASS] THEN includes the role file content
+    - [PASS] THEN starts with role heading including role name
+- GIVEN a Ticket section
+  - WHEN rendered
+    - [PASS] THEN includes the ticket content
+    - [PASS] THEN starts with Ticket heading
+- GIVEN a WritingGuidelines section
+  - WHEN rendered
+    - [PASS] THEN returns the static writing guidelines text
+- GIVEN an OutputPathSection for PUBLIC.md
+  - WHEN rendered
+    - [PASS] THEN includes the label in heading
+    - [PASS] THEN includes the output path
+- GIVEN an OutputPathSection for plan_flow.json
+  - WHEN rendered
+    - [PASS] THEN includes the label in heading
+    - [PASS] THEN includes the path
