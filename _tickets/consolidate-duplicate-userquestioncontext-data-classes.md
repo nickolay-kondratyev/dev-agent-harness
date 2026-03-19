@@ -1,11 +1,11 @@
 ---
 id: nid_yuja09a6v2l54s6bquvskc57p_E
 title: "Consolidate duplicate UserQuestionContext data classes"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T18:19:29Z
-status_updated_iso: 2026-03-19T18:19:29Z
+status_updated_iso: 2026-03-19T18:45:53Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
