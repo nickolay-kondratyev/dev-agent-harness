@@ -87,6 +87,9 @@ private data class TestFixture(
     val tempDir: Path,
 )
 
+/** Tracks temp directories for cleanup in afterEach. */
+private val tempDirsForCleanup = mutableListOf<Path>()
+
 private fun createFixture(
     outFactory: OutFactory,
     agentResult: NonInteractiveAgentResult = NonInteractiveAgentResult.Success(AGENT_SUCCESS_OUTPUT),
@@ -94,6 +97,7 @@ private fun createFixture(
     failOnGitKeyword: String? = null,
 ): TestFixture {
     val tempDir = Files.createTempDirectory("failure-learning-test")
+    tempDirsForCleanup.add(tempDir)
     val ticketFile = tempDir.resolve("ticket.md")
     Files.writeString(ticketFile, initialTicketContent)
 
@@ -143,6 +147,13 @@ private val FAILED_WORKFLOW_RESULT = PartResult.FailedWorkflow("test step X fail
 class TicketFailureLearningUseCaseImplTest : AsgardDescribeSpec(
     config = AsgardDescribeSpecConfig(autoClearOutLinesAfterTest = true),
     body = {
+
+        afterEach {
+            tempDirsForCleanup.forEach { dir ->
+                dir.toFile().deleteRecursively()
+            }
+            tempDirsForCleanup.clear()
+        }
 
         describe("GIVEN agent succeeds (happy path)") {
             describe("WHEN recordFailureLearning is called with FailedWorkflow") {
@@ -202,13 +213,27 @@ class TicketFailureLearningUseCaseImplTest : AsgardDescribeSpec(
                     updated shouldContain "- **Parts completed**: frontend/setup, backend/setup"
                 }
 
-                it("THEN includes agent-generated summary") {
+                it("THEN includes agent-generated Approach in summary") {
                     val fixture = createFixture(outFactory)
                     fixture.useCase.recordFailureLearning(FAILED_WORKFLOW_RESULT)
 
                     val updated = Files.readString(fixture.ticketFile)
                     updated shouldContain "**Approach**: Attempted to implement the dashboard"
+                }
+
+                it("THEN includes agent-generated Root Cause in summary") {
+                    val fixture = createFixture(outFactory)
+                    fixture.useCase.recordFailureLearning(FAILED_WORKFLOW_RESULT)
+
+                    val updated = Files.readString(fixture.ticketFile)
                     updated shouldContain "**Root Cause**: Test setup was missing mock data"
+                }
+
+                it("THEN includes agent-generated Recommendations in summary") {
+                    val fixture = createFixture(outFactory)
+                    fixture.useCase.recordFailureLearning(FAILED_WORKFLOW_RESULT)
+
+                    val updated = Files.readString(fixture.ticketFile)
                     updated shouldContain "**Recommendations**: Add mock data fixtures"
                 }
 
@@ -425,7 +450,7 @@ Build the dashboard feature.
             describe("WHEN mapping to failure context") {
                 it("THEN FailedWorkflow maps to failureType FailedWorkflow") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(
+                    val context = fixture.useCase.buildFailureContext(
                         PartResult.FailedWorkflow("some reason"),
                     )
                     context.failureType shouldBe "FailedWorkflow"
@@ -433,7 +458,7 @@ Build the dashboard feature.
 
                 it("THEN AgentCrashed maps to failureType AgentCrashed") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(
+                    val context = fixture.useCase.buildFailureContext(
                         PartResult.AgentCrashed("crash details"),
                     )
                     context.failureType shouldBe "AgentCrashed"
@@ -441,7 +466,7 @@ Build the dashboard feature.
 
                 it("THEN FailedToConverge maps to failureType FailedToConverge") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(
+                    val context = fixture.useCase.buildFailureContext(
                         PartResult.FailedToConverge("convergence summary"),
                     )
                     context.failureType shouldBe "FailedToConverge"
@@ -449,31 +474,31 @@ Build the dashboard feature.
 
                 it("THEN Completed maps to failureType Completed") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(PartResult.Completed)
+                    val context = fixture.useCase.buildFailureContext(PartResult.Completed)
                     context.failureType shouldBe "Completed"
                 }
 
                 it("THEN workflowType comes from run context") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     context.workflowType shouldBe "with-planning"
                 }
 
                 it("THEN failedAt comes from run context") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     context.failedAt shouldBe "backend_impl/impl"
                 }
 
                 it("THEN iteration comes from run context") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     context.iteration shouldBe "2/3"
                 }
 
                 it("THEN partsCompleted comes from run context") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     context.partsCompleted shouldBe listOf("frontend/setup", "backend/setup")
                 }
             }
@@ -483,7 +508,7 @@ Build the dashboard feature.
             describe("WHEN assembleAgentInstructions is called") {
                 it("THEN includes failure facts") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     val instructions = fixture.useCase.assembleAgentInstructions(context)
 
                     instructions shouldContain "Try number: 1"
@@ -494,7 +519,7 @@ Build the dashboard feature.
 
                 it("THEN includes artifacts directory path") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     val instructions = fixture.useCase.assembleAgentInstructions(context)
 
                     instructions shouldContain ".ai_out"
@@ -502,7 +527,7 @@ Build the dashboard feature.
 
                 it("THEN includes expected output format") {
                     val fixture = createFixture(outFactory)
-                    val context = fixture.useCase.mapToFailureContext(FAILED_WORKFLOW_RESULT)
+                    val context = fixture.useCase.buildFailureContext(FAILED_WORKFLOW_RESULT)
                     val instructions = fixture.useCase.assembleAgentInstructions(context)
 
                     instructions shouldContain "**Approach**"
@@ -516,6 +541,7 @@ Build the dashboard feature.
             describe("WHEN partsCompleted is empty") {
                 it("THEN shows 'none' for parts completed") {
                     val tempDir = Files.createTempDirectory("build-try-section-test")
+                    tempDirsForCleanup.add(tempDir)
                     val ticketFile = tempDir.resolve("ticket.md")
                     Files.writeString(ticketFile, "# Test")
 

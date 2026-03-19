@@ -20,7 +20,9 @@ skipped: 0
     - [PASS] THEN appends TRY-N section with Previous Failed Attempts heading
     - [PASS] THEN commits on the try branch
     - [PASS] THEN includes TRY-1 sub-heading
-    - [PASS] THEN includes agent-generated summary
+    - [PASS] THEN includes agent-generated Approach in summary
+    - [PASS] THEN includes agent-generated Recommendations in summary
+    - [PASS] THEN includes agent-generated Root Cause in summary
     - [PASS] THEN includes branch name in structured facts
     - [PASS] THEN includes failed-at and iteration
     - [PASS] THEN includes failure type derived from PartResult variant

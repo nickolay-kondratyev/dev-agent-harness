@@ -44,7 +44,7 @@ class TicketFailureLearningUseCaseImpl(
     }
 
     private suspend fun doRecordFailureLearning(partResult: PartResult) {
-        val failureContext = mapToFailureContext(partResult)
+        val failureContext = buildFailureContext(partResult)
         val agentSummary = runAnalysisAgent(failureContext)
         val trySection = buildTrySection(failureContext, agentSummary)
 
@@ -53,9 +53,9 @@ class TicketFailureLearningUseCaseImpl(
         propagateToOriginatingBranch()
     }
 
-    // ── PartResult → FailureContext mapping ─────────────────────────────────
+    // ── PartResult → FailureContext building ─────────────────────────────────
 
-    internal fun mapToFailureContext(partResult: PartResult): PartResultFailureContext {
+    internal fun buildFailureContext(partResult: PartResult): PartResultFailureContext {
         val failureType = when (partResult) {
             is PartResult.FailedWorkflow -> "FailedWorkflow"
             is PartResult.AgentCrashed -> "AgentCrashed"
@@ -91,6 +91,7 @@ class TicketFailureLearningUseCaseImpl(
                 out.warn(
                     "failure_learning_agent_failed",
                     Val(result.exitCode, ValType.COUNT),
+                    Val(result.output, ValType.STRING_USER_AGNOSTIC),
                 )
                 null
             }
@@ -213,7 +214,11 @@ class TicketFailureLearningUseCaseImpl(
                 "failure_learning_propagation_failed",
                 Val(e.message ?: "unknown", ValType.STRING_USER_AGNOSTIC),
             )
-            // Best-effort: try to return to the try branch even if propagation failed
+            // Best-effort: try to return to the try branch even if propagation failed.
+            // WHY-NOT: We do not clean up staged changes on the originating branch here.
+            // If failure occurs between checkout and commit, the originating branch may be
+            // left with a staged ticket file. This is acceptable for V1 given the best-effort
+            // contract — the try branch (our primary target) is unaffected.
             tryCheckoutBranch(runContext.branchName)
         }
     }

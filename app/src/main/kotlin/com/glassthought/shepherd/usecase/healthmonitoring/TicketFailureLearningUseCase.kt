@@ -24,6 +24,13 @@ class NoOpTicketFailureLearningUseCase : TicketFailureLearningUseCase {
  *
  * Captures everything about the current try that the impl needs to build
  * the TRY-N section and perform git operations.
+ *
+ * **Per-run construction**: This context contains both run-identity fields (ticketPath,
+ * branchName) and failure-specific fields (failedAt, iteration, partsCompleted).
+ * As a result, [TicketFailureLearningUseCaseImpl] must be constructed per-run/per-failure,
+ * not as a long-lived singleton. The current wiring via `TicketShepherdCreator` already
+ * constructs per-run, so this is safe. If wiring changes to singleton scope, this
+ * design must be revisited.
  */
 data class FailureLearningRunContext(
     /** Path to the ticket markdown file. */
@@ -62,7 +69,7 @@ data class FailureLearningRunContext(
  *
  * Internal to the impl — used to assemble agent instructions and the TRY-N section.
  */
-data class PartResultFailureContext(
+internal data class PartResultFailureContext(
     /** Workflow type (e.g., "with-planning", "straightforward"). */
     val workflowType: String,
 
