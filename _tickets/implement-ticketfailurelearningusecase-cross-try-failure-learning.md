@@ -1,11 +1,11 @@
 ---
 id: nid_m1j23weqywhhom2jh3vj10rf7_E
 title: "Implement TicketFailureLearningUseCase — cross-try failure learning"
-status: open
+status: in_progress
 deps: [nid_njq7ezzxmf8orffmzf7oorsd0_E]
 links: []
 created_iso: 2026-03-19T00:48:19Z
-status_updated_iso: 2026-03-19T00:48:19Z
+status_updated_iso: 2026-03-19T17:41:07Z
 type: feature
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
