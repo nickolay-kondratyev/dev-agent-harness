@@ -893,4 +893,179 @@ class PartExecutorImplTest : AsgardDescribeSpec({
             }
         }
     }
+
+    // ── Doer+Reviewer: Part Completion Guard — PASS with empty pending → Completed ──
+
+    describe("GIVEN a doer+reviewer executor with empty feedback pending directory") {
+        describe("WHEN reviewer signals PASS") {
+
+            it("THEN the result is PartResult.Completed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val feedbackDir = Files.createTempDirectory("feedback-guard-test")
+                Files.createDirectories(feedbackDir.resolve("pending"))
+                Files.createDirectories(feedbackDir.resolve("addressed"))
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, feedbackDir = feedbackDir)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+                result shouldBe PartResult.Completed
+            }
+        }
+    }
+
+    // ── Doer+Reviewer: Part Completion Guard — PASS with critical in pending → AgentCrashed ──
+
+    describe("GIVEN a doer+reviewer executor with critical feedback file in pending") {
+        describe("WHEN reviewer signals PASS") {
+
+            it("THEN the result is PartResult.AgentCrashed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val feedbackDir = Files.createTempDirectory("feedback-guard-test")
+                val pendingDir = feedbackDir.resolve("pending")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(feedbackDir.resolve("addressed"))
+                Files.writeString(pendingDir.resolve("critical__missing-null-check.md"), "# Critical issue")
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, feedbackDir = feedbackDir)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+            }
+        }
+    }
+
+    // ── Doer+Reviewer: Part Completion Guard — PASS with important in pending → AgentCrashed ──
+
+    describe("GIVEN a doer+reviewer executor with important feedback file in pending") {
+        describe("WHEN reviewer signals PASS") {
+
+            it("THEN the result is PartResult.AgentCrashed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val feedbackDir = Files.createTempDirectory("feedback-guard-test")
+                val pendingDir = feedbackDir.resolve("pending")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(feedbackDir.resolve("addressed"))
+                Files.writeString(pendingDir.resolve("important__error-handling.md"), "# Important issue")
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, feedbackDir = feedbackDir)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+            }
+        }
+    }
+
+    // ── Doer+Reviewer: Part Completion Guard — PASS with only optional → Completed + moved ──
+
+    describe("GIVEN a doer+reviewer executor with only optional feedback files in pending") {
+        describe("WHEN reviewer signals PASS") {
+
+            it("THEN the result is PartResult.Completed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val feedbackDir = Files.createTempDirectory("feedback-guard-test")
+                val pendingDir = feedbackDir.resolve("pending")
+                val addressedDir = feedbackDir.resolve("addressed")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(addressedDir)
+                Files.writeString(pendingDir.resolve("optional__naming.md"), "# Naming suggestion")
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, feedbackDir = feedbackDir)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+                result shouldBe PartResult.Completed
+            }
+
+            it("THEN optional files are moved from pending to addressed") {
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val feedbackDir = Files.createTempDirectory("feedback-guard-test")
+                val pendingDir = feedbackDir.resolve("pending")
+                val addressedDir = feedbackDir.resolve("addressed")
+                Files.createDirectories(pendingDir)
+                Files.createDirectories(addressedDir)
+                Files.writeString(pendingDir.resolve("optional__naming.md"), "# Naming suggestion")
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, feedbackDir = feedbackDir)
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),
+                        AgentSignal.Done(DoneResult.PASS),
+                    )
+                )
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(buildHandle("doer"), buildHandle("reviewer", sessionId = "s2")))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                executor.execute()
+
+                Files.exists(pendingDir.resolve("optional__naming.md")) shouldBe false
+                Files.exists(addressedDir.resolve("optional__naming.md")) shouldBe true
+            }
+        }
+    }
 })

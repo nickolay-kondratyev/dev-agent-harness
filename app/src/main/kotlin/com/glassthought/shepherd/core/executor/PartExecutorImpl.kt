@@ -32,6 +32,7 @@ data class PartExecutorDeps(
     val failedToConvergeUseCase: FailedToConvergeUseCase,
     val outFactory: OutFactory,
     val publicMdValidator: PublicMdValidator = PublicMdValidator(),
+    val partCompletionGuard: PartCompletionGuard = PartCompletionGuard(),
 )
 
 /**
@@ -162,6 +163,7 @@ class PartExecutorImpl(
     ): PartResult? = when (signal) {
         is AgentSignal.Done -> when (signal.result) {
             DoneResult.PASS -> validatePublicMdOrCrash(revConfig, doerHandle, reviewerHandle)
+                ?: validateCompletionGuardOrCrash(revConfig, doerHandle, reviewerHandle)
                 ?: run {
                     reviewerStatus.transitionTo(signal)
                     reviewerStatus = SubPartStatus.COMPLETED
@@ -247,6 +249,27 @@ class PartExecutorImpl(
             )
         ))
 
+    /**
+     * Part Completion Guard (Gate 5, R8): validates no critical/important feedback in pending/.
+     * Returns [PartResult.AgentCrashed] if blocking items found, null if guard passes.
+     * Only applies when the reviewer config has a feedbackDir; otherwise passes trivially.
+     */
+    @Suppress("ReturnCount")
+    private suspend fun validateCompletionGuardOrCrash(
+        revConfig: SubPartConfig, doerHandle: SpawnedAgentHandle, reviewerHandle: SpawnedAgentHandle,
+    ): PartResult.AgentCrashed? {
+        val feedbackDir = revConfig.feedbackDir ?: return null
+        val pendingDir = feedbackDir.resolve(PENDING_DIR)
+        val addressedDir = feedbackDir.resolve(ADDRESSED_DIR)
+        val result = deps.partCompletionGuard.validate(pendingDir, addressedDir)
+        if (result is PartCompletionGuard.GuardResult.Failed) {
+            reviewerStatus = SubPartStatus.FAILED
+            killAllSessions(doerHandle, reviewerHandle)
+            return PartResult.AgentCrashed(result.message)
+        }
+        return null
+    }
+
     private suspend fun validatePublicMdOrCrash(
         config: SubPartConfig, doerHandle: SpawnedAgentHandle, reviewerHandle: SpawnedAgentHandle?,
     ): PartResult.AgentCrashed? {
@@ -288,6 +311,8 @@ class PartExecutorImpl(
 
     companion object {
         private const val ITERATION_INCREMENT = 2
+        private const val PENDING_DIR = "pending"
+        private const val ADDRESSED_DIR = "addressed"
         private const val SELF_COMPACTED_UNEXPECTED =
             "SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade"
     }
