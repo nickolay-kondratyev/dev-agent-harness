@@ -1,11 +1,11 @@
 ---
 id: nid_i5se9ful3qgnq1s0ccifoauve_E
 title: "Update spec docs for granular feedback loop post-implementation"
-status: open
+status: in_progress
 deps: [nid_fq8wn0eb9yrvzcpzdurlmsg7i_E]
 links: []
 created_iso: 2026-03-18T22:39:02Z
-status_updated_iso: 2026-03-18T22:39:02Z
+status_updated_iso: 2026-03-19T20:33:15Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
