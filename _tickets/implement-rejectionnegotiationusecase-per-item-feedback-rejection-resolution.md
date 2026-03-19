@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:18:00Z
 id: nid_rnusi51qg9yw7cmszkes0l1ab_E
 title: "Implement RejectionNegotiationUseCase — per-item feedback rejection resolution"
-status: in_progress
+status: closed
 deps: [nid_dnelaf98097nicijp4kvjfd1d_E, nid_92vpmdxcn3j8f98gzgu9eln43_E]
 links: []
 created_iso: 2026-03-18T22:30:32Z
-status_updated_iso: 2026-03-19T18:02:38Z
+status_updated_iso: 2026-03-19T18:18:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
