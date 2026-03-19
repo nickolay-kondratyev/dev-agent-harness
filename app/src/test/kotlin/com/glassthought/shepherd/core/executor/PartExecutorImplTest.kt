@@ -106,7 +106,11 @@ class PartExecutorImplTest : AsgardDescribeSpec(
         executionContext = testExecutionContext,
     )
 
-    fun buildReviewerConfig(publicMdPath: Path, feedbackDir: Path? = null): SubPartConfig = SubPartConfig(
+    fun buildReviewerConfig(
+        publicMdPath: Path,
+        feedbackDir: Path? = null,
+        privateMdPath: Path? = null,
+    ): SubPartConfig = SubPartConfig(
         partName = "part_1",
         subPartName = "reviewer",
         subPartIndex = 1,
@@ -119,7 +123,7 @@ class PartExecutorImplTest : AsgardDescribeSpec(
         ticketContent = "Test ticket",
         outputDir = publicMdPath.parent,
         publicMdOutputPath = publicMdPath,
-        privateMdPath = null,
+        privateMdPath = privateMdPath,
         executionContext = testExecutionContext,
         doerPublicMdPath = Path.of("/tmp/doer/PUBLIC.md"),
         feedbackDir = feedbackDir ?: publicMdPath.parent.resolve("__feedback"),
@@ -1275,6 +1279,93 @@ class PartExecutorImplTest : AsgardDescribeSpec(
                 executor.execute()
 
                 facade.sendPayloadCalls shouldHaveSize 1
+            }
+        }
+    }
+
+    // ── Compaction: Reviewer PASS + compaction failure → AgentCrashed ──
+
+    describe("GIVEN a doer+reviewer executor where reviewer has low context") {
+        describe("WHEN reviewer signals PASS but compaction fails (missing PRIVATE.md)") {
+
+            it("THEN the result is AgentCrashed, not Completed") {
+                val dir = Files.createTempDirectory("compaction-reviewer-pass-fail")
+                val doerPublicMd = dir.resolve("doer-PUBLIC.md")
+                Files.writeString(doerPublicMd, "doer output")
+                val reviewerPublicMd = dir.resolve("reviewer-PUBLIC.md")
+                Files.writeString(reviewerPublicMd, "reviewer output")
+                val reviewerPrivateMd = dir.resolve("reviewer-PRIVATE.md")
+                // Note: NOT creating reviewer-PRIVATE.md — compaction will fail validation
+
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd, privateMdPath = reviewerPrivateMd)
+
+                val doerHandle = buildHandle("doer")
+                val reviewerHandle = buildHandle("reviewer", sessionId = "session-reviewer")
+
+                // Signal sequence:
+                // 1. Doer Done(COMPLETED) — healthy context, no compaction
+                // 2. Reviewer PASS — low context triggers compaction
+                // 3. Reviewer SelfCompacted — but PRIVATE.md is missing
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),  // doer
+                    AgentSignal.Done(DoneResult.PASS),       // reviewer
+                    AgentSignal.SelfCompacted,               // reviewer compaction (PRIVATE.md missing)
+                ))
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(doerHandle, reviewerHandle))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+
+                // Doer: healthy context (80). Reviewer: low context (20) — triggers compaction
+                var contextReadCount = 0
+                facade.onReadContextWindowState {
+                    contextReadCount++
+                    if (contextReadCount == 1) ContextWindowState(remainingPercentage = 80)
+                    else ContextWindowState(remainingPercentage = 20)
+                }
+
+                val executor = buildExecutor(doerConfig, reviewerConfig = reviewerCfg, facade = facade)
+                val result = executor.execute()
+
+                result.shouldBeInstanceOf<PartResult.AgentCrashed>()
+                (result as PartResult.AgentCrashed).details shouldContain "PRIVATE.md"
+            }
+        }
+    }
+
+    // ── Compaction: Crashed signal during compaction kills session ──────
+
+    describe("GIVEN a doer-only executor with low context") {
+        describe("WHEN agent crashes during compaction") {
+
+            it("THEN killSession is called for the crashed session") {
+                val dir = Files.createTempDirectory("compaction-crash-kill")
+                val publicMd = dir.resolve("PUBLIC.md")
+                Files.writeString(publicMd, "# Output")
+                val privateMd = dir.resolve("PRIVATE.md")
+                val doerConfig = buildDoerConfig(publicMd, privateMdPath = privateMd)
+
+                val doerHandle = buildHandle("doer")
+                val signalQueue = ArrayDeque(listOf(
+                    AgentSignal.Done(DoneResult.COMPLETED),
+                    AgentSignal.Crashed("Agent timed out"),
+                ))
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { doerHandle }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 20) }
+
+                val executor = buildExecutor(doerConfig, facade = facade)
+                executor.execute()
+
+                // killSession should be called: once inside performCompaction (Crashed branch),
+                // and the caller does NOT call killAllSessions for CompactionFailed.
+                // So we expect exactly 1 kill call from the Crashed branch.
+                facade.killSessionCalls shouldHaveSize 1
+                facade.killSessionCalls[0] shouldBe doerHandle
             }
         }
     }

@@ -222,7 +222,7 @@ class PartExecutorImpl(
     }
 
     /** Returns [ReviewerSignalResult.Terminal] to stop, or [ReviewerSignalResult.Continue] to continue iteration. */
-    @Suppress("ReturnCount")
+    @Suppress("ReturnCount", "NestedBlockDepth")
     private suspend fun mapReviewerSignal(
         signal: AgentSignal,
         doerHandle: SpawnedAgentHandle?,
@@ -238,9 +238,17 @@ class PartExecutorImpl(
                     reviewerStatus.transitionTo(signal)
                     reviewerStatus = SubPartStatus.COMPLETED
                     doerStatus = SubPartStatus.COMPLETED
-                    afterDone(revConfig, signal.result, reviewerHandle)
-                    killAllSessions(doerHandle, reviewerHandle)
-                    ReviewerSignalResult.Terminal(PartResult.Completed)
+                    val compactionOutcome = afterDone(revConfig, signal.result, reviewerHandle)
+                    when (compactionOutcome) {
+                        is CompactionOutcome.CompactionFailed -> {
+                            doerHandle?.let { deps.agentFacade.killSession(it) }
+                            ReviewerSignalResult.Terminal(PartResult.AgentCrashed(compactionOutcome.reason))
+                        }
+                        else -> {
+                            killAllSessions(doerHandle, reviewerHandle)
+                            ReviewerSignalResult.Terminal(PartResult.Completed)
+                        }
+                    }
                 }
             }
             DoneResult.NEEDS_ITERATION ->
@@ -352,7 +360,11 @@ class PartExecutorImpl(
         Files.writeString(instructionFile, instructionText)
 
         // Send compaction instruction and await signal
-        val signal = deps.agentFacade.sendPayloadAndAwaitSignal(handle, AgentPayload(instructionFile))
+        val signal = try {
+            deps.agentFacade.sendPayloadAndAwaitSignal(handle, AgentPayload(instructionFile))
+        } finally {
+            Files.deleteIfExists(instructionFile)
+        }
 
         return when (signal) {
             AgentSignal.SelfCompacted -> {
@@ -388,7 +400,8 @@ class PartExecutorImpl(
                 )
             }
             is AgentSignal.Crashed -> {
-                // Agent crashed during compaction (e.g., timeout)
+                // Agent crashed during compaction (e.g., timeout) — kill lingering session
+                deps.agentFacade.killSession(handle)
                 CompactionOutcome.CompactionFailed(signal.details)
             }
             is AgentSignal.FailWorkflow -> {

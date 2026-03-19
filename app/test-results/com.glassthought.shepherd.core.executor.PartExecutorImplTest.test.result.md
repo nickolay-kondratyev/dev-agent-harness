@@ -39,6 +39,9 @@ skipped: 0
 - (4) GIVEN a doer-only executor
   - WHEN the doer signals Done(NEEDS_ITERATION)
     - [PASS] THEN IllegalStateException is thrown
+- (4) GIVEN a doer-only executor with low context
+  - WHEN agent crashes during compaction
+    - [PASS] THEN killSession is called for the crashed session
 - (5) GIVEN a doer+reviewer executor
   - WHEN the reviewer signals Crashed
     - [PASS] THEN the result is PartResult.AgentCrashed
@@ -69,6 +72,9 @@ skipped: 0
 - GIVEN a doer+reviewer executor
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed
+- GIVEN a doer+reviewer executor where reviewer has low context
+  - WHEN reviewer signals PASS but compaction fails (missing PRIVATE.md)
+    - [PASS] THEN the result is AgentCrashed, not Completed
 - GIVEN a doer+reviewer executor with doer at low context
   - WHEN doer low-context compaction -> reviewer NEEDS_ITERATION -> doer respawned -> PASS
     - [PASS] THEN 3 spawn calls are made (doer v1 + reviewer + doer v2 respawn)
