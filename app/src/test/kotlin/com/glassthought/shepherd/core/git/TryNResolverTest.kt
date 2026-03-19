@@ -1,10 +1,12 @@
 package com.glassthought.shepherd.core.git
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.shepherd.core.supporting.git.BranchNameBuilder
 import com.glassthought.shepherd.core.supporting.git.TryNResolverImpl
 import com.glassthought.shepherd.core.supporting.ticket.TicketData
 import io.kotest.matchers.shouldBe
 import java.nio.file.Files
+import java.nio.file.Path
 
 class TryNResolverTest : AsgardDescribeSpec({
 
@@ -14,6 +16,11 @@ class TryNResolverTest : AsgardDescribeSpec({
         status = null,
         description = "",
     )
+
+    fun createAiOutDir(repoRoot: Path, ticketData: TicketData, tryNumber: Int) {
+        val branchName = BranchNameBuilder.build(ticketData, tryNumber)
+        Files.createDirectories(repoRoot.resolve(".ai_out").resolve(branchName))
+    }
 
     describe("GIVEN TryNResolver") {
 
@@ -28,8 +35,7 @@ class TryNResolverTest : AsgardDescribeSpec({
 
         describe("WHEN .ai_out/ directory for try-1 exists") {
             val repoRoot = Files.createTempDirectory("try-n-resolver-test")
-            // Branch name for try-1: "TK-001__my-feature__try-1"
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-001__my-feature__try-1"))
+            createAiOutDir(repoRoot, ticketData, 1)
             val resolver = TryNResolverImpl(repoRoot)
 
             it("THEN returns 2") {
@@ -39,8 +45,8 @@ class TryNResolverTest : AsgardDescribeSpec({
 
         describe("WHEN .ai_out/ directories for try-1 and try-3 exist but not try-2") {
             val repoRoot = Files.createTempDirectory("try-n-resolver-test")
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-001__my-feature__try-1"))
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-001__my-feature__try-3"))
+            createAiOutDir(repoRoot, ticketData, 1)
+            createAiOutDir(repoRoot, ticketData, 3)
             val resolver = TryNResolverImpl(repoRoot)
 
             it("THEN returns 2 (first gap)") {
@@ -50,8 +56,8 @@ class TryNResolverTest : AsgardDescribeSpec({
 
         describe("WHEN .ai_out/ directories for try-1 and try-2 exist") {
             val repoRoot = Files.createTempDirectory("try-n-resolver-test")
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-001__my-feature__try-1"))
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-001__my-feature__try-2"))
+            createAiOutDir(repoRoot, ticketData, 1)
+            createAiOutDir(repoRoot, ticketData, 2)
             val resolver = TryNResolverImpl(repoRoot)
 
             it("THEN returns 3") {
@@ -61,7 +67,8 @@ class TryNResolverTest : AsgardDescribeSpec({
 
         describe("WHEN .ai_out/ exists but contains directories for a different ticket") {
             val repoRoot = Files.createTempDirectory("try-n-resolver-test")
-            Files.createDirectories(repoRoot.resolve(".ai_out/TK-999__other-ticket__try-1"))
+            val otherTicket = TicketData(id = "TK-999", title = "Other Ticket", status = null, description = "")
+            createAiOutDir(repoRoot, otherTicket, 1)
             val resolver = TryNResolverImpl(repoRoot)
 
             it("THEN returns 1 (unrelated directories are ignored)") {
