@@ -8,7 +8,7 @@ import com.glassthought.shepherd.core.state.PartResult
  * See ref.ap.cI3odkAZACqDst82HtxKa.E for the full spec.
  * V1: no-op stub ([NoOpTicketFailureLearningUseCase]). Real implementation deferred.
  */
-interface TicketFailureLearningUseCase {
+fun interface TicketFailureLearningUseCase {
     suspend fun recordFailureLearning(partResult: PartResult)
 }
 
