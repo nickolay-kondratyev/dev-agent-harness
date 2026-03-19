@@ -1,11 +1,11 @@
 ---
 id: nid_o4gj7swdejriooj5bex3b34vf_E
 title: "Align InstructionText + ProtocolVocabulary + InstructionRenderers with new 3-directory feedback structure"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T18:46:42Z
-status_updated_iso: 2026-03-18T18:46:42Z
+status_updated_iso: 2026-03-19T14:28:01Z
 type: chore
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
