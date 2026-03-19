@@ -4,6 +4,7 @@ import com.asgard.core.annotation.AnchorPoint
 import com.glassthought.shepherd.core.context.ProtocolVocabulary
 import java.nio.file.Files
 import java.nio.file.Path
+import kotlin.io.path.listDirectoryEntries
 
 /**
  * Gate 5: Part Completion Guard — validates no pending critical/important feedback on reviewer PASS.
@@ -36,11 +37,9 @@ class PartCompletionGuard {
             return GuardResult.Passed
         }
 
-        val pendingFiles = Files.list(pendingDir).use { stream ->
-            stream.filter { Files.isRegularFile(it) }
-                .map { it.fileName.toString() }
-                .toList()
-        }
+        val pendingFiles = pendingDir.listDirectoryEntries()
+            .filter { Files.isRegularFile(it) }
+            .map { it.fileName.toString() }
 
         val blockingFiles = pendingFiles.filter { fileName ->
             fileName.startsWith(ProtocolVocabulary.SeverityPrefix.CRITICAL) ||
