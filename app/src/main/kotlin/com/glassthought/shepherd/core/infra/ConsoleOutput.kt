@@ -6,7 +6,7 @@ package com.glassthought.shepherd.core.infra
  * Production code uses [DefaultConsoleOutput]; tests substitute a fake
  * that captures printed messages instead of writing to stdout.
  */
-interface ConsoleOutput {
+fun interface ConsoleOutput {
     fun printlnRed(message: String)
 }
 

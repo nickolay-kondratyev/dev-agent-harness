@@ -1,6 +1,7 @@
 package com.glassthought.shepherd.core.context
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldNotContain
 import java.nio.file.Files
@@ -188,15 +189,16 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
 
     // -- PrivateMd tests --
 
-    describe("GIVEN a doer request with PRIVATE.md present") {
+    describe("GIVEN a doer request with privateMdPath pointing to existing non-empty file") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-privatemd-present-test")
-        val request = ContextTestFixtures.doerInstructionRequest(tempDir)
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
 
-        // outputDir = tempDir/comm/in -> parent.parent = tempDir
-        val privateMdDir = tempDir.resolve("private")
-        Files.createDirectories(privateMdDir)
-        Files.writeString(privateMdDir.resolve("PRIVATE.md"), "Session context from prior run.")
+        val privateMdFile = tempDir.resolve("private/PRIVATE.md")
+        Files.createDirectories(privateMdFile.parent)
+        Files.writeString(privateMdFile, "Session context from prior run.")
+
+        val request = baseRequest.copy(privateMdPath = privateMdFile)
 
         describe("WHEN instructions are assembled") {
             val text = provider.assembleInstructions(request).readText()
@@ -208,12 +210,20 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
             it("THEN output contains Prior Session Context header") {
                 text shouldContain "Prior Session Context (PRIVATE.md)"
             }
+
+            it("THEN PRIVATE.md content appears after role definition") {
+                val roleIdx = text.indexOf("# Role:")
+                val privateIdx = text.indexOf("Prior Session Context (PRIVATE.md)")
+                val partIdx = text.indexOf("# Part Context")
+                (roleIdx < privateIdx) shouldBe true
+                (privateIdx < partIdx) shouldBe true
+            }
         }
     }
 
-    describe("GIVEN a doer request without PRIVATE.md") {
+    describe("GIVEN a doer request with privateMdPath = null") {
         val provider = ContextForAgentProvider.standard(outFactory)
-        val tempDir = Files.createTempDirectory("assembly-privatemd-absent-test")
+        val tempDir = Files.createTempDirectory("assembly-privatemd-null-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
         describe("WHEN instructions are assembled") {
@@ -225,21 +235,66 @@ class ContextForAgentProviderAssemblyTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN a planner request with PRIVATE.md present") {
+    describe("GIVEN a doer request with privateMdPath pointing to non-existent file") {
+        val provider = ContextForAgentProvider.standard(outFactory)
+        val tempDir = Files.createTempDirectory("assembly-privatemd-nonexistent-test")
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        val nonExistentPath = tempDir.resolve("does-not-exist/PRIVATE.md")
+        val request = baseRequest.copy(privateMdPath = nonExistentPath)
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN output does NOT contain Prior Session Context header") {
+                text shouldNotContain "Prior Session Context"
+            }
+        }
+    }
+
+    describe("GIVEN a doer request with privateMdPath pointing to empty file") {
+        val provider = ContextForAgentProvider.standard(outFactory)
+        val tempDir = Files.createTempDirectory("assembly-privatemd-empty-test")
+        val baseRequest = ContextTestFixtures.doerInstructionRequest(tempDir)
+
+        val emptyFile = tempDir.resolve("private/PRIVATE.md")
+        Files.createDirectories(emptyFile.parent)
+        Files.writeString(emptyFile, "")
+        val request = baseRequest.copy(privateMdPath = emptyFile)
+
+        describe("WHEN instructions are assembled") {
+            val text = provider.assembleInstructions(request).readText()
+
+            it("THEN output does NOT contain Prior Session Context header") {
+                text shouldNotContain "Prior Session Context"
+            }
+        }
+    }
+
+    describe("GIVEN a planner request with privateMdPath pointing to existing file") {
         val provider = ContextForAgentProvider.standard(outFactory)
         val tempDir = Files.createTempDirectory("assembly-planner-privatemd-test")
-        val request = ContextTestFixtures.plannerRequest(tempDir)
+        val baseRequest = ContextTestFixtures.plannerRequest(tempDir)
 
-        // outputDir = tempDir/planner/comm/in -> parent.parent = tempDir/planner
-        val privateMdDir = tempDir.resolve("planner/private")
-        Files.createDirectories(privateMdDir)
-        Files.writeString(privateMdDir.resolve("PRIVATE.md"), "Planner session context.")
+        val privateMdFile = tempDir.resolve("planner/private/PRIVATE.md")
+        Files.createDirectories(privateMdFile.parent)
+        Files.writeString(privateMdFile, "Planner session context.")
+
+        val request = baseRequest.copy(privateMdPath = privateMdFile)
 
         describe("WHEN instructions are assembled") {
             val text = provider.assembleInstructions(request).readText()
 
             it("THEN output contains PRIVATE.md content") {
                 text shouldContain "Planner session context"
+            }
+
+            it("THEN PRIVATE.md content appears after role definition and before ticket") {
+                val roleIdx = text.indexOf("# Role:")
+                val privateIdx = text.indexOf("Prior Session Context (PRIVATE.md)")
+                val ticketIdx = text.indexOf("# Ticket")
+                (roleIdx < privateIdx) shouldBe true
+                (privateIdx < ticketIdx) shouldBe true
             }
         }
     }
