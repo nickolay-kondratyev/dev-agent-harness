@@ -43,7 +43,7 @@ data class CurrentState(
         currentStatus.validateTransitionTo(newStatus)
 
         val updatedSubPart = subPart.copy(status = newStatus)
-        val updatedSubParts = part.subParts.toMutableList().apply { set(subPartIndex, updatedSubPart) }
+        val updatedSubParts = part.subParts.mapIndexed { i, sp -> if (i == subPartIndex) updatedSubPart else sp }
         parts[partIndex] = part.copy(subParts = updatedSubParts)
     }
 
@@ -68,7 +68,7 @@ data class CurrentState(
         }
 
         val updatedSubPart = subPart.copy(iteration = iteration.copy(current = iteration.current + 1))
-        val updatedSubParts = part.subParts.toMutableList().apply { set(subPartIndex, updatedSubPart) }
+        val updatedSubParts = part.subParts.mapIndexed { i, sp -> if (i == subPartIndex) updatedSubPart else sp }
         parts[partIndex] = part.copy(subParts = updatedSubParts)
     }
 
@@ -85,7 +85,7 @@ data class CurrentState(
 
         val currentSessions = subPart.sessionIds.orEmpty()
         val updatedSubPart = subPart.copy(sessionIds = currentSessions + record)
-        val updatedSubParts = part.subParts.toMutableList().apply { set(subPartIndex, updatedSubPart) }
+        val updatedSubParts = part.subParts.mapIndexed { i, sp -> if (i == subPartIndex) updatedSubPart else sp }
         parts[partIndex] = part.copy(subParts = updatedSubParts)
     }
 
