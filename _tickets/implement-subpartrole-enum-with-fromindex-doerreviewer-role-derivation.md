@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:42:48Z
 id: nid_6zpwfuz85gl4x175fcudp9lju_E
 title: "Implement SubPartRole enum with fromIndex() — doer/reviewer role derivation"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T00:39:14Z
-status_updated_iso: 2026-03-19T17:40:53Z
+status_updated_iso: 2026-03-19T17:42:48Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
