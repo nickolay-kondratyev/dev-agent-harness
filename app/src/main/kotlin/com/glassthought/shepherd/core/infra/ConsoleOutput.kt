@@ -6,19 +6,25 @@ package com.glassthought.shepherd.core.infra
  * Production code uses [DefaultConsoleOutput]; tests substitute a fake
  * that captures printed messages instead of writing to stdout.
  */
-fun interface ConsoleOutput {
+interface ConsoleOutput {
     fun printlnRed(message: String)
+    fun printlnGreen(message: String)
 }
 
-/** Prints to stdout with ANSI red color codes. */
+/** Prints to stdout with ANSI color codes. */
 class DefaultConsoleOutput : ConsoleOutput {
 
     override fun printlnRed(message: String) {
         println("$ANSI_RED$message$ANSI_RESET")
     }
 
+    override fun printlnGreen(message: String) {
+        println("$ANSI_GREEN$message$ANSI_RESET")
+    }
+
     companion object {
         private const val ANSI_RED = "\u001b[31m"
+        private const val ANSI_GREEN = "\u001b[32m"
         private const val ANSI_RESET = "\u001b[0m"
     }
 }

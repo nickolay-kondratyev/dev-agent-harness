@@ -46,6 +46,13 @@ object ShepherdValType {
         expectedValClass = String::class,
     )
 
+    /** Name of a part being executed or referenced. */
+    val PART_NAME = ValTypeV2(
+        typeName = "PART_NAME",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
+
     /** Name of a sub-part (doer or reviewer) being spawned or referenced. */
     val SUB_PART_NAME = ValTypeV2(
         typeName = "SUB_PART_NAME",
