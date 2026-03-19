@@ -28,6 +28,11 @@ class SessionsState(
         return map.get(guid)
     }
 
+    /** Removes the session entry for the given [guid]. Returns the removed entry, or null. */
+    suspend fun remove(guid: HandshakeGuid): SessionEntry? {
+        return map.remove(guid)
+    }
+
     /**
      * Removes all sessions belonging to the given [partName].
      * Returns the list of removed [SessionEntry] instances.

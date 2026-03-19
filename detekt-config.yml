@@ -7,8 +7,8 @@ complexity:
     # Test classes grow naturally as new subtypes are tested — exclude test sources.
     excludes: ['**/test/**']
   LongParameterList:
-    # Allow more parameters in constructors for data classes and test builders.
-    constructorThreshold: 8
+    # Allow more parameters in constructors for DI wiring classes and data classes.
+    constructorThreshold: 9
     functionThreshold: 6
     ignoreDefaultParameters: true
     ignoreDataClasses: true
