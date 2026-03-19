@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:11:31Z
 id: nid_92vpmdxcn3j8f98gzgu9eln43_E
 title: "Implement FeedbackResolutionParser — parse Resolution markers from feedback files"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-18T22:29:51Z
-status_updated_iso: 2026-03-19T17:00:30Z
+status_updated_iso: 2026-03-19T17:11:31Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
