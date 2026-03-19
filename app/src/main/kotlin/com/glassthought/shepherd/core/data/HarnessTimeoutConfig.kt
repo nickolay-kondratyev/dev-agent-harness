@@ -69,6 +69,13 @@ data class HarnessTimeoutConfig(
    *  Polled every second.  Default 20 means 80% of context has been used. */
   val contextWindowHardThresholdPct: Int = 20,
 
+  // --- FailedToConverge (doc/use-case/HealthMonitoring.md § FailedToConvergeUseCase Detail) ---
+
+  /** Number of additional iterations granted when the operator approves extending
+   *  an exhausted iteration budget.  Fixed increment avoids input-parsing edge cases
+   *  and prevents accidental runaway consumption. */
+  val failedToConvergeIterationIncrement: Int = 2,
+
 ) {
 
   companion object {
