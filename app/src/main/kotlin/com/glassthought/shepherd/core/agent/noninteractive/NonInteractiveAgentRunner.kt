@@ -12,7 +12,7 @@ import kotlin.time.Duration
  *
  * ref.ap.ad4vG4G2xMPiMHRreoYVr.E
  */
-interface NonInteractiveAgentRunner {
+fun interface NonInteractiveAgentRunner {
     suspend fun run(request: NonInteractiveAgentRequest): NonInteractiveAgentResult
 }
 
