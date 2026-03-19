@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T21:26:35Z
 id: nid_ehbkox6da4gfkgul8jpc3quln_E
 title: "Integration test — AgentFacadeImpl end-to-end signal flow"
-status: in_progress
+status: closed
 deps: [nid_p1w49sk0s2isnvcjbmhgapho7_E, nid_qdd1w86a415xllfpvcsf8djab_E, nid_gpfjqkfrmfbvhm1gan31rlvs9_E]
 links: []
 created_iso: 2026-03-19T00:30:37Z
-status_updated_iso: 2026-03-19T21:01:09Z
+status_updated_iso: 2026-03-19T21:26:35Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
