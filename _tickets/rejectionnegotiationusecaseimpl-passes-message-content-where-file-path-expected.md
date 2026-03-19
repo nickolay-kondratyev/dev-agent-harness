@@ -1,11 +1,11 @@
 ---
 id: nid_srtovyxkmpyp3xupve7x1akiy_E
 title: "RejectionNegotiationUseCaseImpl passes message content where file path expected"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T19:29:52Z
-status_updated_iso: 2026-03-19T19:29:52Z
+status_updated_iso: 2026-03-19T19:40:32Z
 type: bug
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
