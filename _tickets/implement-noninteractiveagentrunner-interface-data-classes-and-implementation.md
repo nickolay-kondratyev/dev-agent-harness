@@ -1,11 +1,11 @@
 ---
 id: nid_njq7ezzxmf8orffmzf7oorsd0_E
 title: "Implement NonInteractiveAgentRunner — interface, data classes, and implementation"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T23:55:59Z
-status_updated_iso: 2026-03-18T23:55:59Z
+status_updated_iso: 2026-03-19T17:07:10Z
 type: feature
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
