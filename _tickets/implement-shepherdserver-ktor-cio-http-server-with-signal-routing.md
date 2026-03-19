@@ -2,7 +2,7 @@
 id: nid_gpfjqkfrmfbvhm1gan31rlvs9_E
 title: "Implement ShepherdServer — Ktor CIO HTTP server with signal routing"
 status: open
-deps: [nid_erd0khe8sg0vqbnwtg23aqzw9_E, nid_m7oounvwb31ra53ivu7btoj5v_E]
+deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_v14amda2uv5nedrp9hvb8xlfq_E]
 links: [nid_yrxjoh46cua15t9ktvdksi48t_E]
 created_iso: 2026-03-19T00:40:50Z
 status_updated_iso: 2026-03-19T00:40:50Z

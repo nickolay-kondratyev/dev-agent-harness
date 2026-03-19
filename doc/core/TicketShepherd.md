@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # TicketShepherd / ap.P3po8Obvcjw4IXsSUSU91.E
 
 The central coordinator that drives a ticket through its entire workflow lifecycle.

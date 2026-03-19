@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # UserQuestionHandler / ap.NE4puAzULta4xlOLh5kfD.E
 
 Strategy interface for handling user questions from agents. Decouples the question-answering

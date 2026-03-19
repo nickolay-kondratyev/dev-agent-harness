@@ -2,7 +2,7 @@
 id: nid_i28ll9uk8k9uvdv3gus2izj4o_E
 title: "Add self-compacted signal endpoint + ProtocolVocabulary update"
 status: open
-deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_erd0khe8sg0vqbnwtg23aqzw9_E]
+deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_v14amda2uv5nedrp9hvb8xlfq_E]
 links: []
 created_iso: 2026-03-19T00:41:10Z
 status_updated_iso: 2026-03-19T00:41:10Z

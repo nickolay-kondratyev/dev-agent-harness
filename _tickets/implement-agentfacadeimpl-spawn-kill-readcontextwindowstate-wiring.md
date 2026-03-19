@@ -2,7 +2,7 @@
 id: nid_p1w49sk0s2isnvcjbmhgapho7_E
 title: "Implement AgentFacadeImpl — spawn, kill, readContextWindowState wiring"
 status: open
-deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_3rw8eoib2wseydcyhnj648d2a_E, nid_t7dnd545hf343i2v7jqcke3x7_E, nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_v14amda2uv5nedrp9hvb8xlfq_E, nid_erd0khe8sg0vqbnwtg23aqzw9_E]
+deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_3rw8eoib2wseydcyhnj648d2a_E, nid_t7dnd545hf343i2v7jqcke3x7_E, nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_v14amda2uv5nedrp9hvb8xlfq_E]
 links: []
 created_iso: 2026-03-19T00:29:55Z
 status_updated_iso: 2026-03-19T00:29:55Z

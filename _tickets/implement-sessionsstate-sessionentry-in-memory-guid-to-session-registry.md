@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T00:43:53Z
 id: nid_erd0khe8sg0vqbnwtg23aqzw9_E
 title: "Implement SessionsState + SessionEntry — in-memory GUID-to-session registry"
-status: open
+status: closed
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E]
 links: [nid_v14amda2uv5nedrp9hvb8xlfq_E]
 created_iso: 2026-03-19T00:39:38Z
-status_updated_iso: 2026-03-19T00:39:38Z
+status_updated_iso: 2026-03-19T00:43:53Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -94,3 +95,7 @@ Backed by coroutine-safe `MutableSynchronizedMap` (suspend-friendly `Mutex`).
 **2026-03-19T00:42:42Z**
 
 NOTE: This ticket overlaps with nid_v14amda2uv5nedrp9hvb8xlfq_E which was created from the SessionsState.md spec. The two tickets cover the same component. Implementer should close whichever is picked up second, or merge them into one implementation session. The key difference: this ticket includes SessionEntry fields and SubPartRole enum inline, while the other ticket has those as separate sub-tickets (nid_5o5wyxuzoz7qrkuq4wuo2gnjr_E for SessionEntry, nid_6zpwfuz85gl4x175fcudp9lju_E for SubPartRole).
+
+**2026-03-19T00:43:53Z**
+
+Closed as duplicate. The SessionsState spec agent created a better-sliced set: nid_v14amda2uv5nedrp9hvb8xlfq_E (SessionsState) + nid_5o5wyxuzoz7qrkuq4wuo2gnjr_E (SessionEntry) + nid_89bw63qr6qyewthjq4wp3x0so_E (MutableSynchronizedMap) + nid_6zpwfuz85gl4x175fcudp9lju_E (SubPartRole). Dependencies on this ticket should be redirected to nid_v14amda2uv5nedrp9hvb8xlfq_E.
