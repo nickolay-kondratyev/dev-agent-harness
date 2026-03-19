@@ -1,4 +1,4 @@
-#need-tickets
+#has-tickets
 # Agent-to-Server Communication Protocol / ap.wLpW8YbvqpRdxDplnN7Vh.E
 
 Defines the full communication protocol between agents running in TMUX sessions and the Shepherd harness server — identity, discovery, endpoints, payloads, and CLI tooling.
