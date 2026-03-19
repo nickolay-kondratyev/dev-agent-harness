@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:46:47Z
 id: nid_yuja09a6v2l54s6bquvskc57p_E
 title: "Consolidate duplicate UserQuestionContext data classes"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T18:19:29Z
-status_updated_iso: 2026-03-19T18:45:53Z
+status_updated_iso: 2026-03-19T18:46:47Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -25,3 +26,9 @@ Consolidate into a single class and remove the mapping function.
 Option 1: Delete session package version, have PendingQuestion use question package version.
 Option 2: Delete question package version, have UserQuestionHandler use session package version.
 
+
+## Notes
+
+**2026-03-19T18:46:53Z**
+
+Ticket already resolved. Only one UserQuestionContext exists at core/question/UserQuestionContext.kt. SessionEntry.kt imports it from the question package. No duplicate in session package, no toQuestionContext mapping function. No code changes needed.
