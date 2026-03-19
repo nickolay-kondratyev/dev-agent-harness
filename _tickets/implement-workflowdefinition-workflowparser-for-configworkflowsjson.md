@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T02:28:25Z
 id: nid_kavqh23pdfq56cdli0fv4sm3u_E
 title: "Implement WorkflowDefinition + WorkflowParser for config/workflows/*.json"
-status: open
+status: closed
 deps: [nid_m3cm8xizw5qhu1cu3454rca79_E]
 links: []
 created_iso: 2026-03-18T18:02:56Z
-status_updated_iso: 2026-03-18T18:02:56Z
+status_updated_iso: 2026-03-19T02:28:25Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
