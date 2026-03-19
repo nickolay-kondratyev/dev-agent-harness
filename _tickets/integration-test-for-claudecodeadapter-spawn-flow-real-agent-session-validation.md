@@ -1,11 +1,11 @@
 ---
 id: nid_nrws54ce2s2hatkn8nfa3dd7l_E
 title: "Integration test for ClaudeCodeAdapter + spawn flow — real agent session validation"
-status: open
+status: in_progress
 deps: [nid_t7dnd545hf343i2v7jqcke3x7_E, nid_3rw8eoib2wseydcyhnj648d2a_E]
 links: []
 created_iso: 2026-03-19T00:17:53Z
-status_updated_iso: 2026-03-19T00:17:53Z
+status_updated_iso: 2026-03-19T19:53:11Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
