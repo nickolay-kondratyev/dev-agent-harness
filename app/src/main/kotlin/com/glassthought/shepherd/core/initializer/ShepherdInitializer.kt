@@ -65,6 +65,9 @@ class ShepherdInitializer(
 
             try {
                 // Step 3: Create TicketShepherd with all ticket-scoped wiring
+                // DEFERRED: thread cliParams.iterationMax to TicketShepherdCreator.create() when its
+                //  signature supports it. Currently iterationMax is parsed from CLI but not yet
+                //  consumed downstream. See ref.ap.mFo35x06vJbjMQ8m7Lh4Z.E.
                 val ticketShepherd = ticketShepherdCreatorFactory
                     .create(outFactory)
                     .create(

@@ -29,6 +29,29 @@ import java.nio.file.Path
 // ── Test Fakes ─────────────────────────────────────────────────────────
 
 /**
+ * Wraps [NoOpOutFactory] and tracks whether [close] was called.
+ * Used to verify that [ShepherdContext.close] (which delegates to [Infra.close])
+ * actually triggers cleanup.
+ */
+private class TrackingOutFactory : OutFactory {
+    private val delegate = NoOpOutFactory()
+    var closeCalled = false
+
+    override fun getOutForClass(kClass: kotlin.reflect.KClass<*>) = delegate.getOutForClass(kClass)
+
+    override fun setLogLevelProvider(logLevelProvider: com.asgard.core.out.LogLevelProvider) {
+        delegate.setLogLevelProvider(logLevelProvider)
+    }
+
+    override fun getLogLevelProvider(): com.asgard.core.out.LogLevelProvider = delegate.getLogLevelProvider()
+
+    override suspend fun close() {
+        closeCalled = true
+        delegate.close()
+    }
+}
+
+/**
  * Fake [ContextInitializer] that returns a controllable [ShepherdContext].
  * Can be configured to throw to simulate Step 1 failure.
  */
@@ -297,29 +320,40 @@ class ShepherdInitializerTest : AsgardDescribeSpec(
         // ── Cleanup: ShepherdContext is closed on server start failure ──
 
         describe("GIVEN server starter that throws") {
-            val outFactory = NoOpOutFactory()
-            val shepherdContext = createTestShepherdContext(outFactory)
+            val trackingOutFactory = TrackingOutFactory()
+            val shepherdContext = createTestShepherdContext(trackingOutFactory)
 
             val failingServerStarter = ServerStarter { _, _ ->
                 error("Server failed to start")
             }
 
             val initializer = ShepherdInitializer(
-                outFactory = outFactory,
+                outFactory = trackingOutFactory,
                 contextInitializer = FakeContextInitializer(shepherdContext),
-                ticketShepherdCreatorFactory = TicketShepherdCreatorFactory { FakeTicketShepherdCreator(outFactory) },
+                ticketShepherdCreatorFactory = TicketShepherdCreatorFactory {
+                    FakeTicketShepherdCreator(trackingOutFactory)
+                },
                 serverPortReader = { TEST_SERVER_PORT },
                 serverStarter = failingServerStarter,
             )
 
             describe("WHEN run() is called") {
-                it("THEN ShepherdContext.close() is still called (cleanup in reverse)") {
-                    // ShepherdContext.close() delegates to Infra which closes OutFactory.
-                    // We verify the exception propagates correctly.
+                it("THEN exception from server starter propagates") {
                     val exception = shouldThrow<IllegalStateException> {
                         initializer.run(DEFAULT_CLI_PARAMS)
                     }
                     exception.message shouldContain "Server failed to start"
+                }
+
+                it("THEN ShepherdContext.close() is called (cleanup in reverse)") {
+                    // ShepherdContext delegates AsgardCloseable to Infra, which calls outFactory.close().
+                    // Tracking outFactory.close() proves the cleanup path was executed.
+                    try {
+                        initializer.run(DEFAULT_CLI_PARAMS)
+                    } catch (_: IllegalStateException) {
+                        // expected
+                    }
+                    trackingOutFactory.closeCalled shouldBe true
                 }
             }
         }
@@ -361,20 +395,16 @@ class ShepherdInitializerTest : AsgardDescribeSpec(
 
         describe("GIVEN TICKET_SHEPHERD_SERVER_PORT env var is not set") {
             describe("WHEN readServerPortFromEnv() is called") {
-                // WHY: We test the companion function directly since env var reading
-                // cannot be easily controlled in the test process without polluting state.
-                // The ShepherdInitializer accepts serverPortReader as a parameter for testability.
-                it("THEN the default serverPortReader is the readServerPortFromEnv function") {
-                    // Verify the companion function exists and is callable.
-                    // Actual env var test would require setting env vars, which is fragile.
-                    // The serverPortReader injection seam is the primary testability mechanism.
-                    val initializer = ShepherdInitializer(
-                        outFactory = NoOpOutFactory(),
-                        contextInitializer = FakeContextInitializer(shouldFail = true),
-                        ticketShepherdCreatorFactory = TicketShepherdCreatorFactory { error("unused") },
-                    )
-                    // The initializer was constructed successfully with default serverPortReader
-                    initializer shouldBe initializer // trivially true — construction didn't throw
+                // WHY-NOT: We cannot easily set/unset env vars in the test JVM without
+                // polluting global state. Instead, we test the companion function directly
+                // and rely on the serverPortReader injection seam for integration testing.
+                it("THEN throws IllegalStateException with descriptive message") {
+                    // In test environment, TICKET_SHEPHERD_SERVER_PORT is not set
+                    val exception = shouldThrow<IllegalStateException> {
+                        ShepherdInitializer.readServerPortFromEnv()
+                    }
+                    exception.message shouldContain "TICKET_SHEPHERD_SERVER_PORT"
+                    exception.message shouldContain "is not set"
                 }
             }
         }

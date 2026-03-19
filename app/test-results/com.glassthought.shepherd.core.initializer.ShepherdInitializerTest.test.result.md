@@ -11,7 +11,7 @@ skipped: 0
     - [PASS] THEN server is never started
 - GIVEN TICKET_SHEPHERD_SERVER_PORT env var is not set
   - WHEN readServerPortFromEnv() is called
-    - [PASS] THEN the default serverPortReader is the readServerPortFromEnv function
+    - [PASS] THEN throws IllegalStateException with descriptive message
 - GIVEN TicketShepherd.run() exits via FakeProcessExitException
   - WHEN run() completes (via exit)
     - [PASS] THEN server is stopped
@@ -27,4 +27,5 @@ skipped: 0
     - [PASS] THEN server is started on port 18080
 - GIVEN server starter that throws
   - WHEN run() is called
-    - [PASS] THEN ShepherdContext.close() is still called (cleanup in reverse)
+    - [PASS] THEN ShepherdContext.close() is called (cleanup in reverse)
+    - [PASS] THEN exception from server starter propagates

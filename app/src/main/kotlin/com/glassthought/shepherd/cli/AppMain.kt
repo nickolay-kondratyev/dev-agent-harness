@@ -82,6 +82,8 @@ class RunSubcommand : Callable<Int> {
     )
     lateinit var ticketPath: Path
 
+    // WHY required: TicketShepherdCreator.create() requires workflowName: String with no default.
+    // Could become optional with a default (e.g., "straightforward") in the future if spec changes.
     @Option(
         names = ["--workflow"],
         required = true,
@@ -124,10 +126,17 @@ class RunSubcommand : Callable<Int> {
         )
 
         // [runBlocking] is acceptable at main() entry points per Kotlin development standards.
-        runBlocking {
-            initializer.run(cliParams)
+        // WHY: Catching generic Exception is intentional at this top-level entry point to
+        // provide a clean error message instead of a stack trace to the user.
+        @Suppress("TooGenericExceptionCaught")
+        return try {
+            runBlocking {
+                initializer.run(cliParams)
+            }
+            0
+        } catch (e: Exception) {
+            System.err.println("Startup failed: ${e.message}")
+            1
         }
-
-        return 0
     }
 }
