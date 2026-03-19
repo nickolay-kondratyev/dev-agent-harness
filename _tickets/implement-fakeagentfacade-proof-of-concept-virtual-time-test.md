@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T15:52:01Z
 id: nid_g3e2bkvqepf2wzipadayt9in8_E
 title: "Implement FakeAgentFacade + proof-of-concept virtual time test"
-status: in_progress
+status: closed
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_c9jhmwry79x87j1h27qh4tvle_E]
 links: []
 created_iso: 2026-03-19T00:29:30Z
-status_updated_iso: 2026-03-19T15:38:29Z
+status_updated_iso: 2026-03-19T15:52:01Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
