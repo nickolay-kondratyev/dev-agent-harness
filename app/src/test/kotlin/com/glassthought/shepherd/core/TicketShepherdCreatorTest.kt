@@ -6,10 +6,10 @@ import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.interrupt.InterruptHandlerImpl
+import com.glassthought.shepherd.core.state.CurrentStatePersistenceImpl
 import com.glassthought.shepherd.core.time.TestClock
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import io.kotest.matchers.shouldBe
-import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.types.shouldBeInstanceOf
 import java.nio.file.Path
 
@@ -73,93 +73,55 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
 
             describe("WHEN create() is called") {
 
+                // DRY: shared creator construction for tests that don't need specific fakes
+                val killerFactory = TrackingKillerFactory()
+                val creator = TicketShepherdCreatorImpl(
+                    shepherdContext = createTestShepherdContext(),
+                    aiOutputStructure = testAiOutputStructure,
+                    clock = TestClock(),
+                    consoleOutput = FakeConsoleOutput(),
+                    processExiter = FakeProcessExiter(),
+                    allSessionsKillerFactory = killerFactory.create(),
+                )
+                val result = creator.create()
+
                 it("THEN returns a result with an InterruptHandlerImpl") {
-                    val killerFactory = TrackingKillerFactory()
-                    val creator = TicketShepherdCreatorImpl(
-                        shepherdContext = createTestShepherdContext(),
-                        aiOutputStructure = testAiOutputStructure,
-                        clock = TestClock(),
-                        consoleOutput = FakeConsoleOutput(),
-                        processExiter = FakeProcessExiter(),
-                        allSessionsKillerFactory = killerFactory.create(),
-                    )
-
-                    val result = creator.create()
-
                     result.interruptHandler.shouldBeInstanceOf<InterruptHandlerImpl>()
                 }
 
                 it("THEN returns an initialized CurrentState with empty parts") {
-                    val killerFactory = TrackingKillerFactory()
-                    val creator = TicketShepherdCreatorImpl(
-                        shepherdContext = createTestShepherdContext(),
-                        aiOutputStructure = testAiOutputStructure,
-                        clock = TestClock(),
-                        consoleOutput = FakeConsoleOutput(),
-                        processExiter = FakeProcessExiter(),
-                        allSessionsKillerFactory = killerFactory.create(),
-                    )
-
-                    val result = creator.create()
-
                     result.currentState.parts shouldBe mutableListOf()
                 }
 
-                it("THEN returns a non-null CurrentStatePersistence") {
-                    val killerFactory = TrackingKillerFactory()
-                    val creator = TicketShepherdCreatorImpl(
-                        shepherdContext = createTestShepherdContext(),
-                        aiOutputStructure = testAiOutputStructure,
-                        clock = TestClock(),
-                        consoleOutput = FakeConsoleOutput(),
-                        processExiter = FakeProcessExiter(),
-                        allSessionsKillerFactory = killerFactory.create(),
-                    )
-
-                    val result = creator.create()
-
-                    result.currentStatePersistence shouldNotBe null
+                it("THEN returns a CurrentStatePersistenceImpl (correct wiring)") {
+                    result.currentStatePersistence.shouldBeInstanceOf<CurrentStatePersistenceImpl>()
                 }
 
                 it("THEN invokes the AllSessionsKiller factory") {
-                    val killerFactory = TrackingKillerFactory()
-                    val creator = TicketShepherdCreatorImpl(
-                        shepherdContext = createTestShepherdContext(),
-                        aiOutputStructure = testAiOutputStructure,
-                        clock = TestClock(),
-                        consoleOutput = FakeConsoleOutput(),
-                        processExiter = FakeProcessExiter(),
-                        allSessionsKillerFactory = killerFactory.create(),
-                    )
-
-                    creator.create()
-
                     killerFactory.factoryInvoked shouldBe true
                 }
             }
 
-            describe("AND the InterruptHandler is installed") {
-                describe("WHEN a SIGINT signal is simulated on the returned handler") {
+            describe("WHEN create() result handler is invoked directly") {
 
-                    it("THEN the handler responds with confirmation message (proving install wired correctly)") {
-                        val fakeConsole = FakeConsoleOutput()
-                        val killerFactory = TrackingKillerFactory()
-                        val creator = TicketShepherdCreatorImpl(
-                            shepherdContext = createTestShepherdContext(),
-                            aiOutputStructure = testAiOutputStructure,
-                            clock = TestClock(),
-                            consoleOutput = fakeConsole,
-                            processExiter = FakeProcessExiter(),
-                            allSessionsKillerFactory = killerFactory.create(),
-                        )
+                it("THEN the handler responds with confirmation message (proving wiring correctness)") {
+                    val fakeConsole = FakeConsoleOutput()
+                    val killerFactory = TrackingKillerFactory()
+                    val creator = TicketShepherdCreatorImpl(
+                        shepherdContext = createTestShepherdContext(),
+                        aiOutputStructure = testAiOutputStructure,
+                        clock = TestClock(),
+                        consoleOutput = fakeConsole,
+                        processExiter = FakeProcessExiter(),
+                        allSessionsKillerFactory = killerFactory.create(),
+                    )
 
-                        val result = creator.create()
+                    val result = creator.create()
 
-                        // Verify the handler is functional by calling handleSignal directly
-                        (result.interruptHandler as InterruptHandlerImpl).handleSignal()
+                    // Verify the handler is functional by calling handleSignal directly
+                    (result.interruptHandler as InterruptHandlerImpl).handleSignal()
 
-                        fakeConsole.messages.size shouldBe 1
-                    }
+                    fakeConsole.messages.size shouldBe 1
                 }
             }
         }

@@ -39,8 +39,8 @@ data class TicketShepherdCreatorResult(
  *
  * ### Current scope
  * Wires [InterruptHandler] (ref.ap.yWFAwVrZdx1UTDqDJmDpe.E) with all production dependencies.
- * Calls [InterruptHandler.install] after [CurrentState] is initialized but before
- * the main execution loop starts.
+ * Pure wiring only — no side effects. The caller is responsible for calling
+ * [InterruptHandler.install] on the returned result before the main execution loop starts.
  *
  * ### Future responsibilities (TODOs)
  * - Workflow JSON resolution
@@ -56,7 +56,10 @@ data class TicketShepherdCreatorResult(
 fun interface TicketShepherdCreator {
 
     /**
-     * Wires ticket-scoped dependencies and installs the interrupt handler.
+     * Wires ticket-scoped dependencies. Pure wiring — no side effects.
+     *
+     * The caller must call [TicketShepherdCreatorResult.interruptHandler].[InterruptHandler.install]
+     * before the main execution loop starts.
      *
      * @return [TicketShepherdCreatorResult] with all wired components.
      */
@@ -114,10 +117,6 @@ class TicketShepherdCreatorImpl(
             consoleOutput = consoleOutput,
             processExiter = processExiter,
         )
-
-        // Install interrupt handler after CurrentState is initialized but before the main
-        // execution loop. This ensures Ctrl+C cleanup has access to the current state.
-        interruptHandler.install()
 
         // Future: construct full TicketShepherd (ref.ap.P3po8Obvcjw4IXsSUSU91.E)
         // and wire AgentFacadeImpl, ContextForAgentProvider, PartExecutor, etc.
