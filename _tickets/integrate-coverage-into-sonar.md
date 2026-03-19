@@ -1,11 +1,11 @@
 ---
 id: nid_o0ajw475drc46gblqd8s2prie_E
 title: "Integrate coverage into sonar"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T20:29:31Z
-status_updated_iso: 2026-03-19T20:29:31Z
+status_updated_iso: 2026-03-19T20:31:12Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
