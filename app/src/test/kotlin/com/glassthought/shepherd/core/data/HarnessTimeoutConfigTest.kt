@@ -68,6 +68,14 @@ class HarnessTimeoutConfigTest : AsgardDescribeSpec({
             }
         }
 
+        it("THEN healthCheckInterval is 1 second") {
+            config.healthCheckInterval shouldBe 1.seconds
+        }
+
+        it("THEN payloadAckTimeout is 2 seconds") {
+            config.payloadAckTimeout shouldBe 2.seconds
+        }
+
         it("THEN selfCompactionTimeout is shorter than production default") {
             config.selfCompactionTimeout shouldBe 3.seconds
         }

@@ -19,6 +19,8 @@ skipped: 0
 - GIVEN HarnessTimeoutConfig.forTests()
   - [PASS] THEN contextWindowHardThresholdPct retains production value
   - [PASS] THEN contextWindowSoftThresholdPct retains production value
+  - [PASS] THEN healthCheckInterval is 1 second
+  - [PASS] THEN payloadAckTimeout is 2 seconds
   - [PASS] THEN selfCompactionTimeout is shorter than production default
   - WHEN inspecting healthTimeouts ladder
     - [PASS] THEN normalActivity is 5 seconds
