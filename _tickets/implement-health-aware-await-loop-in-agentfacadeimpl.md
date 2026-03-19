@@ -1,11 +1,11 @@
 ---
 id: nid_qdd1w86a415xllfpvcsf8djab_E
 title: "Implement Health-Aware Await Loop in AgentFacadeImpl"
-status: open
+status: in_progress
 deps: [nid_0of6zl2493ctvmy9m23kxnhnl_E, nid_sfgmp7jk8tlnnh2sgblh3npkj_E, nid_p1w49sk0s2isnvcjbmhgapho7_E, nid_y4ick5sgbafgwgeauhu385xq2_E, nid_xxkpa9l10jin3a16oqlps8djt_E]
 links: []
 created_iso: 2026-03-18T17:37:59Z
-status_updated_iso: 2026-03-18T17:37:59Z
+status_updated_iso: 2026-03-19T20:25:48Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
