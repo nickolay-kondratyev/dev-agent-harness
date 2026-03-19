@@ -1,11 +1,11 @@
 ---
 id: nid_92vpmdxcn3j8f98gzgu9eln43_E
 title: "Implement FeedbackResolutionParser — parse Resolution markers from feedback files"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-18T22:29:51Z
-status_updated_iso: 2026-03-18T22:29:51Z
+status_updated_iso: 2026-03-19T17:00:30Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
