@@ -63,6 +63,8 @@ sealed class AgentInstructionRequest {
     abstract val iterationNumber: Int
     abstract val outputDir: Path
     abstract val publicMdOutputPath: Path
+    /** Explicit path to PRIVATE.md from a prior session. Null means no prior context to inject. */
+    abstract val privateMdPath: Path?
 
     data class DoerRequest(
         override val roleDefinition: RoleDefinition,
@@ -70,6 +72,7 @@ sealed class AgentInstructionRequest {
         override val iterationNumber: Int,
         override val outputDir: Path,
         override val publicMdOutputPath: Path,
+        override val privateMdPath: Path? = null,
         val executionContext: ExecutionContext,
         val reviewerPublicMdPath: Path?,     // null on iteration 1
     ) : AgentInstructionRequest()
@@ -80,6 +83,7 @@ sealed class AgentInstructionRequest {
         override val iterationNumber: Int,
         override val outputDir: Path,
         override val publicMdOutputPath: Path,
+        override val privateMdPath: Path? = null,
         val executionContext: ExecutionContext,
         val doerPublicMdPath: Path,          // always required; non-nullable
         val feedbackDir: Path,               // always required; non-nullable
@@ -91,6 +95,7 @@ sealed class AgentInstructionRequest {
         override val iterationNumber: Int,
         override val outputDir: Path,
         override val publicMdOutputPath: Path,
+        override val privateMdPath: Path? = null,
         val roleCatalogEntries: List<RoleCatalogEntry>,
         val planReviewerPublicMdPath: Path?,     // null on iteration 1
         val planJsonOutputPath: Path,            // always required; non-nullable
@@ -103,6 +108,7 @@ sealed class AgentInstructionRequest {
         override val iterationNumber: Int,
         override val outputDir: Path,
         override val publicMdOutputPath: Path,
+        override val privateMdPath: Path? = null,
         val planJsonContent: String,             // always required; non-nullable
         val planMdContent: String,               // always required; non-nullable
         val plannerPublicMdPath: Path,           // always required; non-nullable

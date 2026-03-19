@@ -61,7 +61,7 @@ class ContextForAgentProviderImpl(
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. PrivateMd (silently skipped if absent)
-        privateMdSection(request.outputDir)?.let { add(it) }
+        privateMdSection(request.privateMdPath)?.let { add(it) }
         // 3. Part context
         add(InstructionRenderers.partContext(
             request.executionContext.partName,
@@ -97,7 +97,7 @@ class ContextForAgentProviderImpl(
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. PrivateMd (silently skipped if absent)
-        privateMdSection(request.outputDir)?.let { add(it) }
+        privateMdSection(request.privateMdPath)?.let { add(it) }
         // 3. Part context
         add(InstructionRenderers.partContext(
             request.executionContext.partName,
@@ -138,7 +138,7 @@ class ContextForAgentProviderImpl(
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. PrivateMd (silently skipped if absent)
-        privateMdSection(request.outputDir)?.let { add(it) }
+        privateMdSection(request.privateMdPath)?.let { add(it) }
         // 3. Ticket
         add(ticketSection(request.ticketContent))
         // 4. Role catalog
@@ -176,7 +176,7 @@ class ContextForAgentProviderImpl(
         // 1. Role definition
         add(roleDefinitionSection(request.roleDefinition))
         // 2. PrivateMd (silently skipped if absent)
-        privateMdSection(request.outputDir)?.let { add(it) }
+        privateMdSection(request.privateMdPath)?.let { add(it) }
         // 3. Ticket
         add(ticketSection(request.ticketContent))
         // 4. plan_flow.json content
@@ -211,18 +211,16 @@ class ContextForAgentProviderImpl(
         "# Role: ${role.name}\n\n${role.filePath.readText()}"
 
     /**
-     * Reads `${sub_part}/private/PRIVATE.md` if it exists.
-     * outputDir = `${sub_part}/comm/in` -> parent.parent = `${sub_part}`
-     * Returns null (silently skipped) when the file does not exist.
+     * Returns the prior session context section if [privateMdPath] points to an existing,
+     * non-empty file. Returns null (silently skipped) when the path is null, the file
+     * does not exist, or the file is empty.
      */
-    private fun privateMdSection(outputDir: Path): String? {
-        val privateMdPath = outputDir.parent.parent.resolve("private/PRIVATE.md")
-        return if (Files.exists(privateMdPath)) {
-            "# Prior Session Context (PRIVATE.md)\n\n${privateMdPath.readText()}"
-        } else {
-            null
-        }
-    }
+    private fun privateMdSection(privateMdPath: Path?): String? =
+        privateMdPath
+            ?.takeIf { Files.exists(it) }
+            ?.readText()
+            ?.takeIf { it.isNotBlank() }
+            ?.let { "# Prior Session Context (PRIVATE.md)\n\n$it" }
 
     private fun ticketSection(content: String): String =
         "# Ticket\n\n$content"
