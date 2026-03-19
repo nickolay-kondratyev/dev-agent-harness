@@ -48,7 +48,7 @@ class SetupPlanUseCaseImpl(
             else -> {
                 // WHY: WorkflowDefinition init block enforces exactly one of parts/planningParts,
                 // so this branch is unreachable in practice. Kept as a safety net.
-                throw IllegalStateException(
+                error(
                     "WorkflowDefinition is neither straightforward nor with-planning — " +
                         "this should be unreachable due to init validation."
                 )
