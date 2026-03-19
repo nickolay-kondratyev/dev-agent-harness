@@ -8,7 +8,7 @@ import kotlin.system.exitProcess
  * Production code uses [DefaultProcessExiter]; tests substitute a fake that
  * captures the exit code instead of terminating the JVM.
  */
-interface ProcessExiter {
+fun interface ProcessExiter {
     fun exit(code: Int): Nothing
 }
 
