@@ -16,17 +16,18 @@ skipped: 0
   - WHEN handleFailure is called
     - [PASS] THEN exits with code 1
     - [PASS] THEN kills all sessions
-    - [PASS] THEN prints convergence failure in red
+    - [PASS] THEN prints convergence failure
 - GIVEN a FailedWorkflow result
   - WHEN handleFailure is called
     - [PASS] THEN exits with code 1
     - [PASS] THEN kills all sessions
-    - [PASS] THEN output contains ANSI red escape code
-    - [PASS] THEN output contains ANSI reset escape code
-    - [PASS] THEN prints failure reason in red
+    - [PASS] THEN prints failure reason
     - [PASS] THEN records failure learning
 - GIVEN an AgentCrashed result
   - WHEN handleFailure is called
     - [PASS] THEN exits with code 1
     - [PASS] THEN kills all sessions
-    - [PASS] THEN prints crash details in red
+    - [PASS] THEN prints crash details
+- GIVEN an order tracker wired into all fakes
+  - WHEN handleFailure is called
+    - [PASS] THEN steps execute in order: print -> kill -> learning -> exit

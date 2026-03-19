@@ -3,46 +3,73 @@ package com.glassthought.shepherd.usecase.healthmonitoring
 import com.asgard.core.out.LogLevel
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
+import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.state.PartResult
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
-import java.io.ByteArrayOutputStream
-import java.io.PrintStream
 
 // ── Test Fakes ──────────────────────────────────────────────────────────────
 
 /**
  * Thrown by [FakeProcessExiter] to interrupt flow and capture the exit code.
  */
-class FakeProcessExitException(val exitCode: Int) : RuntimeException("FakeProcessExit(code=$exitCode)")
+internal class FakeProcessExitException(val exitCode: Int) : RuntimeException("FakeProcessExit(code=$exitCode)")
 
-class FakeProcessExiter : ProcessExiter {
+internal class FakeProcessExiter : ProcessExiter {
     override fun exit(code: Int): Nothing {
         throw FakeProcessExitException(code)
     }
 }
 
-class FakeAllSessionsKiller : AllSessionsKiller {
+internal class FakeConsoleOutput : ConsoleOutput {
+    val printedMessages = mutableListOf<String>()
+
+    override fun printlnRed(message: String) {
+        printedMessages.add(message)
+    }
+}
+
+internal class FakeAllSessionsKiller(
+    private val orderTracker: OrderTracker? = null,
+) : AllSessionsKiller {
     var killAllSessionsCalled = false
         private set
 
     override suspend fun killAllSessions() {
         killAllSessionsCalled = true
+        orderTracker?.events?.add(EVENT_KILL_SESSIONS)
+    }
+
+    companion object {
+        const val EVENT_KILL_SESSIONS = "kill_sessions"
     }
 }
 
-class SpyTicketFailureLearningUseCase(
+internal class SpyTicketFailureLearningUseCase(
     private val shouldThrow: Exception? = null,
+    private val orderTracker: OrderTracker? = null,
 ) : TicketFailureLearningUseCase {
     var recordedPartResult: PartResult? = null
         private set
 
     override suspend fun recordFailureLearning(partResult: PartResult) {
         recordedPartResult = partResult
+        orderTracker?.events?.add(EVENT_LEARNING)
         shouldThrow?.let { throw it }
     }
+
+    companion object {
+        const val EVENT_LEARNING = "learning"
+    }
+}
+
+/**
+ * Tracks the order of operations across test fakes.
+ */
+internal class OrderTracker {
+    val events = mutableListOf<String>()
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -53,28 +80,12 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
 
         describe("GIVEN a FailedWorkflow result") {
             describe("WHEN handleFailure is called") {
-                it("THEN prints failure reason in red") {
+                it("THEN prints failure reason") {
                     val result = executeAndCapture(
                         outFactory = outFactory,
                         partResult = PartResult.FailedWorkflow("plan step X failed"),
                     )
-                    result.capturedOutput shouldContain "Workflow failed: plan step X failed"
-                }
-
-                it("THEN output contains ANSI red escape code") {
-                    val result = executeAndCapture(
-                        outFactory = outFactory,
-                        partResult = PartResult.FailedWorkflow("plan step X failed"),
-                    )
-                    result.capturedOutput shouldContain "\u001b[31m"
-                }
-
-                it("THEN output contains ANSI reset escape code") {
-                    val result = executeAndCapture(
-                        outFactory = outFactory,
-                        partResult = PartResult.FailedWorkflow("plan step X failed"),
-                    )
-                    result.capturedOutput shouldContain "\u001b[0m"
+                    result.fakeConsole.printedMessages.first() shouldContain "Workflow failed: plan step X failed"
                 }
 
                 it("THEN kills all sessions") {
@@ -105,12 +116,12 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
 
         describe("GIVEN an AgentCrashed result") {
             describe("WHEN handleFailure is called") {
-                it("THEN prints crash details in red") {
+                it("THEN prints crash details") {
                     val result = executeAndCapture(
                         outFactory = outFactory,
                         partResult = PartResult.AgentCrashed("segfault in agent"),
                     )
-                    result.capturedOutput shouldContain "Agent crashed: segfault in agent"
+                    result.fakeConsole.printedMessages.first() shouldContain "Agent crashed: segfault in agent"
                 }
 
                 it("THEN kills all sessions") {
@@ -133,12 +144,13 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
 
         describe("GIVEN a FailedToConverge result") {
             describe("WHEN handleFailure is called") {
-                it("THEN prints convergence failure in red") {
+                it("THEN prints convergence failure") {
                     val result = executeAndCapture(
                         outFactory = outFactory,
                         partResult = PartResult.FailedToConverge("exceeded max iterations"),
                     )
-                    result.capturedOutput shouldContain "Failed to converge: exceeded max iterations"
+                    result.fakeConsole.printedMessages.first() shouldContain
+                        "Failed to converge: exceeded max iterations"
                 }
 
                 it("THEN kills all sessions") {
@@ -164,6 +176,7 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN still exits with code 1 (learning failure is non-fatal)").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
+                    val fakeConsole = FakeConsoleOutput()
                     val fakeKiller = FakeAllSessionsKiller()
                     val fakeExiter = FakeProcessExiter()
                     val throwingLearning = SpyTicketFailureLearningUseCase(
@@ -171,6 +184,7 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                     )
                     val useCase = FailedToExecutePlanUseCaseImpl(
                         outFactory = outFactory,
+                        consoleOutput = fakeConsole,
                         allSessionsKiller = fakeKiller,
                         ticketFailureLearningUseCase = throwingLearning,
                         processExiter = fakeExiter,
@@ -184,6 +198,7 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN still kills all sessions even when learning fails").config(
                     extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
                 ) {
+                    val fakeConsole = FakeConsoleOutput()
                     val fakeKiller = FakeAllSessionsKiller()
                     val fakeExiter = FakeProcessExiter()
                     val throwingLearning = SpyTicketFailureLearningUseCase(
@@ -191,6 +206,7 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                     )
                     val useCase = FailedToExecutePlanUseCaseImpl(
                         outFactory = outFactory,
+                        consoleOutput = fakeConsole,
                         allSessionsKiller = fakeKiller,
                         ticketFailureLearningUseCase = throwingLearning,
                         processExiter = fakeExiter,
@@ -208,6 +224,7 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                 it("THEN throws IllegalArgumentException") {
                     val useCase = FailedToExecutePlanUseCaseImpl(
                         outFactory = outFactory,
+                        consoleOutput = FakeConsoleOutput(),
                         allSessionsKiller = FakeAllSessionsKiller(),
                         ticketFailureLearningUseCase = SpyTicketFailureLearningUseCase(),
                         processExiter = FakeProcessExiter(),
@@ -219,13 +236,58 @@ class FailedToExecutePlanUseCaseImplTest : AsgardDescribeSpec(
                 }
             }
         }
+
+        describe("GIVEN an order tracker wired into all fakes") {
+            describe("WHEN handleFailure is called") {
+                it("THEN steps execute in order: print -> kill -> learning -> exit") {
+                    val orderTracker = OrderTracker()
+                    val fakeConsole = object : ConsoleOutput {
+                        override fun printlnRed(message: String) {
+                            orderTracker.events.add(EVENT_PRINT)
+                        }
+                    }
+                    val fakeKiller = FakeAllSessionsKiller(orderTracker)
+                    val spyLearning = SpyTicketFailureLearningUseCase(orderTracker = orderTracker)
+                    val fakeExiter = object : ProcessExiter {
+                        override fun exit(code: Int): Nothing {
+                            orderTracker.events.add(EVENT_EXIT)
+                            throw FakeProcessExitException(code)
+                        }
+                    }
+
+                    val useCase = FailedToExecutePlanUseCaseImpl(
+                        outFactory = outFactory,
+                        consoleOutput = fakeConsole,
+                        allSessionsKiller = fakeKiller,
+                        ticketFailureLearningUseCase = spyLearning,
+                        processExiter = fakeExiter,
+                    )
+
+                    shouldThrow<FakeProcessExitException> {
+                        useCase.handleFailure(PartResult.FailedWorkflow("ordering test"))
+                    }
+
+                    orderTracker.events shouldBe listOf(
+                        EVENT_PRINT,
+                        FakeAllSessionsKiller.EVENT_KILL_SESSIONS,
+                        SpyTicketFailureLearningUseCase.EVENT_LEARNING,
+                        EVENT_EXIT,
+                    )
+                }
+            }
+        }
     },
-)
+) {
+    companion object {
+        private const val EVENT_PRINT = "print"
+        private const val EVENT_EXIT = "exit"
+    }
+}
 
 // ── Helpers ─────────────────────────────────────────────────────────────────
 
 private data class HandleFailureResult(
-    val capturedOutput: String,
+    val fakeConsole: FakeConsoleOutput,
     val fakeKiller: FakeAllSessionsKiller,
     val spyLearning: SpyTicketFailureLearningUseCase,
     val caughtException: FakeProcessExitException,
@@ -233,38 +295,31 @@ private data class HandleFailureResult(
 
 /**
  * Executes [FailedToExecutePlanUseCaseImpl.handleFailure] with fresh fakes,
- * capturing stdout and the [FakeProcessExitException].
+ * capturing the [FakeProcessExitException] and console output.
  */
 private suspend fun executeAndCapture(
     outFactory: com.asgard.core.out.OutFactory,
     partResult: PartResult,
 ): HandleFailureResult {
+    val fakeConsole = FakeConsoleOutput()
     val fakeKiller = FakeAllSessionsKiller()
     val fakeExiter = FakeProcessExiter()
     val spyLearning = SpyTicketFailureLearningUseCase()
 
     val useCase = FailedToExecutePlanUseCaseImpl(
         outFactory = outFactory,
+        consoleOutput = fakeConsole,
         allSessionsKiller = fakeKiller,
         ticketFailureLearningUseCase = spyLearning,
         processExiter = fakeExiter,
     )
 
-    val originalOut = System.out
-    val buffer = ByteArrayOutputStream()
-    System.setOut(PrintStream(buffer))
-
-    val exception: FakeProcessExitException
-    try {
-        exception = shouldThrow<FakeProcessExitException> {
-            useCase.handleFailure(partResult)
-        }
-    } finally {
-        System.setOut(originalOut)
+    val exception = shouldThrow<FakeProcessExitException> {
+        useCase.handleFailure(partResult)
     }
 
     return HandleFailureResult(
-        capturedOutput = buffer.toString(),
+        fakeConsole = fakeConsole,
         fakeKiller = fakeKiller,
         spyLearning = spyLearning,
         caughtException = exception,

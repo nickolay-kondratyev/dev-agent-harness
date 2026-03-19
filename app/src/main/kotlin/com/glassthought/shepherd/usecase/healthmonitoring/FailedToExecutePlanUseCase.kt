@@ -3,6 +3,7 @@ package com.glassthought.shepherd.usecase.healthmonitoring
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.state.PartResult
 
@@ -27,6 +28,7 @@ interface FailedToExecutePlanUseCase {
  */
 class FailedToExecutePlanUseCaseImpl(
     outFactory: OutFactory,
+    private val consoleOutput: ConsoleOutput,
     private val allSessionsKiller: AllSessionsKiller,
     private val ticketFailureLearningUseCase: TicketFailureLearningUseCase,
     private val processExiter: ProcessExiter,
@@ -53,7 +55,7 @@ class FailedToExecutePlanUseCaseImpl(
                 "Completed result should never reach FailedToExecutePlanUseCase"
             )
         }
-        println("${ANSI_RED}$message${ANSI_RESET}")
+        consoleOutput.printlnRed(message)
     }
 
     private suspend fun tryRecordFailureLearning(failedResult: PartResult) {
@@ -68,8 +70,6 @@ class FailedToExecutePlanUseCaseImpl(
     }
 
     companion object {
-        private const val ANSI_RED = "\u001b[31m"
-        private const val ANSI_RESET = "\u001b[0m"
         private const val EXIT_CODE_FAILURE = 1
     }
 }
