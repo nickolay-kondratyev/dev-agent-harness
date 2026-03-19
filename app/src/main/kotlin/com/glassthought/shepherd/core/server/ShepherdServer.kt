@@ -14,7 +14,7 @@ import com.glassthought.shepherd.core.session.SessionsState
 import com.glassthought.shepherd.core.state.SubPartRole
 import io.ktor.http.HttpStatusCode
 import io.ktor.serialization.jackson.jackson
-import com.fasterxml.jackson.module.kotlin.MissingKotlinParameterException
+import com.fasterxml.jackson.databind.exc.MismatchedInputException
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
 import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
@@ -63,9 +63,9 @@ class ShepherdServer(
             jackson()
         }
         application.install(StatusPages) {
-            exception<MissingKotlinParameterException> { call, cause ->
+            exception<MismatchedInputException> { call, cause ->
                 call.respondText(
-                    "Missing required field: ${cause.parameter.name}",
+                    "Missing required field: ${cause.path.lastOrNull()?.fieldName ?: "unknown"}",
                     status = HttpStatusCode.BadRequest,
                 )
             }
