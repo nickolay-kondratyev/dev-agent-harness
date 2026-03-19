@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:53:19Z
 id: nid_dnelaf98097nicijp4kvjfd1d_E
 title: "Implement ReInstructAndAwait use case — send instruction to existing session and await signal"
-status: in_progress
+status: closed
 deps: [nid_m7oounvwb31ra53ivu7btoj5v_E, nid_g3e2bkvqepf2wzipadayt9in8_E]
 links: []
 created_iso: 2026-03-18T22:30:11Z
-status_updated_iso: 2026-03-19T17:39:23Z
+status_updated_iso: 2026-03-19T17:53:19Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
