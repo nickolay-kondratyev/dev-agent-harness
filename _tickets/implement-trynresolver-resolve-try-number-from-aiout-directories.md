@@ -1,11 +1,11 @@
 ---
 id: nid_156yspl7869zrisam6l6xrd66_E
 title: "Implement TryNResolver — resolve try number from .ai_out/ directories"
-status: open
+status: in_progress
 deps: [nid_9kic96nh6mb8r5legcsvt46uy_E]
 links: []
 created_iso: 2026-03-18T23:44:11Z
-status_updated_iso: 2026-03-18T23:44:11Z
+status_updated_iso: 2026-03-19T17:41:45Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
