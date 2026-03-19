@@ -25,7 +25,7 @@ import kotlin.time.Duration.Companion.milliseconds
  * iteration feedback, PUBLIC.md re-instruction, and health pings.
  */
 @AnchorPoint("ap.m6X7We58LwUAu4khybhtZ.E")
-interface AckedPayloadSender {
+fun interface AckedPayloadSender {
     /**
      * Wrap [payloadContent] in the Payload Delivery ACK XML, send via TMUX send-keys,
      * and await ACK. Retries per the retry policy (3 attempts, 3 min each).
