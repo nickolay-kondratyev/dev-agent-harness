@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T17:54:00Z
 id: nid_sfgmp7jk8tlnnh2sgblh3npkj_E
 title: "Implement DetectionContext enum + AgentUnresponsiveUseCase"
-status: in_progress
+status: closed
 deps: [nid_0of6zl2493ctvmy9m23kxnhnl_E]
 links: []
 created_iso: 2026-03-18T17:36:26Z
-status_updated_iso: 2026-03-19T17:38:31Z
+status_updated_iso: 2026-03-19T17:54:00Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
