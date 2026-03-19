@@ -135,18 +135,13 @@ class PartExecutorImpl(
 
     @Suppress("ReturnCount")
     private suspend fun executeDoerWithReviewer(revConfig: SubPartConfig): PartResult {
-        var doerHandle: SpawnedAgentHandle? = spawnSubPart(doerConfig, isDoer = true)
+        var doerHandle: SpawnedAgentHandle = spawnSubPart(doerConfig, isDoer = true)
         var reviewerHandle: SpawnedAgentHandle? = null
-        var doerSignal = sendDoerInstructions(doerHandle!!, reviewerPublicMdPath = null)
+        var doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = null)
 
         while (true) {
-            val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle!!, reviewerHandle)
+            val doerResult = mapDoerSignalInReviewerPath(doerSignal, doerHandle, reviewerHandle)
             if (doerResult is DoerSignalResult.Terminal) return doerResult.partResult
-
-            // After afterDone, doerHandle may have been compacted
-            if (doerResult is DoerSignalResult.Continue && doerResult.doerCompacted) {
-                doerHandle = null
-            }
 
             // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
             // Subsequent iterations reuse the already-alive reviewer session.
@@ -159,18 +154,10 @@ class PartExecutorImpl(
             )
             if (revResult is ReviewerSignalResult.Terminal) return revResult.partResult
 
-            // After reviewer afterDone, reviewer may have been compacted
-            if (revResult is ReviewerSignalResult.Continue && revResult.reviewerCompacted) {
-                reviewerHandle = null
-            }
-
-            // Respawn compacted sub-parts before inner loop (needs active handles)
-            if (doerHandle == null) {
-                doerHandle = respawnAfterCompaction(doerConfig)
-            }
-            if (reviewerHandle == null) {
-                reviewerHandle = respawnAfterCompaction(revConfig)
-            }
+            // Resolve handles for next iteration: null compacted sessions and respawn as needed.
+            val handles = resolveHandlesForNextIteration(doerResult, revResult, doerHandle, reviewerHandle, revConfig)
+            doerHandle = handles.doer
+            reviewerHandle = handles.reviewer
 
             // NEEDS_ITERATION: processNeedsIteration handles budget check + inner loop.
             val needsIterResult = processNeedsIteration(doerHandle, reviewerHandle, revConfig)
@@ -178,6 +165,37 @@ class PartExecutorImpl(
 
             doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
         }
+    }
+
+    /** Handles pair carrying live (possibly newly-spawned) sessions for the next iteration. */
+    private data class IterationHandles(
+        val doer: SpawnedAgentHandle,
+        val reviewer: SpawnedAgentHandle,
+    )
+
+    /**
+     * Resolves doer and reviewer handles for the next iteration.
+     *
+     * If either sub-part was self-compacted during this iteration (handle killed by [afterDone]),
+     * a fresh session is spawned via [respawnAfterCompaction]. Otherwise the live handle is reused.
+     */
+    private suspend fun resolveHandlesForNextIteration(
+        doerResult: DoerSignalResult,
+        revResult: ReviewerSignalResult,
+        doerHandle: SpawnedAgentHandle,
+        reviewerHandle: SpawnedAgentHandle,
+        revConfig: SubPartConfig,
+    ): IterationHandles {
+        val finalDoer = when {
+            doerResult is DoerSignalResult.Continue && doerResult.doerCompacted -> respawnAfterCompaction(doerConfig)
+            else -> doerHandle
+        }
+        val finalReviewer = when {
+            revResult is ReviewerSignalResult.Continue && revResult.reviewerCompacted ->
+                respawnAfterCompaction(revConfig)
+            else -> reviewerHandle
+        }
+        return IterationHandles(finalDoer, finalReviewer)
     }
 
     /** Result of processing a doer signal in the reviewer path. */
