@@ -3,11 +3,9 @@ package com.glassthought.shepherd.integtest.compaction
 import com.asgard.core.out.OutFactory
 import com.glassthought.bucket.isIntegTestEnabled
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
-import com.glassthought.shepherd.core.agent.adapter.BuildStartCommandParams
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
 import com.glassthought.shepherd.core.agent.contextwindow.ClaudeCodeContextWindowStateReader
 import com.glassthought.shepherd.core.agent.contextwindow.ContextWindowStateReader
-import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.facade.AgentFacadeImpl
 import com.glassthought.shepherd.core.agent.facade.AgentPayload
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
@@ -15,7 +13,6 @@ import com.glassthought.shepherd.core.agent.facade.ContextWindowState
 import com.glassthought.shepherd.core.agent.facade.DoneResult
 import com.glassthought.shepherd.core.agent.facade.SpawnAgentConfig
 import com.glassthought.shepherd.core.agent.facade.SpawnedAgentHandle
-import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.shepherd.core.compaction.SelfCompactionInstructionBuilder
 import com.glassthought.shepherd.core.data.AgentType
@@ -27,6 +24,9 @@ import com.glassthought.shepherd.core.server.AckedPayloadSenderImpl
 import com.glassthought.shepherd.core.server.ShepherdServer
 import com.glassthought.shepherd.core.session.SessionsState
 import com.glassthought.shepherd.core.time.SystemClock
+import com.glassthought.shepherd.integtest.IntegTestCallbackProtocol
+import com.glassthought.shepherd.integtest.IntegTestHelpers
+import com.glassthought.shepherd.integtest.ServerPortInjectingAdapter
 import com.glassthought.shepherd.integtest.SharedContextDescribeSpec
 import com.glassthought.shepherd.usecase.healthmonitoring.AgentUnresponsiveUseCaseImpl
 import com.glassthought.shepherd.usecase.healthmonitoring.SingleSessionKiller
@@ -81,9 +81,9 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
             shepherdServer.configureApplication(this)
         }.start(wait = false)
 
-        val scriptsDir = CompactionIntegTestHelpers.resolveCallbackScriptsDir()
+        val scriptsDir = IntegTestHelpers.resolveCallbackScriptsDir()
 
-        val wrappedAdapter = CompactionServerPortInjectingAdapter(
+        val wrappedAdapter = ServerPortInjectingAdapter(
             delegate = realAdapter,
             serverPort = serverPort,
             callbackScriptsDir = scriptsDir,
@@ -109,7 +109,6 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
         )
         val noOpQaDrainer = QaDrainer { _, _ -> }
 
-        // Grouped dependencies for facade construction
         val facadeDeps = FacadeDeps(
             sessionsState = sessionsState,
             wrappedAdapter = wrappedAdapter,
@@ -133,14 +132,13 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
             CompactionIntegTestHelpers.createCompactionSystemPromptFile(tmpDir)
 
         // Track spawned handles and their facades for cleanup
-        val spawnedEntries =
-            mutableListOf<Pair<AgentFacadeImpl, SpawnedAgentHandle>>()
+        val spawnedEntries = mutableListOf<SpawnedEntry>()
 
         afterEach {
-            spawnedEntries.forEach { (facade, handle) ->
+            spawnedEntries.forEach { entry ->
                 try {
-                    facade.killSession(handle)
-                } catch (_: Exception) {
+                    entry.facade.killSession(entry.handle)
+                } catch (_: IllegalStateException) {
                     // Session may already be killed
                 }
             }
@@ -153,14 +151,23 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                 timeoutMillis = 5000,
             )
             systemPromptFile.delete()
-            tmpDir.listFiles()?.forEach { it.delete() }
+            tmpDir.deleteRecursively()
         }
 
         // ── Scenario 1: context_window_slim.json readability ───────
+        //
+        // WHY synthetic JSON: The external vintrin hook that produces
+        // context_window_slim.json is not guaranteed to be configured
+        // in all CI environments. This test validates that
+        // ClaudeCodeContextWindowStateReader correctly resolves the
+        // session-based path and parses the JSON format — using a
+        // synthetic file with a real agent session ID ensures the path
+        // resolution logic works with real session IDs without
+        // depending on the external hook being present.
 
-        describe("WHEN agent starts and context_window_slim.json exists") {
+        describe("WHEN agent starts and synthetic context_window_slim.json is written") {
 
-            it("THEN ClaudeCodeContextWindowStateReader parses it") {
+            it("THEN ClaudeCodeContextWindowStateReader parses it correctly") {
                 val stubReader = ContextWindowStateReader {
                     ContextWindowState(remainingPercentage = null)
                 }
@@ -173,12 +180,13 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                         systemPromptFile = systemPromptFile,
                     )
                 )
-                spawnedEntries.add(facade to handle)
+                spawnedEntries.add(SpawnedEntry(facade, handle))
 
                 val agentSessionId = handle.sessionId.sessionId
                 agentSessionId.shouldNotBeEmpty()
 
-                // Write synthetic context_window_slim.json
+                // Write synthetic context_window_slim.json at the
+                // path ClaudeCodeContextWindowStateReader expects
                 val sessionDir =
                     ClaudeCodeContextWindowStateReader.defaultBasePath()
                         .resolve(agentSessionId)
@@ -216,10 +224,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
 
         describe("WHEN self-compaction instruction is sent to agent") {
 
-            val privateMdPath = tmpDir.toPath()
-                .resolve("PRIVATE-${System.currentTimeMillis()}.md")
-
-            it("THEN agent signals SelfCompacted") {
+            it("THEN agent signals SelfCompacted and PRIVATE.md is valid") {
                 val stubReader = ContextWindowStateReader {
                     ContextWindowState(remainingPercentage = null)
                 }
@@ -232,16 +237,18 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                         systemPromptFile = systemPromptFile,
                     )
                 )
-                spawnedEntries.add(facade to handle)
+                spawnedEntries.add(SpawnedEntry(facade, handle))
+
+                val privateMdPath = tmpDir.toPath()
+                    .resolve("PRIVATE-${System.currentTimeMillis()}.md")
 
                 val instructionText =
                     SelfCompactionInstructionBuilder().build(privateMdPath)
                 val instructionFile =
-                    CompactionIntegTestHelpers.createInstructionFile(
-                        tmpDir = tmpDir,
-                        name = "compaction-instruction",
-                        content = instructionText,
-                    )
+                    IntegTestHelpers.createDoneInstructionFile(tmpDir)
+                        .also {
+                            it.writeText(instructionText)
+                        }
 
                 try {
                     val payload = AgentPayload(
@@ -250,17 +257,16 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                     val signal =
                         facade.sendPayloadAndAwaitSignal(handle, payload)
                     signal.shouldBeInstanceOf<AgentSignal.SelfCompacted>()
+
+                    // Validate PRIVATE.md exists and is non-empty
+                    val validator = PrivateMdValidator()
+                    val result = validator.validate(
+                        privateMdPath, "compaction-trigger",
+                    )
+                    result shouldBe PrivateMdValidator.ValidationResult.Valid
                 } finally {
                     instructionFile.delete()
                 }
-            }
-
-            it("THEN PRIVATE.md exists and is non-empty") {
-                val validator = PrivateMdValidator()
-                val result = validator.validate(
-                    privateMdPath, "compaction-trigger",
-                )
-                result shouldBe PrivateMdValidator.ValidationResult.Valid
             }
         }
 
@@ -282,7 +288,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                         systemPromptFile = systemPromptFile,
                     )
                 )
-                spawnedEntries.add(facade to firstHandle)
+                spawnedEntries.add(SpawnedEntry(facade, firstHandle))
 
                 // Step 2: Send compaction instruction
                 val privateMdPath = tmpDir.toPath().resolve(
@@ -314,14 +320,16 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
 
                 // Step 3: Kill old session
                 facade.killSession(firstHandle)
-                spawnedEntries.removeAll { it.second == firstHandle }
+                spawnedEntries.removeAll { it.handle == firstHandle }
 
-                // Step 4: New system prompt with PRIVATE.md content
-                val privateMdContent = if (Files.exists(privateMdPath)) {
-                    Files.readString(privateMdPath)
-                } else {
-                    "No PRIVATE.md — agent did not write the file."
+                // Step 4: Fail hard if PRIVATE.md is missing after
+                // SelfCompacted signal — no silent fallbacks
+                check(Files.exists(privateMdPath)) {
+                    "PRIVATE.md not found at [$privateMdPath] " +
+                        "after SelfCompacted signal"
                 }
+                val privateMdContent = Files.readString(privateMdPath)
+
                 val rotatedPrompt =
                     CompactionIntegTestHelpers.createRotatedSystemPromptFile(
                         tmpDir = tmpDir,
@@ -335,7 +343,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                         systemPromptFile = rotatedPrompt,
                     )
                 )
-                spawnedEntries.add(facade to secondHandle)
+                spawnedEntries.add(SpawnedEntry(facade, secondHandle))
 
                 try {
                     // Step 6: Verify new session is functional
@@ -363,6 +371,17 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
         }
     }
 })
+
+// ── Data classes ─────────────────────────────────────────────────────────────
+
+/**
+ * Tracks a spawned agent and its owning facade for cleanup.
+ * Replaces `Pair<AgentFacadeImpl, SpawnedAgentHandle>`.
+ */
+private data class SpawnedEntry(
+    val facade: AgentFacadeImpl,
+    val handle: SpawnedAgentHandle,
+)
 
 // ── Facade dependency group ─────────────────────────────────────────────────
 
@@ -404,79 +423,13 @@ private data class FacadeDeps(
     }
 }
 
-// ── Adapter that injects server port and PATH ───────────────────────────────
-
-/**
- * Wrapping [AgentTypeAdapter] that injects `TICKET_SHEPHERD_SERVER_PORT`
- * and `callback_shepherd.signal.sh` PATH into the command.
- *
- * Duplicated from AgentFacadeImplIntegTest (private to that class).
- */
-private class CompactionServerPortInjectingAdapter(
-    private val delegate: AgentTypeAdapter,
-    private val serverPort: Int,
-    private val callbackScriptsDir: String,
-) : AgentTypeAdapter {
-
-    override fun buildStartCommand(
-        params: BuildStartCommandParams,
-    ): TmuxStartCommand {
-        val delegateCommand = delegate.buildStartCommand(params)
-        val originalCommand = delegateCommand.command
-
-        val envPrefix =
-            "export TICKET_SHEPHERD_SERVER_PORT=$serverPort && " +
-                "export PATH=\$PATH:$callbackScriptsDir && "
-
-        val bashCPrefix = "bash -c '"
-        val insertionPoint = originalCommand.indexOf(bashCPrefix)
-        check(insertionPoint >= 0) {
-            "Expected command to contain '$bashCPrefix' " +
-                "but got: $originalCommand"
-        }
-        val afterPrefix = insertionPoint + bashCPrefix.length
-        val modifiedCommand =
-            originalCommand.substring(0, afterPrefix) +
-                envPrefix +
-                originalCommand.substring(afterPrefix)
-
-        return TmuxStartCommand(modifiedCommand)
-    }
-
-    override suspend fun resolveSessionId(
-        handshakeGuid: HandshakeGuid,
-    ): String {
-        return delegate.resolveSessionId(handshakeGuid)
-    }
-}
-
 // ── Helper utilities ────────────────────────────────────────────────────────
 
 /**
- * Stateless helper utilities for [SelfCompactionIntegTest].
+ * Stateless helper utilities specific to [SelfCompactionIntegTest].
+ * Shared helpers live in [IntegTestHelpers].
  */
 private object CompactionIntegTestHelpers {
-
-    fun resolveCallbackScriptsDir(): String {
-        val projectDir = System.getProperty("user.dir")
-        val scriptsDir = File(projectDir, "src/main/resources/scripts")
-        check(scriptsDir.isDirectory) {
-            "Callback scripts directory not found at " +
-                "${scriptsDir.absolutePath}. " +
-                "Ensure you are running from the app module directory."
-        }
-        val signalScript = File(
-            scriptsDir, "callback_shepherd.signal.sh",
-        )
-        check(signalScript.exists()) {
-            "callback_shepherd.signal.sh not found at " +
-                signalScript.absolutePath
-        }
-        if (!signalScript.canExecute()) {
-            signalScript.setExecutable(true)
-        }
-        return scriptsDir.absolutePath
-    }
 
     fun buildSpawnConfig(
         partName: String,
@@ -489,16 +442,8 @@ private object CompactionIntegTestHelpers {
         model = "sonnet",
         role = "DOER",
         systemPromptPath = systemPromptFile.toPath(),
-        bootstrapMessage = buildBootstrapMessage(),
+        bootstrapMessage = IntegTestCallbackProtocol.BOOTSTRAP_MESSAGE,
     )
-
-    private fun buildBootstrapMessage(): String {
-        return "You are a test agent. Your FIRST action must be " +
-            "to call `callback_shepherd.signal.sh started` using " +
-            "the Bash tool. This is critical — do it immediately " +
-            "before anything else. After that, wait for further " +
-            "instructions via payload delivery."
-    }
 
     @Suppress("MaxLineLength")
     fun createCompactionSystemPromptFile(tmpDir: File): File {
@@ -512,42 +457,12 @@ private object CompactionIntegTestHelpers {
             |
             |You are a test agent running in an integration test. Follow these rules EXACTLY:
             |
-            |## Callback Protocol
+            |${IntegTestCallbackProtocol.CORE_PROTOCOL}
             |
-            |You MUST use `callback_shepherd.signal.sh` (already on your PATH) to communicate with the harness.
+            |${IntegTestCallbackProtocol.SELF_COMPACTION_PROTOCOL}
             |
-            |### On startup (FIRST thing you do):
-            |```bash
-            |callback_shepherd.signal.sh started
-            |```
-            |
-            |### When you receive a payload wrapped in XML tags:
-            |1. First ACK the payload:
-            |```bash
-            |callback_shepherd.signal.sh ack-payload <payload_id>
-            |```
-            |The payload_id is in the `payload_id` attribute of the XML tag.
-            |
-            |2. Then read and follow the instructions in the payload.
-            |
-            |### When instructed to self-compact:
-            |1. Write the summary file as instructed (PRIVATE.md at the specified path)
-            |2. Then signal self-compaction:
-            |```bash
-            |callback_shepherd.signal.sh self-compacted
-            |```
-            |
-            |### When done with work:
-            |```bash
-            |callback_shepherd.signal.sh done completed
-            |```
-            |
-            |## IMPORTANT
-            |- ALWAYS call `callback_shepherd.signal.sh started` FIRST before doing anything else.
-            |- ALWAYS ACK payloads before processing them.
-            |- When asked to self-compact: write the PRIVATE.md file FIRST, then signal `self-compacted`.
-            |- When asked to signal done: signal `done completed`.
-            |- Use Bash tool to execute the callback scripts.
+            |${IntegTestCallbackProtocol.IMPORTANT_NOTES_BASE}
+            |${IntegTestCallbackProtocol.IMPORTANT_NOTES_COMPACTION}
             """.trimMargin()
         )
         return file
@@ -577,34 +492,9 @@ private object CompactionIntegTestHelpers {
             |$privateMdContent
             |```
             |
-            |## Callback Protocol
+            |${IntegTestCallbackProtocol.CORE_PROTOCOL}
             |
-            |You MUST use `callback_shepherd.signal.sh` (already on your PATH) to communicate with the harness.
-            |
-            |### On startup (FIRST thing you do):
-            |```bash
-            |callback_shepherd.signal.sh started
-            |```
-            |
-            |### When you receive a payload wrapped in XML tags:
-            |1. First ACK the payload:
-            |```bash
-            |callback_shepherd.signal.sh ack-payload <payload_id>
-            |```
-            |The payload_id is in the `payload_id` attribute of the XML tag.
-            |
-            |2. Then read and follow the instructions in the payload.
-            |
-            |### When done with work:
-            |```bash
-            |callback_shepherd.signal.sh done completed
-            |```
-            |
-            |## IMPORTANT
-            |- ALWAYS call `callback_shepherd.signal.sh started` FIRST before doing anything else.
-            |- ALWAYS ACK payloads before processing them.
-            |- ALWAYS signal done when you finish processing a payload's instructions.
-            |- Use Bash tool to execute the callback scripts.
+            |${IntegTestCallbackProtocol.IMPORTANT_NOTES_BASE}
             """.trimMargin()
         )
         return file
