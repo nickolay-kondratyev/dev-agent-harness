@@ -24,7 +24,7 @@ import java.time.Instant
  * ap.yWFAwVrZdx1UTDqDJmDpe.E
  */
 @AnchorPoint("ap.yWFAwVrZdx1UTDqDJmDpe.E")
-interface InterruptHandler {
+fun interface InterruptHandler {
     /**
      * Registers the SIGINT handler. Called once during startup.
      * NOT suspend — signal registration is synchronous.
