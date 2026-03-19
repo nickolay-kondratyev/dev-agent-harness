@@ -17,7 +17,7 @@ import kotlin.io.path.readText
  *
  * ap.kz1nvt0wyd2UpWsCGmm7Y.E
  */
-interface WorkflowParser {
+fun interface WorkflowParser {
 
     /**
      * Parses the workflow file at `config/workflows/<workflowName>.json`
