@@ -1,0 +1,50 @@
+---
+spec: "com.glassthought.shepherd.core.creator.TicketShepherdCreatorTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a clean working tree and valid ticket
+  - WHEN create() is called
+    - [PASS] THEN working tree validation is called
+- GIVEN a dirty working tree
+  - WHEN create() is called
+    - [PASS] THEN fails with IllegalStateException
+- GIVEN a straightforward workflow
+  - WHEN create() is called
+    - [PASS] THEN returns TicketShepherd with tryNumber set
+- GIVEN a straightforward workflow with valid ticket
+  - WHEN create() is called
+    - [PASS] THEN creates the execution sub-part comm directories
+    - [PASS] THEN creates the harness_private directory
+    - [PASS] THEN creates the shared/plan directory
+- GIVEN a ticket with blank id
+  - WHEN create() is called
+    - [PASS] THEN fails with IllegalStateException mentioning 'id'
+- GIVEN a ticket with null status
+  - WHEN create() is called
+    - [PASS] THEN fails with IllegalStateException mentioning 'status'
+- GIVEN a ticket with status 'open' instead of 'in_progress'
+  - WHEN create() is called
+    - [PASS] THEN error message mentions the actual status 'open'
+    - [PASS] THEN fails with IllegalStateException mentioning 'in_progress'
+- GIVEN a valid creator setup
+  - WHEN create() is called
+    - [PASS] THEN current_state.json exists on disk
+- GIVEN a with-planning workflow
+  - WHEN create() is called
+    - [PASS] THEN returns TicketShepherd with tryNumber set
+- GIVEN a workflow parser
+  - WHEN create() is called with workflow name 'my-workflow'
+    - [PASS] THEN workflow parser receives the correct workflow name
+- GIVEN the current branch is 'feature/existing'
+  - WHEN create() is called
+    - [PASS] THEN originatingBranch is 'feature/existing'
+- GIVEN try-N resolver returns 3 (first two try dirs exist)
+  - WHEN create() is called
+    - [PASS] THEN resolver was called with the ticket data
+    - [PASS] THEN tryNumber is 3
+- GIVEN valid ticket and try number 2
+  - WHEN create() is called
+    - [PASS] THEN feature branch is created with correct name format
