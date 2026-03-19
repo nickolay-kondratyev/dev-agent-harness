@@ -1,11 +1,11 @@
 ---
 id: nid_ou1fy9kv67zrv8dwnlu6dsf9g_E
 title: "Consider removing question field duplication between PendingQuestion and UserQuestionContext"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T17:57:53Z
-status_updated_iso: 2026-03-19T17:57:53Z
+status_updated_iso: 2026-03-19T18:04:01Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
