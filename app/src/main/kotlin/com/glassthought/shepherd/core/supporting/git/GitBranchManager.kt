@@ -36,20 +36,24 @@ interface GitBranchManager {
             outFactory: OutFactory,
             processRunner: ProcessRunner,
             workingDir: Path? = null,
-        ): GitBranchManager = GitBranchManagerImpl(outFactory, processRunner, workingDir)
+        ): GitBranchManager = GitBranchManagerImpl(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            gitCommandBuilder = GitCommandBuilder(workingDir),
+        )
     }
 }
 
 /**
  * Default implementation of [GitBranchManager].
  *
- * Delegates git CLI commands to [ProcessRunner]. When [workingDir] is provided,
- * all git commands are prefixed with `-C <dir>` to target a specific repository.
+ * Delegates git CLI commands to [ProcessRunner]. Uses [GitCommandBuilder] to
+ * construct command arrays (optionally targeting a specific repository via `-C`).
  */
 class GitBranchManagerImpl(
     outFactory: OutFactory,
     private val processRunner: ProcessRunner,
-    private val workingDir: Path? = null,
+    private val gitCommandBuilder: GitCommandBuilder,
 ) : GitBranchManager {
 
     private val out = outFactory.getOutForClass(GitBranchManagerImpl::class)
@@ -62,7 +66,7 @@ class GitBranchManagerImpl(
             Val(branchName, ValType.GIT_BRANCH_NAME),
         )
 
-        processRunner.runProcess(*gitCommand("checkout", "-b", branchName))
+        processRunner.runProcess(*gitCommandBuilder.build("checkout", "-b", branchName))
 
         out.info(
             "branch_created_and_checked_out",
@@ -75,7 +79,7 @@ class GitBranchManagerImpl(
             emptyList()
         }
 
-        val output = processRunner.runProcess(*gitCommand("rev-parse", "--abbrev-ref", "HEAD"))
+        val output = processRunner.runProcess(*gitCommandBuilder.build("rev-parse", "--abbrev-ref", "HEAD"))
         val branchName = output.trim()
 
         out.info(
@@ -84,16 +88,5 @@ class GitBranchManagerImpl(
         )
 
         return branchName
-    }
-
-    /**
-     * Builds a git command array, prepending `-C <workingDir>` when [workingDir] is set.
-     */
-    private fun gitCommand(vararg args: String): Array<String> {
-        return if (workingDir != null) {
-            arrayOf("git", "-C", workingDir.toString(), *args)
-        } else {
-            arrayOf("git", *args)
-        }
     }
 }

@@ -8,9 +8,9 @@
     <ID>NewLineAtEndOfFile:AgentType.kt$com.glassthought.shepherd.core.data.AgentType.kt</ID>
     <ID>NewLineAtEndOfFile:ShepherdContext.kt$com.glassthought.shepherd.core.initializer.data.ShepherdContext.kt</ID>
     <ID>NewLineAtEndOfFile:TmuxSessionName.kt$com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName.kt</ID>
-    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("checkout", "-b", branchName))</ID>
-    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommand("rev-parse", "--abbrev-ref", "HEAD"))</ID>
-    <ID>SpreadOperator:WorkingTreeValidator.kt$WorkingTreeValidatorImpl$(*gitCommand("status", "--porcelain"))</ID>
+    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommandBuilder.build("checkout", "-b", branchName))</ID>
+    <ID>SpreadOperator:GitBranchManager.kt$GitBranchManagerImpl$(*gitCommandBuilder.build("rev-parse", "--abbrev-ref", "HEAD"))</ID>
+    <ID>SpreadOperator:WorkingTreeValidator.kt$WorkingTreeValidatorImpl$(*gitCommandBuilder.build("status", "--porcelain"))</ID>
     <ID>TooManyFunctions:AiOutputStructure.kt$AiOutputStructure</ID>
     <ID>TooManyFunctions:ContextForAgentProviderImpl.kt$ContextForAgentProviderImpl : ContextForAgentProvider</ID>
   </CurrentIssues>

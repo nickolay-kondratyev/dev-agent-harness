@@ -391,7 +391,7 @@ class CommitPerSubPartTest : AsgardDescribeSpec(
                         gitOperationFailureUseCase = FakeGitOperationFailureUseCase(),
                         hostUsername = HOST_USERNAME,
                         gitUserEmail = GIT_USER_EMAIL,
-                        workingDir = java.nio.file.Path.of("/some/repo"),
+                        gitCommandBuilder = GitCommandBuilder(java.nio.file.Path.of("/some/repo")),
                     )
 
                     strategy.onSubPartDone(DEFAULT_CONTEXT)

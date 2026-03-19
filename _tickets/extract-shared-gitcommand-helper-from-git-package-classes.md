@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-19T18:12:39Z
 id: nid_j32uihvbfy7bm4miaoee6a4iy_E
 title: "Extract shared gitCommand helper from git package classes"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-19T17:53:31Z
-status_updated_iso: 2026-03-19T18:04:19Z
+status_updated_iso: 2026-03-19T18:12:39Z
 type: chore
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
