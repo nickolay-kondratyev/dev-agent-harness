@@ -25,7 +25,6 @@ import io.kotest.matchers.shouldBe
 import io.kotest.matchers.shouldNotBe
 import io.kotest.matchers.string.shouldStartWith
 import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.launch
 import java.nio.file.Path
 import java.time.Instant
 import kotlin.time.Duration.Companion.milliseconds
@@ -59,7 +58,35 @@ private object NoOpCommunicator : TmuxCommunicator {
     override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
 }
 
-private class FakeCreator : TmuxSessionCreator {
+/**
+ * Communicator that completes the session's signal deferred when [sendKeys] is called.
+ * Used by the sendPayloadAndAwaitSignal test to simulate an agent responding to a payload
+ * without delay-based synchronization.
+ *
+ * Looks up the entry in [sessions] by [partName], completes the first incomplete deferred,
+ * and re-registers the entry so the lookup remains valid.
+ */
+private class SignalCompletingCommunicator(
+    private val sessions: SessionsState,
+    private val partName: String,
+    private val signal: AgentSignal,
+) : TmuxCommunicator {
+    override suspend fun sendKeys(paneTarget: String, text: String) {
+        val removed = sessions.removeAllForPart(partName)
+        for (entry in removed) {
+            if (!entry.signalDeferred.isCompleted) {
+                entry.signalDeferred.complete(signal)
+            }
+        }
+    }
+
+    override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
+}
+
+private class FakeCreator(
+    private val communicator: TmuxCommunicator = NoOpCommunicator,
+    private val onSessionCreated: (suspend () -> Unit)? = null,
+) : TmuxSessionCreator {
     val created = mutableListOf<String>()
 
     override suspend fun createSession(
@@ -67,12 +94,14 @@ private class FakeCreator : TmuxSessionCreator {
         startCommand: TmuxStartCommand,
     ): TmuxSession {
         created.add(sessionName)
-        return TmuxSession(
+        val session = TmuxSession(
             name = TmuxSessionName(sessionName),
             paneTarget = "$sessionName:0.0",
-            communicator = NoOpCommunicator,
+            communicator = communicator,
             existsChecker = SessionExistenceChecker { true },
         )
+        onSessionCreated?.invoke()
+        return session
     }
 }
 
@@ -132,10 +161,13 @@ private fun harness(
     timeout: HarnessTimeoutConfig = HarnessTimeoutConfig.forTests(),
     ctxState: ContextWindowState = ContextWindowState(75),
     outFactory: OutFactory,
+    communicator: TmuxCommunicator = NoOpCommunicator,
+    onSessionCreated: (suspend () -> Unit)? = null,
+    sessionsOverride: SessionsState? = null,
 ): Harness {
-    val sessions = SessionsState()
+    val sessions = sessionsOverride ?: SessionsState()
     val adapter = FakeAdapterForFacade(resolvedSessionId = RESOLVED_ID)
-    val creator = FakeCreator()
+    val creator = FakeCreator(communicator = communicator, onSessionCreated = onSessionCreated)
     val killer = FakeKiller()
     val reader = FakeReader(result = ctxState)
     val clock = TestClock(FIXED_INSTANT)
@@ -155,32 +187,33 @@ private fun harness(
 }
 
 /**
- * Spawns an agent, auto-completing the startup signal.
+ * Creates a harness that auto-completes the startup signal when the TMUX session
+ * is created. Uses [FakeCreator.onSessionCreated] callback to complete the deferred
+ * synchronously — no polling or delay needed.
  *
- * Polls [SessionsState] by removing entries for [PART] and completing
- * the signal deferred. This is a pragmatic workaround because
- * [SessionsState] doesn't expose an "iterate all entries" method.
+ * The callback removes entries via [SessionsState.removeAllForPart] to access the
+ * placeholder deferred and completes it. This is safe because [AgentFacadeImpl.spawnAgent]
+ * holds its own reference to the deferred and re-registers a real entry after startup.
  */
-private suspend fun kotlinx.coroutines.CoroutineScope.spawn(
-    h: Harness,
-    cfg: SpawnAgentConfig = config(),
-): SpawnedAgentHandle {
-    val job = launch {
-        while (true) {
-            val removed = h.sessions.removeAllForPart(cfg.partName)
+private fun autoCompletingHarness(
+    ctxState: ContextWindowState = ContextWindowState(75),
+    outFactory: OutFactory,
+    partName: String = PART,
+): Harness {
+    val sessions = SessionsState()
+    return harness(
+        ctxState = ctxState,
+        outFactory = outFactory,
+        onSessionCreated = {
+            val removed = sessions.removeAllForPart(partName)
             for (entry in removed) {
                 if (!entry.signalDeferred.isCompleted) {
-                    entry.signalDeferred.complete(
-                        AgentSignal.Done(DoneResult.COMPLETED),
-                    )
+                    entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
                 }
             }
-            kotlinx.coroutines.delay(5.milliseconds)
-        }
-    }
-    val handle = h.facade.spawnAgent(cfg)
-    job.cancel()
-    return handle
+        },
+        sessionsOverride = sessions,
+    )
 }
 
 private fun makeHandle(sessionId: String = "nonexistent"): SpawnedAgentHandle {
@@ -208,77 +241,77 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             describe("WHEN spawnAgent is called") {
 
                 it("THEN calls adapter.buildStartCommand once") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     h.adapter.buildCalls.size shouldBe 1
                 }
 
                 it("THEN passes correct bootstrapMessage") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     h.adapter.buildCalls.first().bootstrapMessage shouldBe BOOTSTRAP
                 }
 
                 it("THEN passes correct model") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     h.adapter.buildCalls.first().model shouldBe MODEL
                 }
 
                 it("THEN passes correct systemPromptFilePath") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     val path = h.adapter.buildCalls.first().systemPromptFilePath
                     path shouldBe PROMPT_PATH.toString()
                 }
 
                 it("THEN passes handshakeGuid with prefix") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     val guid = h.adapter.buildCalls.first().handshakeGuid
                     guid.value shouldStartWith "handshake."
                 }
 
                 it("THEN creates TMUX session with correct name") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     h.creator.created.size shouldBe 1
                     h.creator.created.first() shouldBe EXPECTED_SESSION
                 }
 
                 it("THEN calls adapter.resolveSessionId") {
-                    val h = harness(outFactory = outFactory)
-                    spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    h.facade.spawnAgent(config())
                     h.adapter.resolveCalls.size shouldBe 1
                 }
 
                 it("THEN returns handle with guid prefix") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     handle.guid.value shouldStartWith "handshake."
                 }
 
                 it("THEN returns handle with resolved sessionId") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     handle.sessionId.sessionId shouldBe RESOLVED_ID
                 }
 
                 it("THEN returns handle with correct agentType") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     handle.sessionId.agentType shouldBe AgentType.CLAUDE_CODE
                 }
 
                 it("THEN returns handle with timestamp from clock") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     handle.lastActivityTimestamp shouldBe FIXED_INSTANT
                 }
 
                 it("THEN registers entry in SessionsState") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     h.sessions.lookup(handle.guid) shouldNotBe null
                 }
             }
@@ -341,15 +374,15 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             describe("WHEN killSession is called") {
 
                 it("THEN calls sessionKiller") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     h.facade.killSession(handle)
                     h.killer.killed.size shouldBe 1
                 }
 
                 it("THEN removes entry from SessionsState") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
+                    val h = autoCompletingHarness(outFactory = outFactory)
+                    val handle = h.facade.spawnAgent(config())
                     h.facade.killSession(handle)
                     h.sessions.lookup(handle.guid) shouldBe null
                 }
@@ -399,24 +432,33 @@ class AgentFacadeImplTest : AsgardDescribeSpec(
             describe("WHEN signal deferred is completed") {
 
                 it("THEN returns the completed signal") {
-                    val h = harness(outFactory = outFactory)
-                    val handle = spawn(h)
                     val expected = AgentSignal.Done(DoneResult.COMPLETED)
-
-                    val job = launch {
-                        kotlinx.coroutines.delay(50.milliseconds)
-                        val entry = h.sessions.lookup(handle.guid)!!
-                        entry.signalDeferred.complete(expected)
-                    }
+                    val sessions = SessionsState()
+                    val communicator = SignalCompletingCommunicator(
+                        sessions = sessions,
+                        partName = PART,
+                        signal = expected,
+                    )
+                    val h = harness(
+                        outFactory = outFactory,
+                        communicator = communicator,
+                        sessionsOverride = sessions,
+                        onSessionCreated = {
+                            val removed = sessions.removeAllForPart(PART)
+                            for (entry in removed) {
+                                if (!entry.signalDeferred.isCompleted) {
+                                    entry.signalDeferred.complete(AgentSignal.Done(DoneResult.COMPLETED))
+                                }
+                            }
+                        },
+                    )
+                    val handle = h.facade.spawnAgent(config())
 
                     val payload = AgentPayload(
                         instructionFilePath = Path.of("/tmp/instr.md"),
                     )
-                    val result = h.facade.sendPayloadAndAwaitSignal(
-                        handle, payload,
-                    )
+                    val result = h.facade.sendPayloadAndAwaitSignal(handle, payload)
                     result shouldBe expected
-                    job.cancel()
                 }
             }
 

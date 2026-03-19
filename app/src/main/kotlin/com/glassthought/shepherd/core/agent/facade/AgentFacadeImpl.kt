@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.agent.facade
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
+import com.asgard.core.exception.base.AsgardBaseException
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.ShepherdValType
 import com.glassthought.shepherd.core.agent.TmuxAgentSession
@@ -110,8 +111,11 @@ class AgentFacadeImpl(
     /**
      * V1 stub — delivers payload and awaits the signal deferred.
      *
-     * Full health-aware await loop (health pings, Q&A handling, crash detection)
-     * is deferred to a separate ticket.
+     * **V1 limitation**: Sends the raw instruction file path via TMUX send-keys without
+     * ACK protocol wrapping (ref.ap.tbtBcVN2iCl1xfHJthllP.E). The full ACK-wrapped delivery
+     * via [com.glassthought.shepherd.core.server.AckedPayloadSender] and health-aware await loop
+     * (health pings, Q&A handling, crash detection) are deferred to ticket
+     * nid_qdd1w86a415xllfpvcsf8djab_E.
      */
     override suspend fun sendPayloadAndAwaitSignal(
         handle: SpawnedAgentHandle,
@@ -126,11 +130,19 @@ class AgentFacadeImpl(
             ?: error("No SessionEntry found for guid=[${handle.guid}]")
 
         val freshSignalDeferred = CompletableDeferred<AgentSignal>()
-        val updatedEntry = existingEntry.withFreshDeferred(freshSignalDeferred, clock.now())
+        val updatedEntry = SessionEntry(
+            tmuxAgentSession = existingEntry.tmuxAgentSession,
+            partName = existingEntry.partName,
+            subPartName = existingEntry.subPartName,
+            subPartIndex = existingEntry.subPartIndex,
+            signalDeferred = freshSignalDeferred,
+            lastActivityTimestamp = AtomicReference(clock.now()),
+            questionQueue = existingEntry.questionQueue,
+        )
         sessionsState.register(handle.guid, updatedEntry)
 
-        // Send the instruction file path to the agent via TMUX send-keys.
-        existingEntry.tmuxAgentSession.tmuxSession.sendKeys(payload.instructionFilePath.toString())
+        // V1 stub: sends raw path without ACK wrapping. See KDoc above.
+        updatedEntry.tmuxAgentSession.tmuxSession.sendKeys(payload.instructionFilePath.toString())
 
         return freshSignalDeferred.await()
     }
@@ -194,8 +206,8 @@ class AgentFacadeImpl(
             sessionsState.remove(guid)
             sessionKiller.killSession(tmuxSession)
             throw AgentSpawnException(
-                message = "Agent startup timeout for session [$sessionName] " +
-                    "after ${harnessTimeoutConfig.healthTimeouts.startup}",
+                sessionName = sessionName,
+                timeout = harnessTimeoutConfig.healthTimeouts.startup,
                 cause = e,
             )
         }
@@ -270,27 +282,20 @@ class AgentFacadeImpl(
     }
 }
 
-/**
- * Creates a new [SessionEntry] with a fresh [signalDeferred] and updated timestamp,
- * preserving all other fields from this entry.
- */
-private fun SessionEntry.withFreshDeferred(
-    signalDeferred: CompletableDeferred<AgentSignal>,
-    now: java.time.Instant,
-): SessionEntry = SessionEntry(
-    tmuxAgentSession = tmuxAgentSession,
-    partName = partName,
-    subPartName = subPartName,
-    subPartIndex = subPartIndex,
-    signalDeferred = signalDeferred,
-    lastActivityTimestamp = AtomicReference(now),
-    questionQueue = ConcurrentLinkedQueue(),
-)
 
 /**
  * Thrown when agent spawning fails (TMUX creation failure, startup timeout, etc.).
+ *
+ * @property sessionName The TMUX session name that failed to spawn.
+ * @property timeout The startup timeout duration that was exceeded.
  */
 class AgentSpawnException(
-    message: String,
+    val sessionName: String,
+    val timeout: kotlin.time.Duration,
     cause: Throwable? = null,
-) : RuntimeException(message, cause)
+) : AsgardBaseException(
+    "agent_spawn_failed",
+    cause,
+    Val(sessionName, ValType.STRING_USER_AGNOSTIC),
+    Val(timeout.toString(), ValType.STRING_USER_AGNOSTIC),
+)
