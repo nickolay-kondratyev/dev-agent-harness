@@ -13,7 +13,7 @@ import com.glassthought.shepherd.core.state.PartResult
  *
  * See spec at `doc/use-case/HealthMonitoring.md` § FailedToExecutePlanUseCase Detail.
  */
-interface FailedToExecutePlanUseCase {
+fun interface FailedToExecutePlanUseCase {
     suspend fun handleFailure(failedResult: PartResult): Nothing
 }
 

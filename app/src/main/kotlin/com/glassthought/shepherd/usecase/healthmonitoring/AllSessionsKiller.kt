@@ -6,6 +6,6 @@ package com.glassthought.shepherd.usecase.healthmonitoring
  * The default implementation ([com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller])
  * kills the entire tmux server. Alternative implementations (e.g., fakes) can be injected for tests.
  */
-interface AllSessionsKiller {
+fun interface AllSessionsKiller {
     suspend fun killAllSessions()
 }
