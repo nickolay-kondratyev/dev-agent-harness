@@ -78,8 +78,7 @@ class PartExecutorImpl(
                 terminateWith(handle, null, SubPartRole.DOER, PartResult.FailedWorkflow(signal.reason))
             is AgentSignal.Crashed ->
                 terminateWith(handle, null, SubPartRole.DOER, PartResult.AgentCrashed(signal.details))
-            AgentSignal.SelfCompacted ->
-                error("SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade")
+            AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
         }
     }
 
@@ -150,8 +149,7 @@ class PartExecutorImpl(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.DOER, PartResult.FailedWorkflow(signal.reason))
         is AgentSignal.Crashed ->
             terminateWith(doerHandle, reviewerHandle, SubPartRole.DOER, PartResult.AgentCrashed(signal.details))
-        AgentSignal.SelfCompacted ->
-            error("SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade")
+        AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
     }
 
     /** Returns [PartResult] to stop, or null to continue iteration. */
@@ -182,8 +180,7 @@ class PartExecutorImpl(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.FailedWorkflow(signal.reason))
         is AgentSignal.Crashed ->
             terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.AgentCrashed(signal.details))
-        AgentSignal.SelfCompacted ->
-            error("SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade")
+        AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
     }
 
     @Suppress("ReturnCount")
@@ -291,5 +288,7 @@ class PartExecutorImpl(
 
     companion object {
         private const val ITERATION_INCREMENT = 2
+        private const val SELF_COMPACTED_UNEXPECTED =
+            "SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade"
     }
 }
