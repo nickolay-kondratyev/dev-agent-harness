@@ -1,11 +1,11 @@
 ---
 id: nid_ejfyrux3m22ww1yl9smu57wwz_E
 title: "Implement PayloadId value class + generation"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T00:39:54Z
-status_updated_iso: 2026-03-19T00:39:54Z
+status_updated_iso: 2026-03-19T17:08:52Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
