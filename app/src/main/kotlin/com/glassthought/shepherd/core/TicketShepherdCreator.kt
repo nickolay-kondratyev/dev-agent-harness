@@ -16,6 +16,7 @@ import com.glassthought.shepherd.core.state.CurrentStatePersistence
 import com.glassthought.shepherd.core.state.CurrentStatePersistenceImpl
 import com.glassthought.shepherd.core.time.Clock
 import com.glassthought.shepherd.core.time.SystemClock
+import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 
 /**
@@ -77,6 +78,8 @@ fun interface TicketShepherdCreator {
  *   ContextInitializer (ref.ap.9zump9YISPSIcdnxEXZZX.E).
  * @param aiOutputStructure Ticket-scoped `.ai_out/` path resolver. Created by caller
  *   after branch name is known.
+ * @param workflowDefinition Static workflow definition parsed from config. Provides the
+ *   parts list for `.ai_out/` directory structure creation.
  * @param clock Wall-clock abstraction. Production: [SystemClock]; tests: TestClock.
  * @param consoleOutput Console printing abstraction for testability.
  * @param processExiter Process exit abstraction for testability.
@@ -86,6 +89,7 @@ fun interface TicketShepherdCreator {
 class TicketShepherdCreatorImpl(
     private val shepherdContext: ShepherdContext,
     private val aiOutputStructure: AiOutputStructure,
+    private val workflowDefinition: WorkflowDefinition,
     private val clock: Clock = SystemClock(),
     private val consoleOutput: ConsoleOutput = DefaultConsoleOutput(),
     private val processExiter: ProcessExiter = DefaultProcessExiter(),
@@ -99,7 +103,9 @@ class TicketShepherdCreatorImpl(
 
     override fun create(): TicketShepherdCreatorResult {
         // Future steps (not yet implemented — see KDoc):
-        // - Workflow JSON resolution, ticket parsing, git branch creation, .ai_out/ setup
+        // - Workflow JSON resolution, ticket parsing, git branch creation
+
+        aiOutputStructure.ensureStructure(workflowDefinition.allPartsForStructure())
 
         val currentState = CurrentState(parts = mutableListOf())
 

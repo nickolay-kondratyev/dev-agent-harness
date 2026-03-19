@@ -28,6 +28,20 @@ data class WorkflowDefinition(
     /** True when this workflow has static execution parts (no planning phase). */
     val isStraightforward: Boolean get() = parts != null
 
+    /**
+     * Returns ALL parts needed for directory structure creation via [AiOutputStructure.ensureStructure].
+     *
+     * - **Straightforward** workflows: returns [parts] (execution parts).
+     * - **With-planning** workflows: returns [planningParts] (planning parts).
+     *
+     * This is the canonical method for getting parts to pass to `ensureStructure()`.
+     */
+    fun allPartsForStructure(): List<Part> = when {
+        isStraightforward -> parts!!
+        isWithPlanning -> planningParts!!
+        else -> error("Unreachable: WorkflowDefinition init block ensures exactly one of parts/planningParts is set.")
+    }
+
     init {
         require((parts != null) xor (planningParts != null)) {
             "WorkflowDefinition must have exactly one of 'parts' (straightforward) " +

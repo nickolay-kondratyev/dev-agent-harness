@@ -5,6 +5,7 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.out.Out
 import com.glassthought.shepherd.core.executor.PartExecutor
 import com.glassthought.shepherd.core.executor.PartExecutorFactory
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.interrupt.InterruptHandler
@@ -30,6 +31,7 @@ data class TicketShepherdDeps(
     val processExiter: ProcessExiter,
     val finalCommitUseCase: FinalCommitUseCase,
     val ticketStatusUpdater: TicketStatusUpdater,
+    val aiOutputStructure: AiOutputStructure,
     val out: Out,
     val ticketId: String,
 )

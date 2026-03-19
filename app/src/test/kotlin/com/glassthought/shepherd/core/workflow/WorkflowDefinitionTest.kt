@@ -113,6 +113,39 @@ class WorkflowDefinitionTest : AsgardDescribeSpec({
         }
     }
 
+    // ── allPartsForStructure() ──
+
+    describe("GIVEN a straightforward WorkflowDefinition with allPartsForStructure()") {
+        val definition = WorkflowDefinition(
+            name = "straightforward",
+            parts = listOf(executionPart("main"), executionPart("secondary")),
+        )
+
+        it("THEN allPartsForStructure() returns execution parts") {
+            definition.allPartsForStructure() shouldBe definition.parts
+        }
+
+        it("THEN allPartsForStructure() returns the expected number of parts") {
+            definition.allPartsForStructure().size shouldBe 2
+        }
+    }
+
+    describe("GIVEN a with-planning WorkflowDefinition with allPartsForStructure()") {
+        val definition = WorkflowDefinition(
+            name = "with-planning",
+            planningParts = listOf(planningPart("plan"), planningPart("review")),
+            executionPhasesFrom = "plan_flow.json",
+        )
+
+        it("THEN allPartsForStructure() returns planning parts") {
+            definition.allPartsForStructure() shouldBe definition.planningParts
+        }
+
+        it("THEN allPartsForStructure() returns the expected number of parts") {
+            definition.allPartsForStructure().size shouldBe 2
+        }
+    }
+
     // ── executionPhasesFrom required for with-planning ──
 
     describe("GIVEN planningParts without executionPhasesFrom") {

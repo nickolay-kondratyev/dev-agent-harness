@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.context
 
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
+import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Path
 
 /**
@@ -33,10 +34,11 @@ fun interface ContextForAgentProvider {
     suspend fun assembleInstructions(request: AgentInstructionRequest): Path
 
     companion object {
-        fun standard(outFactory: OutFactory): ContextForAgentProvider =
+        fun standard(outFactory: OutFactory, aiOutputStructure: AiOutputStructure): ContextForAgentProvider =
             ContextForAgentProviderImpl(
                 outFactory = outFactory,
                 assembler = InstructionPlanAssembler(outFactory),
+                aiOutputStructure = aiOutputStructure,
             )
     }
 }
