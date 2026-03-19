@@ -111,7 +111,7 @@ private fun createTestSessionEntry(
     subPartIndex = subPartIndex,
     signalDeferred = CompletableDeferred<AgentSignal>(),
     lastActivityTimestamp = Instant.now(),
-    pendingPayloadAck = null,
+    pendingPayloadAck = java.util.concurrent.atomic.AtomicReference(null),
     questionQueue = questionQueue,
 )
 
