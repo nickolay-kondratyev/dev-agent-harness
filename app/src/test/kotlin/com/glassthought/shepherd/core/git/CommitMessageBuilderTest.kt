@@ -36,17 +36,7 @@ class CommitMessageBuilderTest : AsgardDescribeSpec({
                     result shouldBe "[shepherd] backend_impl/impl — completed"
                 }
             }
-
-            it("THEN omits iteration info") {
-                val result = CommitMessageBuilder.build(
-                    partName = "planning",
-                    subPartName = "plan",
-                    result = "completed",
-                    hasReviewer = false,
-                )
-                result shouldBe "[shepherd] planning/plan — completed"
-            }
-        }
+}
 
         describe("WHEN called with reviewer (hasReviewer=true)") {
 

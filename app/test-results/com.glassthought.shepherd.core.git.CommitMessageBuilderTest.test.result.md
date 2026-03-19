@@ -26,4 +26,3 @@ skipped: 0
       - [PASS] THEN returns '[shepherd] backend_impl/impl — completed'
     - AND partName='planning', subPartName='plan', result='completed'
       - [PASS] THEN returns '[shepherd] planning/plan — completed'
-    - [PASS] THEN omits iteration info
