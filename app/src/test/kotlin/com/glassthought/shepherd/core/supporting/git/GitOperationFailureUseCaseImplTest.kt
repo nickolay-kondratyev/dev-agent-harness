@@ -77,6 +77,12 @@ internal class FakeProcessRunner : ProcessRunner {
 
 // ── Test Helpers ─────────────────────────────────────────────────────────────
 
+private data class UseCaseTestFixture(
+    val useCase: GitOperationFailureUseCase,
+    val fakeFailedToExecutePlan: FakeFailedToExecutePlanUseCase,
+    val fakeLockFileOps: FakeGitIndexLockFileOperations,
+)
+
 private val DEFAULT_CONTEXT = GitFailureContext(
     partName = "build",
     subPartName = "compile",
@@ -94,14 +100,14 @@ private fun createUseCase(
     processRunner: ProcessRunner = FakeProcessRunner(),
     failedUseCase: FakeFailedToExecutePlanUseCase = FakeFailedToExecutePlanUseCase(),
     lockOps: FakeGitIndexLockFileOperations = FakeGitIndexLockFileOperations(),
-): Triple<GitOperationFailureUseCase, FakeFailedToExecutePlanUseCase, FakeGitIndexLockFileOperations> {
+): UseCaseTestFixture {
     val useCase = GitOperationFailureUseCaseImpl(
         outFactory = outFactory,
         processRunner = processRunner,
         failedToExecutePlanUseCase = failedUseCase,
         indexLockFileOperations = lockOps,
     )
-    return Triple(useCase, failedUseCase, lockOps)
+    return UseCaseTestFixture(useCase, failedUseCase, lockOps)
 }
 
 // ── Tests ───────────────────────────────────────────────────────────────────
@@ -448,7 +454,7 @@ class GitOperationFailureUseCaseImplTest : AsgardDescribeSpec(
                 reason shouldContain "On branch main"
             }
 
-            it("THEN FailedWorkflow reason contains sub-part name and iteration") {
+            it("THEN FailedWorkflow reason contains sub-part name") {
                 val failedUseCase = FakeFailedToExecutePlanUseCase()
                 val (useCase, _, _) = createUseCase(
                     outFactory = outFactory,
@@ -471,6 +477,30 @@ class GitOperationFailureUseCaseImplTest : AsgardDescribeSpec(
 
                 val reason = (failedUseCase.capturedResult as PartResult.FailedWorkflow).reason
                 reason shouldContain "stage-files"
+            }
+
+            it("THEN FailedWorkflow reason contains iteration number") {
+                val failedUseCase = FakeFailedToExecutePlanUseCase()
+                val (useCase, _, _) = createUseCase(
+                    outFactory = outFactory,
+                    processRunner = fakeRunner,
+                    failedUseCase = failedUseCase,
+                    lockOps = FakeGitIndexLockFileOperations(lockExists = false),
+                )
+
+                shouldThrow<FakeFailureEscalationException> {
+                    useCase.handleGitFailure(
+                        gitCommand = GIT_ADD_COMMAND,
+                        errorOutput = UNRELATED_ERROR,
+                        context = GitFailureContext(
+                            partName = "deploy",
+                            subPartName = "stage-files",
+                            iterationNumber = 3,
+                        ),
+                    )
+                }
+
+                val reason = (failedUseCase.capturedResult as PartResult.FailedWorkflow).reason
                 reason shouldContain "3"
             }
         }

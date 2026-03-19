@@ -10,7 +10,8 @@ skipped: 0
     - [PASS] THEN returns normally (triggers fast-path)
 - GIVEN fail-fast escalation
   - [PASS] THEN FailedWorkflow reason contains git status output
-  - [PASS] THEN FailedWorkflow reason contains sub-part name and iteration
+  - [PASS] THEN FailedWorkflow reason contains iteration number
+  - [PASS] THEN FailedWorkflow reason contains sub-part name
   - [PASS] THEN FailedWorkflow reason contains the git command
   - [PASS] THEN FailedWorkflow reason contains the part name
   - [PASS] THEN FailedWorkflow reason contains the stderr
