@@ -15,7 +15,7 @@ import java.nio.file.StandardCopyOption
  *
  * ap.RII1274uoKRv8UrOq06CD.E
  */
-interface CurrentStatePersistence {
+fun interface CurrentStatePersistence {
     suspend fun flush(state: CurrentState)
 }
 
