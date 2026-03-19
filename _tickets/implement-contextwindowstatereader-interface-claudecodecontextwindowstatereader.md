@@ -2,7 +2,7 @@
 id: nid_mebn70o7xjiabzx5uxngjx8uf_E
 title: "Implement ContextWindowStateReader interface + ClaudeCodeContextWindowStateReader"
 status: open
-deps: [nid_xeq8q9q7xmr56x5ttr98br4z9_E]
+deps: [nid_xeq8q9q7xmr56x5ttr98br4z9_E, nid_m7oounvwb31ra53ivu7btoj5v_E]
 links: []
 created_iso: 2026-03-19T00:40:44Z
 status_updated_iso: 2026-03-19T00:40:44Z
@@ -100,3 +100,9 @@ WHY staleness is NOT a hard-stop: the hook stopping mid-session is a recoverable
 - All unit tests pass
 - `./test.sh` passes
 
+
+## Notes
+
+**2026-03-19T00:51:24Z**
+
+Added missing dep: AgentFacade interface (nid_m7oounvwb31ra53ivu7btoj5v_E) — ContextWindowState data class is defined there.
