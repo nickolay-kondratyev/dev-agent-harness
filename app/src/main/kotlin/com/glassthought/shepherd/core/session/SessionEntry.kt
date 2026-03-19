@@ -27,7 +27,7 @@ import java.util.concurrent.atomic.AtomicReference
  * See ref.ap.7V6upjt21tOoCFXA7nqNh.E for the SessionsState spec.
  */
 @AnchorPoint("ap.igClEuLMC0bn7mDrK41jQ.E")
-data class SessionEntry(
+class SessionEntry(
     val tmuxAgentSession: TmuxAgentSession,
     val partName: String,
     val subPartName: String,
