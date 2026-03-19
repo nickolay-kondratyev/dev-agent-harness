@@ -3,27 +3,18 @@ package com.glassthought.shepherd.core.server
 import com.asgard.core.out.LogLevel
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
-import com.glassthought.shepherd.core.agent.TmuxAgentSession
-import com.glassthought.shepherd.core.agent.facade.AgentSignal
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
-import com.glassthought.shepherd.core.agent.sessionresolver.ResumableAgentSessionId
-import com.glassthought.shepherd.core.agent.tmux.SessionExistenceChecker
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
-import com.glassthought.shepherd.core.agent.tmux.TmuxSession
-import com.glassthought.shepherd.core.agent.tmux.data.TmuxSessionName
 import com.glassthought.shepherd.core.context.ProtocolVocabulary
-import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.session.SessionEntry
+import com.glassthought.shepherd.core.session.createTestSessionEntry
+import com.glassthought.shepherd.core.session.createTestTmuxAgentSession
 import io.kotest.assertions.throwables.shouldThrow
 import io.kotest.matchers.shouldBe
 import io.kotest.matchers.string.shouldContain
 import io.kotest.matchers.string.shouldStartWith
 import io.kotest.matchers.string.shouldEndWith
-import kotlinx.coroutines.CompletableDeferred
-import java.time.Instant
-import java.util.concurrent.ConcurrentLinkedQueue
 import java.util.concurrent.atomic.AtomicInteger
-import java.util.concurrent.atomic.AtomicReference
 import kotlin.time.Duration.Companion.milliseconds
 
 class AckedPayloadSenderTest : AsgardDescribeSpec(
@@ -71,7 +62,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -81,7 +72,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         )
 
         describe("WHEN sendAndAwaitAck is called and ACK arrives immediately") {
-            val sessionEntry = createTestSessionEntry(tmuxSession)
+            val sessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
 
             // Simulate immediate ACK by clearing pendingPayloadAck on send
             spyCommunicator.onSend = { sessionEntry.pendingPayloadAck.set(null) }
@@ -99,7 +90,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.abcdef12-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -109,7 +100,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         )
 
         describe("WHEN sendAndAwaitAck is called") {
-            val sessionEntry = createTestSessionEntry(tmuxSession)
+            val sessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
             var payloadAckAtSendTime: PayloadId? = null
 
             spyCommunicator.onSend = {
@@ -132,7 +123,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.11111111-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -142,7 +133,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         )
 
         describe("WHEN ACK arrives immediately") {
-            val sessionEntry = createTestSessionEntry(tmuxSession)
+            val sessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
             spyCommunicator.onSend = { sessionEntry.pendingPayloadAck.set(null) }
 
             it("THEN sendAndAwaitAck returns normally") {
@@ -151,7 +142,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             }
 
             it("THEN sendKeys was called exactly once") {
-                val sendSessionEntry = createTestSessionEntry(tmuxSession)
+                val sendSessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 spyCommunicator.sendCount = 0
                 spyCommunicator.onSend = { sendSessionEntry.pendingPayloadAck.set(null) }
                 sender.sendAndAwaitAck(tmuxSession, sendSessionEntry, "test content")
@@ -166,7 +157,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.22222222-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -176,7 +167,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         )
 
         describe("WHEN ACK arrives on second attempt") {
-            val sessionEntry = createTestSessionEntry(tmuxSession)
+            val sessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
             var attemptCount = 0
 
             spyCommunicator.onSend = {
@@ -196,7 +187,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             it("THEN sendKeys was called twice").config(
                 extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
             ) {
-                val retrySessionEntry = createTestSessionEntry(tmuxSession)
+                val retrySessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 spyCommunicator.sendCount = 0
                 var retryAttemptCount = 0
                 spyCommunicator.onSend = {
@@ -217,7 +208,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.33333333-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -227,7 +218,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         )
 
         describe("WHEN all attempts timeout without ACK") {
-            val sessionEntry = createTestSessionEntry(tmuxSession)
+            val sessionEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
             // spyCommunicator.onSend is no-op (default) — never clears pendingPayloadAck
 
             it("THEN throws PayloadAckTimeoutException").config(
@@ -241,7 +232,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             it("THEN exception message contains payload ID").config(
                 extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
             ) {
-                val freshEntry = createTestSessionEntry(tmuxSession)
+                val freshEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 val exception = shouldThrow<PayloadAckTimeoutException> {
                     sender.sendAndAwaitAck(tmuxSession, freshEntry, "test content")
                 }
@@ -251,7 +242,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             it("THEN sendKeys was called maxAttempts times").config(
                 extensions = listOf(logCheckOverrideAllow(LogLevel.WARN)),
             ) {
-                val countEntry = createTestSessionEntry(tmuxSession)
+                val countEntry = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 spyCommunicator.sendCount = 0
                 try {
                     sender.sendAndAwaitAck(tmuxSession, countEntry, "test content")
@@ -269,7 +260,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val handshakeGuid = HandshakeGuid("handshake.44444444-e5f6-7890-abcd-ef1234567890")
         val counter = AtomicInteger(1)
         val spyCommunicator = SpyTmuxCommunicator()
-        val tmuxSession = createTestTmuxAgentSession(handshakeGuid, spyCommunicator)
+        val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
             payloadCounter = counter,
@@ -283,14 +274,14 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             spyCommunicator.onSend = { /* no-op, will simulate ACK below */ }
 
             it("THEN first call uses sequence 1 and second uses sequence 2") {
-                val entry1 = createTestSessionEntry(tmuxSession)
+                val entry1 = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 spyCommunicator.onSend = {
                     sentPayloadIds.add(spyCommunicator.lastSentText!!)
                     entry1.pendingPayloadAck.set(null)
                 }
                 sender.sendAndAwaitAck(tmuxSession, entry1, "first")
 
-                val entry2 = createTestSessionEntry(tmuxSession)
+                val entry2 = createTestSessionEntry(tmuxAgentSession = tmuxSession)
                 spyCommunicator.onSend = {
                     sentPayloadIds.add(spyCommunicator.lastSentText!!)
                     entry2.pendingPayloadAck.set(null)
@@ -326,37 +317,3 @@ private class SpyTmuxCommunicator : TmuxCommunicator {
 
     override suspend fun sendRawKeys(paneTarget: String, keys: String) = Unit
 }
-
-private val noOpExistsChecker = SessionExistenceChecker { false }
-
-private fun createTestTmuxAgentSession(
-    handshakeGuid: HandshakeGuid,
-    communicator: TmuxCommunicator,
-): TmuxAgentSession {
-    val tmuxSession = TmuxSession(
-        name = TmuxSessionName("test-session"),
-        paneTarget = "test-session:0.0",
-        communicator = communicator,
-        existsChecker = noOpExistsChecker,
-    )
-    val resumableId = ResumableAgentSessionId(
-        handshakeGuid = handshakeGuid,
-        agentType = AgentType.CLAUDE_CODE,
-        sessionId = "test-session-id",
-        model = "test-model",
-    )
-    return TmuxAgentSession(tmuxSession = tmuxSession, resumableAgentSessionId = resumableId)
-}
-
-private fun createTestSessionEntry(
-    tmuxAgentSession: TmuxAgentSession,
-): SessionEntry = SessionEntry(
-    tmuxAgentSession = tmuxAgentSession,
-    partName = "test-part",
-    subPartName = "test-sub-part",
-    subPartIndex = 0,
-    signalDeferred = CompletableDeferred<AgentSignal>(),
-    lastActivityTimestamp = AtomicReference(Instant.now()),
-    pendingPayloadAck = AtomicReference(null),
-    questionQueue = ConcurrentLinkedQueue(),
-)
