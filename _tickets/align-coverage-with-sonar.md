@@ -1,11 +1,11 @@
 ---
 id: nid_x56bo8icym4x66j0w7zjtvfuy_E
 title: "Align coverage with sonar"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-19T22:05:18Z
-status_updated_iso: 2026-03-19T22:05:18Z
+status_updated_iso: 2026-03-19T22:06:24Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
