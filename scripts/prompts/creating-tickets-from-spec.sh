@@ -3,7 +3,7 @@
 
 _make_instructions(){
   local -r spec_to_process="$(rgfiles "#need-tickets" ./doc/ | grep_format.file | head -n 5 | path | echom)"
-  file_verify_exists "${spec_to_process:?}" </dev/null
+  # file_verify_exists "${spec_to_process:?}" </dev/null
 
   # shellcheck disable=SC2155
 local tmp_file="$(ei2 make_tmp_file)"
