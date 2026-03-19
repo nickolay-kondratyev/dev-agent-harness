@@ -5,4 +5,52 @@ failed: 0
 skipped: 0
 ---
 
-*No tests were run*
+- GIVEN status is COMPLETED (terminal)
+  - WHEN signal is Crashed
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+  - WHEN signal is Done
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+  - WHEN signal is FailWorkflow
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+- GIVEN status is FAILED (terminal)
+  - WHEN signal is Crashed
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+  - WHEN signal is Done
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+  - WHEN signal is FailWorkflow
+    - [PASS] THEN throws IllegalStateException mentioning terminal
+- GIVEN status is IN_PROGRESS
+  - WHEN signal is Crashed
+    - [PASS] THEN returns Fail
+  - WHEN signal is Done(COMPLETED)
+    - [PASS] THEN returns Complete
+  - WHEN signal is Done(NEEDS_ITERATION)
+    - [PASS] THEN returns IterateContinue
+  - WHEN signal is Done(PASS)
+    - [PASS] THEN returns Complete
+  - WHEN signal is FailWorkflow
+    - [PASS] THEN returns Fail
+  - WHEN signal is SelfCompacted
+    - [PASS] THEN throws IllegalStateException
+- GIVEN status is NOT_STARTED
+  - (1) WHEN signal is Done
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+  - (2) WHEN signal is Done
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+  - WHEN signal is Crashed
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+  - WHEN signal is Done
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+  - WHEN signal is FailWorkflow
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+  - WHEN signal is SelfCompacted
+    - [PASS] THEN throws IllegalStateException mentioning NOT_STARTED
+- GIVEN validateCanSpawn
+  - WHEN status is COMPLETED
+    - [PASS] THEN throws IllegalStateException
+  - WHEN status is FAILED
+    - [PASS] THEN throws IllegalStateException
+  - WHEN status is IN_PROGRESS
+    - [PASS] THEN throws IllegalStateException
+  - WHEN status is NOT_STARTED
+    - [PASS] THEN returns Spawn
