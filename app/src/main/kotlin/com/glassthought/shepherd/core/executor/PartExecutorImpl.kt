@@ -145,25 +145,24 @@ class PartExecutorImpl(
 
             // Lazy spawn: reviewer is created after doer's first Done(COMPLETED), per spec flow.
             // Subsequent iterations reuse the already-alive reviewer session.
-            if (reviewerHandle == null) {
-                reviewerHandle = spawnSubPart(revConfig, isDoer = false)
-            }
+            // `liveReviewer` is a non-null local — avoids !! on the nullable var.
+            val liveReviewer = reviewerHandle ?: spawnSubPart(revConfig, isDoer = false)
 
             val revResult = mapReviewerSignal(
-                sendReviewerInstructions(reviewerHandle, revConfig), doerHandle, reviewerHandle, revConfig
+                sendReviewerInstructions(liveReviewer, revConfig), doerHandle, liveReviewer, revConfig
             )
             if (revResult is ReviewerSignalResult.Terminal) return revResult.partResult
 
             // Resolve handles for next iteration: null compacted sessions and respawn as needed.
-            val handles = resolveHandlesForNextIteration(doerResult, revResult, doerHandle, reviewerHandle, revConfig)
+            val handles = resolveHandlesForNextIteration(doerResult, revResult, doerHandle, liveReviewer, revConfig)
             doerHandle = handles.doer
             reviewerHandle = handles.reviewer
 
             // NEEDS_ITERATION: processNeedsIteration handles budget check + inner loop.
-            val needsIterResult = processNeedsIteration(doerHandle, reviewerHandle, revConfig)
+            val needsIterResult = processNeedsIteration(handles.doer, handles.reviewer, revConfig)
             if (needsIterResult != null) return needsIterResult
 
-            doerSignal = sendDoerInstructions(doerHandle, reviewerPublicMdPath = revConfig.publicMdOutputPath)
+            doerSignal = sendDoerInstructions(handles.doer, reviewerPublicMdPath = revConfig.publicMdOutputPath)
         }
     }
 
