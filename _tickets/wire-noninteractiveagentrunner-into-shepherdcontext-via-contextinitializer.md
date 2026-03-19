@@ -1,11 +1,11 @@
 ---
 id: nid_ptsnp5tmbfhpmz6ighcnmrfeo_E
 title: "Wire NonInteractiveAgentRunner into ShepherdContext via ContextInitializer"
-status: open
+status: in_progress
 deps: [nid_njq7ezzxmf8orffmzf7oorsd0_E]
 links: []
 created_iso: 2026-03-18T23:56:13Z
-status_updated_iso: 2026-03-18T23:56:13Z
+status_updated_iso: 2026-03-19T17:56:06Z
 type: feature
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
