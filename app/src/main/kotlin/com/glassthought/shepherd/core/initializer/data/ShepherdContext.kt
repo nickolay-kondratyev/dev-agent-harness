@@ -5,6 +5,7 @@ import com.asgard.core.lifecycle.AsgardCloseable
 import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner
 import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.initializer.Infra
+import com.glassthought.shepherd.core.session.SessionsState
 
 /**
  * Encapsulates all application-level dependencies created during initialization.
@@ -25,4 +26,5 @@ class ShepherdContext(
   val infra: Infra,
   val nonInteractiveAgentRunner: NonInteractiveAgentRunner,
   val timeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
+  val sessionsState: SessionsState = SessionsState(),
 ) : AsgardCloseable by infra

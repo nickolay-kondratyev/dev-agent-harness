@@ -75,8 +75,16 @@ class PartExecutorImpl(
 ) : PartExecutor {
 
     private val out = deps.outFactory.getOutForClass(PartExecutorImpl::class)
-    private var currentIteration: Int = iterationConfig.current
-    private var maxIterations: Int = iterationConfig.max
+
+    // WHY 1-based for reviewer path: CommitMessageBuilder requires currentIteration >= 1 when
+    // hasReviewer is true. The initial doer+reviewer cycle IS iteration 1. IterationConfig.current
+    // defaults to 0, so we shift to 1 and add 1 to max to preserve the same number of allowed
+    // NEEDS_ITERATION feedback rounds. Example: with max=4, there are 4 allowed NEEDS_ITERATIONs
+    // regardless of the 0-based vs 1-based starting point.
+    private var currentIteration: Int =
+        if (reviewerConfig != null) iterationConfig.current + 1 else iterationConfig.current
+    private var maxIterations: Int =
+        if (reviewerConfig != null) iterationConfig.max + 1 else iterationConfig.max
     private var doerStatus: SubPartStatus = SubPartStatus.NOT_STARTED
     private var reviewerStatus: SubPartStatus = SubPartStatus.NOT_STARTED
 
@@ -94,6 +102,7 @@ class PartExecutorImpl(
             is AgentSignal.Crashed ->
                 terminateWith(handle, null, SubPartRole.DOER, PartResult.AgentCrashed(signal.details))
             AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
+            AgentSignal.Started -> error(STARTED_UNEXPECTED)
         }
     }
 
@@ -237,6 +246,7 @@ class PartExecutorImpl(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.DOER, PartResult.AgentCrashed(signal.details))
         )
         AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
+        AgentSignal.Started -> error(STARTED_UNEXPECTED)
     }
 
     /** Result of processing a reviewer signal. */
@@ -267,6 +277,7 @@ class PartExecutorImpl(
             terminateWith(doerHandle, reviewerHandle, SubPartRole.REVIEWER, PartResult.AgentCrashed(signal.details))
         )
         AgentSignal.SelfCompacted -> error(SELF_COMPACTED_UNEXPECTED)
+        AgentSignal.Started -> error(STARTED_UNEXPECTED)
     }
 
     @Suppress("ReturnCount")
@@ -481,6 +492,7 @@ class PartExecutorImpl(
                     "Agent [${config.subPartName}] sent FailWorkflow during compaction: ${signal.reason}"
                 )
             }
+            AgentSignal.Started -> error(STARTED_UNEXPECTED)
         }
     }
 
@@ -630,5 +642,7 @@ class PartExecutorImpl(
         private const val ADDRESSED_DIR = "addressed"
         private const val SELF_COMPACTED_UNEXPECTED =
             "SelfCompacted should not reach PartExecutorImpl — handled inside AgentFacade"
+        private const val STARTED_UNEXPECTED =
+            "Started should not reach PartExecutorImpl — only used during spawn phase"
     }
 }

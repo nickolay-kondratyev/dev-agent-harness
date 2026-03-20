@@ -84,7 +84,16 @@ class ShepherdServer(
 
     // ── Signal handlers ────────────────────────────────────────────────
 
-    /** Side-channel: agent reports it has started. Update timestamp only. */
+    /**
+     * Agent reports it has started. Updates timestamp and completes the placeholder entry's
+     * [signalDeferred] with [AgentSignal.Started] so that
+     * [AgentFacadeImpl.awaitStartupOrCleanup] can return.
+     *
+     * WHY complete the deferred: Without this, `awaitStartupOrCleanup` blocks until the
+     * startup timeout because no signal ever arrives on the placeholder entry. The agent
+     * sends `started`, then waits for payload delivery, but payload delivery cannot happen
+     * until `spawnAgent` returns — creating a deadlock.
+     */
     private suspend fun io.ktor.server.routing.RoutingContext.handleStarted() {
         val request = call.receive<SignalStartedRequest>()
         val guid = HandshakeGuid(request.handshakeGuid)
@@ -92,6 +101,7 @@ class ShepherdServer(
         val entry = lookupOrRespond404(guid) ?: return
 
         updateTimestamp(entry)
+        entry.signalDeferred.complete(AgentSignal.Started)
 
         out.info(
             "signal_started_received",

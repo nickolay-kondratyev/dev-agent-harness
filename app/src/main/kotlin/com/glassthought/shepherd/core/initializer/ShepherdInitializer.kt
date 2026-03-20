@@ -6,7 +6,6 @@ import com.glassthought.shepherd.core.Constants
 import com.glassthought.shepherd.core.creator.TicketShepherdCreator
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.server.ShepherdServer
-import com.glassthought.shepherd.core.session.SessionsState
 import io.ktor.server.cio.CIO
 import io.ktor.server.engine.EmbeddedServer
 import io.ktor.server.engine.embeddedServer
@@ -58,8 +57,10 @@ class ShepherdInitializer(
 
         try {
             // Step 2: Start embedded HTTP server for agent callbacks
-            val sessionsState = SessionsState()
-            val shepherdServer = ShepherdServer(sessionsState, outFactory)
+            // WHY: Use the SAME SessionsState from ShepherdContext so that the server and
+            // AgentFacadeImpl share one registry. Creating a separate instance was a bug that
+            // caused signal_unknown_handshake_guid failures.
+            val shepherdServer = ShepherdServer(shepherdContext.sessionsState, outFactory)
             val serverPort = serverPortReader()
             val ktorServer = serverStarter.start(shepherdServer, serverPort)
 

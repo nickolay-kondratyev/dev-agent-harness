@@ -97,6 +97,9 @@ class ReInstructAndAwaitImpl(
                 "Unexpected SelfCompacted signal reached ReInstructAndAwait — " +
                     "facade should handle self-compaction transparently"
             )
+            AgentSignal.Started -> error(
+                "Started should not reach ReInstructAndAwait — only used during spawn phase"
+            )
         }
     }
 }

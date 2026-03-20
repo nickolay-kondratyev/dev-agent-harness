@@ -110,8 +110,14 @@ class ClaudeCodeAdapter internal constructor(
         parts.add("--dangerously-skip-permissions")
 
         // Bootstrap message as positional initial prompt argument (after all flags).
+        // WHY append GUID: The bootstrap message is the first user message recorded in the
+        // Claude CLI's JSONL session file. FilesystemGuidScanner searches JSONL content for
+        // the handshake GUID to resolve the session ID. Without the GUID in the message,
+        // the scanner never finds a match and resolveSessionId times out.
+        val bootstrapWithGuid = "${params.bootstrapMessage}\n\n" +
+            "[HARNESS_GUID: ${params.handshakeGuid.value}]"
         // Shell-escaped to handle special characters in the message.
-        parts.add(shellQuote(params.bootstrapMessage))
+        parts.add(shellQuote(bootstrapWithGuid))
 
         val claudeCommand = parts.joinToString(" ")
         // [unset CLAUDECODE]: Claude Code refuses to start when the CLAUDECODE env var is set

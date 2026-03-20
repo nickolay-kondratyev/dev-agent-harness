@@ -67,11 +67,14 @@ class PartExecutorInfraBuilder private constructor() {
          * @param shepherdContext Shared infrastructure (tmux, logging, agent runner).
          * @param outFactory Logging factory.
          * @param clock Wall-clock abstraction.
+         * @param sessionsState The shared session registry. Must be the SAME instance passed to
+         *   [com.glassthought.shepherd.core.server.ShepherdServer].
          */
         fun buildAgentFacade(
             shepherdContext: ShepherdContext,
             outFactory: OutFactory,
             clock: Clock,
+            sessionsState: SessionsState,
         ): AgentFacadeImpl {
             val sessionManager = shepherdContext.infra.tmux.sessionManager
             val singleSessionKiller = SingleSessionKiller { session ->
@@ -102,7 +105,7 @@ class PartExecutorInfraBuilder private constructor() {
             )
 
             return AgentFacadeImpl(
-                sessionsState = SessionsState(),
+                sessionsState = sessionsState,
                 agentTypeAdapter = shepherdContext.infra.claudeCode.agentTypeAdapter,
                 tmuxSessionCreator = sessionManager,
                 sessionKiller = singleSessionKiller,

@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T18:17:46Z
 id: nid_maa8lefzvngmu40roa4z23whd_E
 title: "Create test_with_e2e.sh and verify E2E straightforward workflow test passes"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T16:23:44Z
-status_updated_iso: 2026-03-20T16:34:20Z
+status_updated_iso: 2026-03-20T18:17:46Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -47,8 +48,22 @@ and unit tests pass.
 
 ## Acceptance Criteria
 
-1. `test_with_e2e.sh` exists and is executable
-2. Running `./test_with_e2e.sh` executes ONLY the E2E test (not all integration tests)
-3. The E2E test passes (exit code 0) against real GLM-backed agents
-4. Any bugs found during execution are fixed
+1. ✅ `test_with_e2e.sh` exists and is executable
+2. ✅ Running `./test_with_e2e.sh` executes ONLY the E2E test (not all integration tests)
+3. ✅ The E2E test passes (exit code 0) against real GLM-backed agents
+4. ✅ Any bugs found during execution are fixed (5 bugs found and fixed)
 
+## Resolution
+
+### Created `test_with_e2e.sh`
+Follows the exact pattern of `test_with_integ.sh` with `--tests` filter for the E2E class.
+
+### 5 Production Bugs Found and Fixed
+1. **SessionsState wiring** — Server and AgentFacade had separate instances; signals couldn't find entries. Fixed by sharing via ShepherdContext.
+2. **awaitStartupOrCleanup deadlock** — `handleStarted` never completed `signalDeferred`. Added `AgentSignal.Started`.
+3. **GUID not found in JSONL** — `FilesystemGuidScanner` searched JSONL content but GUID was only in env vars. Appended `[HARNESS_GUID: ...]` to bootstrap message.
+4. **Iteration 1-based** — `CommitMessageBuilder` required `currentIteration >= 1` but executor started at 0. Fixed with 1-based counting for reviewer path.
+5. **ticket CLI PATH** — `ProcessBuilder` can't resolve shell functions. Added note-ticket to subprocess PATH in E2E test.
+
+### Review: PASS
+Implementation review confirmed all 5 fixes are correct root-cause fixes (not workarounds). Minor feedback addressed (stale comment, trailing newline).

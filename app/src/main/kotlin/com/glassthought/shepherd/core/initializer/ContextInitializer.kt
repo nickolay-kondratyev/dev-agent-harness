@@ -69,8 +69,18 @@ fun interface ContextInitializer {
   ): ShepherdContext
 
   companion object {
-    /** Production wiring — GLM is NOT enabled; agents use the real Anthropic API. */
-    fun standard(): ContextInitializer = ContextInitializerImpl()
+    /**
+     * Production wiring — GLM is NOT enabled by default; agents use the real Anthropic API.
+     *
+     * When [Constants.OPTIONAL_ENV_VARS.TICKET_SHEPHERD_GLM_ENABLED] env var is set to `"true"`,
+     * GLM IS enabled, redirecting spawned agents to GLM (Z.AI). This is used by E2E tests
+     * that run the binary as a subprocess and need GLM env vars exported into the tmux session
+     * (env vars set on the subprocess ProcessBuilder do NOT propagate through tmux).
+     */
+    fun standard(): ContextInitializer {
+      val glmEnabled = System.getenv(Constants.OPTIONAL_ENV_VARS.TICKET_SHEPHERD_GLM_ENABLED) == "true"
+      return ContextInitializerImpl(glmEnabled = glmEnabled)
+    }
 
     /**
      * Integration test wiring — GLM IS enabled; agents are redirected to GLM (Z.AI).
@@ -149,7 +159,7 @@ class ContextInitializerImpl(
     )
 
     // GLM config redirects spawned Claude Code agents to GLM (Z.AI) instead of real Anthropic API.
-    // Only enabled for integration tests — production agents use the real Anthropic API.
+    // Enabled for integration tests and when TICKET_SHEPHERD_GLM_ENABLED=true env var is set.
     // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
     val glmConfig = if (glmEnabled) GlmConfig.standard(authToken = zaiApiKey) else null
 
