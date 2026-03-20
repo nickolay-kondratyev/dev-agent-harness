@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T01:26:40Z
 id: nid_l32a31tdfjoe7ld0uurtum9g6_E
 title: "Wire PartExecutorFactory production implementation in TicketShepherdCreator"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T00:45:53Z
-status_updated_iso: 2026-03-20T00:49:23Z
+status_updated_iso: 2026-03-20T01:26:40Z
 type: feature
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
