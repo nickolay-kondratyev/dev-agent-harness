@@ -130,6 +130,9 @@ class SubPartConfigBuilder(
     }
 
     companion object {
-        private const val BOOTSTRAP_MESSAGE = "Waiting for instructions."
+        private const val BOOTSTRAP_MESSAGE =
+            "Your FIRST action must be to call `callback_shepherd.signal.sh started` " +
+            "using the Bash tool. This is CRITICAL — do it immediately before anything else. " +
+            "After that, wait for further instructions via payload delivery."
     }
 }

@@ -75,8 +75,28 @@ fun interface ContextInitializer {
     /**
      * Integration test wiring — GLM IS enabled; agents are redirected to GLM (Z.AI).
      * See `ai_input/memory/deep/integ_tests__use_glm_for_agent_spawning.md` for rationale.
+     *
+     * WHY sentinel port/scripts: Integration tests create their own server with a dynamic port
+     * and override these values via [ServerPortInjectingAdapter]. The adapter's native values
+     * are overridden at command-build time, so these sentinels are never exposed to agents.
      */
-    fun forIntegTest(): ContextInitializer = ContextInitializerImpl(glmEnabled = true)
+    fun forIntegTest(): ContextInitializer = ContextInitializerImpl(
+      glmEnabled = true,
+      // WHY-NOT reading from env var: integration tests pick a dynamic port after context init,
+      // and inject it via ServerPortInjectingAdapter which overrides the entire command.
+      serverPortOverride = INTEG_TEST_SENTINEL_PORT,
+      callbackScriptsDirOverride = INTEG_TEST_SENTINEL_SCRIPTS_DIR,
+    )
+
+    /**
+     * Sentinel values for integration test wiring. [ServerPortInjectingAdapter] replaces these
+     * with real dynamically-assigned values in the generated command. They exist only
+     * to avoid requiring `TICKET_SHEPHERD_SERVER_PORT` env var during integ test initialization.
+     *
+     * Visibility: `internal` so [ServerPortInjectingAdapter] can reference them for replacement.
+     */
+    internal const val INTEG_TEST_SENTINEL_PORT = 0
+    internal const val INTEG_TEST_SENTINEL_SCRIPTS_DIR = "/unused-integ-test-sentinel"
   }
 }
 
@@ -87,12 +107,19 @@ fun interface ContextInitializer {
  *   Injectable for unit testing without touching the real filesystem.
  * @param processRunnerFactory Factory to create [ProcessRunner]. Default: [ProcessRunner.standard].
  *   Injectable for unit testing without spawning real processes.
+ * @param serverPortOverride When non-null, uses this port directly instead of reading from env var.
+ *   Used by integration tests where the port is dynamically assigned and injected via
+ *   [com.glassthought.shepherd.integtest.ServerPortInjectingAdapter].
+ * @param callbackScriptsDirOverride When non-null, uses this directory directly instead of
+ *   extracting scripts from classpath resources.
  */
 class ContextInitializerImpl(
   private val envVarReader: (String) -> String? = System::getenv,
   private val fileReader: (Path) -> String = { it.toFile().readText() },
   private val processRunnerFactory: ProcessRunnerFactory = ProcessRunnerFactory { ProcessRunner.standard(it) },
   private val glmEnabled: Boolean = false,
+  private val serverPortOverride: Int? = null,
+  private val callbackScriptsDirOverride: String? = null,
 ) : ContextInitializer {
 
   override suspend fun initialize(
@@ -126,10 +153,15 @@ class ContextInitializerImpl(
     // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
     val glmConfig = if (glmEnabled) GlmConfig.standard(authToken = zaiApiKey) else null
 
+    val serverPort = readServerPort()
+    val callbackScriptsDir = resolveCallbackScriptsDir()
+
     val claudeCodeInfra = ClaudeCodeInfra(
       agentTypeAdapter = ClaudeCodeAdapter.create(
         claudeProjectsDir = Constants.CLAUDE_CODE.defaultProjectsDir(),
         outFactory = outFactory,
+        serverPort = serverPort,
+        callbackScriptsDir = callbackScriptsDir,
         glmConfig = glmConfig,
       ),
     )
@@ -168,6 +200,60 @@ class ContextInitializerImpl(
     }
 
     return zaiApiKey
+  }
+
+  /**
+   * Returns the server port, either from [serverPortOverride] or from the
+   * [Constants.AGENT_COMM.SERVER_PORT_ENV_VAR] env var.
+   *
+   * WHY reading it again here (also read by [ShepherdInitializer] for server binding):
+   * The adapter needs the port to export it into each spawned agent's tmux session
+   * so callback scripts know which port to POST to.
+   */
+  private fun readServerPort(): Int {
+    if (serverPortOverride != null) return serverPortOverride
+
+    val envVar = Constants.AGENT_COMM.SERVER_PORT_ENV_VAR
+    val portStr = envVarReader(envVar)
+      ?: error("Environment variable [$envVar] is not set. " +
+        "It must specify the port for the embedded HTTP server.")
+    return portStr.toIntOrNull()
+      ?: error("Environment variable [$envVar] has invalid value [$portStr]. " +
+        "It must be a valid port number.")
+  }
+
+  /**
+   * Returns the callback scripts directory, either from [callbackScriptsDirOverride] or by
+   * extracting `callback_shepherd.signal.sh` from classpath resources to a temp directory.
+   *
+   * The scripts live at `src/main/resources/scripts/` relative to the `app` module.
+   * At runtime (when running from the Gradle-built distribution), they are on the classpath.
+   */
+  private fun resolveCallbackScriptsDir(): String {
+    if (callbackScriptsDirOverride != null) return callbackScriptsDirOverride
+
+    val scriptName = "callback_shepherd.signal.sh"
+    val resourcePath = "/scripts/$scriptName"
+
+    val inputStream = javaClass.getResourceAsStream(resourcePath)
+      ?: error("Callback script not found on classpath at [$resourcePath]. " +
+        "Ensure the resources are included in the build.")
+
+    val tempDir = java.nio.file.Files.createTempDirectory("shepherd-callback-scripts")
+    val targetFile = tempDir.resolve(scriptName).toFile()
+
+    inputStream.use { input ->
+      targetFile.outputStream().use { output ->
+        input.copyTo(output)
+      }
+    }
+
+    targetFile.setExecutable(true)
+    // Cleanup on JVM exit: delete file first, then directory (order matters).
+    targetFile.deleteOnExit()
+    tempDir.toFile().deleteOnExit()
+
+    return tempDir.toAbsolutePath().toString()
   }
 
   private fun createNonInteractiveAgentRunner(

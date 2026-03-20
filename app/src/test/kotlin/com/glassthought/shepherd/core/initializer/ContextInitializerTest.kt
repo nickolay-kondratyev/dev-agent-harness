@@ -28,6 +28,7 @@ class ContextInitializerTest : AsgardDescribeSpec(
             Constants.REQUIRED_ENV_VARS.HOST_USERNAME -> "testuser"
             Constants.REQUIRED_ENV_VARS.TICKET_SHEPHERD_AGENTS_DIR -> "/tmp/agents"
             Constants.REQUIRED_ENV_VARS.AI_MODEL_ZAI_FAST -> "test-fast-model"
+            Constants.AGENT_COMM.SERVER_PORT_ENV_VAR -> "18080"
             else -> null
         }
     }

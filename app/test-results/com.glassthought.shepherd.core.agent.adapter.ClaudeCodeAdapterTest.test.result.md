@@ -8,12 +8,14 @@ skipped: 0
 - GIVEN ClaudeCodeAdapter
   - AND all flags enabled
     - WHEN buildStartCommand is called
+      - [PASS] THEN command adds callback scripts dir to PATH
       - [PASS] THEN command always contains --dangerously-skip-permissions (Docker invariant)
       - [PASS] THEN command contains --model sonnet
       - [PASS] THEN command contains --system-prompt-file with the file path
       - [PASS] THEN command contains --tools Read,Write
       - [PASS] THEN command contains the bootstrap message as a positional argument
       - [PASS] THEN command exports TICKET_SHEPHERD_HANDSHAKE_GUID with the handshake guid value
+      - [PASS] THEN command exports TICKET_SHEPHERD_SERVER_PORT with the server port
       - [PASS] THEN command starts with bash -c and includes cd to working dir
   - AND appendSystemPrompt=true
     - WHEN buildStartCommand is called

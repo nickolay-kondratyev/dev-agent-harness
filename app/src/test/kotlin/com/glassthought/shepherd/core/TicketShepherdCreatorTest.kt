@@ -240,6 +240,8 @@ private fun createTestShepherdContext(): com.glassthought.shepherd.core.initiali
         agentTypeAdapter = com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter.create(
             claudeProjectsDir = java.nio.file.Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
+            serverPort = 18080,
+            callbackScriptsDir = "/tmp/test-callback-scripts",
         ),
     )
     val infra = com.glassthought.shepherd.core.initializer.Infra(

@@ -15,7 +15,7 @@ skipped: 0
 - GIVEN a doer-only execution part
   - WHEN building config for the doer (index 0)
     - [PASS] THEN agentType is CLAUDE_CODE
-    - [PASS] THEN bootstrapMessage is set
+    - [PASS] THEN bootstrapMessage instructs agent to call started signal
     - [PASS] THEN doerPublicMdPath is null (doer has no doer reference)
     - [PASS] THEN executionContext has correct partDescription
     - [PASS] THEN executionContext has correct partName

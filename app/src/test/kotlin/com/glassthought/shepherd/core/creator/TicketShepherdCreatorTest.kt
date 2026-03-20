@@ -165,6 +165,8 @@ private fun createTestShepherdContext(): ShepherdContext {
         agentTypeAdapter = com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter.create(
             claudeProjectsDir = Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
+            serverPort = 18080,
+            callbackScriptsDir = "/tmp/test-callback-scripts",
         ),
     )
     val infra = com.glassthought.shepherd.core.initializer.Infra(
