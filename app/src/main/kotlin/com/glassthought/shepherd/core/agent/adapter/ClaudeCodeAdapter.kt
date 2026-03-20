@@ -47,7 +47,7 @@ private class FilesystemGuidScanner(
  * and `ClaudeCodeAgentSessionIdResolver` (session ID resolution via JSONL scanning).
  *
  * **buildStartCommand** — builds the `claude` CLI command for **interactive mode** (no `-p`/`--print`):
- * - `TICKET_SHEPHERD_HANDSHAKE_GUID` and env var exports
+ * - `TICKET_SHEPHERD_HANDSHAKE_GUID`, `TICKET_SHEPHERD_SERVER_PORT`, and PATH env var exports
  * - `cd` to working directory
  * - `unset CLAUDECODE` (nested-session detection workaround)
  * - `--system-prompt-file <path>` (required, see SpawnTmuxAgentSessionUseCase spec)
@@ -63,6 +63,8 @@ private class FilesystemGuidScanner(
  *
  * @param guidScanner Strategy for scanning for GUID matches.
  * @param outFactory Factory for structured logging.
+ * @param serverPort The Shepherd HTTP server port, exported as `TICKET_SHEPHERD_SERVER_PORT` into each agent tmux session.
+ * @param callbackScriptsDir Absolute path to the directory containing `callback_shepherd.signal.sh`, added to PATH in the tmux session.
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
  */
@@ -70,6 +72,8 @@ private class FilesystemGuidScanner(
 class ClaudeCodeAdapter internal constructor(
     private val guidScanner: GuidScanner,
     outFactory: OutFactory,
+    private val serverPort: Int,
+    private val callbackScriptsDir: String,
     private val glmConfig: GlmConfig? = null,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
@@ -117,6 +121,10 @@ class ClaudeCodeAdapter internal constructor(
         // [TICKET_SHEPHERD_HANDSHAKE_GUID]: exported so callback scripts can include it in every
         // HTTP callback, identifying this agent session to the harness server.
         //
+        // [TICKET_SHEPHERD_SERVER_PORT]: exported so callback scripts know which port to POST to.
+        //
+        // [PATH += callbackScriptsDir]: ensures callback_shepherd.signal.sh is on PATH for the agent.
+        //
         // [GLM env vars]: When glmConfig is provided, env var exports are prepended to redirect
         // the spawned `claude` CLI to the GLM (Z.AI) Anthropic-compatible endpoint.
         // See ref.ap.8BYTb6vcyAzpWavQguBrb.E for config details.
@@ -124,6 +132,8 @@ class ClaudeCodeAdapter internal constructor(
         val innerCommand = "${glmPrefix}cd ${params.workingDir} && " +
             "unset CLAUDECODE && " +
             "export ${Constants.AGENT_COMM.HANDSHAKE_GUID_ENV_VAR}=${params.handshakeGuid.value} && " +
+            "export ${Constants.AGENT_COMM.SERVER_PORT_ENV_VAR}=$serverPort && " +
+            "export PATH=\$PATH:$callbackScriptsDir && " +
             claudeCommand
         val fullCommand = "bash -c '${escapeForBashC(innerCommand)}'"
 
@@ -194,6 +204,8 @@ class ClaudeCodeAdapter internal constructor(
          *
          * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
          * @param outFactory Factory for structured logging.
+         * @param serverPort The Shepherd HTTP server port to export into each agent's tmux session.
+         * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
          * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
          * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
          * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
@@ -201,6 +213,8 @@ class ClaudeCodeAdapter internal constructor(
         fun create(
             claudeProjectsDir: Path,
             outFactory: OutFactory,
+            serverPort: Int,
+            callbackScriptsDir: String,
             glmConfig: GlmConfig? = null,
             resolveTimeoutMs: Long = 45_000L,
             pollIntervalMs: Long = 500L,
@@ -208,6 +222,8 @@ class ClaudeCodeAdapter internal constructor(
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
             guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
             outFactory = outFactory,
+            serverPort = serverPort,
+            callbackScriptsDir = callbackScriptsDir,
             glmConfig = glmConfig,
             resolveTimeoutMs = resolveTimeoutMs,
             pollIntervalMs = pollIntervalMs,

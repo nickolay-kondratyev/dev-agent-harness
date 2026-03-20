@@ -147,8 +147,8 @@ class SubPartConfigBuilderTest : AsgardDescribeSpec(
                     config.systemPromptPath shouldBe DOER_ROLE_DEFINITION.filePath
                 }
 
-                it("THEN bootstrapMessage is set") {
-                    config.bootstrapMessage shouldBe "Waiting for instructions."
+                it("THEN bootstrapMessage instructs agent to call started signal") {
+                    config.bootstrapMessage shouldContain "callback_shepherd.signal.sh started"
                 }
 
                 it("THEN roleDefinition matches the resolved role") {

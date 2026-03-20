@@ -12,6 +12,9 @@ import kotlin.io.path.createDirectories
 import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 
+private const val TEST_SERVER_PORT = 19876
+private const val TEST_CALLBACK_SCRIPTS_DIR = "/opt/shepherd/scripts"
+
 class ClaudeCodeAdapterTest : AsgardDescribeSpec({
 
     val testGuid = HandshakeGuid("handshake.test-uuid-1234")
@@ -25,6 +28,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -64,6 +69,14 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     command shouldContain "export ${Constants.AGENT_COMM.HANDSHAKE_GUID_ENV_VAR}=${testGuid.value}"
                 }
 
+                it("THEN command exports TICKET_SHEPHERD_SERVER_PORT with the server port") {
+                    command shouldContain "export ${Constants.AGENT_COMM.SERVER_PORT_ENV_VAR}=$TEST_SERVER_PORT"
+                }
+
+                it("THEN command adds callback scripts dir to PATH") {
+                    command shouldContain "export PATH=\$PATH:$TEST_CALLBACK_SCRIPTS_DIR"
+                }
+
                 it("THEN command contains the bootstrap message as a positional argument") {
                     command shouldContain bootstrapMessage
                 }
@@ -74,6 +87,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -104,6 +119,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -137,6 +154,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -167,6 +186,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -192,6 +213,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val params = BuildStartCommandParams(
@@ -217,6 +240,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
             val adapter = ClaudeCodeAdapter.create(
                 claudeProjectsDir = Path.of("/dev/null"),
                 outFactory = outFactory,
+                serverPort = TEST_SERVER_PORT,
+                callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             )
 
             val specialMessage = "GUID is \$HOME and `command` and \"quoted\""
@@ -259,6 +284,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         val adapter = ClaudeCodeAdapter(
             guidScanner = GuidScanner { emptyList() },
             outFactory = outFactory,
+            serverPort = TEST_SERVER_PORT,
+            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             glmConfig = glmConfig,
         )
 
@@ -315,6 +342,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
         val adapter = ClaudeCodeAdapter(
             guidScanner = GuidScanner { emptyList() },
             outFactory = outFactory,
+            serverPort = TEST_SERVER_PORT,
+            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
             glmConfig = null,
         )
 
@@ -390,6 +419,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         )
 
                         val result = adapter.resolveSessionId(guid)
@@ -411,6 +442,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                             resolveTimeoutMs = 600L,
                         )
 
@@ -429,6 +462,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                             resolveTimeoutMs = 600L,
                         )
 
@@ -455,6 +490,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         )
 
                         shouldThrow<IllegalStateException> {
@@ -475,6 +512,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
@@ -501,6 +540,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         )
 
                         val result = adapter.resolveSessionId(guid)
@@ -525,6 +566,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                         val adapter = ClaudeCodeAdapter.create(
                             claudeProjectsDir = tempDir,
                             outFactory = outFactory,
+                            serverPort = TEST_SERVER_PORT,
+                            callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                             resolveTimeoutMs = 600L,
                         )
 
@@ -552,6 +595,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     val adapter = ClaudeCodeAdapter(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
+                        serverPort = TEST_SERVER_PORT,
+                        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         pollIntervalMs = 1L,
                     )
 
@@ -569,6 +614,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     val adapter = ClaudeCodeAdapter(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
+                        serverPort = TEST_SERVER_PORT,
+                        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         pollIntervalMs = 1L,
                     )
 
@@ -590,6 +637,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     val adapter = ClaudeCodeAdapter(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
+                        serverPort = TEST_SERVER_PORT,
+                        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         pollIntervalMs = 1L,
                     )
 
@@ -611,6 +660,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     val adapter = ClaudeCodeAdapter(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
+                        serverPort = TEST_SERVER_PORT,
+                        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         resolveTimeoutMs = 100L,
                         pollIntervalMs = 10L,
                     )
@@ -629,6 +680,8 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                     val adapter = ClaudeCodeAdapter(
                         guidScanner = fakeScanner,
                         outFactory = outFactory,
+                        serverPort = TEST_SERVER_PORT,
+                        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
                         resolveTimeoutMs = 100L,
                         pollIntervalMs = 10L,
                     )
