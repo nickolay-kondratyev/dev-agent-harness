@@ -5,7 +5,9 @@ import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.TicketShepherd
 import com.glassthought.shepherd.core.TicketShepherdDeps
 import com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller
-import com.glassthought.shepherd.core.executor.PartExecutorFactory
+import com.glassthought.shepherd.core.executor.PartExecutorFactoryContext
+import com.glassthought.shepherd.core.executor.PartExecutorFactoryCreator
+import com.glassthought.shepherd.core.executor.ProductionPartExecutorFactoryCreator
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.DefaultConsoleOutput
@@ -86,11 +88,10 @@ fun interface TicketShepherdCreator {
  * Production implementation of [TicketShepherdCreator].
  *
  * Constructor-injects shared/reusable dependencies. Ticket-scoped dependencies
- * (CurrentState, AiOutputStructure, TicketShepherd) are constructed internally within [create].
+ * (CurrentState, AiOutputStructure, AgentFacade, PartExecutorFactory) are constructed
+ * internally within [create]/[wireTicketShepherd].
  *
  * ### Deps not yet wired internally
- * - [partExecutorFactory] — requires AgentFacadeImpl + ContextForAgentProvider (ticket-scoped),
- *   which will be wired here once PartExecutorFactory production wiring is implemented.
  * - [finalCommitUseCase], [ticketStatusUpdater] — require production impls not yet available.
  *
  * @param workflowParser Parses workflow JSON into [WorkflowDefinition]
@@ -103,7 +104,9 @@ fun interface TicketShepherdCreator {
  * @param consoleOutput Console printing abstraction for testability
  * @param processExiter Process exit abstraction for testability
  * @param setupPlanUseCaseFactory Creates ticket-scoped [SetupPlanUseCase]
- * @param partExecutorFactory Creates [com.glassthought.shepherd.core.executor.PartExecutor] per part
+ * @param partExecutorFactoryCreator Creates ticket-scoped
+ *   [com.glassthought.shepherd.core.executor.PartExecutorFactory] from deps available inside [wireTicketShepherd].
+ *   Production default: [ProductionPartExecutorFactoryCreator] which wires AgentFacadeImpl, GitCommitStrategy, etc.
  * @param finalCommitUseCase Performs final git commit if dirty
  * @param ticketStatusUpdater Updates ticket status to "done"
  * @param allSessionsKillerFactory Creates [AllSessionsKiller] from [ShepherdContext]
@@ -132,9 +135,8 @@ class TicketShepherdCreatorImpl(
             outFactory = of,
         )
     },
-    private val partExecutorFactory: PartExecutorFactory = PartExecutorFactory {
-        TODO("PartExecutorFactory not yet wired for production")
-    },
+    private val partExecutorFactoryCreator: PartExecutorFactoryCreator =
+        ProductionPartExecutorFactoryCreator(clock = clock),
     private val finalCommitUseCase: FinalCommitUseCase = FinalCommitUseCase {
         TODO("FinalCommitUseCase not yet wired for production")
     },
@@ -209,7 +211,7 @@ class TicketShepherdCreatorImpl(
         return StateSetupResult(aiOutputStructure, currentState, currentStatePersistence)
     }
 
-    private fun wireTicketShepherd(
+    private suspend fun wireTicketShepherd(
         shepherdContext: ShepherdContext,
         ticketData: TicketData,
         workflowDefinition: WorkflowDefinition,
@@ -236,6 +238,23 @@ class TicketShepherdCreatorImpl(
             allSessionsKiller = allSessionsKiller,
             ticketFailureLearningUseCase = NoOpTicketFailureLearningUseCase(),
             processExiter = processExiter,
+        )
+
+        // -- Wire ticket-scoped PartExecutorFactory via creator --
+        val planMdPath = if (workflowDefinition.isWithPlanning) {
+            stateResult.aiOutputStructure.planMd()
+        } else {
+            null
+        }
+
+        val partExecutorFactory = partExecutorFactoryCreator.create(
+            PartExecutorFactoryContext(
+                shepherdContext = shepherdContext,
+                outFactory = outFactory,
+                aiOutputStructure = stateResult.aiOutputStructure,
+                ticketData = ticketData,
+                planMdPath = planMdPath,
+            )
         )
 
         val deps = TicketShepherdDeps(

@@ -7,6 +7,7 @@ import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRe
 import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner
 import com.glassthought.shepherd.core.executor.PartExecutor
 import com.glassthought.shepherd.core.executor.PartExecutorFactory
+import com.glassthought.shepherd.core.executor.PartExecutorFactoryCreator
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
@@ -198,7 +199,9 @@ private fun createCreator(
         consoleOutput = consoleOutput,
         processExiter = processExiter,
         setupPlanUseCaseFactory = SetupPlanUseCaseFactory { _, _ -> SetupPlanUseCase { emptyList() } },
-        partExecutorFactory = PartExecutorFactory { PartExecutor { PartResult.Completed } },
+        partExecutorFactoryCreator = PartExecutorFactoryCreator { _ ->
+            PartExecutorFactory { PartExecutor { PartResult.Completed } }
+        },
         finalCommitUseCase = FinalCommitUseCase { /* no-op for tests */ },
         ticketStatusUpdater = TicketStatusUpdater { /* no-op for tests */ },
         allSessionsKillerFactory = AllSessionsKillerFactory { _ -> FakeAllSessionsKiller() },
