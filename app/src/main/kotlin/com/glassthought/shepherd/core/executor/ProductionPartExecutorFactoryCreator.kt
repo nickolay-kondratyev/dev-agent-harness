@@ -55,6 +55,7 @@ class ProductionPartExecutorFactoryCreator(
             shepherdContext = shepherdContext,
             outFactory = outFactory,
             clock = clock,
+            sessionsState = shepherdContext.sessionsState,
         )
 
         val contextForAgentProvider = ContextForAgentProvider.standard(

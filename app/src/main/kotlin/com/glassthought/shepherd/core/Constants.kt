@@ -31,6 +31,21 @@ object Constants {
   }
 
   /**
+   * Optional environment variables that control runtime behavior without being required.
+   */
+  object OPTIONAL_ENV_VARS {
+    /**
+     * When set to `"true"`, redirects spawned Claude Code agents to GLM (Z.AI) instead of
+     * the real Anthropic API. Used by E2E tests that run the binary as a subprocess and need
+     * GLM env vars exported into the tmux session.
+     *
+     * WHY an env var (not a CLI flag): The E2E test spawns the binary as a black box. An env
+     * var is the simplest mechanism to influence behavior without changing the CLI interface.
+     */
+    const val TICKET_SHEPHERD_GLM_ENABLED = "TICKET_SHEPHERD_GLM_ENABLED"
+  }
+
+  /**
    * Required environment variables validated at harness initialization.
    *
    * See doc/core/git.md (ref.ap.BvNCIzjdHS2iAP4gAQZQf.E) for specification.

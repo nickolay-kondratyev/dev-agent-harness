@@ -6,6 +6,8 @@ import com.glassthought.bucket.isIntegTestEnabled
 import io.kotest.common.ExperimentalKotest
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.shouldBe
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.databind.node.ObjectNode
 import java.net.ServerSocket
 import java.nio.file.Files
 import java.nio.file.Path
@@ -23,11 +25,11 @@ import java.util.concurrent.TimeUnit
  * This test does NOT assert agent coding quality (e.g., hello-world.sh content) --
  * it verifies **harness behavior**: orchestration, signal flow, git operations, and clean exit.
  *
- * **GLM (Z.AI) note**: The binary runs with `ContextInitializer.standard()` which does NOT
- * inject GLM env vars into the agent command. However, this test sets `ANTHROPIC_BASE_URL`,
- * `ANTHROPIC_AUTH_TOKEN`, and model alias env vars on the subprocess. These propagate via
- * environment inheritance: ProcessBuilder env -> binary process -> tmux session -> `claude` CLI.
- * If `ClaudeCodeAdapter.buildStartCommand()` ever adds `unset ANTHROPIC_BASE_URL`, this will break.
+ * **GLM (Z.AI) note**: The binary detects `TICKET_SHEPHERD_GLM_ENABLED=true` and enables
+ * [GlmConfig], which exports `ANTHROPIC_BASE_URL`, `ANTHROPIC_AUTH_TOKEN`, and model alias
+ * env vars explicitly in the `bash -c` command that tmux runs. This is necessary because
+ * tmux sessions inherit from the tmux SERVER's environment, not the calling process's
+ * environment — so env vars set on the subprocess ProcessBuilder do NOT propagate.
  *
  * Requires: Docker container, tmux, `Z_AI_GLM_API_TOKEN` secret, `-PrunIntegTests=true`.
  */
@@ -36,9 +38,12 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
     {
         describe("GIVEN a temp git repo with a simple ticket").config(isIntegTestEnabled()) {
 
-            // ── Resolve binary path and fail hard if not built ───────────────────
-            val projectRoot = Path.of(System.getProperty("user.dir"))
-            val binaryPath = projectRoot.resolve("app/build/install/app/bin/app")
+            // ── Resolve paths ──────────────────────────────────────────────────
+            // Gradle sets user.dir to the subproject directory (app/), so the repo
+            // root is one level up.
+            val appModuleDir = Path.of(System.getProperty("user.dir"))
+            val repoRoot = appModuleDir.parent
+            val binaryPath = repoRoot.resolve("app/build/install/app/bin/app")
 
             require(Files.exists(binaryPath)) {
                 "Binary not found at [$binaryPath]. Run `./gradlew :app:installDist` first."
@@ -54,21 +59,27 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
             val hostUsername = System.getenv("HOST_USERNAME") ?: "e2e-test"
             val aiModelZaiFast = System.getenv("AI_MODEL__ZAI__FAST") ?: "glm-4-flash"
 
-            // ── Read GLM token for agent redirection ─────────────────────────────
+            // ── Validate GLM token file exists (binary reads it via readZaiApiKey) ──
             val glmTokenFile = Path.of(myEnv, ".secrets", "Z_AI_GLM_API_TOKEN")
             require(Files.exists(glmTokenFile)) {
                 "GLM token file not found at [$glmTokenFile]. Required for agent redirection to Z.AI."
             }
-            val glmToken = Files.readString(glmTokenFile).trim()
 
             // ── Allocate dynamic server port ─────────────────────────────────────
             val serverPort = ServerSocket(0).use { it.localPort }
 
             // ── Create temporary git repo under .tmp/ (per CLAUDE.md convention) ──
-            val dotTmpDir = projectRoot.resolve(".tmp")
+            val dotTmpDir = repoRoot.resolve(".tmp")
             Files.createDirectories(dotTmpDir)
             val tempDir = Files.createTempDirectory(dotTmpDir, "e2e-straightforward-")
             val tempDirFile = tempDir.toFile()
+
+            // ── Pre-trust the temp directory in Claude CLI config ──────────────
+            // WHY: Claude CLI shows an interactive trust dialog for unknown workspace
+            // directories. In interactive mode (not --print), this blocks the agent
+            // from proceeding. We pre-populate the project entry in .claude.json
+            // so the trust dialog is skipped.
+            preTrustWorkspace(tempDir)
 
             // Record tmux sessions before test for delta cleanup
             val tmuxSessionsBefore = listTmuxSessions()
@@ -128,7 +139,7 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
             val workflowDir = tempDir.resolve("config/workflows")
             Files.createDirectories(workflowDir)
             Files.copy(
-                projectRoot.resolve("config/workflows/straightforward.json"),
+                repoRoot.resolve("config/workflows/straightforward.json"),
                 workflowDir.resolve("straightforward.json"),
             )
 
@@ -155,14 +166,14 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
                 // Server port for embedded HTTP server
                 put("TICKET_SHEPHERD_SERVER_PORT", serverPort.toString())
 
-                // GLM env vars for agent redirection via environment inheritance.
-                // The `claude` CLI inherits these through: ProcessBuilder -> binary -> tmux -> bash -c -> claude.
-                put("ANTHROPIC_BASE_URL", "https://api.z.ai/api/anthropic")
-                put("ANTHROPIC_AUTH_TOKEN", glmToken)
-                put("CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC", "1")
-                put("ANTHROPIC_DEFAULT_OPUS_MODEL", "glm-5")
-                put("ANTHROPIC_DEFAULT_SONNET_MODEL", "glm-5")
-                put("ANTHROPIC_DEFAULT_HAIKU_MODEL", "glm-4-flash")
+                // Enable GLM so the binary exports ANTHROPIC_BASE_URL etc. into the tmux command.
+                // WHY-NOT relying on env var inheritance: tmux sessions inherit from the tmux
+                // SERVER's environment, not the calling process. Setting ANTHROPIC_BASE_URL on
+                // this ProcessBuilder does NOT propagate to the spawned tmux session. Instead,
+                // TICKET_SHEPHERD_GLM_ENABLED tells the binary to read the GLM token from the
+                // secret file and build GlmConfig, which exports the env vars explicitly in the
+                // bash -c command that tmux runs.
+                put("TICKET_SHEPHERD_GLM_ENABLED", "true")
 
                 // Inherit JAVA_HOME if set (binary needs JVM)
                 System.getenv("JAVA_HOME")?.let { put("JAVA_HOME", it) }
@@ -197,7 +208,20 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
 
             val process = processBuilder.start()
 
+            // ── Auto-advance Claude CLI onboarding prompts ────────────────────
+            // WHY: The Claude CLI in interactive mode shows onboarding/trust
+            // dialogs that block agent startup. We send Enter keys to the tmux
+            // session to navigate past them. The tmux session name is known
+            // because the binary uses a deterministic naming convention.
+            val onboardingAdvancer = Thread {
+                advancePastOnboardingPrompts(TMUX_SESSION_NAME)
+            }.apply {
+                isDaemon = true
+                start()
+            }
+
             val completed = process.waitFor(E2E_TIMEOUT_MINUTES, TimeUnit.MINUTES)
+            onboardingAdvancer.interrupt()
             if (!completed) {
                 process.destroyForcibly()
             }
@@ -238,8 +262,12 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
                     }
                 }
 
-                // Delete temp directory
-                tempDirFile.deleteRecursively()
+                // Delete temp directory only on success
+                if (exitCode == 0) {
+                    tempDirFile.deleteRecursively()
+                } else {
+                    println("[E2E] Keeping temp directory for debugging: ${tempDirFile.absolutePath}")
+                }
             }
 
             // ── Assertions ───────────────────────────────────────────────────────
@@ -284,7 +312,100 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
     companion object {
         private const val E2E_TIMEOUT_MINUTES = 15L
         private const val TIMEOUT_EXIT_CODE = -1
-        private const val DIAGNOSTIC_TAIL_LINES = 50
+        private const val DIAGNOSTIC_TAIL_LINES = 200
+
+        /**
+         * The tmux session name used by the binary for the doer agent.
+         * Deterministic: derived from the workflow part name and role.
+         */
+        private const val TMUX_SESSION_NAME = "shepherd_main_impl"
+
+        /**
+         * Number of Enter keys to send to navigate past Claude CLI onboarding prompts.
+         * Prompts: 1) theme selection, 2) security notes, 3) workspace trust.
+         * Extra keys are harmless (they go to the agent's input prompt which ignores empty input).
+         */
+        private const val ONBOARDING_ENTER_COUNT = 5
+
+        /**
+         * Delay between Enter key presses (ms). Enough for the CLI to render the next prompt.
+         */
+        private const val ONBOARDING_KEY_DELAY_MS = 3_000L
+
+        /**
+         * Initial delay before sending keys (ms). Allows the tmux session and CLI to start up.
+         */
+        private const val ONBOARDING_INITIAL_DELAY_MS = 5_000L
+
+        /**
+         * Sends Enter keys to the tmux session to navigate past Claude CLI onboarding
+         * prompts (theme selection, security notes, workspace trust dialog).
+         *
+         * WHY brute-force Enter keys: The Claude CLI in interactive mode shows these
+         * prompts for new workspaces. There is no config setting or CLI flag to skip
+         * them. Sending Enter accepts the default choice at each prompt. Extra Enter
+         * keys are harmless -- they resolve to empty input at the agent prompt, which
+         * the agent ignores.
+         *
+         * This method blocks (with sleeps) and should be called from a daemon thread.
+         */
+        private fun advancePastOnboardingPrompts(sessionName: String) {
+            try {
+                Thread.sleep(ONBOARDING_INITIAL_DELAY_MS)
+                repeat(ONBOARDING_ENTER_COUNT) {
+                    if (Thread.currentThread().isInterrupted) return
+                    try {
+                        ProcessBuilder("tmux", "send-keys", "-t", sessionName, "Enter")
+                            .redirectOutput(ProcessBuilder.Redirect.DISCARD)
+                            .redirectError(ProcessBuilder.Redirect.DISCARD)
+                            .start()
+                            .waitFor()
+                    } catch (_: Exception) {
+                        // Session may not exist yet or already terminated
+                    }
+                    Thread.sleep(ONBOARDING_KEY_DELAY_MS)
+                }
+            } catch (_: InterruptedException) {
+                // Expected when the main thread completes before we finish
+            }
+        }
+
+        /**
+         * Pre-populates workspace trust in Claude CLI's `.claude.json` so the interactive
+         * trust dialog is skipped when the agent starts in the given workspace directory.
+         *
+         * WHY: Claude CLI (interactive mode) shows a trust dialog for unknown workspace
+         * directories. In automated tests, no one is there to click "Yes, I trust this folder".
+         * This writes the minimal project config that the CLI checks to skip the dialog.
+         *
+         * WHY-NOT using --print: The agent protocol requires interactive mode for tool use
+         * and payload delivery.
+         */
+        private fun preTrustWorkspace(workspacePath: Path) {
+            val home = Path.of(System.getenv("HOME") ?: "/home/node")
+            val claudeJsonPath = home.resolve(".claude/.claude.json")
+            require(Files.exists(claudeJsonPath)) {
+                "Claude config not found at [$claudeJsonPath]. Cannot pre-trust workspace."
+            }
+
+            val mapper = ObjectMapper()
+            val root = mapper.readTree(claudeJsonPath.toFile()) as ObjectNode
+
+            val projects = root.get("projects") as? ObjectNode
+                ?: mapper.createObjectNode().also { root.set<ObjectNode>("projects", it) }
+
+            val absPath = workspacePath.toAbsolutePath().toString()
+            if (!projects.has(absPath)) {
+                val projectConfig = mapper.createObjectNode().apply {
+                    putArray("allowedTools")
+                    put("hasTrustDialogAccepted", true)
+                    put("hasCompletedProjectOnboarding", true)
+                }
+                projects.set<ObjectNode>(absPath, projectConfig)
+            }
+
+            mapper.writerWithDefaultPrettyPrinter().writeValue(claudeJsonPath.toFile(), root)
+        }
 
         /**
          * Lists currently running tmux session names.

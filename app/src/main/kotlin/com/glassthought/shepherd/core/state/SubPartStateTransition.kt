@@ -84,6 +84,8 @@ fun SubPartStatus.transitionTo(signal: AgentSignal): SubPartStateTransition {
             is AgentSignal.Crashed -> SubPartStateTransition.Fail
             AgentSignal.SelfCompacted ->
                 error("SelfCompacted is transparent to SubPart status; handle inside facade, not executor")
+            AgentSignal.Started ->
+                error("Started is only used during spawn phase; should never reach state transitions")
         }
         NOT_STARTED ->
             error("Cannot apply AgentSignal to NOT_STARTED; call validateCanSpawn() before spawning")

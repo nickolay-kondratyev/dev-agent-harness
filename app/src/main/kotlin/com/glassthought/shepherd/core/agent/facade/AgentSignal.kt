@@ -4,10 +4,14 @@ import com.asgard.core.annotation.AnchorPoint
 
 /**
  * Sealed class representing signals that flow from an agent (via the server or health monitoring)
- * back to the orchestration layer as the return value of
- * [AgentFacade.sendPayloadAndAwaitSignal]/ref.ap.1aEIkOGUeTijwvrACf3Ga.E.
+ * back to the orchestration layer.
  *
- * [Done], [FailWorkflow], and [SelfCompacted] are completed by the server via HTTP callbacks.
+ * [Started] is completed by the server when the agent reports it is alive, and is awaited by
+ * [AgentFacadeImpl.awaitStartupOrCleanup] during spawn.
+ *
+ * [Done], [FailWorkflow], and [SelfCompacted] are completed by the server via HTTP callbacks
+ * and are awaited by [AgentFacade.sendPayloadAndAwaitSignal]/ref.ap.1aEIkOGUeTijwvrACf3Ga.E.
+ *
  * [Crashed] is produced by the facade's health-aware await loop (ref.ap.QCjutDexa2UBDaKB3jTcF.E)
  * inside `sendPayloadAndAwaitSignal`.
  *
@@ -16,6 +20,17 @@ import com.asgard.core.annotation.AnchorPoint
  */
 @AnchorPoint("ap.uPdI6LlYO56c1kB5W0dpE.E")
 sealed class AgentSignal {
+
+    /**
+     * Agent called `/callback-shepherd/signal/started` — the agent process is alive and has
+     * sent its first HTTP callback to the harness.
+     *
+     * This signal is used ONLY during the spawn phase: [AgentFacadeImpl.awaitStartupOrCleanup]
+     * awaits the placeholder entry's [signalDeferred] which is completed with [Started] by
+     * [ShepherdServer.handleStarted]. After spawn completes, the placeholder entry is replaced
+     * by a real entry with a fresh deferred for lifecycle signals.
+     */
+    data object Started : AgentSignal()
 
     /**
      * Agent called `/callback-shepherd/signal/done` with a valid [DoneResult].
