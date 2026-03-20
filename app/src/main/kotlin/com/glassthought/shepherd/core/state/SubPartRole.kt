@@ -13,9 +13,12 @@ enum class SubPartRole {
     REVIEWER;
 
     companion object {
+        const val DOER_INDEX = 0
+        const val REVIEWER_INDEX = 1
+
         fun fromIndex(subPartIndex: Int): SubPartRole = when (subPartIndex) {
-            0 -> DOER
-            1 -> REVIEWER
+            DOER_INDEX -> DOER
+            REVIEWER_INDEX -> REVIEWER
             else -> throw IllegalArgumentException(
                 "Invalid subPartIndex=[$subPartIndex]. Expected 0 (DOER) or 1 (REVIEWER)."
             )

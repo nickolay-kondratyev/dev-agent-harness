@@ -1,0 +1,55 @@
+---
+spec: "com.glassthought.shepherd.core.executor.SubPartConfigBuilderTest"
+status: PASSED
+failed: 0
+skipped: 0
+---
+
+- GIVEN a doer+reviewer execution part
+  - WHEN building config for the reviewer (index 1)
+    - [PASS] THEN doerPublicMdPath references the doer's public MD
+    - [PASS] THEN feedbackDir references the part's feedback dir
+    - [PASS] THEN model is opus
+    - [PASS] THEN roleDefinition is CODE_REVIEWER
+    - [PASS] THEN subPartRole is REVIEWER
+- GIVEN a doer-only execution part
+  - WHEN building config for the doer (index 0)
+    - [PASS] THEN agentType is CLAUDE_CODE
+    - [PASS] THEN bootstrapMessage is set
+    - [PASS] THEN doerPublicMdPath is null (doer has no doer reference)
+    - [PASS] THEN executionContext has correct partDescription
+    - [PASS] THEN executionContext has correct partName
+    - [PASS] THEN executionContext has empty priorPublicMdPaths
+    - [PASS] THEN executionContext has planMdPath set
+    - [PASS] THEN feedbackDir is null (doer has no feedback)
+    - [PASS] THEN model is sonnet
+    - [PASS] THEN outputDir points to execution comm out dir
+    - [PASS] THEN partName matches the part name
+    - [PASS] THEN privateMdPath points to execution private MD
+    - [PASS] THEN publicMdOutputPath points to execution public MD
+    - [PASS] THEN roleDefinition matches the resolved role
+    - [PASS] THEN subPartIndex is 0
+    - [PASS] THEN subPartName matches the sub-part name
+    - [PASS] THEN subPartRole is DOER
+    - [PASS] THEN systemPromptPath is the role definition file path
+    - [PASS] THEN ticketContent matches
+- GIVEN a part with an invalid agent type
+  - WHEN building config
+    - [PASS] THEN throws IllegalArgumentException mentioning the invalid type
+- GIVEN a part with an unknown role
+  - WHEN building config
+    - [PASS] THEN throws IllegalArgumentException mentioning the unknown role
+- GIVEN a part with lowercase agent type 'claude_code'
+  - WHEN building config
+    - [PASS] THEN agentType is correctly parsed as CLAUDE_CODE
+- GIVEN a planning phase part
+  - WHEN building config for the planner (index 0)
+    - [PASS] THEN outputDir uses planning comm out dir
+    - [PASS] THEN privateMdPath uses planning path resolution
+    - [PASS] THEN publicMdOutputPath uses planning path resolution
+- GIVEN no planning phase (planMdPath is null)
+  - WHEN building config
+    - [PASS] THEN executionContext.planMdPath is null
+- GIVEN prior parts have completed
+  - WHEN building config with prior public MD paths
+    - [PASS] THEN executionContext contains the prior paths

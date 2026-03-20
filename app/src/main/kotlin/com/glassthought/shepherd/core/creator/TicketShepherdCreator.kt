@@ -6,7 +6,9 @@ import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.TicketShepherd
 import com.glassthought.shepherd.core.TicketShepherdDeps
 import com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller
-import com.glassthought.shepherd.core.executor.PartExecutorFactory
+import com.glassthought.shepherd.core.executor.PartExecutorFactoryContext
+import com.glassthought.shepherd.core.executor.PartExecutorFactoryCreator
+import com.glassthought.shepherd.core.executor.ProductionPartExecutorFactoryCreator
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.DefaultConsoleOutput
@@ -90,11 +92,8 @@ fun interface TicketShepherdCreator {
  * Production implementation of [TicketShepherdCreator].
  *
  * Constructor-injects shared/reusable dependencies. Ticket-scoped dependencies
- * (CurrentState, AiOutputStructure, TicketShepherd) are constructed internally within [create].
- *
- * ### Deps not yet wired internally
- * - [partExecutorFactory] — requires AgentFacadeImpl + ContextForAgentProvider (ticket-scoped),
- *   which will be wired here once PartExecutorFactory production wiring is implemented.
+ * (CurrentState, AiOutputStructure, AgentFacade, PartExecutorFactory) are constructed
+ * internally within [create]/[wireTicketShepherd].
  *
  * @param workflowParser Parses workflow JSON into [WorkflowDefinition]
  * @param ticketParser Parses ticket markdown into [TicketData]
@@ -106,7 +105,9 @@ fun interface TicketShepherdCreator {
  * @param consoleOutput Console printing abstraction for testability
  * @param processExiter Process exit abstraction for testability
  * @param setupPlanUseCaseFactory Creates ticket-scoped [SetupPlanUseCase]
- * @param partExecutorFactory Creates [com.glassthought.shepherd.core.executor.PartExecutor] per part
+ * @param partExecutorFactoryCreator Creates ticket-scoped
+ *   [com.glassthought.shepherd.core.executor.PartExecutorFactory] from deps available inside [wireTicketShepherd].
+ *   Production default: [ProductionPartExecutorFactoryCreator] which wires AgentFacadeImpl, GitCommitStrategy, etc.
  * @param finalCommitUseCaseFactory Creates [FinalCommitUseCase] from deps available inside [wireTicketShepherd]
  * @param ticketStatusUpdaterFactory Creates [TicketStatusUpdater] for a given ticket ID
  * @param allSessionsKillerFactory Creates [AllSessionsKiller] from [ShepherdContext]
@@ -136,9 +137,8 @@ class TicketShepherdCreatorImpl(
             outFactory = of,
         )
     },
-    private val partExecutorFactory: PartExecutorFactory = PartExecutorFactory {
-        TODO("PartExecutorFactory not yet wired for production")
-    },
+    private val partExecutorFactoryCreator: PartExecutorFactoryCreator =
+        ProductionPartExecutorFactoryCreator(clock = clock),
     private val finalCommitUseCaseFactory: FinalCommitUseCaseFactory = FinalCommitUseCaseFactory { of, pr, gofu ->
         FinalCommitUseCase.standard(
             outFactory = of,
@@ -224,7 +224,7 @@ class TicketShepherdCreatorImpl(
         return StateSetupResult(aiOutputStructure, currentState, currentStatePersistence)
     }
 
-    private fun wireTicketShepherd(
+    private suspend fun wireTicketShepherd(
         shepherdContext: ShepherdContext,
         ticketData: TicketData,
         workflowDefinition: WorkflowDefinition,
@@ -254,17 +254,10 @@ class TicketShepherdCreatorImpl(
             processExiter = processExiter,
         )
 
-        val processRunner = processRunnerFactory.create(outFactory)
-        val gitOperationFailureUseCase = GitOperationFailureUseCase.standard(
-            outFactory = outFactory,
-            processRunner = processRunner,
-            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
-            indexLockFileOperations = StandardGitIndexLockFileOperations(repoRoot.resolve(".git")),
-        )
-        val finalCommitUseCase = finalCommitUseCaseFactory.create(
-            outFactory = outFactory,
-            processRunner = processRunner,
-            gitOperationFailureUseCase = gitOperationFailureUseCase,
+        val finalCommitUseCase = wireFinalCommitUseCase(outFactory, failedToExecutePlanUseCase)
+
+        val partExecutorFactory = wirePartExecutorFactory(
+            shepherdContext, outFactory, workflowDefinition, stateResult, ticketData,
         )
 
         val deps = TicketShepherdDeps(
@@ -289,6 +282,45 @@ class TicketShepherdCreatorImpl(
             tryNumber = gitResult.tryNumber,
         )
     }
+
+    private fun wireFinalCommitUseCase(
+        outFactory: OutFactory,
+        failedToExecutePlanUseCase: FailedToExecutePlanUseCaseImpl,
+    ): FinalCommitUseCase {
+        val processRunner = processRunnerFactory.create(outFactory)
+        val gitOperationFailureUseCase = GitOperationFailureUseCase.standard(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
+            indexLockFileOperations = StandardGitIndexLockFileOperations(repoRoot.resolve(".git")),
+        )
+        return finalCommitUseCaseFactory.create(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            gitOperationFailureUseCase = gitOperationFailureUseCase,
+        )
+    }
+
+    private suspend fun wirePartExecutorFactory(
+        shepherdContext: ShepherdContext,
+        outFactory: OutFactory,
+        workflowDefinition: WorkflowDefinition,
+        stateResult: StateSetupResult,
+        ticketData: TicketData,
+    ) = partExecutorFactoryCreator.create(
+        PartExecutorFactoryContext(
+            shepherdContext = shepherdContext,
+            outFactory = outFactory,
+            aiOutputStructure = stateResult.aiOutputStructure,
+            ticketData = ticketData,
+            planMdPath = if (workflowDefinition.isWithPlanning) {
+                stateResult.aiOutputStructure.planMd()
+            } else {
+                null
+            },
+            repoRoot = repoRoot,
+        )
+    )
 
     companion object {
         private const val REQUIRED_STATUS = "in_progress"
