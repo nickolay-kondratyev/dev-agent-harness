@@ -1,11 +1,11 @@
 ---
 id: nid_90p54ba8i7vm4wju7su8s187w_E
 title: "fix factory not wired"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T00:19:44Z
-status_updated_iso: 2026-03-20T00:19:44Z
+status_updated_iso: 2026-03-20T00:24:35Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
