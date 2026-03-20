@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T20:18:53Z
 id: nid_kzz296dqtpojvf3gp29827xtk_E
 title: "fix PATH issue on start"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T20:02:51Z
-status_updated_iso: 2026-03-20T20:05:17Z
+status_updated_iso: 2026-03-20T20:18:53Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
@@ -43,3 +44,14 @@ _ The built script exists. The fix is for the harness to ensure export PATH=$PAT
 
 _ Crunched for 49s
 ```
+
+## Resolution
+
+Added `CallbackScriptsDir` validated type that ensures the callback scripts directory exists and contains an executable `callback_shepherd.signal.sh` at construction time. This replaces the raw `String` parameter, providing fail-fast behavior instead of a mysterious exit code 127 at runtime.
+
+### Changes
+- **New**: `CallbackScriptsDir` class with `validated()` (production) and `unvalidated()` (tests/sentinels) factories
+- **Updated**: `ClaudeCodeAdapter` accepts `CallbackScriptsDir` instead of `String`
+- **Updated**: `ContextInitializerImpl.resolveCallbackScriptsDir()` returns `CallbackScriptsDir.validated()`
+- **Added**: `CallbackScriptsDirTest` with 10 test cases covering all validation scenarios
+- All existing tests pass
