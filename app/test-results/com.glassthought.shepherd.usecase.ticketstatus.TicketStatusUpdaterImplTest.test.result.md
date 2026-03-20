@@ -5,6 +5,9 @@ failed: 0
 skipped: 0
 ---
 
+- GIVEN a TicketStatusUpdaterImpl with a failing ProcessRunner
+  - WHEN markDone is called
+    - [PASS] THEN the exception propagates to the caller
 - GIVEN a TicketStatusUpdaterImpl with ticketId 'abc-123'
   - WHEN markDone is called
     - [PASS] THEN it invokes 'ticket close abc-123' via ProcessRunner
