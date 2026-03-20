@@ -1,6 +1,5 @@
 package com.glassthought.shepherd.usecase.planning
 
-import com.asgard.core.out.OutFactory
 import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
 import com.glassthought.shepherd.core.executor.PartExecutor
@@ -77,40 +76,51 @@ class ProductionPlanningPartExecutorFactory internal constructor(
 
     companion object {
         /**
+         * Infrastructure overrides for [create] — both have sensible production defaults.
+         *
+         * @param clock Wall-clock abstraction. Default: [SystemClock].
+         * @param envProvider Environment variable reader. Default: [System.getenv].
+         */
+        data class CreationConfig(
+            val clock: Clock = SystemClock(),
+            val envProvider: (String) -> String? = System::getenv,
+        )
+
+        /**
          * Suspend factory method that builds all infrastructure and returns a ready-to-use
          * [ProductionPlanningPartExecutorFactory].
          *
+         * `outFactory` is derived from `shepherdContext.infra.outFactory`.
+         *
          * @param planningPart The planning [Part] from WorkflowDefinition.planningParts.
          * @param shepherdContext Shared infrastructure (tmux, logging, agent runner).
-         * @param outFactory Logging factory.
          * @param aiOutputStructure Ticket-scoped path resolver.
          * @param ticketData Parsed ticket data (description used in agent context).
          * @param repoRoot Repository root path for git operations.
          * @param failedToExecutePlanUseCase Failure handler for git operation failures.
-         * @param clock Wall-clock abstraction. Default: [SystemClock].
-         * @param envProvider Environment variable reader. Default: [System.getenv].
+         * @param config Infrastructure overrides (clock, envProvider). Default: production values.
          */
         @Suppress("LongParameterList")
         suspend fun create(
             planningPart: Part,
             shepherdContext: ShepherdContext,
-            outFactory: OutFactory,
             aiOutputStructure: AiOutputStructure,
             ticketData: TicketData,
             repoRoot: Path,
             failedToExecutePlanUseCase: FailedToExecutePlanUseCase,
-            clock: Clock = SystemClock(),
-            envProvider: (String) -> String? = System::getenv,
+            config: CreationConfig = CreationConfig(),
         ): ProductionPlanningPartExecutorFactory {
+            val outFactory = shepherdContext.infra.outFactory
+
             val roleDefinitions = PartExecutorInfraBuilder.loadRoleDefinitions(
                 outFactory = outFactory,
-                envProvider = envProvider,
+                envProvider = config.envProvider,
             )
 
             val agentFacade = PartExecutorInfraBuilder.buildAgentFacade(
                 shepherdContext = shepherdContext,
                 outFactory = outFactory,
-                clock = clock,
+                clock = config.clock,
                 sessionsState = shepherdContext.sessionsState,
             )
 
@@ -126,7 +136,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 processRunner = processRunner,
                 repoRoot = repoRoot,
                 failedToExecutePlanUseCase = failedToExecutePlanUseCase,
-                envProvider = envProvider,
+                envProvider = config.envProvider,
             )
 
             val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(

@@ -258,7 +258,7 @@ class ContextInitializerImpl(
       }
     }
 
-    targetFile.setExecutable(true)
+    check(targetFile.setExecutable(true)) { "Failed to set executable bit on ${targetFile.absolutePath}" }
     // Cleanup on JVM exit: delete file first, then directory (order matters).
     targetFile.deleteOnExit()
     tempDir.toFile().deleteOnExit()

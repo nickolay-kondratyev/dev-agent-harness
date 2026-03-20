@@ -214,7 +214,6 @@ class ClaudeCodeAdapter internal constructor(
          * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
          * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
          * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
-         * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
          */
         fun create(
             claudeProjectsDir: Path,
@@ -224,9 +223,8 @@ class ClaudeCodeAdapter internal constructor(
             glmConfig: GlmConfig? = null,
             resolveTimeoutMs: Long = 45_000L,
             pollIntervalMs: Long = 500L,
-            dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
-            guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
+            guidScanner = FilesystemGuidScanner(claudeProjectsDir),
             outFactory = outFactory,
             serverPort = serverPort,
             callbackScriptsDir = callbackScriptsDir,

@@ -367,7 +367,6 @@ class TicketShepherdCreatorImpl(
             val planningPartExecutorFactory = ProductionPlanningPartExecutorFactory.create(
                 planningPart = planningPart,
                 shepherdContext = ctx.shepherdContext,
-                outFactory = ctx.outFactory,
                 aiOutputStructure = ctx.aiOutputStructure,
                 ticketData = ctx.ticketData,
                 repoRoot = ctx.repoRoot,
