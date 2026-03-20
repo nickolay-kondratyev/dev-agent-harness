@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T22:25:43Z
 id: nid_piz5dmri01i09ey16nx2i3nc0_E
 title: "Pass direct callback executable path"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T21:49:25Z
-status_updated_iso: 2026-03-20T21:53:03Z
+status_updated_iso: 2026-03-20T22:25:43Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
