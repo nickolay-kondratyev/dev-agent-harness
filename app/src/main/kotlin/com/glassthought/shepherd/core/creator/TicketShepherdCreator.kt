@@ -32,7 +32,10 @@ import com.glassthought.shepherd.usecase.finalcommit.FinalCommitUseCase
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCaseImpl
 import com.glassthought.shepherd.usecase.healthmonitoring.NoOpTicketFailureLearningUseCase
+import com.glassthought.shepherd.usecase.planning.DetailedPlanningUseCase
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
+import com.glassthought.shepherd.usecase.planning.SetupPlanUseCaseImpl
+import com.glassthought.shepherd.usecase.planning.StraightforwardPlanUseCaseImpl
 import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdater
 import java.nio.file.Path
 
@@ -116,8 +119,18 @@ class TicketShepherdCreatorImpl(
     private val clock: Clock = SystemClock(),
     private val consoleOutput: ConsoleOutput = DefaultConsoleOutput(),
     private val processExiter: ProcessExiter = DefaultProcessExiter(),
-    private val setupPlanUseCaseFactory: SetupPlanUseCaseFactory = SetupPlanUseCaseFactory { _, _ ->
-        TODO("SetupPlanUseCaseFactory not yet wired for production")
+    private val setupPlanUseCaseFactory: SetupPlanUseCaseFactory = SetupPlanUseCaseFactory { wd, of ->
+        SetupPlanUseCaseImpl(
+            workflowDefinition = wd,
+            straightforwardPlanUseCase = StraightforwardPlanUseCaseImpl(
+                parts = wd.parts ?: emptyList(),
+                outFactory = of,
+            ),
+            detailedPlanningUseCase = DetailedPlanningUseCase {
+                TODO("DetailedPlanningUseCase not yet wired: requires PlanningPartExecutorFactory production impl")
+            },
+            outFactory = of,
+        )
     },
     private val partExecutorFactory: PartExecutorFactory = PartExecutorFactory {
         TODO("PartExecutorFactory not yet wired for production")
