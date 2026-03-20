@@ -199,7 +199,7 @@ private fun createCreator(
         clock = clock,
         consoleOutput = consoleOutput,
         processExiter = processExiter,
-        setupPlanUseCaseFactory = SetupPlanUseCaseFactory { _, _ -> SetupPlanUseCase { emptyList() } },
+        setupPlanUseCaseFactory = SetupPlanUseCaseFactory { _ -> SetupPlanUseCase { emptyList() } },
         partExecutorFactoryCreator = PartExecutorFactoryCreator { _ ->
             PartExecutorFactory { PartExecutor { PartResult.Completed } }
         },

@@ -21,6 +21,7 @@ import com.glassthought.shepherd.core.state.CurrentStateInitializer
 import com.glassthought.shepherd.core.state.CurrentStateInitializerImpl
 import com.glassthought.shepherd.core.state.CurrentStatePersistence
 import com.glassthought.shepherd.core.state.CurrentStatePersistenceImpl
+import com.glassthought.shepherd.core.state.PlanFlowConverterImpl
 import com.glassthought.shepherd.core.supporting.git.BranchNameBuilder
 import com.glassthought.shepherd.core.supporting.git.GitBranchManager
 import com.glassthought.shepherd.core.supporting.git.TryNResolver
@@ -35,9 +36,12 @@ import com.glassthought.shepherd.core.supporting.git.GitOperationFailureUseCase
 import com.glassthought.shepherd.core.supporting.git.StandardGitIndexLockFileOperations
 import com.glassthought.shepherd.usecase.finalcommit.FinalCommitUseCase
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
+import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCase
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCaseImpl
 import com.glassthought.shepherd.usecase.healthmonitoring.NoOpTicketFailureLearningUseCase
 import com.glassthought.shepherd.usecase.planning.DetailedPlanningUseCase
+import com.glassthought.shepherd.usecase.planning.DetailedPlanningUseCaseImpl
+import com.glassthought.shepherd.usecase.planning.ProductionPlanningPartExecutorFactory
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCaseImpl
 import com.glassthought.shepherd.usecase.planning.StraightforwardPlanUseCaseImpl
@@ -124,16 +128,16 @@ class TicketShepherdCreatorImpl(
     private val clock: Clock = SystemClock(),
     private val consoleOutput: ConsoleOutput = DefaultConsoleOutput(),
     private val processExiter: ProcessExiter = DefaultProcessExiter(),
-    private val setupPlanUseCaseFactory: SetupPlanUseCaseFactory = SetupPlanUseCaseFactory { wd, of ->
+    private val setupPlanUseCaseFactory: SetupPlanUseCaseFactory = SetupPlanUseCaseFactory { ctx ->
+        val wd = ctx.workflowDefinition
+        val of = ctx.outFactory
         SetupPlanUseCaseImpl(
             workflowDefinition = wd,
             straightforwardPlanUseCase = StraightforwardPlanUseCaseImpl(
                 parts = wd.parts ?: emptyList(),
                 outFactory = of,
             ),
-            detailedPlanningUseCase = DetailedPlanningUseCase {
-                TODO("DetailedPlanningUseCase not yet wired: requires PlanningPartExecutorFactory production impl")
-            },
+            detailedPlanningUseCase = wireDetailedPlanningUseCase(ctx),
             outFactory = of,
         )
     },
@@ -244,8 +248,6 @@ class TicketShepherdCreatorImpl(
             processExiter = processExiter,
         )
 
-        val setupPlanUseCase = setupPlanUseCaseFactory.create(workflowDefinition, outFactory)
-
         val failedToExecutePlanUseCase = FailedToExecutePlanUseCaseImpl(
             outFactory = outFactory,
             consoleOutput = consoleOutput,
@@ -253,6 +255,20 @@ class TicketShepherdCreatorImpl(
             ticketFailureLearningUseCase = NoOpTicketFailureLearningUseCase(),
             processExiter = processExiter,
         )
+
+        val setupPlanUseCaseContext = SetupPlanUseCaseContext(
+            workflowDefinition = workflowDefinition,
+            outFactory = outFactory,
+            shepherdContext = shepherdContext,
+            aiOutputStructure = stateResult.aiOutputStructure,
+            currentState = stateResult.currentState,
+            currentStatePersistence = stateResult.currentStatePersistence,
+            ticketData = ticketData,
+            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
+            repoRoot = repoRoot,
+        )
+
+        val setupPlanUseCase = setupPlanUseCaseFactory.create(setupPlanUseCaseContext)
 
         val finalCommitUseCase = wireFinalCommitUseCase(outFactory, failedToExecutePlanUseCase)
 
@@ -324,6 +340,54 @@ class TicketShepherdCreatorImpl(
 
     companion object {
         private const val REQUIRED_STATUS = "in_progress"
+        private const val MAX_PLAN_CONVERSION_RETRIES = 3
+
+        /**
+         * Wires the production [DetailedPlanningUseCaseImpl] from [SetupPlanUseCaseContext].
+         *
+         * For straightforward workflows, this is never invoked (routing happens in [SetupPlanUseCaseImpl]).
+         * For with-planning workflows, constructs the full planning infra:
+         * [ProductionPlanningPartExecutorFactory], [PlanFlowConverterImpl], and [DetailedPlanningUseCaseImpl].
+         */
+        internal suspend fun wireDetailedPlanningUseCase(ctx: SetupPlanUseCaseContext): DetailedPlanningUseCase {
+            val planningPart = ctx.workflowDefinition.planningParts?.firstOrNull()
+
+            // WHY: For straightforward workflows, planningParts is null. The DetailedPlanningUseCase
+            // will never be called in that case (SetupPlanUseCaseImpl routes to straightforward),
+            // but we still need to provide an instance. Return a stub that fails explicitly.
+            if (planningPart == null) {
+                return DetailedPlanningUseCase {
+                    error(
+                        "DetailedPlanningUseCase invoked but no planning parts defined in workflow. " +
+                            "This is a bug — SetupPlanUseCaseImpl should have routed to straightforward."
+                    )
+                }
+            }
+
+            val planningPartExecutorFactory = ProductionPlanningPartExecutorFactory.create(
+                planningPart = planningPart,
+                shepherdContext = ctx.shepherdContext,
+                outFactory = ctx.outFactory,
+                aiOutputStructure = ctx.aiOutputStructure,
+                ticketData = ctx.ticketData,
+                repoRoot = ctx.repoRoot,
+            )
+
+            val planFlowConverter = PlanFlowConverterImpl(
+                aiOutputStructure = ctx.aiOutputStructure,
+                currentStatePersistence = ctx.currentStatePersistence,
+                outFactory = ctx.outFactory,
+            )
+
+            return DetailedPlanningUseCaseImpl(
+                partExecutorFactory = planningPartExecutorFactory,
+                planFlowConverter = planFlowConverter,
+                failedToExecutePlanUseCase = ctx.failedToExecutePlanUseCase,
+                currentState = ctx.currentState,
+                maxConversionRetries = MAX_PLAN_CONVERSION_RETRIES,
+                outFactory = ctx.outFactory,
+            )
+        }
 
         /**
          * Validates that the ticket has all required frontmatter fields.
@@ -378,10 +442,28 @@ private data class StateSetupResult(
 // ── Factory interfaces for testability ──────────────────────────────────
 
 /**
- * Factory for creating [SetupPlanUseCase] — ticket-scoped, depends on [WorkflowDefinition].
+ * Ticket-scoped inputs needed to create a [SetupPlanUseCase].
+ *
+ * Groups all dependencies that become available inside `wireTicketShepherd()`
+ * and are needed for both straightforward and detailed planning use cases.
+ */
+data class SetupPlanUseCaseContext(
+    val workflowDefinition: WorkflowDefinition,
+    val outFactory: OutFactory,
+    val shepherdContext: ShepherdContext,
+    val aiOutputStructure: AiOutputStructure,
+    val currentState: CurrentState,
+    val currentStatePersistence: CurrentStatePersistence,
+    val ticketData: TicketData,
+    val failedToExecutePlanUseCase: FailedToExecutePlanUseCase,
+    val repoRoot: Path,
+)
+
+/**
+ * Factory for creating [SetupPlanUseCase] — ticket-scoped, depends on [SetupPlanUseCaseContext].
  */
 fun interface SetupPlanUseCaseFactory {
-    fun create(workflowDefinition: WorkflowDefinition, outFactory: OutFactory): SetupPlanUseCase
+    suspend fun create(context: SetupPlanUseCaseContext): SetupPlanUseCase
 }
 
 /**
