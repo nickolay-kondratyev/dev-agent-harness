@@ -75,7 +75,7 @@ class ProductionPartExecutorFactoryCreator(
         // -- GitCommitStrategy --
         val processRunner = processRunnerProvider?.invoke(outFactory)
             ?: ProcessRunner.standard(outFactory)
-        val gitCommitStrategy = buildGitCommitStrategy(outFactory, processRunner, shepherdContext)
+        val gitCommitStrategy = buildGitCommitStrategy(outFactory, processRunner, shepherdContext, context.repoRoot)
 
         // -- FailedToConvergeUseCase --
         val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(
@@ -168,6 +168,7 @@ class ProductionPartExecutorFactoryCreator(
         outFactory: OutFactory,
         processRunner: ProcessRunner,
         shepherdContext: ShepherdContext,
+        repoRoot: Path,
     ): GitCommitStrategy {
         val hostUsername = envProvider(Constants.REQUIRED_ENV_VARS.HOST_USERNAME)
             ?: error(
@@ -191,7 +192,7 @@ class ProductionPartExecutorFactoryCreator(
             processRunner = processRunner,
             failedToExecutePlanUseCase = failedToExecutePlanUseCase,
             indexLockFileOperations = StandardGitIndexLockFileOperations(
-                gitDir = Path.of(System.getProperty("user.dir"), ".git"),
+                gitDir = repoRoot.resolve(".git"),
             ),
         )
 

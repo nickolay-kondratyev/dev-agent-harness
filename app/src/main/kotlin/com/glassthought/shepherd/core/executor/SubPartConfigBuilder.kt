@@ -125,12 +125,11 @@ class SubPartConfigBuilder(
     }
 
     private fun resolveDoerPublicMdPath(part: Part): Path {
-        val doerSubPart = part.subParts[DOER_INDEX]
+        val doerSubPart = part.subParts[SubPartRole.DOER_INDEX]
         return resolvePublicMdPath(part, doerSubPart)
     }
 
     companion object {
-        private const val DOER_INDEX = 0
         private const val BOOTSTRAP_MESSAGE = "Waiting for instructions."
     }
 }

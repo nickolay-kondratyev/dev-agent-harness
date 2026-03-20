@@ -254,6 +254,7 @@ class TicketShepherdCreatorImpl(
                 aiOutputStructure = stateResult.aiOutputStructure,
                 ticketData = ticketData,
                 planMdPath = planMdPath,
+                repoRoot = repoRoot,
             )
         )
 

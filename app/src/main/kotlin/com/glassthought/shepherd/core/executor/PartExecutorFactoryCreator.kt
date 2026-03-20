@@ -5,6 +5,7 @@ import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.state.IterationConfig
 import com.glassthought.shepherd.core.state.Part
+import com.glassthought.shepherd.core.state.SubPartRole
 import com.glassthought.shepherd.core.supporting.ticket.TicketData
 import java.nio.file.Path
 
@@ -20,6 +21,7 @@ data class PartExecutorFactoryContext(
     val aiOutputStructure: AiOutputStructure,
     val ticketData: TicketData,
     val planMdPath: Path?,
+    val repoRoot: Path,
 )
 
 /**
@@ -45,8 +47,6 @@ fun interface PartExecutorFactoryCreator {
     suspend fun create(context: PartExecutorFactoryContext): PartExecutorFactory
 
     companion object {
-        private const val DOER_INDEX = 0
-        private const val REVIEWER_INDEX = 1
         private val DEFAULT_ITERATION_CONFIG = IterationConfig(max = 1, current = 0)
 
         /**
@@ -54,7 +54,7 @@ fun interface PartExecutorFactoryCreator {
          * falling back to a sensible default for doer-only parts.
          */
         fun resolveIterationConfig(part: Part): IterationConfig {
-            val reviewerSubPart = part.subParts.getOrNull(REVIEWER_INDEX)
+            val reviewerSubPart = part.subParts.getOrNull(SubPartRole.REVIEWER_INDEX)
             return reviewerSubPart?.iteration ?: DEFAULT_ITERATION_CONFIG
         }
 
@@ -72,14 +72,14 @@ fun interface PartExecutorFactoryCreator {
             return PartExecutorFactory { part: Part ->
                 val doerConfig = configBuilder.build(
                     part = part,
-                    subPartIndex = DOER_INDEX,
+                    subPartIndex = SubPartRole.DOER_INDEX,
                     priorPublicMdPaths = priorPublicMdPaths.toList(),
                 )
 
                 val reviewerConfig = if (part.subParts.size > 1) {
                     configBuilder.build(
                         part = part,
-                        subPartIndex = REVIEWER_INDEX,
+                        subPartIndex = SubPartRole.REVIEWER_INDEX,
                         priorPublicMdPaths = priorPublicMdPaths.toList(),
                     )
                 } else {
