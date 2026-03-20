@@ -84,10 +84,11 @@ class RunSubcommand : Callable<Int> {
 
     // WHY required: TicketShepherdCreator.create() requires workflowName: String with no default.
     // Could become optional with a default (e.g., "straightforward") in the future if spec changes.
+    // * @param workflowName Workflow name (e.g., "straightforward", "with-planning")
     @Option(
         names = ["--workflow"],
         required = true,
-        description = ["Workflow definition name (e.g., 'straightforward')."],
+        description = ["Workflow definition name (e.g., 'straightforward', 'with-planning')."],
     )
     lateinit var workflowName: String
 
