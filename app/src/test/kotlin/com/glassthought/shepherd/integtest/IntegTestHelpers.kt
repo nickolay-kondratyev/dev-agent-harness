@@ -1,5 +1,6 @@
 package com.glassthought.shepherd.integtest
 
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import java.io.File
 
 /**
@@ -21,25 +22,15 @@ internal object IntegTestHelpers {
      * Resolves the absolute path to the callback scripts directory.
      * The scripts are at `app/src/main/resources/scripts/` relative to the project root.
      */
-    fun resolveCallbackScriptsDir(): String {
+    fun resolveCallbackScriptsDir(): CallbackScriptsDir {
         val projectDir = System.getProperty("user.dir")
         val scriptsDir = File(projectDir, "src/main/resources/scripts")
-        check(scriptsDir.isDirectory) {
-            "Callback scripts directory not found at " +
-                "${scriptsDir.absolutePath}. " +
-                "Ensure you are running from the app module directory."
-        }
-        val signalScript = File(
-            scriptsDir, "callback_shepherd.signal.sh",
-        )
-        check(signalScript.exists()) {
-            "callback_shepherd.signal.sh not found at " +
-                signalScript.absolutePath
-        }
-        if (!signalScript.canExecute()) {
+        // Ensure the script is executable before validation
+        val signalScript = File(scriptsDir, "callback_shepherd.signal.sh")
+        if (signalScript.exists() && !signalScript.canExecute()) {
             signalScript.setExecutable(true)
         }
-        return scriptsDir.absolutePath
+        return CallbackScriptsDir.validated(scriptsDir.absolutePath)
     }
 
     /**

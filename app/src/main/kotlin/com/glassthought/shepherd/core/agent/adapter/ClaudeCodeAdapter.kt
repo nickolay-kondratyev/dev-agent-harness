@@ -77,7 +77,7 @@ data class GuidResolutionConfig(
  * @param guidScanner Strategy for scanning for GUID matches.
  * @param outFactory Factory for structured logging.
  * @param serverPort The Shepherd HTTP server port, exported as `TICKET_SHEPHERD_SERVER_PORT` into each agent tmux session.
- * @param callbackScriptsDir Absolute path to the directory containing `callback_shepherd.signal.sh`, added to PATH in the tmux session.
+ * @param callbackScriptsDir Validated directory containing `callback_shepherd.signal.sh`, added to PATH in the tmux session.
  * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
  * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
  */
@@ -86,7 +86,7 @@ class ClaudeCodeAdapter internal constructor(
     private val guidScanner: GuidScanner,
     outFactory: OutFactory,
     private val serverPort: Int,
-    private val callbackScriptsDir: String,
+    private val callbackScriptsDir: CallbackScriptsDir,
     private val glmConfig: GlmConfig? = null,
     private val resolveTimeoutMs: Long = 45_000L,
     private val pollIntervalMs: Long = 500L,
@@ -152,7 +152,7 @@ class ClaudeCodeAdapter internal constructor(
             "unset CLAUDECODE && " +
             "export ${Constants.AGENT_COMM.HANDSHAKE_GUID_ENV_VAR}=${params.handshakeGuid.value} && " +
             "export ${Constants.AGENT_COMM.SERVER_PORT_ENV_VAR}=$serverPort && " +
-            "export PATH=\$PATH:$callbackScriptsDir && " +
+            "export PATH=\$PATH:${callbackScriptsDir.path} && " +
             claudeCommand
         val fullCommand = "bash -c '${escapeForBashC(innerCommand)}'"
 
@@ -224,15 +224,15 @@ class ClaudeCodeAdapter internal constructor(
          * @param claudeProjectsDir Root directory to scan (typically `~/.claude/projects`).
          * @param outFactory Factory for structured logging.
          * @param serverPort The Shepherd HTTP server port to export into each agent's tmux session.
-         * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
-         * @param glmConfig Optional GLM config to redirect agent to a GLM endpoint.
+         * @param callbackScriptsDir Validated directory containing callback scripts, added to PATH.
+         * @param glmConfig Optional GLM config to redirect agents to Z.AI instead of Anthropic.
          * @param guidResolutionConfig Tuning for GUID polling (timeout, interval, dispatcher). Default: [GuidResolutionConfig].
          */
         fun create(
             claudeProjectsDir: Path,
             outFactory: OutFactory,
             serverPort: Int,
-            callbackScriptsDir: String,
+            callbackScriptsDir: CallbackScriptsDir,
             glmConfig: GlmConfig? = null,
             guidResolutionConfig: GuidResolutionConfig = GuidResolutionConfig(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(

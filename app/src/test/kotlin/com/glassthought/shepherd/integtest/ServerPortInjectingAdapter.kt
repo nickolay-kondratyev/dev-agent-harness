@@ -2,6 +2,7 @@ package com.glassthought.shepherd.integtest
 
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.BuildStartCommandParams
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
 import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
@@ -26,7 +27,7 @@ import com.glassthought.shepherd.core.initializer.ContextInitializer
 internal class ServerPortInjectingAdapter(
     private val delegate: AgentTypeAdapter,
     private val serverPort: Int,
-    private val callbackScriptsDir: String,
+    private val callbackScriptsDir: CallbackScriptsDir,
 ) : AgentTypeAdapter {
 
     override fun buildStartCommand(
@@ -45,7 +46,7 @@ internal class ServerPortInjectingAdapter(
 
         // Replace the sentinel PATH export with the real callback scripts dir
         val sentinelPathExport = "export PATH=\$PATH:$SENTINEL_SCRIPTS_DIR"
-        val realPathExport = "export PATH=\$PATH:$callbackScriptsDir"
+        val realPathExport = "export PATH=\$PATH:${callbackScriptsDir.path}"
         check(originalCommand.contains(sentinelPathExport)) {
             "Expected command to contain sentinel PATH export '$sentinelPathExport' " +
                 "but got: $originalCommand"

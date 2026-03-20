@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.infra.ConsoleOutput
 import com.glassthought.shepherd.core.infra.ProcessExiter
@@ -241,7 +242,7 @@ private fun createTestShepherdContext(): com.glassthought.shepherd.core.initiali
             claudeProjectsDir = java.nio.file.Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
             serverPort = 18080,
-            callbackScriptsDir = "/tmp/test-callback-scripts",
+            callbackScriptsDir = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
         ),
     )
     val infra = com.glassthought.shepherd.core.initializer.Infra(
