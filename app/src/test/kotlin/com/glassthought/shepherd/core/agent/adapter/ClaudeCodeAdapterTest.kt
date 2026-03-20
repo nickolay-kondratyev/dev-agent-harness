@@ -80,6 +80,10 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                 it("THEN command contains the bootstrap message as a positional argument") {
                     command shouldContain bootstrapMessage
                 }
+
+                it("THEN command contains [HARNESS_GUID: {guid}] appended to bootstrap message") {
+                    command shouldContain "[HARNESS_GUID: ${testGuid.value}]"
+                }
             }
         }
 
@@ -444,7 +448,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            resolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         shouldThrow<IllegalStateException> {
@@ -464,7 +468,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            resolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
@@ -568,7 +572,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            resolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         shouldThrow<IllegalStateException> {

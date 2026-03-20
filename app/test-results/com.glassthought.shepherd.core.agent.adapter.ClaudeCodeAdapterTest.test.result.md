@@ -13,6 +13,7 @@ skipped: 0
       - [PASS] THEN command contains --model sonnet
       - [PASS] THEN command contains --system-prompt-file with the file path
       - [PASS] THEN command contains --tools Read,Write
+      - [PASS] THEN command contains [HARNESS_GUID: {guid}] appended to bootstrap message
       - [PASS] THEN command contains the bootstrap message as a positional argument
       - [PASS] THEN command exports TICKET_SHEPHERD_HANDSHAKE_GUID with the handshake guid value
       - [PASS] THEN command exports TICKET_SHEPHERD_SERVER_PORT with the server port

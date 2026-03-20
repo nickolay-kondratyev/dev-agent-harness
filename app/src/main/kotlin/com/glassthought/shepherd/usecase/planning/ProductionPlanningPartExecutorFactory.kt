@@ -1,6 +1,5 @@
 package com.glassthought.shepherd.usecase.planning
 
-import com.asgard.core.out.OutFactory
 import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
 import com.glassthought.shepherd.core.executor.PartExecutor
@@ -20,6 +19,20 @@ import com.glassthought.shepherd.core.time.SystemClock
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToConvergeUseCaseImpl
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCase
 import java.nio.file.Path
+
+/**
+ * Test-override knobs for [ProductionPlanningPartExecutorFactory.create].
+ *
+ * Both fields default to production values; tests inject alternatives to avoid real clocks
+ * and real env reads.
+ *
+ * @param clock Wall-clock abstraction. Default: [SystemClock].
+ * @param envProvider Environment variable reader. Default: [System.getenv].
+ */
+data class PartExecutorOverrides(
+    val clock: Clock = SystemClock(),
+    val envProvider: (String) -> String? = System::getenv,
+)
 
 /**
  * Production implementation of [PlanningPartExecutorFactory].
@@ -80,37 +93,38 @@ class ProductionPlanningPartExecutorFactory internal constructor(
          * Suspend factory method that builds all infrastructure and returns a ready-to-use
          * [ProductionPlanningPartExecutorFactory].
          *
+         * `outFactory` is taken from [ShepherdContext.infra] — it is always the same instance
+         * as the one held by the context, so no separate parameter is needed.
+         *
          * @param planningPart The planning [Part] from WorkflowDefinition.planningParts.
          * @param shepherdContext Shared infrastructure (tmux, logging, agent runner).
-         * @param outFactory Logging factory.
          * @param aiOutputStructure Ticket-scoped path resolver.
          * @param ticketData Parsed ticket data (description used in agent context).
          * @param repoRoot Repository root path for git operations.
          * @param failedToExecutePlanUseCase Failure handler for git operation failures.
-         * @param clock Wall-clock abstraction. Default: [SystemClock].
-         * @param envProvider Environment variable reader. Default: [System.getenv].
+         * @param overrides Test-override knobs for clock and env provider. Default: [PartExecutorOverrides].
          */
         @Suppress("LongParameterList")
         suspend fun create(
             planningPart: Part,
             shepherdContext: ShepherdContext,
-            outFactory: OutFactory,
             aiOutputStructure: AiOutputStructure,
             ticketData: TicketData,
             repoRoot: Path,
             failedToExecutePlanUseCase: FailedToExecutePlanUseCase,
-            clock: Clock = SystemClock(),
-            envProvider: (String) -> String? = System::getenv,
+            overrides: PartExecutorOverrides = PartExecutorOverrides(),
         ): ProductionPlanningPartExecutorFactory {
+            val outFactory = shepherdContext.infra.outFactory
+
             val roleDefinitions = PartExecutorInfraBuilder.loadRoleDefinitions(
                 outFactory = outFactory,
-                envProvider = envProvider,
+                envProvider = overrides.envProvider,
             )
 
             val agentFacade = PartExecutorInfraBuilder.buildAgentFacade(
                 shepherdContext = shepherdContext,
                 outFactory = outFactory,
-                clock = clock,
+                clock = overrides.clock,
                 sessionsState = shepherdContext.sessionsState,
             )
 
@@ -126,7 +140,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 processRunner = processRunner,
                 repoRoot = repoRoot,
                 failedToExecutePlanUseCase = failedToExecutePlanUseCase,
-                envProvider = envProvider,
+                envProvider = overrides.envProvider,
             )
 
             val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(

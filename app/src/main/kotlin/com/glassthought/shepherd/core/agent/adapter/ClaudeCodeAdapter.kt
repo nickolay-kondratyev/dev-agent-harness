@@ -20,6 +20,17 @@ import kotlin.io.path.readText
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
+ * Polling configuration for GUID resolution via [FilesystemGuidScanner].
+ *
+ * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
+ * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
+ */
+data class GuidResolutionConfig(
+    val resolveTimeoutMs: Long = 45_000L,
+    val pollIntervalMs: Long = 500L,
+)
+
+/**
  * Filesystem-backed [GuidScanner]: walks [claudeProjectsDir] recursively
  * for `*.jsonl` files and returns those containing the GUID string.
  */
@@ -212,8 +223,8 @@ class ClaudeCodeAdapter internal constructor(
          * @param outFactory Factory for structured logging.
          * @param serverPort The Shepherd HTTP server port to export into each agent's tmux session.
          * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
-         * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
-         * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
+         * @param glmConfig Optional GLM config to redirect agents to Z.AI instead of Anthropic.
+         * @param resolutionConfig Polling timing config for GUID resolution (default: [GuidResolutionConfig]).
          * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
          */
         fun create(
@@ -222,8 +233,7 @@ class ClaudeCodeAdapter internal constructor(
             serverPort: Int,
             callbackScriptsDir: String,
             glmConfig: GlmConfig? = null,
-            resolveTimeoutMs: Long = 45_000L,
-            pollIntervalMs: Long = 500L,
+            resolutionConfig: GuidResolutionConfig = GuidResolutionConfig(),
             dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
             guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
@@ -231,8 +241,8 @@ class ClaudeCodeAdapter internal constructor(
             serverPort = serverPort,
             callbackScriptsDir = callbackScriptsDir,
             glmConfig = glmConfig,
-            resolveTimeoutMs = resolveTimeoutMs,
-            pollIntervalMs = pollIntervalMs,
+            resolveTimeoutMs = resolutionConfig.resolveTimeoutMs,
+            pollIntervalMs = resolutionConfig.pollIntervalMs,
         )
 
         /**
