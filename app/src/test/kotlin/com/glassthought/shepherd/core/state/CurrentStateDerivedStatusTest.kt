@@ -21,14 +21,14 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "UI_DESIGNER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),
                         SubPart(
                             name = "review",
                             role = "UI_REVIEWER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                             iteration = IterationConfig(max = 3, current = 2),
@@ -62,14 +62,14 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "UI_DESIGNER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),
                         SubPart(
                             name = "review",
                             role = "UI_REVIEWER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.IN_PROGRESS,
                             iteration = IterationConfig(max = 3, current = 1),
@@ -105,14 +105,14 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "UI_DESIGNER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.IN_PROGRESS,
                         ),
                         SubPart(
                             name = "review",
                             role = "UI_REVIEWER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.FAILED,
                             iteration = IterationConfig(max = 3, current = 1),
@@ -148,7 +148,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),
@@ -162,7 +162,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),
@@ -189,7 +189,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),
@@ -203,7 +203,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.NOT_STARTED,
                         ),
@@ -233,7 +233,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.IN_PROGRESS,
                         ),
@@ -247,7 +247,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.NOT_STARTED,
                         ),
@@ -279,7 +279,7 @@ class CurrentStateDerivedStatusTest : AsgardDescribeSpec({
                         SubPart(
                             name = "impl",
                             role = "DOER",
-                            agentType = "ClaudeCode",
+                            agentType = "CLAUDE_CODE",
                             model = "sonnet",
                             status = SubPartStatus.COMPLETED,
                         ),

@@ -7,7 +7,7 @@ package com.glassthought.shepherd.core.state
  *
  * @property handshakeGuid The handshake GUID used to correlate the spawn request with the agent callback.
  * @property agentSession The agent session identifier.
- * @property agentType The type of agent spawned (e.g., "ClaudeCode").
+ * @property agentType The type of agent spawned (e.g., "CLAUDE_CODE").
  * @property model The model used by the agent (e.g., "sonnet").
  * @property timestamp ISO-8601 timestamp of when the session was spawned.
  */

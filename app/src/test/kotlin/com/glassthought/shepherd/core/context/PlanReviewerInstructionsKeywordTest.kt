@@ -58,7 +58,7 @@ class PlanReviewerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains agent types and models for validation") {
-                text shouldContain "ClaudeCode"
+                text shouldContain "CLAUDE_CODE"
             }
 
             // -- Planner rationale --

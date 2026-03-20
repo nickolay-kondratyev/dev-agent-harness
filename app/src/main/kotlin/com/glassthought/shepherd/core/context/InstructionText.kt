@@ -151,7 +151,7 @@ object InstructionText {
 
         | agentType | Description | Models |
         |-----------|-------------|--------|
-        | `ClaudeCode` | Claude Code CLI agent in TMUX session | `opus` (high), `sonnet` (budget-high) |
+        | `CLAUDE_CODE` | Claude Code CLI agent in TMUX session | `opus` (high), `sonnet` (budget-high) |
 
         Each sub-part in the plan must specify an `agentType` and `model`.
     """.trimIndent()
@@ -177,13 +177,13 @@ object InstructionText {
                 {
                   "name": "<sub_part_name>",
                   "role": "<role from catalog>",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "opus|sonnet"
                 },
                 {
                   "name": "review",
                   "role": "<reviewer role from catalog>",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "opus|sonnet",
                   "iteration": { "max": 3 }
                 }

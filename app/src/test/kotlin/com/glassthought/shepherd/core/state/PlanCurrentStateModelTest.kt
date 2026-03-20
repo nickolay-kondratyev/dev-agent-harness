@@ -109,7 +109,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
             val record = SessionRecord(
                 handshakeGuid = "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                 agentSession = AgentSessionInfo(id = "77d5b7ea-cf04-453b-8867-162404763e18"),
-                agentType = "ClaudeCode",
+                agentType = "CLAUDE_CODE",
                 model = "sonnet",
                 timestamp = "2026-03-10T15:30:00Z",
             )
@@ -134,8 +134,8 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
               "phase": "execution",
               "description": "Design the dashboard UI",
               "subParts": [
-                { "name": "impl", "role": "UI_DESIGNER", "agentType": "ClaudeCode", "model": "sonnet" },
-                { "name": "review", "role": "UI_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
+                { "name": "impl", "role": "UI_DESIGNER", "agentType": "CLAUDE_CODE", "model": "sonnet" },
+                { "name": "review", "role": "UI_REVIEWER", "agentType": "CLAUDE_CODE", "model": "sonnet",
                   "iteration": { "max": 3 } }
               ]
             }
@@ -230,14 +230,14 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                 {
                   "name": "impl",
                   "role": "UI_DESIGNER",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "sonnet",
                   "status": "IN_PROGRESS",
                   "sessionIds": [
                     {
                       "handshakeGuid": "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                       "agentSession": { "id": "77d5b7ea-cf04-453b-8867-162404763e18" },
-                      "agentType": "ClaudeCode",
+                      "agentType": "CLAUDE_CODE",
                       "model": "sonnet",
                       "timestamp": "2026-03-10T15:30:00Z"
                     }
@@ -246,7 +246,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                 {
                   "name": "review",
                   "role": "UI_REVIEWER",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "sonnet",
                   "status": "IN_PROGRESS",
                   "iteration": { "max": 3, "current": 1 },
@@ -254,7 +254,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                     {
                       "handshakeGuid": "handshake.b2c3d4e5-f6a7-8901-bcde-f12345678901",
                       "agentSession": { "id": "88e6c8fb-df15-564c-9978-273515874f29" },
-                      "agentType": "ClaudeCode",
+                      "agentType": "CLAUDE_CODE",
                       "model": "sonnet",
                       "timestamp": "2026-03-10T15:45:00Z"
                     }
@@ -346,14 +346,14 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                 {
                   "name": "plan",
                   "role": "PLANNER",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "opus",
                   "status": "IN_PROGRESS",
                   "sessionIds": [
                     {
                       "handshakeGuid": "handshake.c3d4e5f6-a7b8-9012-cdef-123456789012",
                       "agentSession": { "id": "99f7d9gc-eg26-675d-aa89-384626985g30" },
-                      "agentType": "ClaudeCode",
+                      "agentType": "CLAUDE_CODE",
                       "model": "opus",
                       "timestamp": "2026-03-10T14:00:00Z"
                     }
@@ -362,7 +362,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                 {
                   "name": "plan_review",
                   "role": "PLAN_REVIEWER",
-                  "agentType": "ClaudeCode",
+                  "agentType": "CLAUDE_CODE",
                   "model": "opus",
                   "status": "IN_PROGRESS",
                   "iteration": { "max": 3, "current": 1 },
@@ -370,7 +370,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                     {
                       "handshakeGuid": "handshake.d4e5f6a7-b8c9-0123-defa-234567890123",
                       "agentSession": { "id": "aag8eahd-fh37-786e-bb90-495737a96h41" },
-                      "agentType": "ClaudeCode",
+                      "agentType": "CLAUDE_CODE",
                       "model": "opus",
                       "timestamp": "2026-03-10T14:30:00Z"
                     }
@@ -453,7 +453,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
         val subPart = SubPart(
             name = "impl",
             role = "IMPLEMENTER",
-            agentType = "ClaudeCode",
+            agentType = "CLAUDE_CODE",
             model = "sonnet",
             status = SubPartStatus.IN_PROGRESS,
             iteration = IterationConfig(max = 5, current = 2),
@@ -461,7 +461,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
                 SessionRecord(
                     handshakeGuid = "handshake.a1b2c3d4-e5f6-7890-abcd-ef1234567890",
                     agentSession = AgentSessionInfo(id = "77d5b7ea-cf04-453b-8867-162404763e18"),
-                    agentType = "ClaudeCode",
+                    agentType = "CLAUDE_CODE",
                     model = "sonnet",
                     timestamp = "2026-03-10T15:30:00Z",
                 ),
@@ -481,7 +481,7 @@ class PlanCurrentStateModelTest : AsgardDescribeSpec({
     // ── NON_NULL serialization inclusion ──
 
     describe("GIVEN SubPart with null optional fields") {
-        val subPart = SubPart(name = "impl", role = "DOER", agentType = "ClaudeCode", model = "sonnet")
+        val subPart = SubPart(name = "impl", role = "DOER", agentType = "CLAUDE_CODE", model = "sonnet")
         val json = mapper.writeValueAsString(subPart)
 
         describe("WHEN serializing") {

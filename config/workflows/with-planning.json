@@ -6,8 +6,8 @@
       "phase": "planning",
       "description": "Plan the workflow",
       "subParts": [
-        { "name": "plan", "role": "PLANNER", "agentType": "ClaudeCode", "model": "opus" },
-        { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "ClaudeCode", "model": "opus",
+        { "name": "plan", "role": "PLANNER", "agentType": "CLAUDE_CODE", "model": "opus" },
+        { "name": "plan_review", "role": "PLAN_REVIEWER", "agentType": "CLAUDE_CODE", "model": "opus",
           "iteration": { "max": 3 } }
       ]
     }
