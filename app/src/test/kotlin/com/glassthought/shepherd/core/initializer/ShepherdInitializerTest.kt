@@ -395,13 +395,15 @@ class ShepherdInitializerTest : AsgardDescribeSpec(
 
         describe("GIVEN TICKET_SHEPHERD_SERVER_PORT env var is not set") {
             describe("WHEN readServerPortFromEnv() is called") {
-                // WHY-NOT: We cannot easily set/unset env vars in the test JVM without
-                // polluting global state. Instead, we test the companion function directly
-                // and rely on the serverPortReader injection seam for integration testing.
+                // WHY-NOT: We cannot unset real env vars in a running JVM without polluting
+                // global state. Instead we inject a no-op envProvider into the companion
+                // function to simulate the var being absent, independent of shell state.
                 it("THEN throws IllegalStateException with descriptive message") {
-                    // In test environment, TICKET_SHEPHERD_SERVER_PORT is not set
+                    // Use an empty env provider to guarantee the env var is absent,
+                    // regardless of ambient shell state (e.g. TICKET_SHEPHERD_SERVER_PORT may
+                    // be set in the developer/CI environment).
                     val exception = shouldThrow<IllegalStateException> {
-                        ShepherdInitializer.readServerPortFromEnv()
+                        ShepherdInitializer.readServerPortFromEnv(envProvider = { null })
                     }
                     exception.message shouldContain "TICKET_SHEPHERD_SERVER_PORT"
                     exception.message shouldContain "is not set"
