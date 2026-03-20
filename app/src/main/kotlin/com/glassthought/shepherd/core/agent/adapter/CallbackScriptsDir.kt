@@ -18,8 +18,15 @@ import java.io.File
 class CallbackScriptsDir private constructor(
     val path: String,
 ) {
+    /** Full absolute path to the signal callback script (e.g., `/tmp/shepherd-callback-scripts-XXX/callback_shepherd.signal.sh`). */
+    val signalScriptPath: String = "$path/$REQUIRED_SCRIPT"
+
+    /** Full absolute path to the query callback script (e.g., `/tmp/shepherd-callback-scripts-XXX/callback_shepherd.query.sh`). */
+    val queryScriptPath: String = "$path/$QUERY_SCRIPT"
+
     companion object {
         private const val REQUIRED_SCRIPT = "callback_shepherd.signal.sh"
+        private const val QUERY_SCRIPT = "callback_shepherd.query.sh"
 
         /**
          * Production factory — validates that [dirPath] is an existing directory containing

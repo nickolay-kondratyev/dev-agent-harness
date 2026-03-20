@@ -253,7 +253,12 @@ class InstructionSectionTest : AsgardDescribeSpec({
     // ── CallbackHelp ─────────────────────────────────────────────────────────
 
     describe("GIVEN a CallbackHelp section for a doer (not reviewer, no plan validation)") {
-        val section = InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false)
+        val section = InstructionSection.CallbackHelp(
+            forReviewer = false,
+            includePlanValidation = false,
+            callbackSignalScriptPath = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR.signalScriptPath,
+            callbackQueryScriptPath = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR.queryScriptPath,
+        )
         val tempDir = Files.createTempDirectory("section-callback-doer-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -275,7 +280,12 @@ class InstructionSectionTest : AsgardDescribeSpec({
     }
 
     describe("GIVEN a CallbackHelp section for a reviewer with plan validation") {
-        val section = InstructionSection.CallbackHelp(forReviewer = true, includePlanValidation = true)
+        val section = InstructionSection.CallbackHelp(
+            forReviewer = true,
+            includePlanValidation = true,
+            callbackSignalScriptPath = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR.signalScriptPath,
+            callbackQueryScriptPath = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR.queryScriptPath,
+        )
         val tempDir = Files.createTempDirectory("section-callback-reviewer-test")
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -725,6 +735,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
             feedbackContent = "Missing unit tests for UserService.",
             currentPath = feedbackPath,
             isOptional = false,
+            callbackSignalScriptPath = ContextTestFixtures.TEST_SIGNAL_SCRIPT_PATH,
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 
@@ -756,6 +767,7 @@ class InstructionSectionTest : AsgardDescribeSpec({
             feedbackContent = "Consider renaming variable for clarity.",
             currentPath = feedbackPath,
             isOptional = true,
+            callbackSignalScriptPath = ContextTestFixtures.TEST_SIGNAL_SCRIPT_PATH,
         )
         val request = ContextTestFixtures.doerInstructionRequest(tempDir)
 

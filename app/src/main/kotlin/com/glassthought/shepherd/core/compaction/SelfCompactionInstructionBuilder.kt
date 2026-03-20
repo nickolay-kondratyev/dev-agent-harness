@@ -15,11 +15,12 @@ class SelfCompactionInstructionBuilder {
      * Renders the self-compaction instruction template with the given PRIVATE.md path.
      *
      * @param privateMdAbsolutePath absolute path where the agent should write its summary
+     * @param callbackSignalScriptPath full absolute path to the signal callback script
      * @return fully rendered instruction text ready to be sent to the agent
      */
-    fun build(privateMdAbsolutePath: Path): String {
+    fun build(privateMdAbsolutePath: Path, callbackSignalScriptPath: String): String {
         val callbackCommand =
-            "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
+            "$callbackSignalScriptPath ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
 
         return """Your context window is running low. Summarize this chat into
             |`$privateMdAbsolutePath` so work can continue in a new chat.

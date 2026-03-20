@@ -78,6 +78,8 @@ private fun buildDeps(): PartExecutorDeps = PartExecutorDeps(
     gitCommitStrategy = stubGitCommitStrategy,
     failedToConvergeUseCase = stubFailedToConvergeUseCase,
     outFactory = com.asgard.core.out.impl.NoOpOutFactory(),
+    callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+        .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
 )
 
 private fun buildFactory(

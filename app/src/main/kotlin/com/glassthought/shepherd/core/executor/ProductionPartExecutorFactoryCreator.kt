@@ -61,29 +61,10 @@ class ProductionPartExecutorFactoryCreator(
         val contextForAgentProvider = ContextForAgentProvider.standard(
             outFactory = outFactory,
             aiOutputStructure = context.aiOutputStructure,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
         )
 
-        val processRunner = processRunnerProvider?.invoke(outFactory)
-            ?: ProcessRunner.standard(outFactory)
-
-        val failedToExecutePlanUseCase = FailedToExecutePlanUseCaseImpl(
-            outFactory = outFactory,
-            consoleOutput = consoleOutput,
-            allSessionsKiller = com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller(
-                outFactory = outFactory,
-                tmuxCommandRunner = shepherdContext.infra.tmux.commandRunner,
-            ),
-            ticketFailureLearningUseCase = NoOpTicketFailureLearningUseCase(),
-            processExiter = processExiter,
-        )
-
-        val gitCommitStrategy = PartExecutorInfraBuilder.buildGitCommitStrategy(
-            outFactory = outFactory,
-            processRunner = processRunner,
-            repoRoot = context.repoRoot,
-            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
-            envProvider = envProvider,
-        )
+        val gitCommitStrategy = buildGitCommitStrategy(context, outFactory, shepherdContext)
 
         val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(
             consoleOutput = consoleOutput,
@@ -104,9 +85,38 @@ class ProductionPartExecutorFactoryCreator(
             gitCommitStrategy = gitCommitStrategy,
             failedToConvergeUseCase = failedToConvergeUseCase,
             outFactory = outFactory,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
             harnessTimeoutConfig = shepherdContext.timeoutConfig,
         )
 
         return PartExecutorFactoryCreator.buildFactory(deps, subPartConfigBuilder)
+    }
+
+    private fun buildGitCommitStrategy(
+        context: PartExecutorFactoryContext,
+        outFactory: OutFactory,
+        shepherdContext: com.glassthought.shepherd.core.initializer.data.ShepherdContext,
+    ): com.glassthought.shepherd.core.supporting.git.GitCommitStrategy {
+        val processRunner = processRunnerProvider?.invoke(outFactory)
+            ?: ProcessRunner.standard(outFactory)
+
+        val failedToExecutePlanUseCase = FailedToExecutePlanUseCaseImpl(
+            outFactory = outFactory,
+            consoleOutput = consoleOutput,
+            allSessionsKiller = com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller(
+                outFactory = outFactory,
+                tmuxCommandRunner = shepherdContext.infra.tmux.commandRunner,
+            ),
+            ticketFailureLearningUseCase = NoOpTicketFailureLearningUseCase(),
+            processExiter = processExiter,
+        )
+
+        return PartExecutorInfraBuilder.buildGitCommitStrategy(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            repoRoot = context.repoRoot,
+            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
+            envProvider = envProvider,
+        )
     }
 }

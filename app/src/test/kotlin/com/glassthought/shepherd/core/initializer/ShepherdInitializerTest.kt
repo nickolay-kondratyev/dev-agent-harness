@@ -173,6 +173,7 @@ private fun createTestShepherdContext(outFactory: OutFactory = NoOpOutFactory())
         outFactory = outFactory,
         tmux = tmuxInfra,
         claudeCode = claudeCodeInfra,
+        callbackScriptsDir = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
     )
     val noOpRunner = com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner {
         com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentResult.Success(output = "")

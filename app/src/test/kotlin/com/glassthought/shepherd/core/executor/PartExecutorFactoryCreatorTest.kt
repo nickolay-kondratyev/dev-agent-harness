@@ -86,6 +86,8 @@ class PartExecutorFactoryCreatorTest : AsgardDescribeSpec(
                         _, _ -> false
                     },
                 outFactory = outFactory,
+                callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+                    .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
             )
         }
 

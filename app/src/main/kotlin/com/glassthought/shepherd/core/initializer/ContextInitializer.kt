@@ -43,6 +43,7 @@ data class Infra(
   val outFactory: OutFactory,
   val tmux: TmuxInfra,
   val claudeCode: ClaudeCodeInfra,
+  val callbackScriptsDir: CallbackScriptsDir,
 ) : AsgardCloseable {
   override suspend fun close() {
     // Out factory should be the last to close
@@ -181,6 +182,7 @@ class ContextInitializerImpl(
       outFactory = outFactory,
       tmux = tmuxInfra,
       claudeCode = claudeCodeInfra,
+      callbackScriptsDir = callbackScriptsDir,
     )
 
     val nonInteractiveAgentRunner = createNonInteractiveAgentRunner(outFactory, zaiApiKey)

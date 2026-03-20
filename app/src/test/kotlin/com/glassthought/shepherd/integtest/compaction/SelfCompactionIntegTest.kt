@@ -243,7 +243,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                     .resolve("PRIVATE-${System.currentTimeMillis()}.md")
 
                 val instructionText =
-                    SelfCompactionInstructionBuilder().build(privateMdPath)
+                    SelfCompactionInstructionBuilder().build(privateMdPath, scriptsDir.signalScriptPath)
                 val instructionFile =
                     IntegTestHelpers.createDoneInstructionFile(tmpDir)
                         .also {
@@ -295,7 +295,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                     "PRIVATE-rotation-${System.currentTimeMillis()}.md",
                 )
                 val instructionText =
-                    SelfCompactionInstructionBuilder().build(privateMdPath)
+                    SelfCompactionInstructionBuilder().build(privateMdPath, scriptsDir.signalScriptPath)
                 val instructionFile =
                     CompactionIntegTestHelpers.createInstructionFile(
                         tmpDir = tmpDir,

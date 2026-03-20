@@ -9,6 +9,7 @@ import com.glassthought.shepherd.core.agent.facade.AgentPayload
 import com.glassthought.shepherd.core.agent.facade.AgentSignal
 import com.glassthought.shepherd.core.agent.facade.DoneResult
 import com.glassthought.shepherd.core.agent.facade.SpawnedAgentHandle
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.compaction.CompactionTrigger
 import com.glassthought.shepherd.core.compaction.SelfCompactionInstructionBuilder
 import com.glassthought.shepherd.core.context.AgentInstructionRequest
@@ -35,6 +36,7 @@ data class PartExecutorDeps(
     val gitCommitStrategy: GitCommitStrategy,
     val failedToConvergeUseCase: FailedToConvergeUseCase,
     val outFactory: OutFactory,
+    val callbackScriptsDir: CallbackScriptsDir,
     val publicMdValidator: PublicMdValidator = PublicMdValidator(),
     val harnessTimeoutConfig: HarnessTimeoutConfig = HarnessTimeoutConfig.defaults(),
     val selfCompactionInstructionBuilder: SelfCompactionInstructionBuilder = SelfCompactionInstructionBuilder(),
@@ -437,7 +439,10 @@ class PartExecutorImpl(
         val privateMdPath = config.privateMdPath
             ?: error("Cannot perform compaction: privateMdPath is null for sub-part [${config.subPartName}]")
 
-        val instructionText = deps.selfCompactionInstructionBuilder.build(privateMdPath)
+        val instructionText = deps.selfCompactionInstructionBuilder.build(
+            privateMdAbsolutePath = privateMdPath,
+            callbackSignalScriptPath = deps.callbackScriptsDir.signalScriptPath,
+        )
         val instructionFile = Files.createTempFile("compaction-instruction-", ".md")
         Files.writeString(instructionFile, instructionText)
 

@@ -12,7 +12,8 @@ class SelfCompactionInstructionBuilderTest : AsgardDescribeSpec({
 
         describe("WHEN build is called with a PRIVATE.md path") {
             val privateMdPath = Path.of("/repo/.ai_out/my_branch/execution/backend/impl/private/PRIVATE.md")
-            val result = builder.build(privateMdPath)
+            val callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh"
+            val result = builder.build(privateMdPath, callbackSignalScriptPath)
 
             it("THEN renders the correct PRIVATE.md absolute path") {
                 result shouldContain privateMdPath.toString()
@@ -22,22 +23,22 @@ class SelfCompactionInstructionBuilderTest : AsgardDescribeSpec({
                 result shouldContain "`$privateMdPath`"
             }
 
-            it("THEN contains the callback signal script name") {
-                result shouldContain ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
+            it("THEN contains the callback signal script full path") {
+                result shouldContain callbackSignalScriptPath
             }
 
             it("THEN contains the self-compacted signal name") {
                 result shouldContain ProtocolVocabulary.Signal.SELF_COMPACTED
             }
 
-            it("THEN contains the full callback command") {
+            it("THEN contains the full callback command with absolute path") {
                 result shouldContain
-                    "${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
+                    "$callbackSignalScriptPath ${ProtocolVocabulary.Signal.SELF_COMPACTED}"
             }
 
             it("THEN wraps the callback command in backticks") {
                 result shouldContain
-                    "`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.SELF_COMPACTED}`"
+                    "`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.SELF_COMPACTED}`"
             }
 
             it("THEN contains guideline to preserve what we're doing and why") {
