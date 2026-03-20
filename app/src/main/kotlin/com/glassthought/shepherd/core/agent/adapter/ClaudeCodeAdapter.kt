@@ -41,6 +41,19 @@ private class FilesystemGuidScanner(
 }
 
 /**
+ * Configuration for GUID resolution polling in [ClaudeCodeAdapter].
+ *
+ * @param resolveTimeoutMs Total polling window in milliseconds. Default: 45 seconds.
+ * @param pollIntervalMs Delay between poll attempts in milliseconds. Default: 500 ms.
+ * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
+ */
+data class GuidResolutionConfig(
+    val resolveTimeoutMs: Long = 45_000L,
+    val pollIntervalMs: Long = 500L,
+    val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+)
+
+/**
  * Claude Code implementation of [AgentTypeAdapter].
  *
  * Merges the responsibilities of the former `ClaudeCodeAgentStarter` (command building)
@@ -212,9 +225,8 @@ class ClaudeCodeAdapter internal constructor(
          * @param outFactory Factory for structured logging.
          * @param serverPort The Shepherd HTTP server port to export into each agent's tmux session.
          * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
-         * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
-         * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
-         * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
+         * @param glmConfig Optional GLM config to redirect agent to a GLM endpoint.
+         * @param guidResolutionConfig Tuning for GUID polling (timeout, interval, dispatcher). Default: [GuidResolutionConfig].
          */
         fun create(
             claudeProjectsDir: Path,
@@ -222,17 +234,15 @@ class ClaudeCodeAdapter internal constructor(
             serverPort: Int,
             callbackScriptsDir: String,
             glmConfig: GlmConfig? = null,
-            resolveTimeoutMs: Long = 45_000L,
-            pollIntervalMs: Long = 500L,
-            dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+            guidResolutionConfig: GuidResolutionConfig = GuidResolutionConfig(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
-            guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
+            guidScanner = FilesystemGuidScanner(claudeProjectsDir, guidResolutionConfig.dispatcherProvider),
             outFactory = outFactory,
             serverPort = serverPort,
             callbackScriptsDir = callbackScriptsDir,
             glmConfig = glmConfig,
-            resolveTimeoutMs = resolveTimeoutMs,
-            pollIntervalMs = pollIntervalMs,
+            resolveTimeoutMs = guidResolutionConfig.resolveTimeoutMs,
+            pollIntervalMs = guidResolutionConfig.pollIntervalMs,
         )
 
         /**

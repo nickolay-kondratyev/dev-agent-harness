@@ -444,7 +444,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            guidResolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         shouldThrow<IllegalStateException> {
@@ -464,7 +464,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            guidResolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         val exception = shouldThrow<IllegalStateException> {
@@ -568,7 +568,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                             outFactory = outFactory,
                             serverPort = TEST_SERVER_PORT,
                             callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
-                            resolveTimeoutMs = 600L,
+                            guidResolutionConfig = GuidResolutionConfig(resolveTimeoutMs = 600L),
                         )
 
                         shouldThrow<IllegalStateException> {

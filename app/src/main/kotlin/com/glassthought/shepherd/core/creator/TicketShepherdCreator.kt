@@ -41,6 +41,7 @@ import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUse
 import com.glassthought.shepherd.usecase.healthmonitoring.NoOpTicketFailureLearningUseCase
 import com.glassthought.shepherd.usecase.planning.DetailedPlanningUseCase
 import com.glassthought.shepherd.usecase.planning.DetailedPlanningUseCaseImpl
+import com.glassthought.shepherd.usecase.planning.PlanningFactoryContext
 import com.glassthought.shepherd.usecase.planning.ProductionPlanningPartExecutorFactory
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCaseImpl
@@ -366,12 +367,14 @@ class TicketShepherdCreatorImpl(
 
             val planningPartExecutorFactory = ProductionPlanningPartExecutorFactory.create(
                 planningPart = planningPart,
-                shepherdContext = ctx.shepherdContext,
-                outFactory = ctx.outFactory,
-                aiOutputStructure = ctx.aiOutputStructure,
-                ticketData = ctx.ticketData,
-                repoRoot = ctx.repoRoot,
-                failedToExecutePlanUseCase = ctx.failedToExecutePlanUseCase,
+                context = PlanningFactoryContext(
+                    shepherdContext = ctx.shepherdContext,
+                    outFactory = ctx.outFactory,
+                    aiOutputStructure = ctx.aiOutputStructure,
+                    ticketData = ctx.ticketData,
+                    repoRoot = ctx.repoRoot,
+                    failedToExecutePlanUseCase = ctx.failedToExecutePlanUseCase,
+                ),
             )
 
             val planFlowConverter = PlanFlowConverterImpl(
