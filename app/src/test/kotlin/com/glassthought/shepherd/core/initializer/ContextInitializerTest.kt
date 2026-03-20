@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.initializer
 
 import com.asgard.core.processRunner.ProcessRunner
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
+import com.glassthought.shepherd.core.creator.ProcessRunnerFactory
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
 import com.glassthought.shepherd.core.Constants
 import com.glassthought.shepherd.core.agent.noninteractive.FakeProcessBehavior
@@ -41,7 +42,7 @@ class ContextInitializerTest : AsgardDescribeSpec(
     }
 
     /** Process runner factory that returns a fake. */
-    val fakeProcessRunnerFactory: (com.asgard.core.out.OutFactory) -> ProcessRunner = {
+    val fakeProcessRunnerFactory = ProcessRunnerFactory {
         FakeProcessRunner(FakeProcessBehavior.Succeed(stdout = "ok"))
     }
 
