@@ -1,11 +1,11 @@
 ---
 id: nid_2vahemrcd2wdjfseqn29e86vh_E
 title: "Wire DetailedPlanningUseCase in TicketShepherdCreator (requires PlanningPartExecutorFactory)"
-status: open
+status: in_progress
 deps: [nid_l32a31tdfjoe7ld0uurtum9g6_E]
 links: []
 created_iso: 2026-03-20T00:46:08Z
-status_updated_iso: 2026-03-20T00:46:08Z
+status_updated_iso: 2026-03-20T01:42:24Z
 type: feature
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
