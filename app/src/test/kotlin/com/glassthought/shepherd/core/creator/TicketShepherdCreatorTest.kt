@@ -29,7 +29,9 @@ import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import com.glassthought.shepherd.core.workflow.WorkflowParser
 import com.glassthought.shepherd.usecase.finalcommit.FinalCommitUseCase
 import com.glassthought.shepherd.core.creator.FinalCommitUseCaseFactory
+import com.glassthought.shepherd.core.state.CurrentStatePersistence
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
+import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCase
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdater
 import io.kotest.assertions.throwables.shouldThrow
@@ -480,6 +482,41 @@ class TicketShepherdCreatorTest : AsgardDescribeSpec(
                 it("THEN workflow parser receives the correct workflow name") {
                     creator.create(shepherdContext, Path.of("/tmp/ticket.md"), "my-workflow")
                     parser.parsedWorkflowName shouldBe "my-workflow"
+                }
+            }
+        }
+
+        // ── wireDetailedPlanningUseCase: fail-fast stub for null planningParts ──
+
+        describe("GIVEN a straightforward workflow with no planningParts") {
+            val tempDir = Files.createTempDirectory("fail-fast-stub-test")
+            val aiOutputStructure = com.glassthought.shepherd.core.filestructure.AiOutputStructure(
+                tempDir, "test-branch",
+            )
+            val currentState = com.glassthought.shepherd.core.state.CurrentState(
+                parts = mutableListOf(),
+            )
+            val ctx = SetupPlanUseCaseContext(
+                workflowDefinition = STRAIGHTFORWARD_WORKFLOW,
+                outFactory = com.asgard.core.out.impl.NoOpOutFactory(),
+                shepherdContext = shepherdContext,
+                aiOutputStructure = aiOutputStructure,
+                currentState = currentState,
+                currentStatePersistence = CurrentStatePersistence { },
+                ticketData = VALID_TICKET_DATA,
+                failedToExecutePlanUseCase = FailedToExecutePlanUseCase {
+                    error("should not be called")
+                },
+                repoRoot = tempDir,
+            )
+
+            describe("WHEN wireDetailedPlanningUseCase is called and the result is invoked") {
+                it("THEN throws IllegalStateException with bug message") {
+                    val useCase = TicketShepherdCreatorImpl.wireDetailedPlanningUseCase(ctx)
+                    val exception = shouldThrow<IllegalStateException> {
+                        useCase.execute()
+                    }
+                    exception.message shouldContain "bug"
                 }
             }
         }

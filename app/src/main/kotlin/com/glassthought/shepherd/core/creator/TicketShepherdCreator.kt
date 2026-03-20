@@ -371,6 +371,7 @@ class TicketShepherdCreatorImpl(
                 aiOutputStructure = ctx.aiOutputStructure,
                 ticketData = ctx.ticketData,
                 repoRoot = ctx.repoRoot,
+                failedToExecutePlanUseCase = ctx.failedToExecutePlanUseCase,
             )
 
             val planFlowConverter = PlanFlowConverterImpl(
