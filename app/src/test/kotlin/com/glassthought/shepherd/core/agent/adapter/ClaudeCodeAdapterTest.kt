@@ -80,6 +80,10 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                 it("THEN command contains the bootstrap message as a positional argument") {
                     command shouldContain bootstrapMessage
                 }
+
+                it("THEN command contains [HARNESS_GUID: {guid}] appended to bootstrap message") {
+                    command shouldContain "[HARNESS_GUID: ${testGuid.value}]"
+                }
             }
         }
 
