@@ -89,12 +89,14 @@ fun interface ContextInitializer {
     )
 
     /**
-     * Sentinel values for integration test wiring. These are never actually used because
-     * [ServerPortInjectingAdapter] replaces them in the generated command. They exist only
+     * Sentinel values for integration test wiring. [ServerPortInjectingAdapter] replaces these
+     * with real dynamically-assigned values in the generated command. They exist only
      * to avoid requiring `TICKET_SHEPHERD_SERVER_PORT` env var during integ test initialization.
+     *
+     * Visibility: `internal` so [ServerPortInjectingAdapter] can reference them for replacement.
      */
-    private const val INTEG_TEST_SENTINEL_PORT = 0
-    private const val INTEG_TEST_SENTINEL_SCRIPTS_DIR = "/unused-integ-test-sentinel"
+    internal const val INTEG_TEST_SENTINEL_PORT = 0
+    internal const val INTEG_TEST_SENTINEL_SCRIPTS_DIR = "/unused-integ-test-sentinel"
   }
 }
 
@@ -247,6 +249,9 @@ class ContextInitializerImpl(
     }
 
     targetFile.setExecutable(true)
+    // Cleanup on JVM exit: delete file first, then directory (order matters).
+    targetFile.deleteOnExit()
+    tempDir.toFile().deleteOnExit()
 
     return tempDir.toAbsolutePath().toString()
   }
