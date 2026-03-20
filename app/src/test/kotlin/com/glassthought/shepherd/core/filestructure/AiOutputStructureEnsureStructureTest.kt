@@ -15,7 +15,7 @@ class AiOutputStructureEnsureStructureTest : AsgardDescribeSpec({
     fun subPart(name: String) = SubPart(
         name = name,
         role = "DOER",
-        agentType = "ClaudeCode",
+        agentType = "CLAUDE_CODE",
         model = "sonnet",
     )
 

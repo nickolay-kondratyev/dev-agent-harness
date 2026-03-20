@@ -53,7 +53,7 @@ class PlannerInstructionsKeywordTest : AsgardDescribeSpec({
             }
 
             it("THEN contains agent types and models section") {
-                text shouldContain "ClaudeCode"
+                text shouldContain "CLAUDE_CODE"
             }
 
             it("THEN contains plan format instructions") {

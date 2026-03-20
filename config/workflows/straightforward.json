@@ -6,8 +6,8 @@
       "phase": "execution",
       "description": "Implement and review",
       "subParts": [
-        { "name": "impl", "role": "IMPLEMENTATION_WITH_SELF_PLAN", "agentType": "ClaudeCode", "model": "sonnet" },
-        { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "ClaudeCode", "model": "sonnet",
+        { "name": "impl", "role": "IMPLEMENTATION_WITH_SELF_PLAN", "agentType": "CLAUDE_CODE", "model": "sonnet" },
+        { "name": "review", "role": "IMPLEMENTATION_REVIEWER", "agentType": "CLAUDE_CODE", "model": "sonnet",
           "iteration": { "max": 4 } }
       ]
     }

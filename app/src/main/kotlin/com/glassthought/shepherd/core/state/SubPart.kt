@@ -8,7 +8,7 @@ package com.glassthought.shepherd.core.state
  *
  * @property name Unique name within the parent part (e.g., "impl", "review").
  * @property role The agent role to assign (e.g., "UI_DESIGNER").
- * @property agentType The type of agent to spawn (e.g., "ClaudeCode").
+ * @property agentType The type of agent to spawn (e.g., "CLAUDE_CODE").
  * @property model The model to use (e.g., "sonnet").
  * @property status Current lifecycle status. Null in plan-flow, populated at runtime.
  * @property iteration Iteration configuration for reviewer sub-parts. Null for doers.
