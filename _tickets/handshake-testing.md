@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T15:14:20Z
 id: nid_i9fypu8dgj0bwb2bw9hast7e5_E
 title: "handshake testing"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T14:43:06Z
-status_updated_iso: 2026-03-20T14:49:31Z
+status_updated_iso: 2026-03-20T15:14:20Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
