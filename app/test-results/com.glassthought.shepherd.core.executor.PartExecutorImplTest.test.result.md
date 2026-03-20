@@ -69,6 +69,16 @@ skipped: 0
 - (9) GIVEN a doer-only executor
   - WHEN execute is called
     - [PASS] THEN spawnAgent is called with the doer's SpawnAgentConfig
+- GIVEN PartExecutorImpl currentIteration starting value
+  - GIVEN a doer+reviewer executor (reviewer path)
+    - WHEN the doer completes on the first cycle
+      - [PASS] THEN CommitMessageBuilder produces iteration suffix '(iteration 1/4)'
+      - [PASS] THEN the first doer SubPartDoneContext has currentIteration = 1
+      - [PASS] THEN the first doer SubPartDoneContext has hasReviewer = true
+  - GIVEN a doer-only executor (no reviewer)
+    - WHEN the doer completes
+      - [PASS] THEN SubPartDoneContext has currentIteration = 0
+      - [PASS] THEN SubPartDoneContext has hasReviewer = false
 - GIVEN a doer+reviewer executor
   - WHEN doer signals COMPLETED and reviewer signals PASS
     - [PASS] THEN the result is PartResult.Completed

@@ -22,6 +22,7 @@ import com.glassthought.shepherd.core.data.HarnessTimeoutConfig
 import com.glassthought.shepherd.core.state.IterationConfig
 import com.glassthought.shepherd.core.state.PartResult
 import com.glassthought.shepherd.core.state.SubPartRole
+import com.glassthought.shepherd.core.supporting.git.CommitMessageBuilder
 import com.glassthought.shepherd.core.supporting.git.GitCommitStrategy
 import com.glassthought.shepherd.core.supporting.git.SubPartDoneContext
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToConvergeUseCase
@@ -1731,6 +1732,93 @@ class PartExecutorImplTest : AsgardDescribeSpec(
 
                 Files.exists(pendingDir.resolve("optional__naming.md")) shouldBe false
                 Files.exists(addressedDir.resolve("optional__naming.md")) shouldBe true
+            }
+        }
+    }
+
+    // ── currentIteration starting value based on reviewerConfig presence ──
+
+    describe("GIVEN PartExecutorImpl currentIteration starting value") {
+
+        describe("GIVEN a doer+reviewer executor (reviewer path)") {
+            describe("WHEN the doer completes on the first cycle") {
+
+                val doerPublicMd = createPublicMdFile("doer output")
+                val reviewerPublicMd = createPublicMdFile("reviewer output")
+                val doerConfig = buildDoerConfig(doerPublicMd)
+                val reviewerCfg = buildReviewerConfig(reviewerPublicMd)
+
+                val doerHandle = buildHandle("doer")
+                val reviewerHandle = buildHandle("reviewer", sessionId = "session-2")
+
+                val signalQueue = ArrayDeque(
+                    listOf(
+                        AgentSignal.Done(DoneResult.COMPLETED),  // doer
+                        AgentSignal.Done(DoneResult.PASS),       // reviewer
+                    )
+                )
+
+                val facade = FakeAgentFacade()
+                val spawnQueue = ArrayDeque(listOf(doerHandle, reviewerHandle))
+                facade.onSpawn { spawnQueue.removeFirst() }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> signalQueue.removeFirst() }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val gitStrategy = RecordingGitCommitStrategy()
+                val executor = buildExecutor(
+                    doerConfig,
+                    reviewerConfig = reviewerCfg,
+                    facade = facade,
+                    gitCommitStrategy = gitStrategy,
+                )
+
+                it("THEN the first doer SubPartDoneContext has currentIteration = 1") {
+                    executor.execute()
+                    gitStrategy.calls.first().currentIteration shouldBe 1
+                }
+
+                it("THEN the first doer SubPartDoneContext has hasReviewer = true") {
+                    gitStrategy.calls.first().hasReviewer shouldBe true
+                }
+
+                it("THEN CommitMessageBuilder produces iteration suffix '(iteration 1/4)'") {
+                    val ctx = gitStrategy.calls.first()
+                    val message = CommitMessageBuilder.build(
+                        partName = ctx.partName,
+                        subPartName = ctx.subPartName,
+                        result = ctx.result,
+                        hasReviewer = ctx.hasReviewer,
+                        currentIteration = ctx.currentIteration,
+                        maxIterations = ctx.maxIterations,
+                    )
+                    message shouldContain "(iteration 1/"
+                }
+            }
+        }
+
+        describe("GIVEN a doer-only executor (no reviewer)") {
+            describe("WHEN the doer completes") {
+
+                val publicMd = createPublicMdFile()
+                val doerConfig = buildDoerConfig(publicMd)
+                val doerHandle = buildHandle("doer")
+
+                val facade = FakeAgentFacade()
+                facade.onSpawn { doerHandle }
+                facade.onSendPayloadAndAwaitSignal { _, _ -> AgentSignal.Done(DoneResult.COMPLETED) }
+                facade.onReadContextWindowState { ContextWindowState(remainingPercentage = 80) }
+
+                val gitStrategy = RecordingGitCommitStrategy()
+                val executor = buildExecutor(doerConfig, facade = facade, gitCommitStrategy = gitStrategy)
+
+                it("THEN SubPartDoneContext has currentIteration = 0") {
+                    executor.execute()
+                    gitStrategy.calls.first().currentIteration shouldBe 0
+                }
+
+                it("THEN SubPartDoneContext has hasReviewer = false") {
+                    gitStrategy.calls.first().hasReviewer shouldBe false
+                }
             }
         }
     }
