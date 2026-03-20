@@ -1,12 +1,12 @@
 ---
-closed_iso: 2026-03-20T01:26:58Z
+closed_iso: 2026-03-20T01:31:13Z
 id: nid_ao50d028h0kp9vypejprl6iq7_E
 title: "Extract shared git staging/commit helper to DRY up FinalCommitUseCaseImpl and CommitPerSubPart"
 status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T01:06:25Z
-status_updated_iso: 2026-03-20T01:26:58Z
+status_updated_iso: 2026-03-20T01:31:13Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
