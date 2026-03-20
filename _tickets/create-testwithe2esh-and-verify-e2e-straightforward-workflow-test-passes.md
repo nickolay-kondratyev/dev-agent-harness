@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T18:17:46Z
 id: nid_maa8lefzvngmu40roa4z23whd_E
 title: "Create test_with_e2e.sh and verify E2E straightforward workflow test passes"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T16:23:44Z
-status_updated_iso: 2026-03-20T16:34:52Z
+status_updated_iso: 2026-03-20T18:17:46Z
 type: task
 priority: 1
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
