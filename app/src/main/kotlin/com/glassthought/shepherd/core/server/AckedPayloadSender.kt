@@ -5,6 +5,7 @@ import com.asgard.core.data.value.Val
 import com.asgard.core.out.OutFactory
 import com.glassthought.shepherd.core.ShepherdValType
 import com.glassthought.shepherd.core.agent.TmuxAgentSession
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.context.ProtocolVocabulary
 import com.glassthought.shepherd.core.session.SessionEntry
 import kotlinx.coroutines.delay
@@ -47,6 +48,8 @@ fun interface AckedPayloadSender {
  * [payloadCounter], wraps payload in XML per the spec, sets [SessionEntry.pendingPayloadAck]
  * before sending, sends via TMUX `send-keys`, and polls until ACK arrives or timeout.
  *
+ * @param callbackScriptsDir Validated callback scripts directory — provides the full absolute path
+ *   to `callback_shepherd.signal.sh` used in the ACK command embedded in payload XML.
  * @param payloadCounter Per-session [AtomicInteger] counter for [PayloadId] generation.
  *   Starts at 1, incremented for each payload sent. Owned by the caller (typically
  *   per-session in the facade).
@@ -56,6 +59,7 @@ fun interface AckedPayloadSender {
  */
 class AckedPayloadSenderImpl(
     outFactory: OutFactory,
+    private val callbackScriptsDir: CallbackScriptsDir,
     private val payloadCounter: AtomicInteger,
     private val ackTimeout: Duration = ACK_TIMEOUT_DEFAULT,
     private val pollInterval: Duration = POLL_INTERVAL_DEFAULT,
@@ -71,7 +75,7 @@ class AckedPayloadSenderImpl(
     ) {
         val handshakeGuid = tmuxSession.resumableAgentSessionId.handshakeGuid
         val payloadId = PayloadId.generate(handshakeGuid, payloadCounter)
-        val wrappedPayload = wrapPayload(payloadId, payloadContent)
+        val wrappedPayload = wrapPayload(payloadId, payloadContent, callbackScriptsDir.signalScriptPath)
 
         for (attempt in 1..maxAttempts) {
             out.info(
@@ -130,13 +134,17 @@ class AckedPayloadSenderImpl(
         /**
          * Wraps [payloadContent] in the Payload Delivery ACK XML format.
          *
+         * @param callbackSignalScriptPath Full absolute path to the signal callback script
+         *   (e.g., `/tmp/shepherd-callback-scripts-XXX/callback_shepherd.signal.sh`).
+         *   Embedded in the `MUST_ACK_BEFORE_PROCEEDING` attribute so the agent can execute
+         *   the ACK command without PATH resolution.
+         *
          * Visible for testing.
          */
-        fun wrapPayload(payloadId: PayloadId, payloadContent: String): String {
+        fun wrapPayload(payloadId: PayloadId, payloadContent: String, callbackSignalScriptPath: String): String {
             val tag = ProtocolVocabulary.PAYLOAD_ACK_TAG
-            val script = ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
             val signal = ProtocolVocabulary.Signal.ACK_PAYLOAD
-            val ackCommand = "$script $signal $payloadId"
+            val ackCommand = "$callbackSignalScriptPath $signal $payloadId"
 
             return "<$tag payload_id=\"$payloadId\" MUST_ACK_BEFORE_PROCEEDING=\"$ackCommand\">\n" +
                 "$payloadContent\n" +

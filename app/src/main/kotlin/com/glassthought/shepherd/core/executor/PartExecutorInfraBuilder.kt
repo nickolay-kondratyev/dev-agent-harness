@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.executor
 import com.asgard.core.out.OutFactory
 import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.Constants
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.contextwindow.ClaudeCodeContextWindowStateReader
 import com.glassthought.shepherd.core.agent.facade.AgentFacadeImpl
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleCatalogLoader
@@ -83,6 +84,7 @@ class PartExecutorInfraBuilder private constructor() {
 
             val ackedPayloadSender = AckedPayloadSenderImpl(
                 outFactory = outFactory,
+                callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
                 payloadCounter = AtomicInteger(0),
             )
 

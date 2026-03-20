@@ -109,6 +109,7 @@ class AgentFacadeImplIntegTest : SharedContextDescribeSpec({
             harnessTimeoutConfig = integTimeoutConfig,
             ackedPayloadSender = AckedPayloadSenderImpl(
                 outFactory = outFactory,
+                callbackScriptsDir = scriptsDir,
                 payloadCounter = AtomicInteger(1),
                 ackTimeout = 2.minutes,
             ),

@@ -2,7 +2,9 @@ package com.glassthought.shepherd.core.executor
 
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
+import com.glassthought.shepherd.core.context.ContextTestFixtures
 import com.glassthought.shepherd.core.data.AgentType
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import com.glassthought.shepherd.core.state.Part
@@ -99,6 +101,7 @@ private fun createBuilder(
     roleDefinitions = roleDefinitions,
     ticketContent = TICKET_CONTENT,
     planMdPath = planMdPath,
+    callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
 )
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -147,8 +150,8 @@ class SubPartConfigBuilderTest : AsgardDescribeSpec(
                     config.systemPromptPath shouldBe DOER_ROLE_DEFINITION.filePath
                 }
 
-                it("THEN bootstrapMessage instructs agent to call started signal") {
-                    config.bootstrapMessage shouldContain "callback_shepherd.signal.sh started"
+                it("THEN bootstrapMessage instructs agent to call started signal with full path") {
+                    config.bootstrapMessage shouldContain "${ContextTestFixtures.TEST_SIGNAL_SCRIPT_PATH} started"
                 }
 
                 it("THEN roleDefinition matches the resolved role") {

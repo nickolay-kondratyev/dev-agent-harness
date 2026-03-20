@@ -77,6 +77,7 @@ class ProductionPartExecutorFactoryCreator(
             roleDefinitions = roleDefinitions,
             ticketContent = context.ticketData.description,
             planMdPath = context.planMdPath,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
         )
 
         val deps = PartExecutorDeps(

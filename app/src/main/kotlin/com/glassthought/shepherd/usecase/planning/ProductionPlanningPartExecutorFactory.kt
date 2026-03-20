@@ -145,6 +145,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 roleDefinitions = roleDefinitions,
                 ticketContent = context.ticketData.description,
                 planMdPath = null, // WHY: Planning agents produce the plan — they don't read an existing plan.
+                callbackScriptsDir = context.shepherdContext.infra.callbackScriptsDir,
             )
 
             val deps = PartExecutorDeps(

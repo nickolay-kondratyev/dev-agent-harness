@@ -61,6 +61,8 @@ private fun testConfigBuilder(): SubPartConfigBuilder = SubPartConfigBuilder(
     roleDefinitions = ROLES,
     ticketContent = "Test ticket",
     planMdPath = null,
+    callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+        .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
 )
 
 // ── Tests ──────────────────────────────────────────────────────────────

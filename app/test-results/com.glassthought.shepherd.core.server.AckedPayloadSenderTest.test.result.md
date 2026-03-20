@@ -30,6 +30,6 @@ skipped: 0
 - GIVEN wrapPayload with a PayloadId and content
   - [PASS] THEN contains the payload content
   - [PASS] THEN ends with the closing XML tag
-  - [PASS] THEN matches the exact spec format
-  - [PASS] THEN opening tag contains MUST_ACK_BEFORE_PROCEEDING with exact ack command
+  - [PASS] THEN matches the exact spec format with full script path
+  - [PASS] THEN opening tag contains MUST_ACK_BEFORE_PROCEEDING with full path ack command
   - [PASS] THEN starts with opening XML tag containing payload_id attribute

@@ -92,6 +92,8 @@ private fun buildFactory(
         roleDefinitions = roleDefinitions,
         ticketContent = "Test ticket content",
         planMdPath = null,
+        callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+            .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
     )
     return ProductionPlanningPartExecutorFactory(
         planningPart = planningPart,
