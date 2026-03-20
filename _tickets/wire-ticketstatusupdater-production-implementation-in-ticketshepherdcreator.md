@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T01:06:32Z
 id: nid_vrghoub55m7ypcua36lj437hg_E
 title: "Wire TicketStatusUpdater production implementation in TicketShepherdCreator"
-status: in_progress
+status: closed
 deps: []
 links: [nid_ygnxc2gdnpjb8niouyg794r1g_E]
 created_iso: 2026-03-20T00:46:34Z
-status_updated_iso: 2026-03-20T00:51:02Z
+status_updated_iso: 2026-03-20T01:06:32Z
 type: feature
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
