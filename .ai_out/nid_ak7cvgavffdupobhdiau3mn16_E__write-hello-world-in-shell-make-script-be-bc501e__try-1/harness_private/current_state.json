@@ -1,0 +1,24 @@
+{
+  "parts" : [ {
+    "name" : "main",
+    "phase" : "execution",
+    "description" : "Implement and review",
+    "subParts" : [ {
+      "name" : "impl",
+      "role" : "IMPLEMENTATION_WITH_SELF_PLAN",
+      "agentType" : "ClaudeCode",
+      "model" : "sonnet",
+      "status" : "NOT_STARTED"
+    }, {
+      "name" : "review",
+      "role" : "IMPLEMENTATION_REVIEWER",
+      "agentType" : "ClaudeCode",
+      "model" : "sonnet",
+      "status" : "NOT_STARTED",
+      "iteration" : {
+        "max" : 4,
+        "current" : 0
+      }
+    } ]
+  } ]
+}
