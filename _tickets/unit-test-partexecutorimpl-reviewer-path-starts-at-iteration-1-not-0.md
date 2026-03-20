@@ -1,11 +1,11 @@
 ---
 id: nid_m2si3js0u72ugb4yfamk0u74y_E
 title: "Unit test: PartExecutorImpl reviewer path starts at iteration 1 (not 0)"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T18:43:36Z
-status_updated_iso: 2026-03-20T18:43:36Z
+status_updated_iso: 2026-03-20T18:56:39Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
