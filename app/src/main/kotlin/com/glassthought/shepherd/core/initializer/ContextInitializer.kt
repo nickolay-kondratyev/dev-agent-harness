@@ -14,6 +14,7 @@ import com.glassthought.shepherd.core.agent.tmux.TmuxSessionManager
 import com.glassthought.shepherd.core.agent.tmux.util.TmuxCommandRunner
 import com.glassthought.shepherd.core.agent.adapter.AgentTypeAdapter
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.adapter.GlmConfig
 import com.glassthought.shepherd.core.initializer.data.ShepherdContext
 import com.glassthought.shepherd.core.Constants
@@ -239,8 +240,8 @@ class ContextInitializerImpl(
    * The scripts live at `src/main/resources/scripts/` relative to the `app` module.
    * At runtime (when running from the Gradle-built distribution), they are on the classpath.
    */
-  private fun resolveCallbackScriptsDir(): String {
-    if (callbackScriptsDirOverride != null) return callbackScriptsDirOverride
+  private fun resolveCallbackScriptsDir(): CallbackScriptsDir {
+    if (callbackScriptsDirOverride != null) return CallbackScriptsDir.forTest(callbackScriptsDirOverride)
 
     val scriptName = "callback_shepherd.signal.sh"
     val resourcePath = "/scripts/$scriptName"
@@ -265,7 +266,8 @@ class ContextInitializerImpl(
     targetFile.deleteOnExit()
     tempDir.toFile().deleteOnExit()
 
-    return tempDir.toAbsolutePath().toString()
+    val dirPath = tempDir.toAbsolutePath().toString()
+    return CallbackScriptsDir.validated(dirPath)
   }
 
   private fun createNonInteractiveAgentRunner(

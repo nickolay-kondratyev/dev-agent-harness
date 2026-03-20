@@ -13,7 +13,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 
 private const val TEST_SERVER_PORT = 19876
-private const val TEST_CALLBACK_SCRIPTS_DIR = "/opt/shepherd/scripts"
+private val TEST_CALLBACK_SCRIPTS_DIR = CallbackScriptsDir.forTest("/opt/shepherd/scripts")
 
 class ClaudeCodeAdapterTest : AsgardDescribeSpec({
 
@@ -74,7 +74,7 @@ class ClaudeCodeAdapterTest : AsgardDescribeSpec({
                 }
 
                 it("THEN command adds callback scripts dir to PATH") {
-                    command shouldContain "export PATH=\$PATH:$TEST_CALLBACK_SCRIPTS_DIR"
+                    command shouldContain "export PATH=\$PATH:${TEST_CALLBACK_SCRIPTS_DIR.path}"
                 }
 
                 it("THEN command contains the bootstrap message as a positional argument") {

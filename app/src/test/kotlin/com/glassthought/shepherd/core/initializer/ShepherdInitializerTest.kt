@@ -1,6 +1,7 @@
 package com.glassthought.shepherd.core.initializer
 
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.asgard.core.out.impl.NoOpOutFactory
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
@@ -165,7 +166,7 @@ private fun createTestShepherdContext(outFactory: OutFactory = NoOpOutFactory())
             claudeProjectsDir = Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
             serverPort = TEST_SERVER_PORT,
-            callbackScriptsDir = "/tmp/test-callback-scripts",
+            callbackScriptsDir = CallbackScriptsDir.forTest("/tmp/test-callback-scripts"),
         ),
     )
     val infra = Infra(
