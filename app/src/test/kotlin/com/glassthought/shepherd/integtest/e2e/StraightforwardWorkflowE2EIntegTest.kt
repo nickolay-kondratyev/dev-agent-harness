@@ -64,20 +64,26 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
             // ── Allocate dynamic server port ─────────────────────────────────────
             val serverPort = ServerSocket(0).use { it.localPort }
 
-            // ── Create temporary git repo ────────────────────────────────────────
-            val tempDir = Files.createTempDirectory("shepherd-e2e-straightforward-")
+            // ── Create temporary git repo under .tmp/ (per CLAUDE.md convention) ──
+            val dotTmpDir = projectRoot.resolve(".tmp")
+            Files.createDirectories(dotTmpDir)
+            val tempDir = Files.createTempDirectory(dotTmpDir, "e2e-straightforward-")
             val tempDirFile = tempDir.toFile()
 
             // Record tmux sessions before test for delta cleanup
             val tmuxSessionsBefore = listTmuxSessions()
 
-            fun runGitInTemp(vararg args: String): Int {
+            fun runGitInTemp(vararg args: String) {
                 val process = ProcessBuilder("git", *args)
                     .directory(tempDirFile)
                     .redirectOutput(ProcessBuilder.Redirect.DISCARD)
-                    .redirectError(ProcessBuilder.Redirect.DISCARD)
+                    .redirectError(ProcessBuilder.Redirect.PIPE)
                     .start()
-                return process.waitFor()
+                val stderr = process.errorStream.bufferedReader().readText()
+                val exitCode = process.waitFor()
+                require(exitCode == 0) {
+                    "git ${args.joinToString(" ")} failed with exit code [$exitCode]. stderr=[$stderr]"
+                }
             }
 
             // git init + configure user
@@ -175,6 +181,10 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
                 "run",
                 "--workflow", "straightforward",
                 "--ticket", ticketFile.toString(),
+                // NOTE: --iteration-max is parsed by CLI but NOT consumed downstream (DEFERRED).
+                // See ref.ap.mFo35x06vJbjMQ8m7Lh4Z.E in ShepherdInitializer.
+                // Actual iteration limit is governed by the workflow JSON
+                // (config/workflows/straightforward.json -> "iteration.max": 4).
                 "--iteration-max", "1",
             )
                 .directory(tempDirFile)
@@ -275,24 +285,24 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
         private const val E2E_TIMEOUT_MINUTES = 15L
         private const val TIMEOUT_EXIT_CODE = -1
         private const val DIAGNOSTIC_TAIL_LINES = 50
-    }
-}
 
-/**
- * Lists currently running tmux session names.
- * Returns an empty list if tmux server is not running.
- */
-private fun listTmuxSessions(): List<String> {
-    return try {
-        val process = ProcessBuilder("tmux", "list-sessions", "-F", "#{session_name}")
-            .redirectErrorStream(true)
-            .start()
-        val sessions = process.inputStream.bufferedReader().readLines()
-            .filter { it.isNotBlank() }
-        process.waitFor()
-        sessions
-    } catch (_: Exception) {
-        emptyList()
+        /**
+         * Lists currently running tmux session names.
+         * Returns an empty list if tmux server is not running.
+         */
+        fun listTmuxSessions(): List<String> {
+            return try {
+                val process = ProcessBuilder("tmux", "list-sessions", "-F", "#{session_name}")
+                    .redirectErrorStream(true)
+                    .start()
+                val sessions = process.inputStream.bufferedReader().readLines()
+                    .filter { it.isNotBlank() }
+                process.waitFor()
+                sessions
+            } catch (_: Exception) {
+                emptyList()
+            }
+        }
     }
 }
 
