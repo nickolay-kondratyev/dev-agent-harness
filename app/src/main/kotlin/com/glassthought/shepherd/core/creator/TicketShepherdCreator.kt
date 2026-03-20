@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.creator
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.out.OutFactory
+import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.TicketShepherd
 import com.glassthought.shepherd.core.TicketShepherdDeps
 import com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller
@@ -37,6 +38,7 @@ import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCaseImpl
 import com.glassthought.shepherd.usecase.planning.StraightforwardPlanUseCaseImpl
 import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdater
+import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdaterImpl
 import java.nio.file.Path
 
 /**
@@ -91,7 +93,7 @@ fun interface TicketShepherdCreator {
  * ### Deps not yet wired internally
  * - [partExecutorFactory] — requires AgentFacadeImpl + ContextForAgentProvider (ticket-scoped),
  *   which will be wired here once PartExecutorFactory production wiring is implemented.
- * - [finalCommitUseCase], [ticketStatusUpdater] — require production impls not yet available.
+ * - [finalCommitUseCase] — requires production impl not yet available.
  *
  * @param workflowParser Parses workflow JSON into [WorkflowDefinition]
  * @param ticketParser Parses ticket markdown into [TicketData]
@@ -105,7 +107,7 @@ fun interface TicketShepherdCreator {
  * @param setupPlanUseCaseFactory Creates ticket-scoped [SetupPlanUseCase]
  * @param partExecutorFactory Creates [com.glassthought.shepherd.core.executor.PartExecutor] per part
  * @param finalCommitUseCase Performs final git commit if dirty
- * @param ticketStatusUpdater Updates ticket status to "done"
+ * @param ticketStatusUpdaterFactory Creates [TicketStatusUpdater] for a given ticket ID
  * @param allSessionsKillerFactory Creates [AllSessionsKiller] from [ShepherdContext]
  */
 @Suppress("LongParameterList")
@@ -138,9 +140,15 @@ class TicketShepherdCreatorImpl(
     private val finalCommitUseCase: FinalCommitUseCase = FinalCommitUseCase {
         TODO("FinalCommitUseCase not yet wired for production")
     },
-    private val ticketStatusUpdater: TicketStatusUpdater = TicketStatusUpdater {
-        TODO("TicketStatusUpdater not yet wired for production")
-    },
+    private val ticketStatusUpdaterFactory: TicketStatusUpdaterFactory =
+        TicketStatusUpdaterFactory { ticketId, outFactory ->
+            val processRunner = ProcessRunner.standard(outFactory)
+            TicketStatusUpdaterImpl(
+                ticketId = ticketId,
+                processRunner = processRunner,
+                outFactory = outFactory,
+            )
+        },
     private val allSessionsKillerFactory: AllSessionsKillerFactory = AllSessionsKillerFactory { ctx ->
         TmuxAllSessionsKiller(
             outFactory = ctx.infra.outFactory,
@@ -217,6 +225,7 @@ class TicketShepherdCreatorImpl(
         stateResult: StateSetupResult,
     ): TicketShepherd {
         val outFactory = shepherdContext.infra.outFactory
+        val ticketStatusUpdater = ticketStatusUpdaterFactory.create(ticketData.id, outFactory)
         val allSessionsKiller = allSessionsKillerFactory.create(shepherdContext)
 
         val interruptHandler = InterruptHandlerImpl(
@@ -321,6 +330,16 @@ private data class StateSetupResult(
  */
 fun interface SetupPlanUseCaseFactory {
     fun create(workflowDefinition: WorkflowDefinition, outFactory: OutFactory): SetupPlanUseCase
+}
+
+/**
+ * Factory for creating [TicketStatusUpdater] for a specific ticket.
+ *
+ * The ticket ID is only known at [TicketShepherdCreator.create] time, so this factory
+ * defers construction until the ticket has been parsed.
+ */
+fun interface TicketStatusUpdaterFactory {
+    fun create(ticketId: String, outFactory: OutFactory): TicketStatusUpdater
 }
 
 /**
