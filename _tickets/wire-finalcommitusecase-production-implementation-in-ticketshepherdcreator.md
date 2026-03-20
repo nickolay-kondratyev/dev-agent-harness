@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T01:08:32Z
 id: nid_ygnxc2gdnpjb8niouyg794r1g_E
 title: "Wire FinalCommitUseCase production implementation in TicketShepherdCreator"
-status: in_progress
+status: closed
 deps: []
 links: [nid_vrghoub55m7ypcua36lj437hg_E]
 created_iso: 2026-03-20T00:46:22Z
-status_updated_iso: 2026-03-20T00:49:59Z
+status_updated_iso: 2026-03-20T01:08:32Z
 type: feature
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
