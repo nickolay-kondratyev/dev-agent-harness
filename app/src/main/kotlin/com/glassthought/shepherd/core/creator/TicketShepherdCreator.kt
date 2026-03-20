@@ -2,6 +2,7 @@ package com.glassthought.shepherd.core.creator
 
 import com.asgard.core.annotation.AnchorPoint
 import com.asgard.core.out.OutFactory
+import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.TicketShepherd
 import com.glassthought.shepherd.core.TicketShepherdDeps
 import com.glassthought.shepherd.core.agent.tmux.TmuxAllSessionsKiller
@@ -28,6 +29,8 @@ import com.glassthought.shepherd.core.time.Clock
 import com.glassthought.shepherd.core.time.SystemClock
 import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import com.glassthought.shepherd.core.workflow.WorkflowParser
+import com.glassthought.shepherd.core.supporting.git.GitOperationFailureUseCase
+import com.glassthought.shepherd.core.supporting.git.StandardGitIndexLockFileOperations
 import com.glassthought.shepherd.usecase.finalcommit.FinalCommitUseCase
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUseCaseImpl
@@ -91,7 +94,7 @@ fun interface TicketShepherdCreator {
  * ### Deps not yet wired internally
  * - [partExecutorFactory] — requires AgentFacadeImpl + ContextForAgentProvider (ticket-scoped),
  *   which will be wired here once PartExecutorFactory production wiring is implemented.
- * - [finalCommitUseCase], [ticketStatusUpdater] — require production impls not yet available.
+ * - [ticketStatusUpdater] — requires production impl not yet available.
  *
  * @param workflowParser Parses workflow JSON into [WorkflowDefinition]
  * @param ticketParser Parses ticket markdown into [TicketData]
@@ -104,9 +107,10 @@ fun interface TicketShepherdCreator {
  * @param processExiter Process exit abstraction for testability
  * @param setupPlanUseCaseFactory Creates ticket-scoped [SetupPlanUseCase]
  * @param partExecutorFactory Creates [com.glassthought.shepherd.core.executor.PartExecutor] per part
- * @param finalCommitUseCase Performs final git commit if dirty
+ * @param finalCommitUseCaseFactory Creates [FinalCommitUseCase] from deps available inside [wireTicketShepherd]
  * @param ticketStatusUpdater Updates ticket status to "done"
  * @param allSessionsKillerFactory Creates [AllSessionsKiller] from [ShepherdContext]
+ * @param processRunnerFactory Creates [ProcessRunner] from [OutFactory]. Default: [ProcessRunner.standard]
  */
 @Suppress("LongParameterList")
 class TicketShepherdCreatorImpl(
@@ -135,8 +139,12 @@ class TicketShepherdCreatorImpl(
     private val partExecutorFactory: PartExecutorFactory = PartExecutorFactory {
         TODO("PartExecutorFactory not yet wired for production")
     },
-    private val finalCommitUseCase: FinalCommitUseCase = FinalCommitUseCase {
-        TODO("FinalCommitUseCase not yet wired for production")
+    private val finalCommitUseCaseFactory: FinalCommitUseCaseFactory = FinalCommitUseCaseFactory { of, pr, gofu ->
+        FinalCommitUseCase.standard(
+            outFactory = of,
+            processRunner = pr,
+            gitOperationFailureUseCase = gofu,
+        )
     },
     private val ticketStatusUpdater: TicketStatusUpdater = TicketStatusUpdater {
         TODO("TicketStatusUpdater not yet wired for production")
@@ -147,6 +155,7 @@ class TicketShepherdCreatorImpl(
             tmuxCommandRunner = ctx.infra.tmux.commandRunner,
         )
     },
+    private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
     private val repoRoot: Path = Path.of(System.getProperty("user.dir")),
 ) : TicketShepherdCreator {
 
@@ -236,6 +245,19 @@ class TicketShepherdCreatorImpl(
             allSessionsKiller = allSessionsKiller,
             ticketFailureLearningUseCase = NoOpTicketFailureLearningUseCase(),
             processExiter = processExiter,
+        )
+
+        val processRunner = processRunnerFactory(outFactory)
+        val gitOperationFailureUseCase = GitOperationFailureUseCase.standard(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            failedToExecutePlanUseCase = failedToExecutePlanUseCase,
+            indexLockFileOperations = StandardGitIndexLockFileOperations(repoRoot.resolve(".git")),
+        )
+        val finalCommitUseCase = finalCommitUseCaseFactory.create(
+            outFactory = outFactory,
+            processRunner = processRunner,
+            gitOperationFailureUseCase = gitOperationFailureUseCase,
         )
 
         val deps = TicketShepherdDeps(
@@ -328,4 +350,15 @@ fun interface SetupPlanUseCaseFactory {
  */
 fun interface AllSessionsKillerFactory {
     fun create(shepherdContext: ShepherdContext): AllSessionsKiller
+}
+
+/**
+ * Factory for creating [FinalCommitUseCase] from deps available inside [TicketShepherdCreatorImpl.wireTicketShepherd].
+ */
+fun interface FinalCommitUseCaseFactory {
+    fun create(
+        outFactory: OutFactory,
+        processRunner: ProcessRunner,
+        gitOperationFailureUseCase: GitOperationFailureUseCase,
+    ): FinalCommitUseCase
 }
