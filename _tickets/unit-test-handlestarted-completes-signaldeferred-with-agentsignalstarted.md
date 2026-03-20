@@ -1,11 +1,12 @@
 ---
+closed_iso: 2026-03-20T18:56:29Z
 id: nid_9koh9x56xefgqrysza3o92f4e_E
 title: "Unit test: handleStarted() completes signalDeferred with AgentSignal.Started"
-status: in_progress
+status: closed
 deps: []
 links: []
 created_iso: 2026-03-20T18:43:18Z
-status_updated_iso: 2026-03-20T18:54:36Z
+status_updated_iso: 2026-03-20T18:56:29Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev

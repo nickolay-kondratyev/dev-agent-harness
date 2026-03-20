@@ -343,6 +343,22 @@ class ShepherdServerTest : AsgardDescribeSpec(
                 }
             }
 
+            it("THEN signalDeferred is completed with AgentSignal.Started") {
+                val (sessionsState, guid) = registerDoerSession()
+                val entry = sessionsState.lookupBlocking(guid)
+                val server = ShepherdServer(sessionsState, outFactory)
+
+                testApplication {
+                    application { server.configureApplication(this) }
+                    client.post("/callback-shepherd/signal/started") {
+                        contentType(ContentType.Application.Json)
+                        setBody("""{"handshakeGuid":"${guid.value}"}""")
+                    }
+                }
+
+                entry.signalDeferred.getCompleted() shouldBe AgentSignal.Started
+            }
+
             it("THEN lastActivityTimestamp is updated") {
                 val (sessionsState, guid) = registerDoerSessionWithOldTimestamp()
                 val entry = sessionsState.lookupBlocking(guid)

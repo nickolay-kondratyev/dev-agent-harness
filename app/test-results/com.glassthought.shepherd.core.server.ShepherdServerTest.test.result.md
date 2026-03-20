@@ -39,6 +39,7 @@ skipped: 0
   - WHEN POST /signal/started
     - [PASS] THEN lastActivityTimestamp is updated
     - [PASS] THEN returns 200
+    - [PASS] THEN signalDeferred is completed with AgentSignal.Started
 - GIVEN a registered session with empty question queue
   - WHEN POST /signal/user-question
     - [PASS] THEN question is appended to questionQueue

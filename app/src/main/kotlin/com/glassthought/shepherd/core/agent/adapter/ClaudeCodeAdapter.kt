@@ -20,17 +20,6 @@ import kotlin.io.path.readText
 import kotlin.time.Duration.Companion.milliseconds
 
 /**
- * Polling configuration for GUID resolution via [FilesystemGuidScanner].
- *
- * @param resolveTimeoutMs Total polling window in milliseconds (default 45 seconds).
- * @param pollIntervalMs Delay between poll attempts in milliseconds (default 500 ms).
- */
-data class GuidResolutionConfig(
-    val resolveTimeoutMs: Long = 45_000L,
-    val pollIntervalMs: Long = 500L,
-)
-
-/**
  * Filesystem-backed [GuidScanner]: walks [claudeProjectsDir] recursively
  * for `*.jsonl` files and returns those containing the GUID string.
  */
@@ -50,6 +39,19 @@ private class FilesystemGuidScanner(
             }
     }
 }
+
+/**
+ * Configuration for GUID resolution polling in [ClaudeCodeAdapter].
+ *
+ * @param resolveTimeoutMs Total polling window in milliseconds. Default: 45 seconds.
+ * @param pollIntervalMs Delay between poll attempts in milliseconds. Default: 500 ms.
+ * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
+ */
+data class GuidResolutionConfig(
+    val resolveTimeoutMs: Long = 45_000L,
+    val pollIntervalMs: Long = 500L,
+    val dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+)
 
 /**
  * Claude Code implementation of [AgentTypeAdapter].
@@ -223,9 +225,8 @@ class ClaudeCodeAdapter internal constructor(
          * @param outFactory Factory for structured logging.
          * @param serverPort The Shepherd HTTP server port to export into each agent's tmux session.
          * @param callbackScriptsDir Absolute path to directory containing callback scripts, added to PATH.
-         * @param glmConfig Optional GLM config to redirect agents to Z.AI instead of Anthropic.
-         * @param resolutionConfig Polling timing config for GUID resolution (default: [GuidResolutionConfig]).
-         * @param dispatcherProvider Coroutine dispatcher provider for IO operations.
+         * @param glmConfig Optional GLM config to redirect agent to a GLM endpoint.
+         * @param guidResolutionConfig Tuning for GUID polling (timeout, interval, dispatcher). Default: [GuidResolutionConfig].
          */
         fun create(
             claudeProjectsDir: Path,
@@ -233,16 +234,15 @@ class ClaudeCodeAdapter internal constructor(
             serverPort: Int,
             callbackScriptsDir: String,
             glmConfig: GlmConfig? = null,
-            resolutionConfig: GuidResolutionConfig = GuidResolutionConfig(),
-            dispatcherProvider: DispatcherProvider = DispatcherProvider.standard(),
+            guidResolutionConfig: GuidResolutionConfig = GuidResolutionConfig(),
         ): ClaudeCodeAdapter = ClaudeCodeAdapter(
-            guidScanner = FilesystemGuidScanner(claudeProjectsDir, dispatcherProvider),
+            guidScanner = FilesystemGuidScanner(claudeProjectsDir, guidResolutionConfig.dispatcherProvider),
             outFactory = outFactory,
             serverPort = serverPort,
             callbackScriptsDir = callbackScriptsDir,
             glmConfig = glmConfig,
-            resolveTimeoutMs = resolutionConfig.resolveTimeoutMs,
-            pollIntervalMs = resolutionConfig.pollIntervalMs,
+            resolveTimeoutMs = guidResolutionConfig.resolveTimeoutMs,
+            pollIntervalMs = guidResolutionConfig.pollIntervalMs,
         )
 
         /**
