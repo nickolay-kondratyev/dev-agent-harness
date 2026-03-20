@@ -6,6 +6,7 @@ import com.glassthought.shepherd.core.agent.adapter.BuildStartCommandParams
 import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.adapter.ClaudeCodeAdapter
 import com.glassthought.shepherd.core.agent.adapter.GuidScanner
+import com.glassthought.shepherd.core.agent.data.TmuxStartCommand
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.tmux.TmuxSession
 import io.kotest.common.ExperimentalKotest
@@ -98,7 +99,7 @@ class TmuxPathIntegTest : SharedContextDescribeSpec({
                 val sessionName = "path-integ-${System.currentTimeMillis()}"
                 val session = sessionManager.createSession(
                     sessionName,
-                    com.glassthought.shepherd.core.agent.data.TmuxStartCommand(modifiedCommand),
+                    TmuxStartCommand(modifiedCommand),
                 )
                 createdSessions.add(session)
 
