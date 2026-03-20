@@ -200,7 +200,7 @@ private fun createCreator(
         setupPlanUseCaseFactory = SetupPlanUseCaseFactory { _, _ -> SetupPlanUseCase { emptyList() } },
         partExecutorFactory = PartExecutorFactory { PartExecutor { PartResult.Completed } },
         finalCommitUseCase = FinalCommitUseCase { /* no-op for tests */ },
-        ticketStatusUpdater = TicketStatusUpdater { /* no-op for tests */ },
+        ticketStatusUpdaterFactory = TicketStatusUpdaterFactory { _, _ -> TicketStatusUpdater { /* no-op */ } },
         allSessionsKillerFactory = AllSessionsKillerFactory { _ -> FakeAllSessionsKiller() },
         repoRoot = repoRoot,
     )

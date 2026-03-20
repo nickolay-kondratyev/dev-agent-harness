@@ -150,4 +150,11 @@ object ShepherdValType {
         userSpecificity = UserSpecificity.USER_AGNOSTIC,
         expectedValClass = String::class,
     )
+
+    /** Ticket identifier (from ticket frontmatter `id` field). */
+    val TICKET_ID = ValTypeV2(
+        typeName = "TICKET_ID",
+        userSpecificity = UserSpecificity.USER_AGNOSTIC,
+        expectedValClass = String::class,
+    )
 }
