@@ -153,9 +153,20 @@ class StraightforwardWorkflowE2EIntegTest : AsgardDescribeSpec(
 
             // ── Build environment for subprocess ─────────────────────────────────
             val subprocessEnv = buildMap {
-                // Inherit PATH so git, tmux, claude are available
-                put("PATH", System.getenv("PATH") ?: "/usr/bin:/bin")
+                // Inherit PATH so git, tmux, claude are available.
+                // WHY append ticket script directory: The harness calls `ticket close <id>` via
+                // ProcessRunner (subprocess exec, not shell function). The `ticket` CLI lives at
+                // $THORG_ROOT/submodules/note-ticket/ticket and is normally exposed via a shell
+                // function, which ProcessBuilder cannot resolve. Adding its directory to PATH
+                // makes the script directly executable.
+                val basePath = System.getenv("PATH") ?: "/usr/bin:/bin"
+                val thorgRoot = System.getenv("THORG_ROOT")
+                val ticketDir = thorgRoot?.let { "$it/submodules/note-ticket" }
+                put("PATH", if (ticketDir != null) "$basePath:$ticketDir" else basePath)
                 put("HOME", System.getenv("HOME") ?: "/root")
+
+                // THORG_ROOT may be needed by tools that reference it
+                thorgRoot?.let { put("THORG_ROOT", it) }
 
                 // Required by EnvironmentValidator (ref.ap.A8WqG9oplNTpsW7YqoIyX.E)
                 put("HOST_USERNAME", hostUsername)
