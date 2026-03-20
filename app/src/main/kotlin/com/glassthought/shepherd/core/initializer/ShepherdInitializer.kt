@@ -96,11 +96,13 @@ class ShepherdInitializer(
         /**
          * Reads the server port from the [Constants.AGENT_COMM.SERVER_PORT_ENV_VAR] env var.
          *
+         * @param envProvider supplier for env var values; defaults to [System.getenv].
+         *   Injectable for testing to avoid ambient shell state.
          * @throws IllegalStateException if the env var is missing or not a valid port number.
          */
-        fun readServerPortFromEnv(): Int {
+        fun readServerPortFromEnv(envProvider: (String) -> String? = System::getenv): Int {
             val envVar = Constants.AGENT_COMM.SERVER_PORT_ENV_VAR
-            val portStr = System.getenv(envVar)
+            val portStr = envProvider(envVar)
                 ?: error("Environment variable [$envVar] is not set. " +
                     "It must specify the port for the embedded HTTP server.")
 
