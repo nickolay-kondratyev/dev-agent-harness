@@ -14,6 +14,9 @@ skipped: 0
 - GIVEN a straightforward workflow
   - WHEN create() is called
     - [PASS] THEN returns TicketShepherd with tryNumber set
+- GIVEN a straightforward workflow with no planningParts
+  - WHEN wireDetailedPlanningUseCase is called and the result is invoked
+    - [PASS] THEN throws IllegalStateException with bug message
 - GIVEN a straightforward workflow with valid ticket
   - WHEN create() is called
     - [PASS] THEN creates the execution sub-part comm directories
