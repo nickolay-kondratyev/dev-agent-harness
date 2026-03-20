@@ -1,5 +1,6 @@
 package com.glassthought.shepherd.usecase.planning
 
+import com.asgard.core.out.OutFactory
 import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.context.ContextForAgentProvider
 import com.glassthought.shepherd.core.executor.PartExecutor
@@ -21,17 +22,18 @@ import com.glassthought.shepherd.usecase.healthmonitoring.FailedToExecutePlanUse
 import java.nio.file.Path
 
 /**
- * Test-override knobs for [ProductionPlanningPartExecutorFactory.create].
+ * Ticket-scoped context required to build a [ProductionPlanningPartExecutorFactory].
  *
- * Both fields default to production values; tests inject alternatives to avoid real clocks
- * and real env reads.
- *
- * @param clock Wall-clock abstraction. Default: [SystemClock].
- * @param envProvider Environment variable reader. Default: [System.getenv].
+ * Groups the six per-ticket dependencies so [ProductionPlanningPartExecutorFactory.create]
+ * stays within the parameter-count limit.
  */
-data class PartExecutorOverrides(
-    val clock: Clock = SystemClock(),
-    val envProvider: (String) -> String? = System::getenv,
+data class PlanningFactoryContext(
+    val shepherdContext: ShepherdContext,
+    val outFactory: OutFactory,
+    val aiOutputStructure: AiOutputStructure,
+    val ticketData: TicketData,
+    val repoRoot: Path,
+    val failedToExecutePlanUseCase: FailedToExecutePlanUseCase,
 )
 
 /**
@@ -93,66 +95,54 @@ class ProductionPlanningPartExecutorFactory internal constructor(
          * Suspend factory method that builds all infrastructure and returns a ready-to-use
          * [ProductionPlanningPartExecutorFactory].
          *
-         * `outFactory` is taken from [ShepherdContext.infra] — it is always the same instance
-         * as the one held by the context, so no separate parameter is needed.
-         *
          * @param planningPart The planning [Part] from WorkflowDefinition.planningParts.
-         * @param shepherdContext Shared infrastructure (tmux, logging, agent runner).
-         * @param aiOutputStructure Ticket-scoped path resolver.
-         * @param ticketData Parsed ticket data (description used in agent context).
-         * @param repoRoot Repository root path for git operations.
-         * @param failedToExecutePlanUseCase Failure handler for git operation failures.
-         * @param overrides Test-override knobs for clock and env provider. Default: [PartExecutorOverrides].
+         * @param context Ticket-scoped dependencies bundled in [PlanningFactoryContext].
+         * @param clock Wall-clock abstraction. Default: [SystemClock].
+         * @param envProvider Environment variable reader. Default: [System.getenv].
          */
-        @Suppress("LongParameterList")
         suspend fun create(
             planningPart: Part,
-            shepherdContext: ShepherdContext,
-            aiOutputStructure: AiOutputStructure,
-            ticketData: TicketData,
-            repoRoot: Path,
-            failedToExecutePlanUseCase: FailedToExecutePlanUseCase,
-            overrides: PartExecutorOverrides = PartExecutorOverrides(),
+            context: PlanningFactoryContext,
+            clock: Clock = SystemClock(),
+            envProvider: (String) -> String? = System::getenv,
         ): ProductionPlanningPartExecutorFactory {
-            val outFactory = shepherdContext.infra.outFactory
-
             val roleDefinitions = PartExecutorInfraBuilder.loadRoleDefinitions(
-                outFactory = outFactory,
-                envProvider = overrides.envProvider,
+                outFactory = context.outFactory,
+                envProvider = envProvider,
             )
 
             val agentFacade = PartExecutorInfraBuilder.buildAgentFacade(
-                shepherdContext = shepherdContext,
-                outFactory = outFactory,
-                clock = overrides.clock,
-                sessionsState = shepherdContext.sessionsState,
+                shepherdContext = context.shepherdContext,
+                outFactory = context.outFactory,
+                clock = clock,
+                sessionsState = context.shepherdContext.sessionsState,
             )
 
             val contextForAgentProvider = ContextForAgentProvider.standard(
-                outFactory = outFactory,
-                aiOutputStructure = aiOutputStructure,
+                outFactory = context.outFactory,
+                aiOutputStructure = context.aiOutputStructure,
             )
 
-            val processRunner = ProcessRunner.standard(outFactory)
+            val processRunner = ProcessRunner.standard(context.outFactory)
 
             val gitCommitStrategy = PartExecutorInfraBuilder.buildGitCommitStrategy(
-                outFactory = outFactory,
+                outFactory = context.outFactory,
                 processRunner = processRunner,
-                repoRoot = repoRoot,
-                failedToExecutePlanUseCase = failedToExecutePlanUseCase,
-                envProvider = overrides.envProvider,
+                repoRoot = context.repoRoot,
+                failedToExecutePlanUseCase = context.failedToExecutePlanUseCase,
+                envProvider = envProvider,
             )
 
             val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(
                 consoleOutput = com.glassthought.shepherd.core.infra.DefaultConsoleOutput(),
                 userInputReader = DefaultUserInputReader(),
-                config = shepherdContext.timeoutConfig,
+                config = context.shepherdContext.timeoutConfig,
             )
 
             val subPartConfigBuilder = SubPartConfigBuilder(
-                aiOutputStructure = aiOutputStructure,
+                aiOutputStructure = context.aiOutputStructure,
                 roleDefinitions = roleDefinitions,
-                ticketContent = ticketData.description,
+                ticketContent = context.ticketData.description,
                 planMdPath = null, // WHY: Planning agents produce the plan — they don't read an existing plan.
             )
 
@@ -161,8 +151,8 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 contextForAgentProvider = contextForAgentProvider,
                 gitCommitStrategy = gitCommitStrategy,
                 failedToConvergeUseCase = failedToConvergeUseCase,
-                outFactory = outFactory,
-                harnessTimeoutConfig = shepherdContext.timeoutConfig,
+                outFactory = context.outFactory,
+                harnessTimeoutConfig = context.shepherdContext.timeoutConfig,
             )
 
             return ProductionPlanningPartExecutorFactory(

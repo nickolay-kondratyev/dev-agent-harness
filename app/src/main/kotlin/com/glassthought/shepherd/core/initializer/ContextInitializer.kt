@@ -259,7 +259,7 @@ class ContextInitializerImpl(
     }
 
     check(targetFile.setExecutable(true)) {
-      "Failed to set executable permission on ${targetFile.absolutePath}"
+      "Failed to set executable permission on [${targetFile.absolutePath}]"
     }
     // Cleanup on JVM exit: delete file first, then directory (order matters).
     targetFile.deleteOnExit()
