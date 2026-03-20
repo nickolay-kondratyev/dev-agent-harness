@@ -5,7 +5,7 @@ failed: 0
 skipped: 0
 ---
 
-- GIVEN CallbackScriptsDir.forTest
+- GIVEN CallbackScriptsDir.unvalidated
   - WHEN called with any path string
     - [PASS] THEN returns a CallbackScriptsDir without filesystem validation
 - GIVEN CallbackScriptsDir.validated

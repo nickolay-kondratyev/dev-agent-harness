@@ -241,7 +241,7 @@ class ContextInitializerImpl(
    * At runtime (when running from the Gradle-built distribution), they are on the classpath.
    */
   private fun resolveCallbackScriptsDir(): CallbackScriptsDir {
-    if (callbackScriptsDirOverride != null) return CallbackScriptsDir.forTest(callbackScriptsDirOverride)
+    if (callbackScriptsDirOverride != null) return CallbackScriptsDir.unvalidated(callbackScriptsDirOverride)
 
     val scriptName = "callback_shepherd.signal.sh"
     val resourcePath = "/scripts/$scriptName"

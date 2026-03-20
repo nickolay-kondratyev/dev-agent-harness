@@ -166,7 +166,7 @@ private fun createTestShepherdContext(outFactory: OutFactory = NoOpOutFactory())
             claudeProjectsDir = Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
             serverPort = TEST_SERVER_PORT,
-            callbackScriptsDir = CallbackScriptsDir.forTest("/tmp/test-callback-scripts"),
+            callbackScriptsDir = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
         ),
     )
     val infra = Infra(

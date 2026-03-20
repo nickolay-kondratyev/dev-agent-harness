@@ -167,7 +167,7 @@ private fun createTestShepherdContext(): ShepherdContext {
             claudeProjectsDir = Path.of("/tmp/test-claude-projects"),
             outFactory = outFactory,
             serverPort = 18080,
-            callbackScriptsDir = CallbackScriptsDir.forTest("/tmp/test-callback-scripts"),
+            callbackScriptsDir = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
         ),
     )
     val infra = com.glassthought.shepherd.core.initializer.Infra(

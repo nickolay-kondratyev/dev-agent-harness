@@ -13,7 +13,7 @@ import kotlin.io.path.createTempDirectory
 import kotlin.io.path.writeText
 
 private const val TEST_SERVER_PORT = 19876
-private val TEST_CALLBACK_SCRIPTS_DIR = CallbackScriptsDir.forTest("/opt/shepherd/scripts")
+private val TEST_CALLBACK_SCRIPTS_DIR = CallbackScriptsDir.unvalidated("/opt/shepherd/scripts")
 
 class ClaudeCodeAdapterTest : AsgardDescribeSpec({
 

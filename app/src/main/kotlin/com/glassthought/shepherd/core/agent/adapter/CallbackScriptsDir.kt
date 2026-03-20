@@ -10,8 +10,8 @@ import java.io.File
  * 2. The required `callback_shepherd.signal.sh` script exists in it
  * 3. The script is executable
  *
- * Use [validated] for production wiring. Use [forTest] in unit tests where the directory
- * does not need to exist on disk.
+ * Use [validated] for production wiring. Use [unvalidated] for sentinel values and unit tests
+ * where the directory does not need to exist on disk.
  *
  * @property path Absolute path to the callback scripts directory.
  */
@@ -47,10 +47,11 @@ class CallbackScriptsDir private constructor(
         }
 
         /**
-         * Test factory — skips filesystem validation. Use only in unit tests where
-         * the callback scripts directory does not need to exist on disk.
+         * Unvalidated factory — skips filesystem validation. Used for sentinel values
+         * (e.g., integ-test wiring where the path is overridden later) and unit tests
+         * where the directory does not need to exist on disk.
          */
-        fun forTest(dirPath: String): CallbackScriptsDir = CallbackScriptsDir(dirPath)
+        fun unvalidated(dirPath: String): CallbackScriptsDir = CallbackScriptsDir(dirPath)
     }
 
     override fun toString(): String = "CallbackScriptsDir(path=$path)"

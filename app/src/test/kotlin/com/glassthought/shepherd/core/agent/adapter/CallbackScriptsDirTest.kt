@@ -102,10 +102,10 @@ class CallbackScriptsDirTest : AsgardDescribeSpec({
         }
     }
 
-    describe("GIVEN CallbackScriptsDir.forTest") {
+    describe("GIVEN CallbackScriptsDir.unvalidated") {
         describe("WHEN called with any path string") {
             it("THEN returns a CallbackScriptsDir without filesystem validation") {
-                val result = CallbackScriptsDir.forTest("/nonexistent/fake/path")
+                val result = CallbackScriptsDir.unvalidated("/nonexistent/fake/path")
 
                 result.path shouldBe "/nonexistent/fake/path"
             }
@@ -114,15 +114,15 @@ class CallbackScriptsDirTest : AsgardDescribeSpec({
 
     describe("GIVEN two CallbackScriptsDir instances with the same path") {
         it("THEN they are equal") {
-            val a = CallbackScriptsDir.forTest("/some/path")
-            val b = CallbackScriptsDir.forTest("/some/path")
+            val a = CallbackScriptsDir.unvalidated("/some/path")
+            val b = CallbackScriptsDir.unvalidated("/some/path")
 
             (a == b) shouldBe true
         }
 
         it("THEN they have the same hashCode") {
-            val a = CallbackScriptsDir.forTest("/some/path")
-            val b = CallbackScriptsDir.forTest("/some/path")
+            val a = CallbackScriptsDir.unvalidated("/some/path")
+            val b = CallbackScriptsDir.unvalidated("/some/path")
 
             a.hashCode() shouldBe b.hashCode()
         }
@@ -130,8 +130,8 @@ class CallbackScriptsDirTest : AsgardDescribeSpec({
 
     describe("GIVEN two CallbackScriptsDir instances with different paths") {
         it("THEN they are not equal") {
-            val a = CallbackScriptsDir.forTest("/path/a")
-            val b = CallbackScriptsDir.forTest("/path/b")
+            val a = CallbackScriptsDir.unvalidated("/path/a")
+            val b = CallbackScriptsDir.unvalidated("/path/b")
 
             (a == b) shouldBe false
         }
