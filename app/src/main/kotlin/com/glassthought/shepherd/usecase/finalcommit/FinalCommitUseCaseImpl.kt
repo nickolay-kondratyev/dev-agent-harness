@@ -5,6 +5,7 @@ import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.supporting.git.GitCommandBuilder
 import com.glassthought.shepherd.core.supporting.git.GitFailureContext
 import com.glassthought.shepherd.core.supporting.git.GitOperationFailureUseCase
+import com.glassthought.shepherd.core.supporting.git.GitStagingCommitHelper
 
 /**
  * Production implementation of [FinalCommitUseCase].
@@ -18,78 +19,32 @@ import com.glassthought.shepherd.core.supporting.git.GitOperationFailureUseCase
  */
 internal class FinalCommitUseCaseImpl(
     outFactory: OutFactory,
-    private val processRunner: ProcessRunner,
-    private val gitOperationFailureUseCase: GitOperationFailureUseCase,
-    private val gitCommandBuilder: GitCommandBuilder = GitCommandBuilder(),
+    processRunner: ProcessRunner,
+    gitOperationFailureUseCase: GitOperationFailureUseCase,
+    gitCommandBuilder: GitCommandBuilder = GitCommandBuilder(),
 ) : FinalCommitUseCase {
 
     private val out = outFactory.getOutForClass(FinalCommitUseCaseImpl::class)
 
-    @Suppress("TooGenericExceptionCaught")
+    private val gitStagingCommitHelper = GitStagingCommitHelper(
+        processRunner = processRunner,
+        gitOperationFailureUseCase = gitOperationFailureUseCase,
+        gitCommandBuilder = gitCommandBuilder,
+    )
+
     override suspend fun commitIfDirty() {
         out.info("final_commit_triggered")
 
-        stageAll()
+        gitStagingCommitHelper.stageAll(FAILURE_CONTEXT)
 
-        if (!hasStagedChanges()) {
+        if (!gitStagingCommitHelper.hasStagedChanges()) {
             out.info("no_staged_changes_skipping_final_commit")
             return
         }
 
-        commit()
+        gitStagingCommitHelper.commit("commit", "-m", COMMIT_MESSAGE, failureContext = FAILURE_CONTEXT)
 
         out.info("final_commit_created")
-    }
-
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun stageAll() {
-        val command = gitCommandBuilder.build("add", "-A")
-        try {
-            processRunner.runProcess(*command)
-        } catch (e: Exception) {
-            gitOperationFailureUseCase.handleGitFailure(
-                gitCommand = command.toList(),
-                errorOutput = e.message ?: "unknown",
-                context = FAILURE_CONTEXT,
-            )
-        }
-    }
-
-    /**
-     * Returns true when there are staged changes to commit.
-     *
-     * `git diff --cached --quiet` exits 0 when the index matches HEAD (no changes),
-     * and non-zero when there are staged changes. Since [ProcessRunner] throws on
-     * non-zero exit, an exception here means changes exist.
-     */
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun hasStagedChanges(): Boolean {
-        return try {
-            processRunner.runProcess(*gitCommandBuilder.build("diff", "--cached", "--quiet"))
-            // Exit 0 → no changes
-            false
-        } catch (_: Exception) {
-            // Non-zero exit → changes exist
-            true
-        }
-    }
-
-    /**
-     * Executes `git commit -m "[shepherd] final-state-commit"`.
-     * On failure, delegates to [gitOperationFailureUseCase].
-     */
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun commit() {
-        val command = gitCommandBuilder.build("commit", "-m", COMMIT_MESSAGE)
-        try {
-            processRunner.runProcess(*command)
-        } catch (e: Exception) {
-            gitOperationFailureUseCase.handleGitFailure(
-                gitCommand = command.toList(),
-                errorOutput = e.message ?: "unknown",
-                context = FAILURE_CONTEXT,
-            )
-        }
     }
 
     companion object {

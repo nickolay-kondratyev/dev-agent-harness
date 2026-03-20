@@ -79,14 +79,20 @@ fun interface GitCommitStrategy {
  */
 internal class CommitPerSubPart(
     outFactory: OutFactory,
-    private val processRunner: ProcessRunner,
-    private val gitOperationFailureUseCase: GitOperationFailureUseCase,
+    processRunner: ProcessRunner,
+    gitOperationFailureUseCase: GitOperationFailureUseCase,
     private val hostUsername: String,
     private val gitUserEmail: String,
-    private val gitCommandBuilder: GitCommandBuilder = GitCommandBuilder(),
+    gitCommandBuilder: GitCommandBuilder = GitCommandBuilder(),
 ) : GitCommitStrategy {
 
     private val out = outFactory.getOutForClass(CommitPerSubPart::class)
+
+    private val gitStagingCommitHelper = GitStagingCommitHelper(
+        processRunner = processRunner,
+        gitOperationFailureUseCase = gitOperationFailureUseCase,
+        gitCommandBuilder = gitCommandBuilder,
+    )
 
     @Suppress("TooGenericExceptionCaught")
     override suspend fun onSubPartDone(context: SubPartDoneContext) {
@@ -97,9 +103,11 @@ internal class CommitPerSubPart(
             )
         }
 
-        stageAll(context)
+        val failureContext = toGitFailureContext(context)
 
-        if (!hasStagedChanges()) {
+        gitStagingCommitHelper.stageAll(failureContext)
+
+        if (!gitStagingCommitHelper.hasStagedChanges()) {
             out.info("no_staged_changes_skipping_commit")
             return
         }
@@ -119,72 +127,18 @@ internal class CommitPerSubPart(
             hostUsername = hostUsername,
         )
 
-        commit(authorName = authorName, message = message, context = context)
+        gitStagingCommitHelper.commit(
+            "commit",
+            "--author=$authorName <$gitUserEmail>",
+            "-m",
+            message,
+            failureContext = failureContext,
+        )
 
         out.info("commit_created") {
             listOf(
                 Val(message, ValType.STRING_USER_AGNOSTIC),
                 Val(authorName, ValType.STRING_USER_AGNOSTIC),
-            )
-        }
-    }
-
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun stageAll(context: SubPartDoneContext) {
-        val command = gitCommandBuilder.build("add", "-A")
-        try {
-            processRunner.runProcess(*command)
-        } catch (e: Exception) {
-            gitOperationFailureUseCase.handleGitFailure(
-                gitCommand = command.toList(),
-                errorOutput = e.message ?: "unknown",
-                context = toGitFailureContext(context),
-            )
-        }
-    }
-
-    /**
-     * Returns true when there are staged changes to commit.
-     *
-     * `git diff --cached --quiet` exits 0 when the index matches HEAD (no changes),
-     * and non-zero when there are staged changes. Since [ProcessRunner] throws on
-     * non-zero exit, an exception here means changes exist.
-     */
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun hasStagedChanges(): Boolean {
-        return try {
-            processRunner.runProcess(*gitCommandBuilder.build("diff", "--cached", "--quiet"))
-            // Exit 0 → no changes
-            false
-        } catch (_: Exception) {
-            // Non-zero exit → changes exist
-            true
-        }
-    }
-
-    /**
-     * Executes `git commit`. On failure, delegates to [gitOperationFailureUseCase] which may
-     * return normally after successful index.lock recovery (retries the exact same command).
-     */
-    @Suppress("TooGenericExceptionCaught", "SpreadOperator")
-    private suspend fun commit(
-        authorName: String,
-        message: String,
-        context: SubPartDoneContext,
-    ) {
-        val command = gitCommandBuilder.build(
-            "commit",
-            "--author=$authorName <$gitUserEmail>",
-            "-m",
-            message,
-        )
-        try {
-            processRunner.runProcess(*command)
-        } catch (e: Exception) {
-            gitOperationFailureUseCase.handleGitFailure(
-                gitCommand = command.toList(),
-                errorOutput = e.message ?: "unknown",
-                context = toGitFailureContext(context),
             )
         }
     }
