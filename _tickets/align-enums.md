@@ -1,11 +1,11 @@
 ---
 id: nid_64ddt50iaqtj9bijtidkutp3w_E
 title: "align enums"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T14:31:30Z
-status_updated_iso: 2026-03-20T14:31:30Z
+status_updated_iso: 2026-03-20T14:32:35Z
 type: task
 priority: 3
 assignee: CC_sonnet-v4.6_WITH-nickolaykondratyev
