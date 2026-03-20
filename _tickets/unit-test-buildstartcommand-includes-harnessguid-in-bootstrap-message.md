@@ -1,11 +1,11 @@
 ---
 id: nid_j1ovm6ohu22o5y8swg2d2hjyz_E
 title: "Unit test: buildStartCommand includes [HARNESS_GUID] in bootstrap message"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T18:43:27Z
-status_updated_iso: 2026-03-20T18:43:27Z
+status_updated_iso: 2026-03-20T18:53:44Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
