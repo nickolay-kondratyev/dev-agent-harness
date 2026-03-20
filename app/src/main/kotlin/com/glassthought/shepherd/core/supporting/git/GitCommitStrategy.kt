@@ -94,7 +94,6 @@ internal class CommitPerSubPart(
         gitCommandBuilder = gitCommandBuilder,
     )
 
-    @Suppress("TooGenericExceptionCaught")
     override suspend fun onSubPartDone(context: SubPartDoneContext) {
         out.info("commit_per_sub_part_triggered") {
             listOf(
