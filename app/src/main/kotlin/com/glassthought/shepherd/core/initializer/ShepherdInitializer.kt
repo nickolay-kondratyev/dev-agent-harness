@@ -132,7 +132,7 @@ fun interface StoppableServer {
 /**
  * Production [ServerStarter] that launches a Ktor CIO embedded server.
  */
-val KtorServerStarter = ServerStarter { shepherdServer, port ->
+val KtorServerStarter: ServerStarter = ServerStarter { shepherdServer, port ->
     val engine = embeddedServer(CIO, port = port) {
         shepherdServer.configureApplication(this)
     }.start(wait = false)

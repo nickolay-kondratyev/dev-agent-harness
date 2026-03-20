@@ -27,6 +27,7 @@ import com.glassthought.shepherd.core.time.TestClock
 import com.glassthought.shepherd.core.workflow.WorkflowDefinition
 import com.glassthought.shepherd.core.workflow.WorkflowParser
 import com.glassthought.shepherd.usecase.finalcommit.FinalCommitUseCase
+import com.glassthought.shepherd.core.creator.FinalCommitUseCaseFactory
 import com.glassthought.shepherd.usecase.healthmonitoring.AllSessionsKiller
 import com.glassthought.shepherd.usecase.planning.SetupPlanUseCase
 import com.glassthought.shepherd.usecase.ticketstatus.TicketStatusUpdater
@@ -199,7 +200,9 @@ private fun createCreator(
         processExiter = processExiter,
         setupPlanUseCaseFactory = SetupPlanUseCaseFactory { _, _ -> SetupPlanUseCase { emptyList() } },
         partExecutorFactory = PartExecutorFactory { PartExecutor { PartResult.Completed } },
-        finalCommitUseCase = FinalCommitUseCase { /* no-op for tests */ },
+        finalCommitUseCaseFactory = FinalCommitUseCaseFactory { _, _, _ ->
+            FinalCommitUseCase { /* no-op for tests */ }
+        },
         ticketStatusUpdaterFactory = TicketStatusUpdaterFactory { _, _ -> TicketStatusUpdater { /* no-op */ } },
         allSessionsKillerFactory = AllSessionsKillerFactory { _ -> FakeAllSessionsKiller() },
         repoRoot = repoRoot,
