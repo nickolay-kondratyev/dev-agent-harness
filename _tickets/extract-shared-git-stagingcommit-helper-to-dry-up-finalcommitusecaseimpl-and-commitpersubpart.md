@@ -1,11 +1,11 @@
 ---
 id: nid_ao50d028h0kp9vypejprl6iq7_E
 title: "Extract shared git staging/commit helper to DRY up FinalCommitUseCaseImpl and CommitPerSubPart"
-status: open
+status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T01:06:25Z
-status_updated_iso: 2026-03-20T01:06:25Z
+status_updated_iso: 2026-03-20T01:20:26Z
 type: task
 priority: 3
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
