@@ -5,7 +5,7 @@ status: in_progress
 deps: []
 links: []
 created_iso: 2026-03-20T14:57:16Z
-status_updated_iso: 2026-03-20T15:28:44Z
+status_updated_iso: 2026-03-20T15:29:28Z
 type: task
 priority: 2
 assignee: CC_opus-v4.6_WITH-nickolaykondratyev
