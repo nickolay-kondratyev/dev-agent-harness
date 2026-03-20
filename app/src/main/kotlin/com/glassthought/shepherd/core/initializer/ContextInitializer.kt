@@ -6,6 +6,7 @@ import com.asgard.core.out.OutFactory
 import com.asgard.core.out.time
 import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunner
+import com.glassthought.shepherd.core.creator.ProcessRunnerFactory
 import com.glassthought.shepherd.core.agent.noninteractive.NonInteractiveAgentRunnerImpl
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicatorImpl
@@ -90,7 +91,7 @@ fun interface ContextInitializer {
 class ContextInitializerImpl(
   private val envVarReader: (String) -> String? = System::getenv,
   private val fileReader: (Path) -> String = { it.toFile().readText() },
-  private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
+  private val processRunnerFactory: ProcessRunnerFactory = ProcessRunnerFactory { ProcessRunner.standard(it) },
   private val glmEnabled: Boolean = false,
 ) : ContextInitializer {
 
@@ -173,7 +174,7 @@ class ContextInitializerImpl(
     outFactory: OutFactory,
     zaiApiKey: String,
   ): NonInteractiveAgentRunner {
-    val processRunner = processRunnerFactory(outFactory)
+    val processRunner = processRunnerFactory.create(outFactory)
 
     return NonInteractiveAgentRunnerImpl(
       processRunner = processRunner,

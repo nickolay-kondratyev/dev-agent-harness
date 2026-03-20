@@ -5,7 +5,6 @@ import com.asgard.core.processRunner.ProcessRunner
 import com.glassthought.shepherd.core.supporting.git.GitCommandBuilder
 import com.glassthought.shepherd.core.supporting.git.GitFailureContext
 import com.glassthought.shepherd.core.supporting.git.GitOperationFailureUseCase
-import java.nio.file.Path
 
 /**
  * Production implementation of [FinalCommitUseCase].

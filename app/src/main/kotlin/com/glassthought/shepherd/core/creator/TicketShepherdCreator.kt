@@ -155,7 +155,7 @@ class TicketShepherdCreatorImpl(
             tmuxCommandRunner = ctx.infra.tmux.commandRunner,
         )
     },
-    private val processRunnerFactory: (OutFactory) -> ProcessRunner = { ProcessRunner.standard(it) },
+    private val processRunnerFactory: ProcessRunnerFactory = ProcessRunnerFactory { ProcessRunner.standard(it) },
     private val repoRoot: Path = Path.of(System.getProperty("user.dir")),
 ) : TicketShepherdCreator {
 
@@ -247,7 +247,7 @@ class TicketShepherdCreatorImpl(
             processExiter = processExiter,
         )
 
-        val processRunner = processRunnerFactory(outFactory)
+        val processRunner = processRunnerFactory.create(outFactory)
         val gitOperationFailureUseCase = GitOperationFailureUseCase.standard(
             outFactory = outFactory,
             processRunner = processRunner,
@@ -350,6 +350,13 @@ fun interface SetupPlanUseCaseFactory {
  */
 fun interface AllSessionsKillerFactory {
     fun create(shepherdContext: ShepherdContext): AllSessionsKiller
+}
+
+/**
+ * Factory for creating [ProcessRunner] from [OutFactory].
+ */
+fun interface ProcessRunnerFactory {
+    fun create(outFactory: OutFactory): ProcessRunner
 }
 
 /**
