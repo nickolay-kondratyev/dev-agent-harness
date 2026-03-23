@@ -149,22 +149,26 @@ sealed class InstructionSection {
      *
      * @param forReviewer controls which done-result values are shown (pass/needs_iteration vs completed).
      * @param includePlanValidation adds the `validate-plan` query section for planning-phase agents.
+     * @param callbackSignalScriptPath full absolute path to the signal callback script.
+     * @param callbackQueryScriptPath full absolute path to the query callback script.
      */
     data class CallbackHelp(
         val forReviewer: Boolean,
         val includePlanValidation: Boolean,
+        val callbackSignalScriptPath: String,
+        val callbackQueryScriptPath: String,
     ) : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String {
             val doneExamples = if (forReviewer) {
                 """
                 |When you complete your review:
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.PASS}`             (if work passes)
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.NEEDS_ITERATION}`  (if work needs changes)
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.PASS}`             (if work passes)
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.NEEDS_ITERATION}`  (if work needs changes)
                 """.trimMargin()
             } else {
                 """
                 |When you complete your task:
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
                 """.trimMargin()
             }
 
@@ -174,7 +178,7 @@ sealed class InstructionSection {
                 |### Queries (read the response from stdout):
                 |
                 |Validate plan before signaling done:
-                |`${ProtocolVocabulary.CALLBACK_QUERY_SCRIPT} validate-plan /absolute/path/to/plan_flow.json`
+                |`$callbackQueryScriptPath validate-plan /absolute/path/to/plan_flow.json`
                 """.trimMargin()
             } else {
                 ""
@@ -184,7 +188,7 @@ sealed class InstructionSection {
                 |<${ProtocolVocabulary.PAYLOAD_ACK_TAG}>
                 |## Communicating with the Harness
                 |
-                |Two scripts on your ${'$'}PATH — one for fire-and-forget signals, one for queries that return data.
+                |Two callback scripts — one for fire-and-forget signals, one for queries that return data.
                 |
                 |### Signals (fire-and-forget — ignore stdout):
                 |
@@ -192,20 +196,20 @@ sealed class InstructionSection {
                 |When you receive input wrapped in `<${ProtocolVocabulary.PAYLOAD_ACK_TAG}>` XML tags, you MUST
                 |call the command in the `MUST_ACK_BEFORE_PROCEEDING` attribute BEFORE processing the
                 |payload content:
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.ACK_PAYLOAD} <payload_id>`
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.ACK_PAYLOAD} <payload_id>`
                 |The `payload_id` and exact command are in the XML wrapper — copy it exactly.
                 |
                 |$doneExamples
                 |
                 |If you have a question for the human:
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.USER_QUESTION} "Your question here"`
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.USER_QUESTION} "Your question here"`
                 |Wait for the answer — it will arrive via your input.
                 |
                 |If you hit an unrecoverable error:
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.FAIL_WORKFLOW} "Reason for failure"`
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.FAIL_WORKFLOW} "Reason for failure"`
                 |
                 |Health ping acknowledgment (when asked):
-                |`${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.PING_ACK}`
+                |`$callbackSignalScriptPath ${ProtocolVocabulary.Signal.PING_ACK}`
                 |$querySection
                 |</${ProtocolVocabulary.PAYLOAD_ACK_TAG}>
             """.trimMargin()
@@ -396,6 +400,8 @@ sealed class InstructionSection {
      *
      * Always returns non-null — the feedback item is always actionable.
      *
+     * @param callbackSignalScriptPath full absolute path to the signal callback script.
+     *
      * Spec: granular-feedback-loop.md (ref.ap.5Y5s8gqykzGN1TVK5MZdS.E) — Doer Instructions
      * Per Feedback Item section.
      */
@@ -403,6 +409,7 @@ sealed class InstructionSection {
         val feedbackContent: String,
         val currentPath: Path,
         val isOptional: Boolean,
+        val callbackSignalScriptPath: String,
     ) : InstructionSection() {
         override fun render(request: AgentInstructionRequest): String {
             val optionalNote = if (isOptional) {
@@ -430,7 +437,7 @@ sealed class InstructionSection {
                 |   instead, with a ${ProtocolVocabulary.WHY_NOT} justification explaining why.
                 |4. Update your PUBLIC.md with a brief one-liner noting this item was
                 |   ${ProtocolVocabulary.FeedbackStatus.ADDRESSED}/${ProtocolVocabulary.FeedbackStatus.REJECTED}.
-                |5. Signal done: `${ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT} ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
+                |5. Signal done: `$callbackSignalScriptPath ${ProtocolVocabulary.Signal.DONE} ${ProtocolVocabulary.DoneResult.COMPLETED}`
                 |$optionalNote
                 |
                 |### Feedback file path

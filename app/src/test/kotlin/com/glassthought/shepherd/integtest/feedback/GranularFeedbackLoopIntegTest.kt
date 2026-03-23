@@ -219,6 +219,7 @@ class GranularFeedbackLoopIntegTest : AsgardDescribeSpec({
                 publicMdValidator = PublicMdValidator(),
                 feedbackFileReader = feedbackFileReader,
                 outFactory = outFactory,
+                callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
             )
         )
         return WiredLoopSetup(loop, gitStrategy)

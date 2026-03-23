@@ -49,6 +49,7 @@ data class InnerFeedbackLoopDeps(
     val publicMdValidator: PublicMdValidator,
     val feedbackFileReader: FeedbackFileReader,
     val outFactory: OutFactory,
+    val callbackSignalScriptPath: String,
 )
 
 /**
@@ -196,6 +197,7 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
                     feedbackFile = file,
                     feedbackContent = feedbackContent,
                     isOptional = isOptional,
+                    callbackSignalScriptPath = deps.callbackSignalScriptPath,
                 )
             )
 
@@ -449,12 +451,14 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
          * [ContextForAgentProviderImpl] can include the per-item
          * [InstructionSection.FeedbackItem] in the assembled instructions.
          */
+        @Suppress("LongParameterList") // Factory method assembling a complex request object
         fun buildFeedbackItemRequest(
             doerConfig: SubPartConfig,
             currentIteration: Int,
             feedbackFile: Path,
             feedbackContent: String,
             isOptional: Boolean,
+            callbackSignalScriptPath: String,
         ) = com.glassthought.shepherd.core.context.AgentInstructionRequest
             .DoerFeedbackItemRequest(
                 roleDefinition = doerConfig.roleDefinition,
@@ -468,6 +472,7 @@ class InnerFeedbackLoop(private val deps: InnerFeedbackLoopDeps) {
                     feedbackContent = feedbackContent,
                     currentPath = feedbackFile,
                     isOptional = isOptional,
+                    callbackSignalScriptPath = callbackSignalScriptPath,
                 ),
             )
     }

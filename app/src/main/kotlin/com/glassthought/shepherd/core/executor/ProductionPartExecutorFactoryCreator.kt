@@ -61,8 +61,43 @@ class ProductionPartExecutorFactoryCreator(
         val contextForAgentProvider = ContextForAgentProvider.standard(
             outFactory = outFactory,
             aiOutputStructure = context.aiOutputStructure,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
         )
 
+        val gitCommitStrategy = buildGitCommitStrategy(context, outFactory, shepherdContext)
+
+        val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(
+            consoleOutput = consoleOutput,
+            userInputReader = DefaultUserInputReader(),
+            config = shepherdContext.timeoutConfig,
+        )
+
+        val subPartConfigBuilder = SubPartConfigBuilder(
+            aiOutputStructure = context.aiOutputStructure,
+            roleDefinitions = roleDefinitions,
+            ticketContent = context.ticketData.description,
+            planMdPath = context.planMdPath,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
+        )
+
+        val deps = PartExecutorDeps(
+            agentFacade = agentFacade,
+            contextForAgentProvider = contextForAgentProvider,
+            gitCommitStrategy = gitCommitStrategy,
+            failedToConvergeUseCase = failedToConvergeUseCase,
+            outFactory = outFactory,
+            callbackScriptsDir = shepherdContext.infra.callbackScriptsDir,
+            harnessTimeoutConfig = shepherdContext.timeoutConfig,
+        )
+
+        return PartExecutorFactoryCreator.buildFactory(deps, subPartConfigBuilder)
+    }
+
+    private fun buildGitCommitStrategy(
+        context: PartExecutorFactoryContext,
+        outFactory: OutFactory,
+        shepherdContext: com.glassthought.shepherd.core.initializer.data.ShepherdContext,
+    ): com.glassthought.shepherd.core.supporting.git.GitCommitStrategy {
         val processRunner = processRunnerProvider?.invoke(outFactory)
             ?: ProcessRunner.standard(outFactory)
 
@@ -77,36 +112,12 @@ class ProductionPartExecutorFactoryCreator(
             processExiter = processExiter,
         )
 
-        val gitCommitStrategy = PartExecutorInfraBuilder.buildGitCommitStrategy(
+        return PartExecutorInfraBuilder.buildGitCommitStrategy(
             outFactory = outFactory,
             processRunner = processRunner,
             repoRoot = context.repoRoot,
             failedToExecutePlanUseCase = failedToExecutePlanUseCase,
             envProvider = envProvider,
         )
-
-        val failedToConvergeUseCase = FailedToConvergeUseCaseImpl(
-            consoleOutput = consoleOutput,
-            userInputReader = DefaultUserInputReader(),
-            config = shepherdContext.timeoutConfig,
-        )
-
-        val subPartConfigBuilder = SubPartConfigBuilder(
-            aiOutputStructure = context.aiOutputStructure,
-            roleDefinitions = roleDefinitions,
-            ticketContent = context.ticketData.description,
-            planMdPath = context.planMdPath,
-        )
-
-        val deps = PartExecutorDeps(
-            agentFacade = agentFacade,
-            contextForAgentProvider = contextForAgentProvider,
-            gitCommitStrategy = gitCommitStrategy,
-            failedToConvergeUseCase = failedToConvergeUseCase,
-            outFactory = outFactory,
-            harnessTimeoutConfig = shepherdContext.timeoutConfig,
-        )
-
-        return PartExecutorFactoryCreator.buildFactory(deps, subPartConfigBuilder)
     }
 }

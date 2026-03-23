@@ -173,6 +173,8 @@ class PartExecutorImplTest : AsgardDescribeSpec(
             gitCommitStrategy = gitCommitStrategy,
             failedToConvergeUseCase = failedToConvergeUseCase,
             outFactory = outFactory,
+            callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
+                .unvalidated("/tmp/test-callback-scripts"),
             harnessTimeoutConfig = harnessTimeoutConfig,
         ),
         iterationConfig = iterationConfig,
@@ -993,6 +995,7 @@ class PartExecutorImplTest : AsgardDescribeSpec(
                         publicMdValidator = PublicMdValidator(),
                         feedbackFileReader = feedbackFileReader,
                         outFactory = outFactory,
+                        callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
                     )
                 )
 
@@ -1006,6 +1009,8 @@ class PartExecutorImplTest : AsgardDescribeSpec(
                         gitCommitStrategy = outerGitStrategy,
                         failedToConvergeUseCase = abortingFailedToConverge,
                         outFactory = outFactory,
+                        callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+                            .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
                         innerFeedbackLoop = innerFeedbackLoop,
                     ),
                     iterationConfig = IterationConfig(max = 3),
@@ -1070,6 +1075,7 @@ class PartExecutorImplTest : AsgardDescribeSpec(
                         publicMdValidator = PublicMdValidator(),
                         feedbackFileReader = feedbackFileReader,
                         outFactory = outFactory,
+                        callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
                     )
                 )
 
@@ -1082,6 +1088,8 @@ class PartExecutorImplTest : AsgardDescribeSpec(
                         gitCommitStrategy = RecordingGitCommitStrategy(),
                         failedToConvergeUseCase = abortingFailedToConverge,
                         outFactory = outFactory,
+                        callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+                            .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
                         innerFeedbackLoop = innerFeedbackLoop,
                     ),
                     iterationConfig = IterationConfig(max = 3),

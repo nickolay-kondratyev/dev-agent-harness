@@ -1,5 +1,6 @@
 package com.glassthought.shepherd.core.executor
 
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
 import com.glassthought.shepherd.core.context.ExecutionContext
 import com.glassthought.shepherd.core.data.AgentType
@@ -24,6 +25,7 @@ class SubPartConfigBuilder(
     private val roleDefinitions: Map<String, RoleDefinition>,
     private val ticketContent: String,
     private val planMdPath: Path?,
+    private val callbackScriptsDir: CallbackScriptsDir,
 ) {
 
     /**
@@ -77,7 +79,7 @@ class SubPartConfigBuilder(
             agentType = agentType,
             model = subPart.model,
             systemPromptPath = roleDefinition.filePath,
-            bootstrapMessage = BOOTSTRAP_MESSAGE,
+            bootstrapMessage = bootstrapMessage(),
             roleDefinition = roleDefinition,
             ticketContent = ticketContent,
             outputDir = outputDir,
@@ -129,10 +131,14 @@ class SubPartConfigBuilder(
         return resolvePublicMdPath(part, doerSubPart)
     }
 
-    companion object {
-        private const val BOOTSTRAP_MESSAGE =
-            "Your FIRST action must be to call `callback_shepherd.signal.sh started` " +
-            "using the Bash tool. This is CRITICAL — do it immediately before anything else. " +
-            "After that, wait for further instructions via payload delivery."
-    }
+    /**
+     * Builds the bootstrap message using the full absolute path to the signal script.
+     *
+     * This message is the first instruction the agent receives. It must use the full path
+     * so the agent can execute the started signal without PATH resolution.
+     */
+    private fun bootstrapMessage(): String =
+        "Your FIRST action must be to call `${callbackScriptsDir.signalScriptPath} started` " +
+        "using the Bash tool. This is CRITICAL — do it immediately before anything else. " +
+        "After that, wait for further instructions via payload delivery."
 }

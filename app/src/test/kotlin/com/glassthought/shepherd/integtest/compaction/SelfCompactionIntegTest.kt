@@ -119,6 +119,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
             agentUnresponsiveUseCase = agentUnresponsiveUseCase,
             noOpQaDrainer = noOpQaDrainer,
             outFactory = outFactory,
+            callbackScriptsDir = scriptsDir,
         )
 
         // ── Temp directory for PRIVATE.md ──────────────────────────
@@ -243,7 +244,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                     .resolve("PRIVATE-${System.currentTimeMillis()}.md")
 
                 val instructionText =
-                    SelfCompactionInstructionBuilder().build(privateMdPath)
+                    SelfCompactionInstructionBuilder().build(privateMdPath, scriptsDir.signalScriptPath)
                 val instructionFile =
                     IntegTestHelpers.createDoneInstructionFile(tmpDir)
                         .also {
@@ -295,7 +296,7 @@ class SelfCompactionIntegTest : SharedContextDescribeSpec({
                     "PRIVATE-rotation-${System.currentTimeMillis()}.md",
                 )
                 val instructionText =
-                    SelfCompactionInstructionBuilder().build(privateMdPath)
+                    SelfCompactionInstructionBuilder().build(privateMdPath, scriptsDir.signalScriptPath)
                 val instructionFile =
                     CompactionIntegTestHelpers.createInstructionFile(
                         tmpDir = tmpDir,
@@ -399,6 +400,7 @@ private data class FacadeDeps(
     val agentUnresponsiveUseCase: AgentUnresponsiveUseCaseImpl,
     val noOpQaDrainer: QaDrainer,
     val outFactory: OutFactory,
+    val callbackScriptsDir: com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir,
 ) {
     fun buildFacade(
         contextWindowStateReader: ContextWindowStateReader,
@@ -413,6 +415,7 @@ private data class FacadeDeps(
             harnessTimeoutConfig = integTimeoutConfig,
             ackedPayloadSender = AckedPayloadSenderImpl(
                 outFactory = outFactory,
+                callbackScriptsDir = callbackScriptsDir,
                 payloadCounter = AtomicInteger(1),
                 ackTimeout = 2.minutes,
             ),

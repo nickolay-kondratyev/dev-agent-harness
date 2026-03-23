@@ -1,5 +1,6 @@
 package com.glassthought.shepherd.core.context
 
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.rolecatalog.RoleDefinition
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Files
@@ -17,6 +18,37 @@ object ContextTestFixtures {
     val TEST_AI_OUTPUT_STRUCTURE = AiOutputStructure(
         repoRoot = Path.of("/tmp/test-repo"),
         branch = "test-branch",
+    )
+
+    /** Shared test [CallbackScriptsDir] for tests that need callback script paths. */
+    val TEST_CALLBACK_SCRIPTS_DIR = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts")
+
+    /** Shortcut for the test signal script full path. */
+    val TEST_SIGNAL_SCRIPT_PATH: String = TEST_CALLBACK_SCRIPTS_DIR.signalScriptPath
+
+    /**
+     * Creates a standard [ContextForAgentProvider] using [TEST_AI_OUTPUT_STRUCTURE]
+     * and [TEST_CALLBACK_SCRIPTS_DIR]. Accepts an [OutFactory] from the test class.
+     */
+    fun standardProvider(
+        outFactory: com.asgard.core.out.OutFactory,
+    ): ContextForAgentProvider = ContextForAgentProvider.standard(
+        outFactory = outFactory,
+        aiOutputStructure = TEST_AI_OUTPUT_STRUCTURE,
+        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
+    )
+
+    /**
+     * Creates a standard [ContextForAgentProvider] using the given [aiOutputStructure]
+     * and [TEST_CALLBACK_SCRIPTS_DIR]. Accepts an [OutFactory] from the test class.
+     */
+    fun standardProvider(
+        outFactory: com.asgard.core.out.OutFactory,
+        aiOutputStructure: AiOutputStructure,
+    ): ContextForAgentProvider = ContextForAgentProvider.standard(
+        outFactory = outFactory,
+        aiOutputStructure = aiOutputStructure,
+        callbackScriptsDir = TEST_CALLBACK_SCRIPTS_DIR,
     )
 
     fun resourceDir(name: String): Path =
@@ -94,6 +126,7 @@ object ContextTestFixtures {
                 feedbackContent = "Add null check before accessing result.",
                 currentPath = feedbackFile,
                 isOptional = false,
+                callbackSignalScriptPath = TEST_SIGNAL_SCRIPT_PATH,
             ),
         )
     }

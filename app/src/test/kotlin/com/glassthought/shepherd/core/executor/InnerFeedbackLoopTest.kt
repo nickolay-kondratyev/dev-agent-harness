@@ -167,6 +167,7 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
                 publicMdValidator = PublicMdValidator(),
                 feedbackFileReader = feedbackFileReader,
                 outFactory = outFactory,
+                callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
             )
         )
     }
@@ -749,6 +750,7 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
                 feedbackFile = feedbackFile,
                 feedbackContent = "Add null check before accessing result.",
                 isOptional = false,
+                callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
             )
 
             it("THEN returns a DoerFeedbackItemRequest") {
@@ -787,6 +789,7 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
                 feedbackFile = feedbackFile,
                 feedbackContent = "Consider renaming variable.",
                 isOptional = true,
+                callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
             )
 
             it("THEN feedbackItem.isOptional is true") {
@@ -846,6 +849,7 @@ class InnerFeedbackLoopTest : AsgardDescribeSpec({
                         publicMdValidator = PublicMdValidator(),
                         feedbackFileReader = queueReader,
                         outFactory = outFactory,
+                        callbackSignalScriptPath = "/tmp/test-callback-scripts/callback_shepherd.signal.sh",
                     )
                 )
 

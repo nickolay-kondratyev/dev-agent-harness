@@ -61,6 +61,8 @@ private fun testConfigBuilder(): SubPartConfigBuilder = SubPartConfigBuilder(
     roleDefinitions = ROLES,
     ticketContent = "Test ticket",
     planMdPath = null,
+    callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+        .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
 )
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -86,6 +88,8 @@ class PartExecutorFactoryCreatorTest : AsgardDescribeSpec(
                         _, _ -> false
                     },
                 outFactory = outFactory,
+                callbackScriptsDir = com.glassthought.shepherd.core.agent.adapter
+                    .CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
             )
         }
 

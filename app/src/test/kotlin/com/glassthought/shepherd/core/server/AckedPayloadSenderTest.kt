@@ -3,8 +3,10 @@ package com.glassthought.shepherd.core.server
 import com.asgard.core.out.LogLevel
 import com.asgard.testTools.describe_spec.AsgardDescribeSpec
 import com.asgard.testTools.describe_spec.AsgardDescribeSpecConfig
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.agent.sessionresolver.HandshakeGuid
 import com.glassthought.shepherd.core.agent.tmux.TmuxCommunicator
+import com.glassthought.shepherd.core.context.ContextTestFixtures
 import com.glassthought.shepherd.core.context.ProtocolVocabulary
 import com.glassthought.shepherd.core.session.SessionEntry
 import com.glassthought.shepherd.core.session.createTestSessionEntry
@@ -26,16 +28,16 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
     describe("GIVEN wrapPayload with a PayloadId and content") {
         val payloadId = PayloadId("a1b2c3d4-3")
         val content = "Read instructions at /path/to/comm/in/instructions.md"
-        val wrapped = AckedPayloadSenderImpl.wrapPayload(payloadId, content)
+        val signalScriptPath = ContextTestFixtures.TEST_SIGNAL_SCRIPT_PATH
+        val wrapped = AckedPayloadSenderImpl.wrapPayload(payloadId, content, signalScriptPath)
 
         it("THEN starts with opening XML tag containing payload_id attribute") {
             wrapped shouldStartWith "<${ProtocolVocabulary.PAYLOAD_ACK_TAG} payload_id=\"a1b2c3d4-3\""
         }
 
-        it("THEN opening tag contains MUST_ACK_BEFORE_PROCEEDING with exact ack command") {
-            val script = ProtocolVocabulary.CALLBACK_SIGNAL_SCRIPT
+        it("THEN opening tag contains MUST_ACK_BEFORE_PROCEEDING with full path ack command") {
             val signal = ProtocolVocabulary.Signal.ACK_PAYLOAD
-            val expectedAttr = "MUST_ACK_BEFORE_PROCEEDING=\"$script $signal a1b2c3d4-3\""
+            val expectedAttr = "MUST_ACK_BEFORE_PROCEEDING=\"$signalScriptPath $signal a1b2c3d4-3\""
             wrapped shouldContain expectedAttr
         }
 
@@ -47,9 +49,9 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
             wrapped shouldEndWith "</${ProtocolVocabulary.PAYLOAD_ACK_TAG}>"
         }
 
-        it("THEN matches the exact spec format") {
+        it("THEN matches the exact spec format with full script path") {
             val expected = "<payload_from_shepherd_must_ack payload_id=\"a1b2c3d4-3\" " +
-                "MUST_ACK_BEFORE_PROCEEDING=\"callback_shepherd.signal.sh ack-payload a1b2c3d4-3\">\n" +
+                "MUST_ACK_BEFORE_PROCEEDING=\"$signalScriptPath ack-payload a1b2c3d4-3\">\n" +
                 "Read instructions at /path/to/comm/in/instructions.md\n" +
                 "</payload_from_shepherd_must_ack>"
             wrapped shouldBe expected
@@ -65,6 +67,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 200.milliseconds,
             pollInterval = 10.milliseconds,
@@ -93,6 +96,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 200.milliseconds,
             pollInterval = 10.milliseconds,
@@ -126,6 +130,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 200.milliseconds,
             pollInterval = 10.milliseconds,
@@ -160,6 +165,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 50.milliseconds,
             pollInterval = 10.milliseconds,
@@ -211,6 +217,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 50.milliseconds,
             pollInterval = 10.milliseconds,
@@ -263,6 +270,7 @@ class AckedPayloadSenderTest : AsgardDescribeSpec(
         val tmuxSession = createTestTmuxAgentSession(handshakeGuid = handshakeGuid, communicator = spyCommunicator)
         val sender = AckedPayloadSenderImpl(
             outFactory = outFactory,
+            callbackScriptsDir = ContextTestFixtures.TEST_CALLBACK_SCRIPTS_DIR,
             payloadCounter = counter,
             ackTimeout = 200.milliseconds,
             pollInterval = 10.milliseconds,

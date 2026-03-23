@@ -121,6 +121,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
             val contextForAgentProvider = ContextForAgentProvider.standard(
                 outFactory = context.outFactory,
                 aiOutputStructure = context.aiOutputStructure,
+                callbackScriptsDir = context.shepherdContext.infra.callbackScriptsDir,
             )
 
             val processRunner = ProcessRunner.standard(context.outFactory)
@@ -144,6 +145,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 roleDefinitions = roleDefinitions,
                 ticketContent = context.ticketData.description,
                 planMdPath = null, // WHY: Planning agents produce the plan — they don't read an existing plan.
+                callbackScriptsDir = context.shepherdContext.infra.callbackScriptsDir,
             )
 
             val deps = PartExecutorDeps(
@@ -152,6 +154,7 @@ class ProductionPlanningPartExecutorFactory internal constructor(
                 gitCommitStrategy = gitCommitStrategy,
                 failedToConvergeUseCase = failedToConvergeUseCase,
                 outFactory = context.outFactory,
+                callbackScriptsDir = context.shepherdContext.infra.callbackScriptsDir,
                 harnessTimeoutConfig = context.shepherdContext.timeoutConfig,
             )
 

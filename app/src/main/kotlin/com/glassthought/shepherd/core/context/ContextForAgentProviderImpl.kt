@@ -3,6 +3,7 @@ package com.glassthought.shepherd.core.context
 import com.asgard.core.data.value.Val
 import com.asgard.core.data.value.ValType
 import com.asgard.core.out.OutFactory
+import com.glassthought.shepherd.core.agent.adapter.CallbackScriptsDir
 import com.glassthought.shepherd.core.filestructure.AiOutputStructure
 import java.nio.file.Path
 
@@ -20,6 +21,7 @@ class ContextForAgentProviderImpl(
     outFactory: OutFactory,
     private val assembler: InstructionPlanAssembler,
     private val aiOutputStructure: AiOutputStructure,
+    private val callbackScriptsDir: CallbackScriptsDir,
 ) : ContextForAgentProvider {
 
     companion object {
@@ -88,7 +90,7 @@ class ContextForAgentProviderImpl(
         add(InstructionSection.IterationFeedback)
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
-        add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false))
+        add(callbackHelpSection(forReviewer = false, includePlanValidation = false))
     }
 
     // -- Doer feedback item plan --
@@ -111,7 +113,7 @@ class ContextForAgentProviderImpl(
         add(request.feedbackItem)
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
-        add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = false))
+        add(callbackHelpSection(forReviewer = false, includePlanValidation = false))
     }
 
     // -- Reviewer plan --
@@ -154,7 +156,7 @@ class ContextForAgentProviderImpl(
         add(InstructionSection.FeedbackWritingInstructions)
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
-        add(InstructionSection.CallbackHelp(forReviewer = true, includePlanValidation = false))
+        add(callbackHelpSection(forReviewer = true, includePlanValidation = false))
     }
 
     // -- Planner plan --
@@ -175,7 +177,7 @@ class ContextForAgentProviderImpl(
         add(InstructionSection.OutputPathSection("PLAN.md", request.planMdOutputPath))
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
-        add(InstructionSection.CallbackHelp(forReviewer = false, includePlanValidation = true))
+        add(callbackHelpSection(forReviewer = false, includePlanValidation = true))
     }
 
     // -- Plan Reviewer plan --
@@ -208,8 +210,20 @@ class ContextForAgentProviderImpl(
         }
         add(InstructionSection.OutputPathSection(PUBLIC_MD, request.publicMdOutputPath))
         add(InstructionSection.WritingGuidelines)
-        add(InstructionSection.CallbackHelp(forReviewer = true, includePlanValidation = true))
+        add(callbackHelpSection(forReviewer = true, includePlanValidation = true))
     }
+
+    // -- CallbackHelp factory --
+
+    private fun callbackHelpSection(
+        forReviewer: Boolean,
+        includePlanValidation: Boolean,
+    ) = InstructionSection.CallbackHelp(
+        forReviewer = forReviewer,
+        includePlanValidation = includePlanValidation,
+        callbackSignalScriptPath = callbackScriptsDir.signalScriptPath,
+        callbackQueryScriptPath = callbackScriptsDir.queryScriptPath,
+    )
 
     // -- Utility extension --
 

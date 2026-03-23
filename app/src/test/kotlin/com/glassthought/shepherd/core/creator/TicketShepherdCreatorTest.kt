@@ -174,6 +174,7 @@ private fun createTestShepherdContext(): ShepherdContext {
         outFactory = outFactory,
         tmux = tmuxInfra,
         claudeCode = claudeCodeInfra,
+        callbackScriptsDir = CallbackScriptsDir.unvalidated("/tmp/test-callback-scripts"),
     )
     val noOpRunner = NonInteractiveAgentRunner {
         NonInteractiveAgentResult.Success(output = "")
